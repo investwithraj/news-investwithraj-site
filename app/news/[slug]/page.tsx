@@ -34,6 +34,11 @@ export async function generateMetadata({
   if (!article) return { title: "Article not found" };
 
   const url = `${SITE.url}/news/${slug}`;
+  // Always route OG/Twitter cards through /api/og — it generates a branded
+  // 1200×630 PNG using a real stock photo (Unsplash/Pexels/Wikimedia) plus
+  // the navy/gold/Fraunces brand wrap. Falls back to article.heroImage.src
+  // only if /api/og is unavailable.
+  const ogUrl = `${SITE.url}/api/og?slug=${slug}`;
   return {
     title: article.title,
     description: article.metaDescription || article.subtitle,
@@ -47,15 +52,13 @@ export async function generateMetadata({
       modifiedTime: article.modifiedAt,
       authors: [`${SITE.rootUrl}#raj`],
       tags: [article.category, ...article.market],
-      images: article.heroImage.src
-        ? [{ url: article.heroImage.src, alt: article.heroImage.alt }]
-        : undefined,
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: article.heroImage.alt }],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description: article.metaDescription || article.subtitle,
-      images: article.heroImage.src ? [article.heroImage.src] : undefined,
+      images: [ogUrl],
     },
   };
 }
