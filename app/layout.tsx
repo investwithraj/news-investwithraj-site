@@ -9,6 +9,7 @@ import { FxProvider } from "@/components/ticker/FxProvider";
 import { DldTicker } from "@/components/ticker/DldTicker";
 import PageLoadCurtain from "@/components/PageLoadCurtain";
 import AmbientAudio from "@/components/AmbientAudio";
+import KonamiEasterEgg from "@/components/KonamiEasterEgg";
 import "./globals.css";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
@@ -208,6 +209,9 @@ export default function RootLayout({
 
         {/* v13 SOTY — Web Audio ambient toggle, Cartier W&W pattern */}
         <AmbientAudio />
+
+        {/* v13 SOTY easter egg — Konami unlocks Bulgari emerald palette */}
+        <KonamiEasterEgg />
 
         {/* v12 SOTM — 35mm film-grain overlay, ~4% opacity, multiply blend */}
         <div className="film-grain" aria-hidden="true" />
