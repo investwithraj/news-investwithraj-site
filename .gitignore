@@ -44,3 +44,5 @@ next-env.d.ts
 
 # Pipeline run artifacts — local observability only
 /pipeline-runs/
+
+.vercel

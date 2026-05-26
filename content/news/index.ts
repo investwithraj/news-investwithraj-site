@@ -23,7 +23,15 @@ export {
   type SemaformSections,
 } from "./types";
 
-export const NEWS_ARTICLES: NewsArticle[] = [];
+import { article as dld21bWeek } from "./2026-05-26-dld-21b-week";
+import { article as modonHudayriyatGolfEstate } from "./2026-05-26-modon-hudayriyat-golf-estate";
+import { article as goldenVisaMortgageFlex } from "./2026-05-26-golden-visa-mortgage-flex";
+
+export const NEWS_ARTICLES: NewsArticle[] = [
+  dld21bWeek,
+  modonHudayriyatGolfEstate,
+  goldenVisaMortgageFlex,
+];
 
 /** Latest N news articles, most recent first. */
 export function getLatestNews(limit = 10): NewsArticle[] {
