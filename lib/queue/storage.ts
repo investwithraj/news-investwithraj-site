@@ -35,9 +35,21 @@ async function kvGet(): Promise<QueueItem[]> {
       cache: "no-store",
     });
     if (!res.ok) return [];
-    const data = (await res.json()) as { result?: string | null };
-    if (!data.result) return [];
-    return JSON.parse(data.result) as QueueItem[];
+    const data = (await res.json()) as { result?: unknown };
+    // Upstash returns the stored value as `result`. We stored a JSON-stringified
+    // array, so result should be a string. Be defensive — also accept arrays
+    // returned directly (some Upstash plan tiers auto-decode JSON content).
+    if (data.result == null) return [];
+    if (Array.isArray(data.result)) return data.result as QueueItem[];
+    if (typeof data.result === "string") {
+      try {
+        const parsed = JSON.parse(data.result);
+        return Array.isArray(parsed) ? (parsed as QueueItem[]) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   } catch {
     return [];
   }
@@ -45,13 +57,16 @@ async function kvGet(): Promise<QueueItem[]> {
 
 async function kvSet(items: QueueItem[]): Promise<boolean> {
   try {
+    // Upstash REST: POST /set/<key> with body = raw value.
+    // We send a single-stringified JSON array as text/plain so it round-trips
+    // correctly through the `result` field on GET.
     const res = await fetch(`${KV_URL}/set/${KV_KEY}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${KV_TOKEN}`,
-        "Content-Type": "application/json",
+        "Content-Type": "text/plain",
       },
-      body: JSON.stringify(JSON.stringify(items)),
+      body: JSON.stringify(items),
       cache: "no-store",
     });
     return res.ok;
