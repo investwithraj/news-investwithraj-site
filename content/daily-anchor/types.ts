@@ -1,11 +1,13 @@
-// Daily Anchor — AI-generated Raj video shown at the top of the homepage.
+// Daily Anchor — Raj's voice over real Dubai/Abu Dhabi/RAK B-roll at the
+// top of the homepage.
 //
 // Morning cron picks the day's lead story, drafts a 60-90s script via Claude
 // (Voice Profile enforced), synthesises with ElevenLabs Raj voice, and
-// generates a lip-synced video via Higgsfield Soul (or Gemini Omni / Veo 3).
+// selects a REAL stock video clip (Pexels Videos) sourced from professional
+// videographers — NOT AI-generated.
 //
-// The resulting URLs are written to pipeline-runs/daily-anchor.json. The
-// homepage <DailyAnchorPane/> reads this file via /api/anchor.
+// The resulting URLs are written to Vercel KV (key: iwr:anchor:current).
+// The homepage <DailyAnchorPane/> reads via /api/anchor.
 
 export type AnchorState =
   | "pending-script"
@@ -27,10 +29,18 @@ export interface DailyAnchor {
   scriptedAt?: string;
   /** ElevenLabs MP3 URL or data URI */
   audioUrl?: string;
-  /** Lip-synced video URL */
+  /** B-roll video URL (real stock footage, looped silently under audio) */
   videoUrl?: string;
-  /** Provider used (higgsfield or gemini) */
-  provider?: "higgsfield" | "gemini" | "veo3";
+  /** Videographer credit (for stock-sourced clips) */
+  videoCredit?: string;
+  /** Provider domain (e.g. "pexels-video", "coverr") */
+  videoSource?: string;
+  /** License identifier */
+  videoLicense?: string;
+  /** Direct link back to the original stock-video page (for attribution) */
+  videoAttributionUrl?: string;
+  /** Provider used (real stock or — legacy — AI-generated) */
+  provider?: "pexels-video" | "coverr" | "veo3" | "higgsfield" | "gemini";
   /** Current pipeline state */
   state: AnchorState;
   /** Last update */

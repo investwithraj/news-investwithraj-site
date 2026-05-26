@@ -18,30 +18,39 @@ import { NextRequest, NextResponse } from "next/server";
 import { callClaude, isClaudeConfigured } from "@/lib/ai/claude";
 import { synthesise, isElevenConfigured } from "@/lib/voice/elevenlabs";
 import {
-  startVideoGeneration,
-  pollVideoGeneration,
-  isVertexConfigured,
-} from "@/lib/ai/vertex";
+  searchStockVideo,
+  pickByDateSeed,
+} from "@/lib/stock/video-providers";
 import { getLatestNews } from "@/content/news";
 import { readCurrentAnchor, writeCurrentAnchor } from "@/lib/anchor/store";
 import type { DailyAnchor } from "@/content/daily-anchor/types";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-// Vertex Veo polling typically completes in 30-60s; allow up to 5 min for the
-// full anchor pipeline (Claude script + ElevenLabs voice + Veo video poll).
+// Allow up to 5 min for the full anchor pipeline (Claude script + ElevenLabs
+// voice + stock video search/fetch). Stock video typically resolves in <2s.
 export const maxDuration = 300;
 
-/** Build the cinematic visual prompt that Veo 3 will render. */
-function buildAnchorVideoPrompt(headline: string): string {
-  return [
-    `Cinematic aerial flyover of Dubai skyline at golden hour.`,
-    `Burj Khalifa and Palm Jumeirah and Marina towers in frame.`,
-    `Moody navy-and-gold color grade, 35mm anamorphic lens, slight film grain.`,
-    `Subtle volumetric haze, light sun flares.`,
-    `No people in frame, no text overlays, no logos.`,
-    `Editorial documentary tone matching the headline mood: "${headline}".`,
-  ].join(" ");
+/** Build the search query for stock B-roll. Varies by headline mood. */
+function buildAnchorVideoQuery(headline: string): string {
+  const lower = headline.toLowerCase();
+
+  // Try to match the dominant subject in the headline so the B-roll feels
+  // tonally appropriate to the day's lead story.
+  if (lower.includes("hudayriyat") || lower.includes("abu dhabi") || lower.includes("saadiyat") || lower.includes("yas")) {
+    return "Abu Dhabi skyline aerial corniche golden hour";
+  }
+  if (lower.includes("ras al khaimah") || lower.includes("marjan") || lower.includes("wynn")) {
+    return "Ras Al Khaimah coastline aerial sunset resort";
+  }
+  if (lower.includes("palm") || lower.includes("nakheel")) {
+    return "Palm Jumeirah Dubai aerial sunset";
+  }
+  if (lower.includes("marina") || lower.includes("downtown") || lower.includes("burj")) {
+    return "Dubai Marina Downtown aerial golden hour sunset";
+  }
+  // Fallback — generic Dubai cinematic
+  return "Dubai skyline aerial golden hour cinematic drone";
 }
 
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
@@ -175,45 +184,47 @@ export async function POST(request: NextRequest) {
     await writeCurrentAnchor(anchor);
   }
 
-  // STAGE 3 — video via Vertex Veo 3 (billed against $100/mo Cloud credit).
-  // Async — start operation, poll until done. Veo 3 typically completes a
-  // 4-sec clip in 30-90 sec; we poll up to ~3 min before bailing.
-  if ((mode === "video" || mode === "full") && isVertexConfigured()) {
-    const videoPrompt = buildAnchorVideoPrompt(headline);
-    const start = await startVideoGeneration({
-      prompt: videoPrompt,
-      aspectRatio: "16:9",
-      durationSeconds: 4,
+  // STAGE 3 — video via REAL stock footage (Pexels Videos + Coverr).
+  // User wants real Dubai/Abu Dhabi/RAK drone footage from real videographers,
+  // not AI-generated content. Pexels API key was already provisioned in the
+  // cover-image pivot.
+  //
+  // Strategy: search the appropriate emirate-tagged drone footage, deterministically
+  // pick one clip per date so the B-roll varies day-to-day but the same date
+  // always shows the same video (consistent across cold-starts + replays).
+  if (mode === "video" || mode === "full") {
+    const query = buildAnchorVideoQuery(headline);
+    const videos = await searchStockVideo({
+      query,
+      orientation: "landscape",
+      minWidth: 1280,
+      minDurationSec: 4,
+      maxDurationSec: 30,
+      perPage: 12,
     });
-
-    if (start.ok && start.operationName) {
-      anchor.provider = "veo3";
-      // Persist operation name immediately so the cron can resume polling if
-      // we exceed the maxDuration ceiling
-      (anchor as DailyAnchor & { operationId?: string }).operationId =
-        start.operationName;
-      await writeCurrentAnchor(anchor);
-
-      // Poll inline — Veo 3 usually completes within Vercel's 5-min ceiling
-      const maxPolls = 18; // 18 × 10s = 180s
-      let completed = false;
-      for (let i = 0; i < maxPolls; i++) {
-        await new Promise((r) => setTimeout(r, 10_000));
-        const poll = await pollVideoGeneration(start.operationName);
-        if (!poll.ok) {
-          break;
-        }
-        if (poll.done && poll.videoUri) {
-          anchor.videoUrl = poll.videoUri;
-          completed = true;
-          break;
-        }
-      }
-      if (!completed) {
-        // Video still pending — anchor goes "ready" with audio only; cron can
-        // resume polling later via mode="video-poll"
-      }
+    const picked = pickByDateSeed(videos, today);
+    if (picked) {
+      anchor.provider = "pexels-video";
+      anchor.videoUrl = picked.url;
+      // Stash photographer + license metadata via a side field so we can
+      // render attribution under the anchor on the homepage later
+      (anchor as DailyAnchor & {
+        videoCredit?: string;
+        videoSource?: string;
+        videoLicense?: string;
+      }).videoCredit = picked.credit;
+      (anchor as DailyAnchor & {
+        videoCredit?: string;
+        videoSource?: string;
+        videoLicense?: string;
+      }).videoSource = picked.source;
+      (anchor as DailyAnchor & {
+        videoCredit?: string;
+        videoSource?: string;
+        videoLicense?: string;
+      }).videoLicense = picked.license;
     }
+    // No "pending" intermediate state — stock search is synchronous + fast
   }
 
   // Final state — ready if we have audio (video is a bonus when Vertex configured)
