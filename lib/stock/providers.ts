@@ -353,22 +353,66 @@ export async function generateImagen(
 
 /* ─── Aggregator — tries every source in order, returns best match ──── */
 
+/** Generic Dubai / UAE fallback queries when a specific subject yields zero. */
+function broaderQueries(originalQuery: string): string[] {
+  const lower = originalQuery.toLowerCase();
+  const out: string[] = [];
+
+  // Emirate-level broadening
+  if (lower.includes("abu dhabi")) {
+    out.push("Abu Dhabi skyline aerial", "Abu Dhabi corniche", "Abu Dhabi luxury architecture");
+  } else if (lower.includes("ras al khaimah") || lower.includes("marjan")) {
+    out.push("Ras Al Khaimah coastline", "RAK Al Marjan island aerial", "Ras Al Khaimah beach resort");
+  } else {
+    out.push("Dubai skyline aerial", "Dubai Marina sunset", "Dubai luxury architecture");
+  }
+
+  // Asset-type broadening (look at keywords in original)
+  if (lower.includes("villa") || lower.includes("mansion")) {
+    out.push("Dubai luxury villa", "UAE luxury home architecture");
+  }
+  if (lower.includes("tower") || lower.includes("apartment")) {
+    out.push("Dubai luxury tower", "UAE skyscraper architecture");
+  }
+  if (lower.includes("beach") || lower.includes("coastline") || lower.includes("waterfront")) {
+    out.push("Dubai beach resort", "UAE coastline aerial");
+  }
+
+  // Final catch-all
+  out.push("UAE luxury real estate aerial");
+  return out;
+}
+
 export async function searchStock(
   opts: StockSearchOptions
 ): Promise<StockImage[]> {
-  // Run all *real-photo* providers in parallel for speed. Imagen is NOT
-  // in this batch — we only call it if all real-photo providers came back
-  // empty (it's slower + costs Gemini credits + is synthetic).
-  const promises: Promise<StockImage[]>[] = [];
-  if (UNSPLASH_KEY) promises.push(searchUnsplash(opts));
-  if (PEXELS_KEY) promises.push(searchPexels(opts));
-  promises.push(searchWikimedia(opts)); // keyless — always run
-  if (PIXABAY_KEY) promises.push(searchPixabay(opts));
+  // 1. Try the specific query first across all real-photo providers in parallel
+  async function tryProviders(query: string): Promise<StockImage[]> {
+    const subOpts = { ...opts, query };
+    const promises: Promise<StockImage[]>[] = [];
+    if (UNSPLASH_KEY) promises.push(searchUnsplash(subOpts));
+    if (PEXELS_KEY) promises.push(searchPexels(subOpts));
+    promises.push(searchWikimedia(subOpts)); // keyless — always run
+    if (PIXABAY_KEY) promises.push(searchPixabay(subOpts));
+    return (await Promise.all(promises)).flat();
+  }
 
-  const results = (await Promise.all(promises)).flat();
-  if (results.length > 0) return results;
+  const firstTry = await tryProviders(opts.query);
+  if (firstTry.length > 0) return firstTry;
 
-  // No real photos found — fall back to Imagen 3 (if configured)
+  // 2. Specific query empty — try broader fallback queries in sequence
+  for (const broader of broaderQueries(opts.query)) {
+    const results = await tryProviders(broader);
+    if (results.length > 0) {
+      // Tag the broader query so callers can see this was a fallback
+      return results.map((r) => ({
+        ...r,
+        alt: `${r.alt || broader} (fallback from "${opts.query}")`,
+      }));
+    }
+  }
+
+  // 3. Last resort — Imagen 3 generation (if Gemini key configured + GCP billing on)
   if (GEMINI_KEY) {
     return generateImagen(opts);
   }
