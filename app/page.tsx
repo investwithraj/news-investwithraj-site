@@ -7,6 +7,7 @@ import { AuthorBrand } from "@/components/homepage/AuthorBrand";
 import { VerticalsBento } from "@/components/homepage/VerticalsBento";
 import { DubaiSkyline3DLoader } from "@/components/futurism/DubaiSkyline3DLoader";
 import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
+import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
 
 /**
  * news.investwithraj.com homepage — Block 3 Wave 4.
@@ -25,6 +26,7 @@ export default function Home() {
   return (
     <main>
       <Hero />
+      <DailyAnchorPane />
       <AuthorBrand />
       <CapitalFlowSection />
       <VerticalsBento />

@@ -7,6 +7,7 @@ import { ConsentRoot } from "@/components/consent/ConsentRoot";
 import { MagneticCursor } from "@/components/futurism/MagneticCursor";
 import { FxProvider } from "@/components/ticker/FxProvider";
 import { DldTicker } from "@/components/ticker/DldTicker";
+import { VoiceMode } from "@/components/voice/VoiceMode";
 import "./globals.css";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
@@ -201,6 +202,10 @@ export default function RootLayout({
 
         {/* Magnetic cursor — desktop only, auto-skips touch + reduced-motion */}
         <MagneticCursor />
+
+        {/* Voice Mode — "Hey Raj" hold-to-talk pill, bottom-right.
+            Browser-gated (Web Speech API). Skipped on unsupported browsers. */}
+        <VoiceMode />
 
         {/* GDPR/PDPL consent banner + 8-pixel network loader (gated by consent) */}
         <ConsentRoot />
