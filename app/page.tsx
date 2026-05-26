@@ -8,6 +8,7 @@ import { VerticalsBento } from "@/components/homepage/VerticalsBento";
 import { DubaiSkyline3DLoader } from "@/components/futurism/DubaiSkyline3DLoader";
 import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
 import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
+import MaterialDivider from "@/components/MaterialDivider";
 
 /**
  * news.investwithraj.com homepage — Block 3 Wave 4.
@@ -26,10 +27,15 @@ export default function Home() {
   return (
     <main>
       <Hero />
+      <MaterialDivider material="brass-strip" />
       <DailyAnchorPane />
+      <MaterialDivider material="cashmere" />
       <AuthorBrand />
+      <MaterialDivider material="ink-cream" />
       <CapitalFlowSection />
+      <MaterialDivider material="cream-fade" />
       <VerticalsBento />
+      <MaterialDivider material="brass-strip" />
       <CrossLink />
     </main>
   );
@@ -40,31 +46,43 @@ function CapitalFlowSection() {
     <section
       className="relative py-20 md:py-28 overflow-hidden"
       style={{ background: "var(--navy)", color: "var(--paper)" }}
+      data-section="dark"
     >
       <div className="max-w-[1240px] mx-auto px-6 md:px-10 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
         <div className="lg:col-span-5 order-2 lg:order-1">
           <span
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.22em]"
+            className="font-mono inline-flex items-center gap-2.5 uppercase"
             style={{
-              background: "rgba(201, 169, 97, 0.18)",
-              color: "var(--gold-bright, #E0C076)",
-              border: "1px solid rgba(201, 169, 97, 0.35)",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.28em",
+              color: "rgba(245, 239, 227, 0.6)",
             }}
           >
-            <span className="w-1 h-1 rounded-full" style={{ background: "var(--gold-bright, #E0C076)" }} />
+            <span
+              aria-hidden="true"
+              className="block"
+              style={{
+                width: "22px",
+                height: "1px",
+                background: "var(--gold-bright, #E0C076)",
+              }}
+            />
             Capital flow · live
           </span>
           <KineticHeadline
             as="h2"
-            className="mt-6 leading-[1.05] tracking-[-0.025em]"
+            className="editorial-h1 mt-6"
             style={{
               color: "var(--paper)",
-              fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
-              fontWeight: 500,
+              fontSize: "clamp(2rem, 4.5vw, 3.75rem)",
+              maxWidth: "16ch",
             }}
           >
             Where the{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-bright, #E0C076)" }}>
+            <span
+              className="editorial-h1-italic"
+              style={{ color: "var(--gold-bright, #E0C076)" }}
+            >
               UAE money
             </span>{" "}
             comes from.
@@ -122,38 +140,27 @@ function Hero() {
         }}
       />
 
-      {/* Top eyebrow */}
+      {/* v13 SOTY — flat editorial eyebrow, no glass */}
       <div className="relative z-20 w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-24 md:pt-28 flex justify-center">
-        <div
-          className="eyebrow-holo px-3.5 py-1.5 rounded-full"
-          style={{
-            background: "rgba(255, 255, 255, 0.92)",
-            backdropFilter: "blur(14px) saturate(180%)",
-            WebkitBackdropFilter: "blur(14px) saturate(180%)",
-            border: "1px solid var(--gold-soft)",
-            boxShadow: "0 4px 18px -6px var(--gold-glow)",
-          }}
-        >
-          <span>news.investwithraj.com</span>
-        </div>
+        <span className="editorial-eyebrow-sotm">
+          news.investwithraj.com
+        </span>
       </div>
 
       {/* Main composition */}
       <div className="relative z-20 flex-1 w-full max-w-[980px] mx-auto px-6 md:px-12 flex flex-col items-center justify-center text-center -mt-10">
         {/* F11 — kinetic Fraunces variable headline */}
         <KineticHeadline
-          className="leading-[0.95]"
+          className="editorial-h1"
           style={{
-            color: "var(--ink)",
-            fontSize: "clamp(2.75rem, 8vw, 7rem)",
-            fontWeight: 500,
-            maxWidth: "18ch",
+            fontSize: "clamp(2.75rem, 8.4vw, 7.75rem)",
+            maxWidth: "16ch",
           }}
         >
           The daily{" "}
           <span
-            className="editorial-italic text-gold-grad"
-            style={{ fontWeight: 400 }}
+            className="editorial-h1-italic"
+            style={{ color: "var(--gold-deep)" }}
           >
             UAE real-estate
           </span>{" "}
@@ -179,7 +186,7 @@ function Hero() {
             target="_blank"
             rel="noopener noreferrer"
             className="btn-graphite group"
-            data-cursor="active"
+            data-cursor-label="OPEN"
             data-magnetic
           >
             <span>Subscribe to Beyond the Deal</span>
@@ -190,7 +197,7 @@ function Hero() {
           <Link
             href={rootCtaUrl({ campaign: "subdomain-hero", content: "request-note" })}
             className="btn-ghost group"
-            data-cursor="active"
+            data-cursor-label="OPEN"
             data-magnetic
           >
             <span>Request the current Note</span>
@@ -234,7 +241,7 @@ function CrossLink() {
           <Link
             href={rootCtaUrl({ campaign: "subdomain-footer", content: "back-to-iwr" })}
             className="editorial-italic text-gold-grad"
-            data-cursor="active"
+            data-cursor-label="OPEN"
             data-magnetic
           >
             investwithraj.com

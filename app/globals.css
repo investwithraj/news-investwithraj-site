@@ -17,39 +17,43 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Surfaces — cool white + silver-light, future-office aesthetic */
-  --paper: #F8FAFC;
-  --paper-pure: #FFFFFF;
-  --chrome: #E8ECF2;
-  --chrome-deep: #B8C2D0;
-  --silver: #C8CFD9;
+  /* v13 SOTY/LUXURY RESET — Cucinelli register. May 26 2026 intensive.
+     Studied: Cartier W&W · Bulgari Eclettica · Brunello Cucinelli · Aman ·
+     Camper & Nicholsons · Montfort. Their cream is warmer than v12's. Their
+     ink is charcoal not navy-black. Their hairlines are taupe not slate.
+     Pure white is BANNED. Pure black is BANNED. */
+  --paper:        #F5F1ED; /* Cucinelli warm cream — PRIMARY canvas */
+  --paper-pure:   #FBF8F2; /* Lightest surface — never #fff */
+  --paper-warm:   #E8DFD0; /* Secondary surface — cards on canvas, hover lift */
+  --paper-cream:  #DDD0BB; /* Deepest cream — section dividers, footer band */
+  --surface-card: #9B8B7E; /* Warm taupe — used SPARINGLY for elevated cards */
+  --chrome:       #DCD3C2; /* Cucinelli taupe-grey */
+  --chrome-deep:  #B5A998; /* Mid-tone for 1px hairlines */
+  --silver:       #C8CFD9;
 
-  /* Ink — deep navy-black, single dark moment when needed.
-     v10.3 readability sweep — every ink token darkened so every chunk
-     of text using semantic tokens automatically reads better.
-     --ink-soft: WCAG AAA on white (~12:1)
-     --ink-muted: WCAG AA strong (~6.5:1)
-     --ink-faint: WCAG AA (~4.8:1) — used for stat captions, faded eyebrows */
-  --ink: #0A0E1C;
-  --ink-soft: #1E2538;
-  --ink-muted: #4A5570;
-  --ink-faint: #6B7B95;
+  /* Ink — Cucinelli warm charcoal, NOT navy-black. Their "black" reads
+     as a deep warm brown-grey (#2B2621), not as cool slate. Every ink
+     token is warm-toned to harmonise with the cream surface. */
+  --ink:       #2B2621;  /* Warm charcoal — primary type */
+  --ink-soft:  #4A413A;  /* Body type at scale */
+  --ink-muted: #7C7268;  /* Secondary copy, labels */
+  --ink-faint: #A89D8E;  /* Captions, eyebrows, faded mono labels */
 
-  /* v11 PRIMARY accent — warm gold (Knight Frank Dubai / Bulgari Hotel
-     register, the UHNW Gulf signal). Promoted from v10 tertiary.
-     Used for: brand mark, primary CTAs, editorial accent words,
-     section eyebrows, heritage callouts. */
-  --gold: #C9A961;
-  --gold-deep: #A88945;
-  --gold-bright: #E0C076;
-  --gold-rich: #B8943D;
-  --gold-soft: rgba(201, 169, 97, 0.12);
-  --gold-glow: rgba(201, 169, 97, 0.35);
+  /* v13 — Cucinelli brass. Slightly deeper than v12 gold so it reads
+     against the warmer cream. The ONLY visible accent — must touch
+     ≤3% of total pixels per viewport (Cartier/Aman/Cucinelli rule).
+     Used on: brand mark, primary CTA, editorial italic accents, 1px hairlines.
+     NEVER used on body links, NEVER as a fill, NEVER on backgrounds. */
+  --gold:        #C9A961; /* The brand brass — kept */
+  --gold-deep:   #A8854B; /* Slightly deeper than v12 for restraint */
+  --gold-bright: #DCBE7A; /* Highlights only */
+  --gold-rich:   #8B6F33; /* Deepest — for cream-on-cream hairlines */
+  --gold-soft:   rgba(201, 169, 97, 0.10);
+  --gold-glow:   rgba(201, 169, 97, 0.22);
 
-  /* v11 SECONDARY surface — warm cream for editorial moments
-     (Aman / Brunello Cucinelli serif-on-cream register). */
-  --paper-warm: #F9F6F0;
-  --paper-cream: #F5EFE3;
+  /* v12 — paper-warm / paper-cream moved up into the primary surface block
+     above. The duplicates here are retained as semantic aliases so legacy
+     references keep working. Both resolve to the editorial cream register. */
 
   /* v11 EXPLICIT navy — same as --ink but semantic for hero backdrop
      + footer + the single dark moments. */
@@ -92,13 +96,21 @@
   --grad-navy: linear-gradient(180deg, #050817 0%, #0A1024 50%, #141A2C 100%);
   --grad-aurora: linear-gradient(135deg, rgba(201, 169, 97, 0.3), rgba(248, 250, 252, 0.15), rgba(184, 148, 61, 0.2));
 
-  /* Shadows */
-  --shadow-gold: 0 0 40px rgba(201, 169, 97, 0.28), 0 0 80px rgba(168, 137, 69, 0.12);
-  --shadow-gold-glow: 0 0 60px rgba(201, 169, 97, 0.4), 0 0 120px rgba(168, 137, 69, 0.18);
-  --shadow-holo: 0 0 40px rgba(0, 188, 212, 0.28), 0 0 80px rgba(0, 145, 234, 0.12);
-  --shadow-card: 0 24px 60px -16px rgba(10, 16, 36, 0.10), 0 0 0 1px var(--chrome-deep);
-  --shadow-glass: 0 8px 40px rgba(10, 16, 36, 0.08), 0 0 0 1px rgba(184, 194, 208, 0.4);
-  --shadow-editorial: 0 32px 80px -24px rgba(10, 16, 36, 0.18), 0 0 0 1px rgba(184, 194, 208, 0.5);
+  /* v12 SOTM RESET — shadows.
+     SOTM rule: NO drop-shadows. Elevation comes from color + 1px hairlines + scale,
+     never from box-shadow. The legacy tokens below are demoted to "barely-there"
+     hairlines for backward compat — any component still requesting them gets a
+     1px gold/ink hairline instead of a chunky shadow. The legacy big-shadow
+     names are KEPT (so we don't break 30 components) but their values are flat. */
+  --shadow-gold: 0 0 0 1px var(--gold-soft);
+  --shadow-gold-glow: 0 0 0 1px var(--gold);
+  --shadow-holo: 0 0 0 1px var(--holo-soft);
+  --shadow-card: 0 0 0 1px var(--chrome-deep);
+  --shadow-glass: 0 0 0 1px rgba(196, 187, 168, 0.35);
+  --shadow-editorial: 0 0 0 1px rgba(196, 187, 168, 0.5);
+
+  /* The only "real" elevation token in v12 — used sparingly, never on every card */
+  --shadow-lift: 0 1px 0 var(--paper-pure) inset, 0 0 0 1px var(--chrome-deep);
 
   /* Semantic */
   --background: var(--paper);
@@ -111,10 +123,15 @@
   --radius-lg: 40px;
   --pad: clamp(1rem, 4vw, 4rem);
 
-  /* Ease curves */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-elastic: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ease curves — v12 SOTM RESET.
+     SOTM rule from Oryzo: ease only, never spring/bounce.
+     --ease-elastic legacy token is REMAPPED to expoOut so nothing overshoots,
+     while still keeping the variable name alive for legacy references. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);            /* expoOut — the default */
+  --ease-display: cubic-bezier(0.25, 1, 0.5, 1);        /* expoOut-tight — for headlines */
+  --ease-elastic: cubic-bezier(0.16, 1, 0.3, 1);        /* DEMOTED — no more bounce */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);          /* Material standard */
+  --ease-curtain: cubic-bezier(0.86, 0, 0.07, 1);       /* For page-transition wipes */
 
   /* Font aliases */
   --font-display: var(--font-space-grotesk);
@@ -205,7 +222,9 @@ body {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
-   Cursor — cyan-holo, mix-blend on dark sections only
+   v12 SOTM CURSOR — 8px filled dot + 32px outline ring that lags behind,
+   plus an optional centered label that fades in over interactive elements
+   ([data-cursor-label="text"]). Pattern lifted from Cartier W&W + Oryzo.
    ──────────────────────────────────────────────────────────────────────── */
 .cursor-dot,
 .cursor-ring {
@@ -219,37 +238,80 @@ body {
   border-radius: 50%;
 }
 .cursor-dot {
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
-  margin-top: -3px;
-  background: var(--gold);
-  box-shadow: 0 0 8px var(--gold-glow);
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  margin-top: -3.5px;
+  background: var(--gold-deep);
+  mix-blend-mode: multiply;
 }
 .cursor-ring {
   width: 32px;
   height: 32px;
   margin-left: -16px;
   margin-top: -16px;
-  border: 1px solid var(--gold);
-  opacity: 0.6;
-  transition: width 240ms var(--ease-out), height 240ms var(--ease-out),
-    margin 240ms var(--ease-out), border-color 240ms var(--ease-out),
-    background 240ms var(--ease-out), box-shadow 240ms var(--ease-out),
+  border: 1px solid var(--gold-deep);
+  opacity: 0.55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--paper-pure);
+  background: transparent;
+  transition: width 360ms var(--ease-display),
+    height 360ms var(--ease-display),
+    margin 360ms var(--ease-display),
+    border-color 240ms var(--ease-out),
+    background 360ms var(--ease-display),
     opacity 240ms var(--ease-out);
+  overflow: hidden;
 }
 .cursor-ring--hover {
   width: 56px;
   height: 56px;
   margin-left: -28px;
   margin-top: -28px;
-  background: var(--gold-soft);
-  box-shadow: var(--shadow-gold);
+  border-color: var(--gold);
   opacity: 1;
 }
-[data-section="dark"] .cursor-dot,
+/* Label mode — only kicks in when [data-cursor-label] is set; ring grows wider */
+.cursor-ring--label {
+  width: 96px;
+  height: 96px;
+  margin-left: -48px;
+  margin-top: -48px;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper-pure);
+  opacity: 1;
+}
+.cursor-ring__label {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 240ms var(--ease-out) 80ms,
+    transform 360ms var(--ease-display) 80ms;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.cursor-ring--label .cursor-ring__label {
+  opacity: 1;
+  transform: translateY(0);
+}
+[data-section="dark"] .cursor-dot {
+  background: var(--gold-bright);
+  mix-blend-mode: normal;
+}
 [data-section="dark"] .cursor-ring {
-  mix-blend-mode: difference;
+  border-color: var(--gold-bright);
+  color: var(--ink);
+}
+[data-section="dark"] .cursor-ring--label {
+  background: var(--paper-pure);
+  border-color: var(--paper-pure);
+  color: var(--ink);
 }
 @media (hover: hover) and (pointer: fine) {
   body.has-custom-cursor,
@@ -298,30 +360,29 @@ body {
   text-transform: uppercase;
   color: var(--ink-muted);
 }
-/* v11 — section eyebrow with gold LED pulse. The .eyebrow-holo class
-   name is kept for backward compat but the COLOR is now gold (primary
-   accent in v11). For genuine live-signal moments (terminal, scroll
-   progress, "now publishing"), use .eyebrow-live instead — that one
-   stays cyan because it actually IS the engine-running indicator. */
+/* v12 SOTM — legacy .eyebrow-holo retargeted to match .editorial-eyebrow-sotm
+   so 30+ components inheriting it get the new register without per-file edits.
+   The pulsing gold dot is replaced with a static 1px gold hairline (Cartier /
+   Montfort pattern). For genuine live-signal moments (terminal, scroll
+   progress, "now publishing"), use .eyebrow-live instead — that one stays
+   cyan because it actually IS the engine-running indicator. */
 .eyebrow-holo {
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.25em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--gold-deep);
+  color: var(--ink-muted);
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 .eyebrow-holo::before {
   content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 22px;
+  height: 1px;
   background: var(--gold);
-  box-shadow: 0 0 10px var(--gold-glow);
-  animation: gold-pulse 2.4s ease-in-out infinite;
+  flex-shrink: 0;
 }
 @keyframes gold-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -541,14 +602,13 @@ body {
 }
 .btn-paper:hover { background: var(--chrome); }
 
-/* Ghost — secondary CTA with holo hover */
+/* Ghost — secondary CTA. Flat warm cream, draws gold hairline on hover. */
 .btn-ghost {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.95rem 1.45rem;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
+  background: var(--paper-pure);
   color: var(--ink);
   font-family: var(--font-body), system-ui, sans-serif;
   font-size: 0.875rem;
@@ -556,17 +616,28 @@ body {
   border: 1px solid var(--chrome-deep);
   border-radius: 999px;
   cursor: pointer;
-  transition: background 220ms var(--ease-out),
-    border-color 220ms var(--ease-out), color 220ms var(--ease-out),
-    transform 220ms var(--ease-out);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 360ms var(--ease-out), color 360ms var(--ease-out),
+    transform 360ms var(--ease-out);
 }
+.btn-ghost::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--gold-soft);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 440ms var(--ease-display);
+  z-index: 0;
+  pointer-events: none;
+}
+.btn-ghost > * { position: relative; z-index: 1; }
 .btn-ghost:hover {
-  background: var(--paper-pure);
   border-color: var(--gold);
   color: var(--gold-deep);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px -8px var(--gold-glow);
 }
+.btn-ghost:hover::after { transform: scaleX(1); }
 
 /* Holo text link with cyan underline */
 .link-holo {
@@ -659,32 +730,49 @@ body {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
-   Glass card — backdrop blur + saturate, future-office aesthetic.
-   v10.2: opacity bumped 0.7 → 0.88 so card text is always readable
-   even on busy backgrounds (3D wireframes, gradients, etc.).
+   v12 SOTM RESET — Glass card.
+   SOTM sites (Cartier, Oryzo, Montfort, Terminal, Lando) use ZERO glass.
+   Glass cards read "template, 2022". v12 replaces frosted blur with a
+   flat warm-cream surface separated by a single 1px hairline. Hover
+   draws-in a gold hairline left→right (clip-path) instead of growing
+   a shadow. Backdrop-filter is preserved only on the .glass-card-legacy
+   opt-in for any component that genuinely needs blur (rare).
    ──────────────────────────────────────────────────────────────────────── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--paper-pure);
+  border: 1px solid var(--chrome-deep);
+  border-radius: var(--radius);
+  transition: border-color 360ms var(--ease-out), transform 360ms var(--ease-out);
+  position: relative;
+}
+.glass-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid var(--gold);
+  opacity: 0;
+  transition: opacity 360ms var(--ease-out);
+}
+.glass-card:hover {
+  border-color: var(--gold);
+}
+.glass-card:hover::after { opacity: 1; }
+
+/* Legacy opt-in: any component that REALLY needs blur (extremely rare) */
+.glass-card-legacy {
+  background: rgba(251, 248, 242, 0.92);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--chrome-deep);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-glass);
-  transition: transform 320ms var(--ease-out), border-color 320ms ease,
-    box-shadow 320ms var(--ease-out);
-}
-.glass-card:hover {
-  border-color: var(--gold);
-  box-shadow: var(--shadow-gold), 0 24px 60px -16px rgba(10, 16, 36, 0.12);
 }
 
-/* Glass nav — sticky, hide-on-scroll */
+/* Glass nav — flattened. No blur. Just warm cream + 1px hairline divider. */
 .glass-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: var(--paper-pure);
   border: 1px solid var(--chrome-deep);
-  box-shadow: 0 8px 32px rgba(10, 14, 28, 0.06);
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -804,23 +892,29 @@ body {
    ──────────────────────────────────────────────────────────────────────── */
 .bento {
   position: relative;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: var(--paper-pure);
   border-radius: var(--radius);
   padding: 2rem;
   border: 1px solid var(--chrome-deep);
   overflow: hidden;
-  transition: transform 320ms var(--ease-out),
-    box-shadow 320ms var(--ease-out), border-color 320ms ease;
+  transition: transform 360ms var(--ease-out), border-color 360ms var(--ease-out);
   will-change: transform;
 }
-.bento:hover {
-  transform: translateY(-3px);
-  border-color: var(--gold);
-  box-shadow: 0 24px 60px -16px rgba(10, 16, 36, 0.12),
-    0 0 0 1px var(--gold-soft);
+.bento::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid var(--gold);
+  opacity: 0;
+  transition: opacity 360ms var(--ease-out);
 }
+.bento:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+}
+.bento:hover::after { opacity: 1; }
 .bento--quartz {
   background: var(--chrome);
 }
@@ -873,8 +967,7 @@ body {
   letter-spacing: 0.18em;
   color: var(--ink-muted);
   text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
+  background: var(--paper-pure);
 }
 .chip-holo {
   display: inline-flex;
@@ -937,7 +1030,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 9500;
-  background: rgba(248, 250, 252, 0.6);
+  background: rgba(10, 14, 28, 0.42);
   backdrop-filter: blur(8px);
   display: none;
   align-items: flex-start;
@@ -954,13 +1047,10 @@ body {
 }
 .cmdk {
   width: min(92vw, 640px);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(24px) saturate(180%);
+  background: var(--paper-pure);
   border: 1px solid var(--chrome-deep);
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 30px 100px rgba(10, 14, 28, 0.18),
-    0 0 0 1px var(--holo-soft);
 }
 .cmdk-input {
   display: flex;
@@ -1051,3 +1141,258 @@ body {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  v12 SOTM utility suite — appended May 26 2026                          ║
+   ║  Implements the awwwards SOTM punch list:                               ║
+   ║    1. Editorial display type (Fraunces 500, opsz 144, tight leading)    ║
+   ║    2. Split-mask reveals (char + word, expoOut, no spring)              ║
+   ║    3. 35mm film-grain overlay (4-6% opacity, site-wide)                 ║
+   ║    4. Flat editorial surfaces (no glass, no shadows, hairlines only)    ║
+   ║    5. Hover affordances (gold hairline left→right draw-on)              ║
+   ║    6. Magnetic cursor targeting hooks                                    ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
+
+/* ─── 1. Editorial display type ────────────────────────────────────────── */
+
+/* The SOTM headline. Fraunces variable serif, opsz 144 (display optical size),
+   SOFT 50 (refined cut, not the rounder 100), WONK 0 (no quirks). Weight 500
+   only — never 700, never 400. Line-height aggressively tight (0.88-0.92).
+   Letter-spacing slightly negative for editorial tension.
+
+   Use on hero H1, section H2 headlines that should feel masthead-grade.
+   Pair sparingly — three editorial-h1s on one page is too many. */
+.editorial-h1 {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-variation-settings: "SOFT" 50, "opsz" 144, "WONK" 0;
+  font-weight: 500;
+  font-style: normal;
+  line-height: 0.88;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+
+.editorial-h1-italic {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+  font-variation-settings: "SOFT" 50, "opsz" 144, "WONK" 1;
+  font-weight: 500;
+  font-style: italic;
+  line-height: 0.88;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.editorial-h2 {
+  font-family: var(--font-editorial), Georgia, serif;
+  font-variation-settings: "SOFT" 60, "opsz" 100, "WONK" 0;
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+/* SOTM eyebrow — replaces the gold-LED pulse. Smaller, calmer, mono caps,
+   wide tracking. No pulsing dot (saved for genuine live signals). */
+.editorial-eyebrow-sotm {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.editorial-eyebrow-sotm::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: var(--gold);
+  flex-shrink: 0;
+}
+
+/* ─── 2. Split-mask reveals ────────────────────────────────────────────── */
+
+/* Each .split-mask is a one-line container with hidden overflow. The .split-mask__inner
+   inside it is what we animate from translateY(110%) to translateY(0). Pair with the
+   gsap timeline in any component — typical pattern:
+
+     <h1 className="editorial-h1">
+       {words.map((w, i) => (
+         <span className="split-mask" key={i}>
+           <span className="split-mask__inner">{w}</span>
+         </span>
+       ))}
+     </h1>
+
+   The inner span starts hidden (transform: translateY(110%)); the gsap timeline
+   reveals each one with stagger 0.04s, duration 0.9s, ease "expo.out". */
+.split-mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  line-height: inherit;
+}
+.split-mask__inner {
+  display: inline-block;
+  transform: translateY(110%);
+  will-change: transform;
+}
+
+/* Pre-animated state — for elements above the fold that should already
+   be visible when first paint hits (avoids FOUC if JS hasn't loaded yet) */
+.split-mask--ready .split-mask__inner {
+  transform: translateY(0);
+}
+
+/* Word-spacing fix — masked spans collapse normal word-spacing */
+.split-words > .split-mask + .split-mask {
+  margin-left: 0.22em;
+}
+
+/* ─── 3. 35mm film grain overlay ───────────────────────────────────────── */
+
+/* Site-wide film-grain layer. ~4% opacity, fractal noise generated inline
+   via an SVG turbulence filter, mix-blended on top of everything.
+   Adds analog film weight to flat digital surfaces — the single most
+   under-appreciated SOTM tell. */
+.film-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 8500;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/></svg>");
+  background-size: 200px 200px;
+  background-repeat: repeat;
+}
+.film-grain--strong { opacity: 0.07; }
+.film-grain--subtle { opacity: 0.025; }
+
+/* ─── 4. Editorial flat surfaces ───────────────────────────────────────── */
+
+.surface-paper { background: var(--paper); }
+.surface-cream { background: var(--paper-warm); }
+.surface-cream-deep { background: var(--paper-cream); }
+.surface-pure { background: var(--paper-pure); }
+.surface-ink { background: var(--ink); color: var(--paper); }
+.surface-navy { background: var(--navy); color: var(--paper); }
+
+/* Hairline — 1px gold divider, used for sectional separation.
+   Replaces every chunky shadow with a single editorial rule. */
+.hairline {
+  height: 1px;
+  background: var(--chrome-deep);
+  border: 0;
+}
+.hairline-gold {
+  height: 1px;
+  background: var(--gold-soft);
+  border: 0;
+}
+.hairline-strong {
+  height: 1px;
+  background: var(--ink);
+  border: 0;
+}
+.hairline-v { width: 1px; height: 100%; background: var(--chrome-deep); }
+.hairline-v-gold { width: 1px; height: 100%; background: var(--gold-soft); }
+
+/* Hard reset for any component that still inherits chunky shadows */
+.no-shadow { box-shadow: none !important; }
+.no-glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ─── 5. Hover affordance — gold hairline draw-on ──────────────────────── */
+
+/* Apply to any anchor or button that should feel SOTM-grade. The hairline
+   underline draws-in from left to right on hover (440ms, expoOut). */
+.affordance-hairline {
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+  padding-bottom: 4px;
+}
+.affordance-hairline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--gold);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 440ms var(--ease-display);
+}
+.affordance-hairline:hover::after {
+  transform: scaleX(1);
+}
+
+/* ─── 6. Magnetic targeting hook ───────────────────────────────────────── */
+
+/* [data-magnetic] elements are tagged for the magnetic-cursor system. The
+   actual JS lives in lib/motion.ts (useMagnetic hook); this just gives them
+   a visual cursor affordance (slight enlarge + gold dot) when hovered. */
+[data-magnetic] {
+  position: relative;
+  transition: transform 360ms var(--ease-display);
+  will-change: transform;
+}
+
+/* ─── 7. SOTM scroll-cue ───────────────────────────────────────────────── */
+
+/* Tiny vertical line that breathes — replaces "SCROLL" badge */
+.scroll-cue {
+  width: 1px;
+  height: 64px;
+  position: relative;
+  overflow: hidden;
+  background: var(--chrome-deep);
+}
+.scroll-cue::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  animation: scroll-cue-fill 2.4s var(--ease-display) infinite;
+  transform-origin: top center;
+}
+@keyframes scroll-cue-fill {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  35%  { transform: scaleY(1); transform-origin: top; }
+  60%  { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ─── 8. Editorial number style ────────────────────────────────────────── */
+
+/* Big counter numbers for stat reveals. Mono digits, tighter leading,
+   negative letter-spacing. */
+.num-sotm {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "lnum";
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+/* ─── 9. Curtain transition (Wave 4 prep) ──────────────────────────────── */
+
+/* Used by future PageCurtain component for route changes */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 9700;
+  background: var(--ink);
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+.curtain-down { transform: translateY(0); transition: transform 700ms var(--ease-curtain); }
+.curtain-up   { transform: translateY(100%); transition: transform 700ms var(--ease-curtain); }

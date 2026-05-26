@@ -4,9 +4,11 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE, CONTACT } from "@/lib/constants";
 import { ConsentRoot } from "@/components/consent/ConsentRoot";
-import { MagneticCursor } from "@/components/futurism/MagneticCursor";
+import CustomCursor from "@/components/CustomCursor";
 import { FxProvider } from "@/components/ticker/FxProvider";
 import { DldTicker } from "@/components/ticker/DldTicker";
+import PageLoadCurtain from "@/components/PageLoadCurtain";
+import AmbientAudio from "@/components/AmbientAudio";
 import "./globals.css";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
@@ -190,20 +192,28 @@ export default function RootLayout({
       </head>
 
       <body className="min-h-full flex flex-col">
+        {/* v13 SOTY — page-load curtain. RT monogram strokes draw on,
+            then curtain wipes up over ~1.9s on first paint. */}
+        <PageLoadCurtain />
+
         <FxProvider>
           {/* DLD daily-pulse ticker — Bloomberg-style strip pinned to top */}
           <DldTicker />
 
           {children}
         </FxProvider>
+
+        {/* v13 SOTY — cursor system with [data-cursor-label] + magnetic */}
+        <CustomCursor />
+
+        {/* v13 SOTY — Web Audio ambient toggle, Cartier W&W pattern */}
+        <AmbientAudio />
+
+        {/* v12 SOTM — 35mm film-grain overlay, ~4% opacity, multiply blend */}
+        <div className="film-grain" aria-hidden="true" />
+
         <Analytics />
         <SpeedInsights />
-
-        {/* Magnetic cursor — desktop only, auto-skips touch + reduced-motion */}
-        <MagneticCursor />
-
-        {/* Voice Mode removed per user request (Block 4.3 reverted).
-            Component still lives at components/voice/VoiceMode.tsx if needed later. */}
 
         {/* GDPR/PDPL consent banner + 8-pixel network loader (gated by consent) */}
         <ConsentRoot />
