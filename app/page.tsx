@@ -5,10 +5,11 @@ import { AuroraBackground } from "@/components/futurism/AuroraBackground";
 import { CurrencyPicker } from "@/components/ticker/FxProvider";
 import { AuthorBrand } from "@/components/homepage/AuthorBrand";
 import { VerticalsBento } from "@/components/homepage/VerticalsBento";
-import { DubaiSkyline3DLoader } from "@/components/futurism/DubaiSkyline3DLoader";
 import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
 import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
 import MaterialDivider from "@/components/MaterialDivider";
+import FrameScroll from "@/components/FrameScroll";
+import { MANIFESTS } from "@/lib/frame-manifest";
 
 /**
  * news.investwithraj.com homepage — Block 3 Wave 4.
@@ -121,10 +122,17 @@ function Hero() {
       className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden gold-mesh-hero"
       style={{ background: "var(--paper-warm)" }}
     >
-      {/* F2 — procedural 3D Dubai skyline. Time-of-day responsive (UAE local).
-          Sits behind everything. ~150 KB lazy-loaded three.js bundle. */}
+      {/* v14 Draftly — replaced DubaiSkyline3DLoader (Three.js procedural)
+          with a FrameScroll cinematic aerial. Zero GPU dependency. 320 WebP
+          frames (Nelemson G, Pexels Videos #31942008, Dubai skyline aerial
+          sunset). */}
       <div className="absolute inset-0 z-0">
-        <DubaiSkyline3DLoader height="100svh" />
+        <FrameScroll
+          manifest={MANIFESTS.hero}
+          scrollHeight={1}
+          fit="cover"
+          className="absolute inset-0"
+        />
       </div>
 
       {/* F12 — aurora overlay layered above skyline for soft brand wash */}
