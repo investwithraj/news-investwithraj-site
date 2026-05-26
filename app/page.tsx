@@ -6,6 +6,7 @@ import { CurrencyPicker } from "@/components/ticker/FxProvider";
 import { AuthorBrand } from "@/components/homepage/AuthorBrand";
 import { VerticalsBento } from "@/components/homepage/VerticalsBento";
 import { DubaiSkyline3DLoader } from "@/components/futurism/DubaiSkyline3DLoader";
+import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
 
 /**
  * news.investwithraj.com homepage — Block 3 Wave 4.
@@ -25,9 +26,72 @@ export default function Home() {
     <main>
       <Hero />
       <AuthorBrand />
+      <CapitalFlowSection />
       <VerticalsBento />
       <CrossLink />
     </main>
+  );
+}
+
+function CapitalFlowSection() {
+  return (
+    <section
+      className="relative py-20 md:py-28 overflow-hidden"
+      style={{ background: "var(--navy)", color: "var(--paper)" }}
+    >
+      <div className="max-w-[1240px] mx-auto px-6 md:px-10 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+        <div className="lg:col-span-5 order-2 lg:order-1">
+          <span
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.22em]"
+            style={{
+              background: "rgba(201, 169, 97, 0.18)",
+              color: "var(--gold-bright, #E0C076)",
+              border: "1px solid rgba(201, 169, 97, 0.35)",
+            }}
+          >
+            <span className="w-1 h-1 rounded-full" style={{ background: "var(--gold-bright, #E0C076)" }} />
+            Capital flow · live
+          </span>
+          <KineticHeadline
+            as="h2"
+            className="mt-6 leading-[1.05] tracking-[-0.025em]"
+            style={{
+              color: "var(--paper)",
+              fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
+              fontWeight: 500,
+            }}
+          >
+            Where the{" "}
+            <span className="editorial-italic" style={{ color: "var(--gold-bright, #E0C076)" }}>
+              UAE money
+            </span>{" "}
+            comes from.
+          </KineticHeadline>
+          <p
+            className="mt-6 text-base md:text-lg leading-[1.65] max-w-[44ch]"
+            style={{ color: "rgba(248, 250, 252, 0.78)" }}
+          >
+            Every dot is a buyer-nationality lane feeding into Dubai land
+            registry prints. Comet brightness ≈ DLD volume share. Live data
+            wires up when the DLD nationality feed is connected.
+          </p>
+          <div
+            className="mt-8 grid grid-cols-2 gap-4 text-xs font-mono uppercase tracking-[0.16em]"
+            style={{ color: "rgba(248, 250, 252, 0.55)" }}
+          >
+            <span>India · #1 buyer</span>
+            <span>UK · #2</span>
+            <span>Russia · #3</span>
+            <span>Pakistan · #4</span>
+            <span>China · #5</span>
+            <span>+ 5 more</span>
+          </div>
+        </div>
+        <div className="lg:col-span-7 order-1 lg:order-2">
+          <CapitalFlowGlobeLoader height="560px" />
+        </div>
+      </div>
+    </section>
   );
 }
 
