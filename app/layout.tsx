@@ -4,6 +4,9 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE, CONTACT } from "@/lib/constants";
 import { ConsentRoot } from "@/components/consent/ConsentRoot";
+import { MagneticCursor } from "@/components/futurism/MagneticCursor";
+import { FxProvider } from "@/components/ticker/FxProvider";
+import { DldTicker } from "@/components/ticker/DldTicker";
 import "./globals.css";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
@@ -180,9 +183,17 @@ export default function RootLayout({
       </head>
 
       <body className="min-h-full flex flex-col">
-        {children}
+        <FxProvider>
+          {/* DLD daily-pulse ticker — Bloomberg-style strip pinned to top */}
+          <DldTicker />
+
+          {children}
+        </FxProvider>
         <Analytics />
         <SpeedInsights />
+
+        {/* Magnetic cursor — desktop only, auto-skips touch + reduced-motion */}
+        <MagneticCursor />
 
         {/* GDPR/PDPL consent banner + 8-pixel network loader (gated by consent) */}
         <ConsentRoot />

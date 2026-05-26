@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { SITE, CONTACT, rootCtaUrl } from "@/lib/constants";
+import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import { AuroraBackground } from "@/components/futurism/AuroraBackground";
+import { CurrencyPicker } from "@/components/ticker/FxProvider";
 
 /**
  * news.investwithraj.com homepage — v11 design system, Block 1 scaffold.
@@ -29,6 +32,9 @@ function Hero() {
       className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden gold-mesh-hero"
       style={{ background: "var(--paper-warm)" }}
     >
+      {/* F12 — animated aurora background, blurred + low opacity */}
+      <AuroraBackground opacity={0.5} />
+
       {/* Top eyebrow */}
       <div className="relative z-20 w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-24 md:pt-28 flex justify-center">
         <div
@@ -47,13 +53,13 @@ function Hero() {
 
       {/* Main composition */}
       <div className="relative z-20 flex-1 w-full max-w-[980px] mx-auto px-6 md:px-12 flex flex-col items-center justify-center text-center -mt-10">
-        <h1
-          className="tracking-[-0.04em] leading-[0.95]"
+        {/* F11 — kinetic Fraunces variable headline. SOFT axis morphs on scroll-in. */}
+        <KineticHeadline
+          className="leading-[0.95]"
           style={{
             color: "var(--ink)",
             fontSize: "clamp(2.75rem, 8vw, 7rem)",
             fontWeight: 500,
-            fontFamily: "var(--font-body), system-ui, sans-serif",
             maxWidth: "18ch",
           }}
         >
@@ -65,7 +71,7 @@ function Hero() {
             UAE real-estate
           </span>{" "}
           read.
-        </h1>
+        </KineticHeadline>
 
         <p
           className="mt-8 md:mt-10 text-base md:text-xl leading-relaxed max-w-2xl"
@@ -87,6 +93,7 @@ function Hero() {
             rel="noopener noreferrer"
             className="btn-graphite group"
             data-cursor="active"
+            data-magnetic
           >
             <span>Subscribe to Beyond the Deal</span>
             <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
@@ -97,6 +104,7 @@ function Hero() {
             href={rootCtaUrl({ campaign: "subdomain-hero", content: "request-note" })}
             className="btn-ghost group"
             data-cursor="active"
+            data-magnetic
           >
             <span>Request the current Note</span>
             <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
@@ -137,8 +145,9 @@ function ComingSoon() {
           <span className="eyebrow-holo justify-center" style={{ display: "inline-flex" }}>
             What's coming
           </span>
-          <h2
-            className="editorial-display mt-6 tracking-[-0.025em]"
+          <KineticHeadline
+            as="h2"
+            className="editorial-display mt-6"
             style={{
               color: "var(--ink)",
               fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
@@ -146,7 +155,7 @@ function ComingSoon() {
             }}
           >
             A daily firehose, verified-source-first.
-          </h2>
+          </KineticHeadline>
 
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 text-left">
             <Stat num="5–15" unit="articles/day" label="Curated · cited · investor-grade" />
@@ -196,8 +205,9 @@ function CrossLink() {
         <span className="eyebrow-holo justify-center" style={{ display: "inline-flex" }}>
           The home page
         </span>
-        <h2
-          className="editorial-display mt-6 tracking-[-0.025em]"
+        <KineticHeadline
+          as="h2"
+          className="editorial-display mt-6"
           style={{
             color: "var(--ink)",
             fontSize: "clamp(1.75rem, 4vw, 3rem)",
@@ -209,10 +219,11 @@ function CrossLink() {
             href={rootCtaUrl({ campaign: "subdomain-footer", content: "back-to-iwr" })}
             className="editorial-italic text-gold-grad"
             data-cursor="active"
+            data-magnetic
           >
             investwithraj.com
           </Link>
-        </h2>
+        </KineticHeadline>
       </div>
 
       <footer
@@ -224,6 +235,7 @@ function CrossLink() {
             © 2026 Raj Tomar
           </span>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2" style={{ color: "var(--ink-muted)" }}>
+            <CurrencyPicker />
             <Link
               href={`${SITE.rootUrl}/legal/privacy`}
               className="transition-colors hover:text-[var(--gold-deep)]"
