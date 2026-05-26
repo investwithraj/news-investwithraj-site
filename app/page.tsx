@@ -3,24 +3,28 @@ import { SITE, CONTACT, rootCtaUrl } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import { AuroraBackground } from "@/components/futurism/AuroraBackground";
 import { CurrencyPicker } from "@/components/ticker/FxProvider";
+import { AuthorBrand } from "@/components/homepage/AuthorBrand";
+import { VerticalsBento } from "@/components/homepage/VerticalsBento";
 
 /**
- * news.investwithraj.com homepage — v11 design system, Block 1 scaffold.
+ * news.investwithraj.com homepage — Block 3 Wave 4.
  *
- * Day-1 state: editorial holding page with the v11 visual register +
- * cross-links to IWR root. Real content firehose (5-15 articles/day,
- * Postiz distribution, Listmonk digest) ships in Block 2.
+ * Restructured from "latest articles" feed into a Puck / Information /
+ * Mansion Global author-as-brand layout:
  *
- * The hero sets the brand premise. Below it: a single "Coming
- * imminently" status card + lead-back to IWR + LinkedIn newsletter.
- * This is enough to ship + get the subdomain indexed on Day-1 while
- * Block 2's content pipeline gets built.
+ *   1. Hero        — brand promise, kinetic Fraunces, magnetic CTAs
+ *   2. AuthorBrand — Raj's masthead, credentials, the operator identity
+ *   3. Verticals   — 5-card bento grid (DLD Pulse / Off-Plan Watch /
+ *                    UHNW Trades / Sovereign Plays / Beyond the Deal)
+ *   4. CrossLink   — back to investwithraj.com for the Note + mandates
+ *   5. Footer      — links + currency picker
  */
 export default function Home() {
   return (
     <main>
       <Hero />
-      <ComingSoon />
+      <AuthorBrand />
+      <VerticalsBento />
       <CrossLink />
     </main>
   );
@@ -32,7 +36,7 @@ function Hero() {
       className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden gold-mesh-hero"
       style={{ background: "var(--paper-warm)" }}
     >
-      {/* F12 — animated aurora background, blurred + low opacity */}
+      {/* F12 — animated aurora background */}
       <AuroraBackground opacity={0.5} />
 
       {/* Top eyebrow */}
@@ -53,7 +57,7 @@ function Hero() {
 
       {/* Main composition */}
       <div className="relative z-20 flex-1 w-full max-w-[980px] mx-auto px-6 md:px-12 flex flex-col items-center justify-center text-center -mt-10">
-        {/* F11 — kinetic Fraunces variable headline. SOFT axis morphs on scroll-in. */}
+        {/* F11 — kinetic Fraunces variable headline */}
         <KineticHeadline
           className="leading-[0.95]"
           style={{
@@ -113,82 +117,11 @@ function Hero() {
           </Link>
         </div>
 
-        {/* Status pill — "publishing imminently" */}
+        {/* Status pill */}
         <div className="mt-14 inline-flex items-center gap-3">
           <span className="eyebrow-live">
             <span>Publishing imminently</span>
           </span>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ComingSoon() {
-  return (
-    <section
-      className="relative py-24 md:py-32"
-      style={{ background: "var(--paper)" }}
-    >
-      <div className="relative max-w-[1080px] mx-auto px-6 md:px-12">
-        <div
-          className="rounded-3xl p-10 md:p-16 text-center"
-          style={{
-            background: "rgba(255, 255, 255, 0.92)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            border: "1px solid var(--gold-soft)",
-            boxShadow:
-              "0 8px 32px rgba(10, 16, 36, 0.06), 0 0 0 1px rgba(201, 169, 97, 0.18)",
-          }}
-        >
-          <span className="eyebrow-holo justify-center" style={{ display: "inline-flex" }}>
-            What's coming
-          </span>
-          <KineticHeadline
-            as="h2"
-            className="editorial-display mt-6"
-            style={{
-              color: "var(--ink)",
-              fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
-              fontWeight: 500,
-            }}
-          >
-            A daily firehose, verified-source-first.
-          </KineticHeadline>
-
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 text-left">
-            <Stat num="5–15" unit="articles/day" label="Curated · cited · investor-grade" />
-            <Stat num="20+" unit="Tier-1 sources" label="DLD · RERA · Knight Frank · JLL · CBRE · Savills" />
-            <Stat num="14" unit="distribution channels" label="LinkedIn · X · IG · Threads · TikTok · YouTube" />
-          </div>
-
-          <p
-            className="mt-12 max-w-2xl mx-auto text-base md:text-lg leading-relaxed"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            Subscribe to{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
-              Beyond the Deal
-            </span>{" "}
-            on LinkedIn to be among the first to receive the daily digest
-            when it goes live.
-          </p>
-
-          <div className="mt-8">
-            <a
-              href={CONTACT.linkedinNewsletter}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-graphite group inline-flex"
-              data-cursor="active"
-            >
-              <span>Subscribe on LinkedIn</span>
-              <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
-                ↗
-              </span>
-            </a>
-          </div>
         </div>
       </div>
     </section>
@@ -263,37 +196,5 @@ function CrossLink() {
         </div>
       </footer>
     </section>
-  );
-}
-
-function Stat({ num, unit, label }: { num: string; unit: string; label: string }) {
-  return (
-    <div className="flex flex-col gap-2 pl-5 border-l" style={{ borderColor: "var(--gold-soft)" }}>
-      <div className="flex items-baseline gap-2 flex-wrap">
-        <span
-          className="tracking-[-0.04em] leading-none"
-          style={{
-            color: "var(--ink)",
-            fontSize: "clamp(2rem, 3.5vw, 3rem)",
-            fontWeight: 500,
-            fontFamily: "var(--font-body), sans-serif",
-          }}
-        >
-          {num}
-        </span>
-        <span
-          className="font-mono text-[0.65rem] tracking-[0.2em] uppercase"
-          style={{ color: "var(--gold-deep)" }}
-        >
-          {unit}
-        </span>
-      </div>
-      <span
-        className="font-mono text-[0.65rem] tracking-[0.18em] uppercase mt-1"
-        style={{ color: "var(--ink-muted)" }}
-      >
-        {label}
-      </span>
-    </div>
   );
 }
