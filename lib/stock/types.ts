@@ -4,7 +4,8 @@ export type StockSource =
   | "unsplash"
   | "pexels"
   | "wikimedia"
-  | "pixabay";
+  | "pixabay"
+  | "imagen";
 
 export interface StockImage {
   /** Direct URL to the image (large size, JPG/WEBP) */
