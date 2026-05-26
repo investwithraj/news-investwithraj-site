@@ -5,6 +5,7 @@ import { AuroraBackground } from "@/components/futurism/AuroraBackground";
 import { CurrencyPicker } from "@/components/ticker/FxProvider";
 import { AuthorBrand } from "@/components/homepage/AuthorBrand";
 import { VerticalsBento } from "@/components/homepage/VerticalsBento";
+import { DubaiSkyline3DLoader } from "@/components/futurism/DubaiSkyline3DLoader";
 
 /**
  * news.investwithraj.com homepage — Block 3 Wave 4.
@@ -36,8 +37,24 @@ function Hero() {
       className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden gold-mesh-hero"
       style={{ background: "var(--paper-warm)" }}
     >
-      {/* F12 — animated aurora background */}
-      <AuroraBackground opacity={0.5} />
+      {/* F2 — procedural 3D Dubai skyline. Time-of-day responsive (UAE local).
+          Sits behind everything. ~150 KB lazy-loaded three.js bundle. */}
+      <div className="absolute inset-0 z-0">
+        <DubaiSkyline3DLoader height="100svh" />
+      </div>
+
+      {/* F12 — aurora overlay layered above skyline for soft brand wash */}
+      <AuroraBackground opacity={0.32} />
+
+      {/* Readability gradient so headline pops over the 3D scene */}
+      <div
+        aria-hidden
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(249, 246, 240, 0.65) 0%, rgba(249, 246, 240, 0.25) 38%, rgba(249, 246, 240, 0.55) 78%, rgba(249, 246, 240, 0.95) 100%)",
+        }}
+      />
 
       {/* Top eyebrow */}
       <div className="relative z-20 w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-24 md:pt-28 flex justify-center">
