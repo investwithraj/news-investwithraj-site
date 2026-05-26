@@ -19,7 +19,11 @@ import { getNewsBySlug } from "@/content/news";
 import { findBestStockImage, triggerUnsplashDownload } from "@/lib/stock/providers";
 import { buildQueryForArticle } from "@/lib/stock/query-builder";
 
-export const runtime = "edge";
+// Node runtime (not edge) because the stock provider chain transitively
+// imports google-auth-library (Vertex AI Imagen fallback) which uses
+// Node-only modules. Node cold-start ~150-300ms vs edge ~30-80ms —
+// acceptable since OG images cache aggressively at the CDN.
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
