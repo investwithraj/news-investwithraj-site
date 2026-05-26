@@ -49,13 +49,26 @@ export default function PageLoadCurtain() {
   return (
     <div
       aria-hidden="true"
-      className="fixed inset-0 z-[9700] flex items-center justify-center pointer-events-none"
+      className="fixed inset-0 z-[9700] flex items-center justify-center pointer-events-none overflow-hidden"
       style={{
         background: "var(--ink)",
         transform: phase === "up" ? "translateY(-100%)" : "translateY(0)",
         transition: "transform 800ms var(--ease-curtain)",
       }}
     >
+      {/* v14.4 — Higgsfield brass-monogram backdrop. RT embossed in
+          polished brass, slow catchlight rotation. Silent autoplay. */}
+      <video
+        src="/cinema/raw/08-brass-monogram.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ opacity: 0.45 }}
+      />
       <svg
         viewBox="0 0 200 120"
         className="w-32 md:w-44 h-auto"
