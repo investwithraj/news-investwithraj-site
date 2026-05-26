@@ -53,8 +53,9 @@ export async function searchUnsplash(
     if (!res.ok) return [];
     const data = (await res.json()) as {
       results?: Array<{
+        id: string;
         urls: { full: string; regular: string; small: string };
-        links: { html: string };
+        links: { html: string; download_location: string };
         user: { name: string; links: { html: string } };
         width: number;
         height: number;
@@ -73,6 +74,9 @@ export async function searchUnsplash(
         height: r.height,
         source: "unsplash" as const,
         alt: r.alt_description || opts.query,
+        photographerUrl: r.user.links.html,
+        downloadTriggerUrl: r.links.download_location,
+        sourceId: r.id,
       }));
   } catch {
     return [];
@@ -272,6 +276,40 @@ export async function searchPixabay(
   } catch {
     return [];
   }
+}
+
+/**
+ * Trigger an Unsplash download event. Required by the Unsplash API guidelines
+ * whenever a photo is actually "used" (displayed to end users, rendered into
+ * a final asset, etc.). Fire-and-forget — failure is non-blocking.
+ *
+ * Docs: https://unsplash.com/documentation#triggering-a-download
+ */
+export async function triggerUnsplashDownload(downloadUrl: string): Promise<void> {
+  if (!UNSPLASH_KEY || !downloadUrl) return;
+  try {
+    await fetch(downloadUrl, {
+      headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` },
+      cache: "no-store",
+    });
+  } catch {
+    // Non-blocking — guideline compliance shouldn't break user requests
+  }
+}
+
+/**
+ * Build Unsplash attribution suffix that satisfies the license.
+ *   Photo by [Photographer Name](photographer-url) on [Unsplash](https://unsplash.com/?utm_source=news-investwithraj&utm_medium=referral)
+ * Caller renders this as markdown or assembles their own JSX.
+ */
+export function unsplashAttribution(img: {
+  credit: string;
+  photographerUrl?: string;
+}): string {
+  const photographer = img.photographerUrl
+    ? `[${img.credit}](${img.photographerUrl}?utm_source=news-investwithraj&utm_medium=referral)`
+    : img.credit;
+  return `Photo by ${photographer} on [Unsplash](https://unsplash.com/?utm_source=news-investwithraj&utm_medium=referral)`;
 }
 
 /* ─── Imagen 3 via Gemini API (generates a synthetic image as fallback) ── */

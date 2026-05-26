@@ -25,6 +25,12 @@ export interface StockImage {
   source: StockSource;
   /** Optional human-supplied caption / alt text */
   alt?: string;
+  /** Unsplash-only — photographer profile URL (used for "Photo by X on Unsplash" attribution) */
+  photographerUrl?: string;
+  /** Unsplash-only — the download trigger endpoint URL we MUST ping when the photo is used (Unsplash API ToS) */
+  downloadTriggerUrl?: string;
+  /** Unsplash photo ID (for explicit download triggers later) */
+  sourceId?: string;
 }
 
 export interface StockSearchOptions {

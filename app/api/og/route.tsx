@@ -16,7 +16,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { getNewsBySlug } from "@/content/news";
-import { findBestStockImage } from "@/lib/stock/providers";
+import { findBestStockImage, triggerUnsplashDownload } from "@/lib/stock/providers";
 import { buildQueryForArticle } from "@/lib/stock/query-builder";
 
 export const runtime = "edge";
@@ -29,6 +29,12 @@ export async function GET(request: NextRequest) {
   let bg = searchParams.get("bg") || "";
   let credit = searchParams.get("credit") || "";
   let category = "";
+
+  // Track Unsplash usage so we can fire the download trigger ToS-compliantly
+  let unsplashSource: {
+    photographerUrl?: string;
+    downloadTriggerUrl?: string;
+  } | null = null;
 
   if (slug && !title) {
     const article = getNewsBySlug(slug);
@@ -45,9 +51,23 @@ export async function GET(request: NextRequest) {
         if (stock) {
           bg = stock.url;
           credit = stock.credit;
+          // If Unsplash supplied the photo: capture trigger URL + photographer link
+          if (stock.source === "unsplash") {
+            unsplashSource = {
+              photographerUrl: stock.photographerUrl,
+              downloadTriggerUrl: stock.downloadTriggerUrl,
+            };
+          }
         }
       }
     }
+  }
+
+  // Fire the Unsplash download trigger (required by API guidelines — fire-and-forget).
+  // ImageResponse renders the photo, which counts as a "use" per their license.
+  if (unsplashSource?.downloadTriggerUrl) {
+    // Don't await — keep OG render fast
+    triggerUnsplashDownload(unsplashSource.downloadTriggerUrl);
   }
 
   if (!title) title = "news.investwithraj.com";
@@ -200,7 +220,8 @@ export async function GET(request: NextRequest) {
           </span>
         </div>
 
-        {/* Photo credit (small, bottom-right) */}
+        {/* Photo credit (small, bottom-right). For Unsplash photos, includes
+            "on Unsplash" per their License attribution requirement. */}
         {credit && (
           <div
             style={{
@@ -208,15 +229,19 @@ export async function GET(request: NextRequest) {
               bottom: 24,
               right: 56,
               color: PAPER,
-              opacity: 0.45,
+              opacity: 0.55,
               fontSize: 12,
               fontFamily: "Inter",
               letterSpacing: "0.1em",
-              textTransform: "uppercase",
               display: "flex",
             }}
           >
             Photo · {credit}
+            {unsplashSource && (
+              <span style={{ marginLeft: 6, display: "flex" }}>
+                {" on Unsplash"}
+              </span>
+            )}
           </div>
         )}
       </div>
