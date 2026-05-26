@@ -76,11 +76,13 @@ export async function GET(request: NextRequest) {
 
   if (!title) title = "news.investwithraj.com";
 
-  // Brand colors
-  const NAVY = "#0A1024";
-  const GOLD = "#C9A961";
-  const GOLD_BRIGHT = "#E0C076";
-  const PAPER = "#F9F6F0";
+  // v13 SOTY/Luxury brand colors (Cucinelli register)
+  const NAVY = "#0A1024";          // dark moment for navy variant
+  const INK = "#2B2621";           // warm charcoal (NOT navy-black)
+  const GOLD = "#C9A961";          // brass — single accent
+  const GOLD_BRIGHT = "#DCBE7A";   // highlights only
+  const PAPER = "#F5F1ED";         // Cucinelli cream (NOT pure white)
+  void INK; // available for future variants
 
   return new ImageResponse(
     (
