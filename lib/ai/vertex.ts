@@ -280,7 +280,11 @@ export async function startVideoGeneration(req: VeoRequest): Promise<VeoStartRes
   }
 }
 
-/** Poll a Veo operation. Returns done=true with videoUri once complete. */
+/**
+ * Poll a Veo operation. Veo uses a non-standard polling endpoint
+ * (`:fetchPredictOperation` POST), not the standard GET on the operation
+ * name. Returns done=true with videoUri once complete.
+ */
 export async function pollVideoGeneration(
   operationName: string
 ): Promise<VeoPollResult> {
@@ -289,19 +293,47 @@ export async function pollVideoGeneration(
   }
   try {
     const token = await getAccessToken();
-    const url = `https://${VERTEX_LOCATION}-aiplatform.googleapis.com/v1/${operationName}`;
+
+    // Derive the model path from the operation name to build fetchPredictOperation URL:
+    //   projects/<P>/locations/<L>/publishers/google/models/<MODEL>/operations/<OP>
+    //   → POST https://<LOC>-aiplatform.googleapis.com/v1/<modelPath>:fetchPredictOperation
+    const modelMatch = operationName.match(
+      /^(projects\/[^/]+\/locations\/[^/]+\/publishers\/google\/models\/[^/]+)\/operations\/[^/]+$/
+    );
+    if (!modelMatch) {
+      return {
+        ok: false,
+        error: `Cannot parse model from operation name: ${operationName}`,
+      };
+    }
+    const modelPath = modelMatch[1];
+    const url = `https://${VERTEX_LOCATION}-aiplatform.googleapis.com/v1/${modelPath}:fetchPredictOperation`;
 
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ operationName }),
       cache: "no-store",
     });
     if (!res.ok) {
-      return { ok: false, error: `Veo poll ${res.status}` };
+      const errText = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: `Veo poll ${res.status}: ${errText.slice(0, 300)}`,
+      };
     }
     const data = (await res.json()) as {
       done?: boolean;
       response?: {
-        videos?: Array<{ gcsUri?: string; mimeType?: string }>;
+        videos?: Array<{
+          gcsUri?: string;
+          bytesBase64Encoded?: string;
+          mimeType?: string;
+        }>;
+        generatedSamples?: Array<{ video?: { uri?: string } }>;
       };
       error?: { message?: string };
     };
@@ -312,11 +344,20 @@ export async function pollVideoGeneration(
     if (!data.done) {
       return { ok: true, done: false };
     }
-    const uri = data.response?.videos?.[0]?.gcsUri;
-    if (!uri) {
-      return { ok: false, error: "Operation done but no video URI" };
+    // Veo response shape varies — check both modern + legacy paths
+    const v = data.response?.videos?.[0];
+    const uri = v?.gcsUri || data.response?.generatedSamples?.[0]?.video?.uri;
+    if (uri) {
+      return { ok: true, done: true, videoUri: uri };
     }
-    return { ok: true, done: true, videoUri: uri };
+    if (v?.bytesBase64Encoded) {
+      return {
+        ok: true,
+        done: true,
+        videoUri: `data:${v.mimeType || "video/mp4"};base64,${v.bytesBase64Encoded}`,
+      };
+    }
+    return { ok: false, error: "Operation done but no video URI or bytes" };
   } catch (e) {
     return {
       ok: false,
