@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter, JetBrains_Mono, Fraunces } from "next/font/google
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE, CONTACT } from "@/lib/constants";
+import { ConsentRoot } from "@/components/consent/ConsentRoot";
 import "./globals.css";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
@@ -182,6 +183,9 @@ export default function RootLayout({
         {children}
         <Analytics />
         <SpeedInsights />
+
+        {/* GDPR/PDPL consent banner + 8-pixel network loader (gated by consent) */}
+        <ConsentRoot />
 
         {/* Hidden footer-of-footer — cross-domain link discoverability */}
         <a

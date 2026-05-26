@@ -331,10 +331,90 @@ curl -X POST "https://news.investwithraj.com/api/queue/add?secret=$POST_PUBLISH_
 
 ---
 
+## Block 2.8 — Consent banner + 8-pixel network + IMAP press inbox
+
+### Consent (GDPR + UAE PDPL compliant)
+
+Klaro-inspired two-stage banner. Compact "Accept all / Reject all / Manage"
+strip at bottom, expandable per-purpose modal with per-vendor toggles.
+Default = strict opt-in (everything off except cookieless Plausible).
+
+- `lib/consent/types.ts` — 8 pixels defined with purpose grouping (analytics / advertising / conversion)
+- `lib/consent/state.ts` — localStorage-backed consent state, fires `iwr-consent-changed` events
+- `components/consent/ConsentBanner.tsx` — UI banner + ConsentReopenLink footer helper
+- `components/consent/PixelLoader.tsx` — listens to consent events, dynamically injects/removes pixel snippets
+- `components/consent/ConsentRoot.tsx` — server component, reads env vars, renders both
+- `lib/pixels/snippets.ts` — official GA4, Plausible, Meta, LinkedIn, X, TikTok, Google Ads, MS Clarity snippets
+
+Banner is wired into `app/layout.tsx` via `<ConsentRoot />`.
+
+### Pixel env vars (all optional — pixel stays dormant if not set)
+
+```bash
+NEXT_PUBLIC_GA4_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_PLAUSIBLE_DOMAIN=news.investwithraj.com
+NEXT_PUBLIC_MS_CLARITY_ID=xxxxxxxxxx
+NEXT_PUBLIC_META_PIXEL_ID=000000000000000
+NEXT_PUBLIC_LINKEDIN_INSIGHT_ID=0000000
+NEXT_PUBLIC_X_PIXEL_ID=xxxxxxxxxx
+NEXT_PUBLIC_TIKTOK_PIXEL_ID=XXXXXXXXXXXXXXXXXX
+NEXT_PUBLIC_GOOGLE_ADS_ID=AW-XXXXXXXXXX
+```
+
+### IMAP press inbox
+
+Daily poller — pulls unread emails from `raj@news.investwithraj.com`,
+classifies sender (developer-tier-1, advisor-tier-1, government, trade-pub,
+agency, noise), extracts tags + links + attachments, drops structured drafts
+into `content/press-inbound/<slug>.json` for review.
+
+Pure-Node IMAP4 client over TLS — no heavyweight dependency. ~200 LOC.
+
+- `lib/press-inbox/types.ts` — PressEmail + PressDraft + sender-domain tier lookup
+- `lib/press-inbox/imap-client.ts` — IMAP4 over `node:tls`, LOGIN / SELECT / SEARCH UNSEEN / FETCH / STORE +FLAGS \Seen
+- `lib/press-inbox/draft-builder.ts` — subject cleanup, dek extraction, relevance scoring (0-1 by tier + tags + body length + links + attachments)
+- `lib/press-inbox/storage.ts` — file-system at `content/press-inbound/`
+- `app/api/press-inbox/route.ts` — POST endpoint, GET listing
+
+### IMAP env vars
+
+```bash
+IMAP_HOST=imap.gmail.com           # or your mail provider
+IMAP_PORT=993
+IMAP_USERNAME=raj@news.investwithraj.com
+IMAP_PASSWORD=<app-password>       # NOT regular password
+IMAP_MAILBOX=INBOX
+```
+
+### Endpoint
+
+```bash
+# Manual poll
+curl -X POST "https://news.investwithraj.com/api/press-inbox?secret=$POST_PUBLISH_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"markSeen": true, "minScore": 0.3}'
+
+# Health check + draft listing
+curl https://news.investwithraj.com/api/press-inbox
+```
+
+### Schedule-skill integration
+
+Add to the daily cron prompt after the existing distribute step:
+
+```
+8. POST to /api/press-inbox to ingest any new PR firm emails.
+   Drop drafts into content/press-inbound/ — review next day.
+```
+
+---
+
 ## Roadmap
 
 - ✅ Block 2.4 — IndexNow + Google sitemap ping + post-publish webhook
 - ✅ Block 2.5 — Postiz MCP wrapper, schedule 14-channel social posts per article
 - ✅ Block 2.6 — Listmonk daily digest builder
 - ✅ Block 2.7 — Approval Queue dashboard at `/internal/dashboard` (Reddit + Quora + HARO drafts)
-- ⏳ Block 2.8 — Klaro consent + 8-pixel network + IMAP press parser
+- ✅ Block 2.8 — Klaro consent + 8-pixel network + IMAP press parser
+
+**Block 2 complete. Site is Day-1 production-ready.**
