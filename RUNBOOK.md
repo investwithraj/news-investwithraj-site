@@ -261,10 +261,80 @@ Engines see the new articles within ~60 seconds of the push.
 
 ---
 
+---
+
+## Block 2.7 — Approval Queue (outreach drafts that need human review)
+
+Distinct from `/api/distribute` (own megaphones, fully automated). The queue
+covers third-party communities + media pitches where Raj's eyeball is required
+before posting: **Reddit · Quora · HARO/Qwoted/Featured · Stack Exchange ·
+BiggerPockets · PropertyHub · Discord investor servers · LinkedIn comments ·
+Twitter replies · Telegram groups**.
+
+### Architecture
+
+- `lib/queue/types.ts` — QueueItem + 12 channels + per-channel SLA policy
+- `lib/queue/storage.ts` — Auto-switches between **Vercel KV** (prod, if `KV_REST_API_URL` set) and **file-system** (`pipeline-runs/queue.json`, dev only — Vercel ephemeral)
+- `lib/queue/draft-generators.ts` — Per-channel draft builders (Reddit 1-in-10 rule, Quora TL;DR + final-paragraph link, HARO quote-first ≤200w, SE no-promo-in-body, etc.)
+- `lib/queue/expiry.ts` — Auto-expire stale items per channel SLA (Reddit 24h · Quora 72h · HARO 24h · Twitter reply 12h · others 48h)
+- `app/internal/dashboard/page.tsx` — Server component, basic-auth gated via `middleware.ts`
+- `app/internal/dashboard/DashboardClient.tsx` — Interactive cards with APPROVE / Copy / Mark posted / Edit / Postpone / Skip / Delete
+
+### One-time setup
+
+Two env vars on Vercel project (Settings → Environment Variables):
+
+1. `INTERNAL_BASIC_AUTH` = `user:pass` (any user/password you want)
+   - Middleware gates `/internal/*` with HTTP Basic — browser will prompt
+2. `KV_REST_API_URL` + `KV_REST_API_TOKEN` (recommended for prod)
+   - Set up via Vercel Storage → KV → Create
+   - Without these, queue items live in `pipeline-runs/queue.json` which doesn't persist across cold starts
+
+### Endpoints
+
+```
+GET   /internal/dashboard                              — Raj's review UI (basic-auth)
+POST  /api/queue/add?secret=...                        — Enqueue drafts (called by schedule-skill)
+POST  /api/queue/action/<id>?secret=...                — Approve / skip / edit / postpone / mark-posted / delete
+GET   /api/queue/action/<id>                           — Fetch one item (no auth needed for read)
+```
+
+### Schedule-skill integration
+
+After the daily commit-and-push completes, the orchestrator should also POST to
+`/api/queue/add` with the top 3-5 article slugs of the day. Pipeline generates
+drafts for Reddit + Quora + HARO + LinkedIn-comment by default. Raj reviews
+within 24h via the dashboard.
+
+```bash
+curl -X POST "https://news.investwithraj.com/api/queue/add?secret=$POST_PUBLISH_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"slugs": ["2026-05-26-modon-phase-2"], "channels": ["reddit", "quora", "haro", "linkedin-comment"]}'
+```
+
+### Channel policy quick reference
+
+| Channel | SLA | Self-promo rule |
+|---|---|---|
+| Reddit | 24h | 1-in-10 (≤10% of posts can be self-promo) |
+| Quora | 72h | Link in final paragraph only, ≥300w answer |
+| HARO | 24h | Quote-first, ≤200w, journalist deadline often hard |
+| Qwoted | 48h | Same as HARO |
+| Featured | 72h | Expert-quote DB, 200-300w |
+| Stack Exchange | 96h | No promo URL in body, profile-bio link only |
+| BiggerPockets | 48h | US-investor framing, educational only |
+| PropertyHub | 48h | UK-expat tax angle |
+| Discord investor | 48h | Check pinned #rules first |
+| LinkedIn comment | 24h | Value-add only, no plug |
+| Twitter reply | 12h | Reply within 1hr of original |
+| Telegram group | 24h | Data-led, no soft sell |
+
+---
+
 ## Roadmap
 
 - ✅ Block 2.4 — IndexNow + Google sitemap ping + post-publish webhook
-- ⏳ Block 2.5 — Postiz MCP wrapper, schedule 14-channel social posts per article
-- ⏳ Block 2.6 — Listmonk daily digest builder
-- ⏳ Block 2.7 — Approval Queue dashboard at `/internal/dashboard` (Reddit + Quora + HARO drafts)
+- ✅ Block 2.5 — Postiz MCP wrapper, schedule 14-channel social posts per article
+- ✅ Block 2.6 — Listmonk daily digest builder
+- ✅ Block 2.7 — Approval Queue dashboard at `/internal/dashboard` (Reddit + Quora + HARO drafts)
 - ⏳ Block 2.8 — Klaro consent + 8-pixel network + IMAP press parser
