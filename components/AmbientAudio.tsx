@@ -125,8 +125,14 @@ export default function AmbientAudio() {
         type="button"
         onClick={toggle}
         aria-label={isOn ? "Mute ambient audio" : "Play ambient audio"}
-        className="fixed top-5 right-5 z-[8800] flex items-center gap-2.5 px-3 py-1.5 transition-colors"
+        className="flex items-center gap-2.5 px-3 py-1.5 transition-colors"
         style={{
+          // v14.3.1 — inline position to defeat the styled-jsx specificity bug
+          // that was forcing position: relative + dropping the pill to y=20452px
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          zIndex: 8800,
           background: "var(--paper-pure)",
           border: "1px solid var(--chrome-deep)",
           borderRadius: "100px",
