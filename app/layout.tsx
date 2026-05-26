@@ -114,6 +114,13 @@ export const metadata: Metadata = {
     title: SITE.name,
     statusBarStyle: "default",
   },
+  // F17 — Vision Pro / visionOS Safari spatial-web hints. Honored on
+  // spatial browsers, silently ignored on flat-web ones. /spatial route
+  // is the depth-optimised landing.
+  other: {
+    "apple-spatial-capable": "yes",
+    "apple-spatial-alternate": `${SITE.url}/spatial`,
+  },
 };
 
 /* JSON-LD — WebSite + NewsMediaOrganization + author Person.
