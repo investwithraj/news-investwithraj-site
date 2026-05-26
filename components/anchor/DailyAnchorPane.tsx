@@ -64,36 +64,40 @@ export function DailyAnchorPane() {
         background: "var(--ink)",
         color: "var(--paper)",
       }}
+      data-section="dark"
     >
       <div className="max-w-[1240px] mx-auto px-6 md:px-10 py-16 md:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* LEFT — masthead text */}
         <div className="lg:col-span-5 order-2 lg:order-1">
           <span
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.22em]"
+            className="font-mono uppercase inline-flex items-center gap-2.5"
             style={{
-              background: "rgba(201, 169, 97, 0.18)",
-              color: "var(--gold-bright, #E0C076)",
-              border: "1px solid rgba(201, 169, 97, 0.35)",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.28em",
+              color: "rgba(245, 239, 227, 0.65)",
             }}
           >
             <span
-              className="w-1 h-1 rounded-full"
+              aria-hidden="true"
+              className="block"
               style={{
-                background: anchor?.state === "ready" ? "#22c55e" : "var(--gold-bright, #E0C076)",
-                animation: anchor?.state === "ready" ? "anchor-pulse 1.4s infinite" : "none",
+                width: "22px",
+                height: "1px",
+                background:
+                  anchor?.state === "ready"
+                    ? "var(--gold-bright, #E0C076)"
+                    : "rgba(245, 239, 227, 0.4)",
               }}
             />
             {anchor?.state === "ready" ? "Live · today" : "Daily anchor"}
           </span>
 
           <h2
-            className="mt-6 leading-[1.05] tracking-[-0.025em]"
+            className="editorial-h1 mt-6"
             style={{
-              color: "var(--paper)",
-              fontFamily: "var(--font-fraunces), Georgia, serif",
-              fontSize: "clamp(1.875rem, 4vw, 3rem)",
-              fontWeight: 500,
-              fontVariationSettings: '"SOFT" 80, "opsz" 144',
+              color: "var(--paper-warm)",
+              fontSize: "clamp(1.875rem, 4.2vw, 3.25rem)",
+              maxWidth: "20ch",
             }}
           >
             {anchor?.headline ||
@@ -130,17 +134,17 @@ export function DailyAnchorPane() {
           )}
         </div>
 
-        {/* RIGHT — media surface */}
+        {/* RIGHT — media surface (v13 SOTY: flat panel, 1px hairline, no shadow) */}
         <div className="lg:col-span-7 order-1 lg:order-2">
           <div
-            className="relative aspect-video rounded-2xl overflow-hidden"
+            className="relative aspect-video overflow-hidden"
             style={{
               background:
                 "radial-gradient(ellipse at top, #1a2540, #05081A 70%)",
-              border: "1px solid rgba(201, 169, 97, 0.25)",
-              boxShadow:
-                "0 30px 80px -30px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,169,97,0.1) inset",
+              border: "1px solid rgba(201, 169, 97, 0.3)",
+              borderRadius: "4px",
             }}
+            data-cursor-label="ANCHOR"
           >
             {/* Video B-roll layer — Veo 3 cinematic 4-sec clip, looped silently
                 under the audio voiceover. Only renders when video present. */}
@@ -255,12 +259,11 @@ export function DailyAnchorPane() {
                 onClick={playing ? pause : play}
                 aria-label={playing ? "Pause anchor" : "Play anchor"}
                 data-magnetic
+                data-cursor-label={playing ? "PAUSE" : "PLAY"}
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full flex items-center justify-center transition-all hover:scale-110"
                 style={{
                   background:
                     "radial-gradient(circle at 30% 30%, #E0C076, #A88945)",
-                  boxShadow:
-                    "0 12px 36px rgba(201,169,97,0.6), 0 0 0 4px rgba(201,169,97,0.18)",
                   color: "#0A1024",
                   fontSize: "1.8rem",
                   opacity: playing ? 0.55 : 1,

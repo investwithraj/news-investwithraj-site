@@ -15,32 +15,27 @@ export function VerticalsBento() {
       aria-labelledby="verticals-heading"
     >
       <div className="max-w-[1240px] mx-auto px-6 md:px-10">
-        {/* Eyebrow + section heading */}
+        {/* Eyebrow + section heading — v13 SOTY editorial register */}
         <div className="text-center mb-12 md:mb-16">
           <span
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.22em]"
-            style={{
-              background: "var(--gold-soft)",
-              color: "var(--gold-deep)",
-              border: "1px solid var(--gold-soft)",
-            }}
+            className="editorial-eyebrow-sotm"
+            style={{ display: "inline-flex", justifyContent: "center" }}
           >
-            <span className="w-1 h-1 rounded-full" style={{ background: "var(--gold-deep)" }} />
             The desk
           </span>
           <h2
             id="verticals-heading"
-            className="mt-6 leading-[1.05] tracking-[-0.025em]"
+            className="editorial-h1 mt-6 mx-auto"
             style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-fraunces), Georgia, serif",
-              fontSize: "clamp(1.875rem, 4.5vw, 3.25rem)",
-              fontWeight: 500,
-              fontVariationSettings: '"SOFT" 80, "opsz" 144',
+              fontSize: "clamp(1.875rem, 4.5vw, 3.5rem)",
+              maxWidth: "16ch",
             }}
           >
             Five reads.{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
+            <span
+              className="editorial-h1-italic"
+              style={{ color: "var(--gold-deep)" }}
+            >
               One desk.
             </span>
           </h2>
@@ -83,10 +78,12 @@ function BentoCard({
     <Link
       href={`/v/${vertical.slug}`}
       data-magnetic
-      className={`group relative overflow-hidden rounded-3xl border ${span} ${heightClass} flex flex-col justify-between p-7 md:p-9 transition-transform duration-500 hover:-translate-y-1`}
+      data-cursor-label="OPEN DESK"
+      className={`group relative overflow-hidden border ${span} ${heightClass} flex flex-col justify-between p-7 md:p-9 transition-transform duration-500 hover:-translate-y-1`}
       style={{
         background: vertical.gradient,
-        borderColor: "var(--gold-soft)",
+        borderColor: "var(--chrome-deep)",
+        borderRadius: "4px",
       }}
     >
       {/* Top — glyph + cadence chip */}
@@ -104,11 +101,14 @@ function BentoCard({
           {vertical.glyph}
         </span>
         <span
-          className="font-mono text-[9px] uppercase tracking-[0.22em] px-2 py-1 rounded-full"
+          className="font-mono uppercase px-2.5 py-1"
           style={{
-            background: "rgba(255, 255, 255, 0.55)",
+            fontSize: "0.6rem",
+            letterSpacing: "0.24em",
+            background: "var(--paper-pure)",
             color: "var(--ink-soft)",
-            backdropFilter: "blur(8px)",
+            border: "1px solid var(--chrome-deep)",
+            borderRadius: "2px",
           }}
         >
           {vertical.cadence}
@@ -118,13 +118,9 @@ function BentoCard({
       {/* Bottom — name + tagline */}
       <div>
         <h3
-          className="leading-[1.05] tracking-[-0.02em] mb-2"
+          className="editorial-h2 mb-2"
           style={{
-            color: "var(--ink)",
-            fontFamily: "var(--font-fraunces), Georgia, serif",
-            fontSize: size === "lead" ? "clamp(1.75rem, 3.2vw, 2.25rem)" : "clamp(1.4rem, 2.4vw, 1.75rem)",
-            fontWeight: 500,
-            fontVariationSettings: '"SOFT" 70, "opsz" 144',
+            fontSize: size === "lead" ? "clamp(1.8rem, 3.4vw, 2.4rem)" : "clamp(1.45rem, 2.5vw, 1.85rem)",
           }}
         >
           {vertical.name}

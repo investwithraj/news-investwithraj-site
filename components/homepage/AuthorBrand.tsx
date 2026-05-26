@@ -15,87 +15,64 @@ export function AuthorBrand() {
     >
       <div className="max-w-[1080px] mx-auto px-6 md:px-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-center">
-          {/* Portrait column — Raj's image (deferred — placeholder for Day-1) */}
+          {/* Portrait column — Cucinelli-grade RT monogram placeholder */}
           <div className="md:col-span-5">
             <div
-              className="relative aspect-[4/5] overflow-hidden rounded-3xl"
+              className="relative aspect-[4/5] overflow-hidden"
               style={{
-                background:
-                  "linear-gradient(180deg, var(--paper-cream), var(--paper-warm))",
+                background: "var(--paper-warm)",
                 border: "1px solid var(--gold-soft)",
-                boxShadow:
-                  "0 20px 60px -20px rgba(10, 16, 36, 0.18), inset 0 0 0 1px rgba(255,255,255,0.5)",
+                outline: "1px solid rgba(201, 169, 97, 0.15)",
+                outlineOffset: "8px",
+                borderRadius: "12px",
               }}
+              data-cursor-label="THE OPERATOR"
             >
-              {/* Placeholder mark — replace with actual portrait when available */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
                 <div
                   aria-hidden
-                  className="leading-none mb-6"
+                  className="leading-none mb-6 editorial-h1-italic"
                   style={{
                     color: "var(--gold-deep)",
-                    fontFamily: "var(--font-fraunces), Georgia, serif",
-                    fontSize: "clamp(5rem, 12vw, 9rem)",
-                    fontWeight: 400,
-                    fontVariationSettings: '"SOFT" 100, "opsz" 144',
-                    fontStyle: "italic",
-                    opacity: 0.62,
+                    fontSize: "clamp(6rem, 14vw, 11rem)",
+                    opacity: 0.32,
+                    letterSpacing: "-0.06em",
                   }}
                 >
                   RT
                 </div>
                 <p
-                  className="font-mono text-[10px] uppercase tracking-[0.28em]"
-                  style={{ color: "var(--ink-faint)" }}
+                  className="font-mono uppercase"
+                  style={{
+                    fontSize: "0.625rem",
+                    letterSpacing: "0.3em",
+                    color: "var(--ink-faint)",
+                  }}
                 >
                   Portrait · forthcoming
                 </p>
               </div>
-              {/* Subtle gold rim */}
-              <div
-                aria-hidden
-                className="absolute inset-0 pointer-events-none rounded-3xl"
-                style={{
-                  border: "1px solid rgba(201, 169, 97, 0.35)",
-                }}
-              />
             </div>
           </div>
 
           {/* Text column */}
           <div className="md:col-span-7">
-            <span
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.22em]"
-              style={{
-                background: "rgba(255, 255, 255, 0.7)",
-                color: "var(--gold-deep)",
-                border: "1px solid var(--gold-soft)",
-                backdropFilter: "blur(8px)",
-              }}
-            >
-              <span className="w-1 h-1 rounded-full" style={{ background: "var(--gold-deep)" }} />
+            <span className="editorial-eyebrow-sotm">
               The desk operator
             </span>
 
             <h2
               id="author-heading"
-              className="mt-6 leading-[1.02] tracking-[-0.025em]"
+              className="editorial-h1 mt-6"
               style={{
-                color: "var(--ink)",
-                fontFamily: "var(--font-fraunces), Georgia, serif",
-                fontSize: "clamp(2.25rem, 5vw, 3.75rem)",
-                fontWeight: 500,
-                fontVariationSettings: '"SOFT" 80, "opsz" 144',
+                fontSize: "clamp(2.25rem, 5.2vw, 4rem)",
+                maxWidth: "16ch",
               }}
             >
               Raj Tomar.{" "}
               <span
-                className="editorial-italic"
-                style={{
-                  color: "var(--gold-deep)",
-                  fontStyle: "italic",
-                  fontVariationSettings: '"SOFT" 100, "opsz" 18',
-                }}
+                className="editorial-h1-italic"
+                style={{ color: "var(--gold-deep)" }}
               >
                 Broker, builder,&nbsp;writer.
               </span>
@@ -131,6 +108,7 @@ export function AuthorBrand() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-graphite group"
+                data-cursor-label="SUBSCRIBE"
                 data-magnetic
               >
                 <span>Subscribe to Beyond the Deal</span>
@@ -139,6 +117,7 @@ export function AuthorBrand() {
               <Link
                 href="/v/dld-pulse"
                 className="btn-ghost group"
+                data-cursor-label="EXPLORE"
                 data-magnetic
               >
                 <span>Start with DLD Pulse</span>

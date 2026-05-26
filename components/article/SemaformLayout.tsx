@@ -42,15 +42,12 @@ export function SemaformLayout({ article }: Props) {
         <time dateTime={article.publishedAt}>{article.displayDate}</time>
       </div>
 
-      {/* Title */}
+      {/* Title — v13 editorial-h1 (Fraunces variable SOFT 50 opsz 144 wt 500) */}
       <h1
-        className="leading-[1.03] tracking-[-0.02em] mb-5"
+        className="editorial-h1 mb-6"
         style={{
-          color: "var(--ink)",
-          fontFamily: "var(--font-fraunces), Georgia, serif",
-          fontSize: "clamp(2rem, 5vw, 3.75rem)",
-          fontWeight: 500,
-          fontVariationSettings: '"SOFT" 60, "opsz" 144',
+          fontSize: "clamp(2.25rem, 5.5vw, 4.5rem)",
+          maxWidth: "20ch",
         }}
       >
         {article.title}
