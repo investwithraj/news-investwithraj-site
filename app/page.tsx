@@ -8,8 +8,6 @@ import { VerticalsBento } from "@/components/homepage/VerticalsBento";
 import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
 import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
 import MaterialDivider from "@/components/MaterialDivider";
-import FrameScroll from "@/components/FrameScroll";
-import { MANIFESTS } from "@/lib/frame-manifest";
 
 /**
  * news.investwithraj.com homepage — Block 3 Wave 4.
@@ -122,18 +120,22 @@ function Hero() {
       className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden gold-mesh-hero"
       style={{ background: "var(--paper-warm)" }}
     >
-      {/* v14 Draftly — replaced DubaiSkyline3DLoader (Three.js procedural)
-          with a FrameScroll cinematic aerial. Zero GPU dependency. 320 WebP
-          frames (Nelemson G, Pexels Videos #31942008, Dubai skyline aerial
-          sunset). */}
-      <div className="absolute inset-0 z-0">
-        <FrameScroll
-          manifest={MANIFESTS.hero}
-          scrollHeight={1}
-          fit="cover"
-          className="absolute inset-0"
-        />
-      </div>
+      {/* v14.1 — native <video> hero background (Nelemson G, Pexels Videos
+          #31942008, Dubai skyline aerial sunset). Replaces the broken
+          v14.0 FrameScroll-as-background attempt (FrameScroll needs a
+          multi-viewport container; the hero is 100svh). Smooth cinematic
+          motion via auto-play loop. ~12MB MP4, preload=metadata, no scroll
+          dependency. */}
+      <video
+        className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
+        src="/hero.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+      />
 
       {/* F12 — aurora overlay layered above skyline for soft brand wash */}
       <AuroraBackground opacity={0.32} />
