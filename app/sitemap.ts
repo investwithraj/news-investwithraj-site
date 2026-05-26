@@ -3,6 +3,8 @@ import { SITE } from "@/lib/constants";
 import { NEWS_ARTICLES } from "@/content/news";
 import { INSIGHT_ARTICLES } from "@/content/insights";
 import { AREAS } from "@/content/areas";
+import { DEVELOPERS } from "@/lib/developers";
+import { VERTICALS } from "@/lib/verticals";
 
 /**
  * Generic sitemap.xml — enumerates every public URL on the subdomain
@@ -22,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE.url}/news`, lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: `${SITE.url}/insights`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE.url}/areas`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${SITE.url}/developers`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE.url}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     {
       url: `${SITE.url}/about/editorial-standards`,
@@ -64,6 +67,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(a.modifiedAt),
       changeFrequency: "weekly",
       priority: 0.85,
+    });
+  }
+
+  // Dynamic content — developers (per-developer landing pages)
+  for (const d of DEVELOPERS) {
+    entries.push({
+      url: `${SITE.url}/developer/${d.slug}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    });
+  }
+
+  // Vertical landing pages
+  for (const v of VERTICALS) {
+    entries.push({
+      url: `${SITE.url}/v/${v.slug}`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
     });
   }
 

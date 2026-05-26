@@ -9,10 +9,11 @@
 // CTA on the area's detail page.
 
 import type { AreaPage } from "./types";
+import { ADDITIONAL_AREAS } from "./catalog";
 export type { AreaPage, AreaKind, AreaStat } from "./types";
 export { sortAreas, filterByEmirate } from "./types";
 
-export const AREAS: AreaPage[] = [
+const PRIORITY_AREAS: AreaPage[] = [
   {
     slug: "hudayriyat-island",
     name: "Hudayriyat Island",
@@ -99,6 +100,8 @@ export const AREAS: AreaPage[] = [
     iwrNoteSlug: "wynn-al-marjan-yield",
   },
 ];
+
+export const AREAS: AreaPage[] = [...PRIORITY_AREAS, ...ADDITIONAL_AREAS];
 
 export function getAreaBySlug(slug: string): AreaPage | null {
   return AREAS.find((a) => a.slug === slug) ?? null;
