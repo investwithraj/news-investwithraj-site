@@ -10,6 +10,7 @@ import { DldTicker } from "@/components/ticker/DldTicker";
 import PageLoadCurtain from "@/components/PageLoadCurtain";
 import AmbientAudio from "@/components/AmbientAudio";
 import KonamiEasterEgg from "@/components/KonamiEasterEgg";
+import UISounds from "@/components/UISounds";
 import "./globals.css";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
@@ -209,6 +210,9 @@ export default function RootLayout({
 
         {/* v13 SOTY — Web Audio ambient toggle, Cartier W&W pattern */}
         <AmbientAudio />
+
+        {/* v13 SOTY — UI sound dispatcher, gated by ambient master switch */}
+        <UISounds />
 
         {/* v13 SOTY easter egg — Konami unlocks Bulgari emerald palette */}
         <KonamiEasterEgg />
