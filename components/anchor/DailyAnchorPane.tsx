@@ -38,15 +38,17 @@ export function DailyAnchorPane() {
   }, []);
 
   function play() {
-    if (videoRef.current) {
-      videoRef.current.play();
-      setPlaying(true);
-      return;
-    }
-    if (audioRef.current) {
-      audioRef.current.play();
-      setPlaying(true);
-    }
+    // Audio is the primary track (90s Raj voiceover). Video, if present,
+    // plays underneath as silent looping B-roll (4s × ~22 loops over 90s).
+    const startedAudio = audioRef.current
+      ? audioRef.current.play().then(() => true).catch(() => false)
+      : Promise.resolve(false);
+    const startedVideo = videoRef.current
+      ? videoRef.current.play().then(() => true).catch(() => false)
+      : Promise.resolve(false);
+    Promise.all([startedAudio, startedVideo]).then(([a, v]) => {
+      if (a || v) setPlaying(true);
+    });
   }
 
   function pause() {
@@ -140,62 +142,36 @@ export function DailyAnchorPane() {
                 "0 30px 80px -30px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,169,97,0.1) inset",
             }}
           >
-            {anchor?.videoUrl ? (
+            {/* Video B-roll layer — Veo 3 cinematic 4-sec clip, looped silently
+                under the audio voiceover. Only renders when video present. */}
+            {anchor?.videoUrl && (
               <video
                 ref={videoRef}
                 src={anchor.videoUrl}
                 className="absolute inset-0 w-full h-full object-cover"
                 playsInline
-                muted={!playing}
-                controls={playing}
+                muted
+                loop
+                preload="auto"
               />
-            ) : anchor?.audioUrl ? (
-              <>
-                {/* Placeholder portrait + audio */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span
-                    aria-hidden
-                    className="leading-none"
-                    style={{
-                      color: "var(--gold-bright, #E0C076)",
-                      fontFamily: "var(--font-fraunces), Georgia, serif",
-                      fontSize: "clamp(6rem, 14vw, 12rem)",
-                      fontWeight: 400,
-                      fontStyle: "italic",
-                      fontVariationSettings: '"SOFT" 100, "opsz" 144',
-                      opacity: 0.55,
-                    }}
-                  >
-                    RT
-                  </span>
-                </div>
-                <audio
-                  ref={audioRef}
-                  src={anchor.audioUrl}
-                  onEnded={() => setPlaying(false)}
-                  preload="metadata"
-                />
-                {/* Animated equalizer when playing */}
-                {playing && (
-                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-end gap-1 h-12">
-                    {Array.from({ length: 16 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="w-1 rounded-t-sm"
-                        style={{
-                          background: "var(--gold-bright, #E0C076)",
-                          height: `${20 + Math.abs(Math.sin(i * 0.7 + Date.now() / 200)) * 80}%`,
-                          animation: `anchor-eq 0.${(i % 9) + 2}s ease-in-out infinite alternate`,
-                          animationDelay: `${i * 30}ms`,
-                          opacity: 0.85,
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              // Placeholder hero — no anchor generated yet
+            )}
+
+            {/* Audio element — ElevenLabs Raj voice. The PRIMARY playback track.
+                Always rendered when audio present (independent of video). */}
+            {anchor?.audioUrl && (
+              <audio
+                ref={audioRef}
+                src={anchor.audioUrl}
+                onEnded={() => {
+                  setPlaying(false);
+                  videoRef.current?.pause();
+                }}
+                preload="metadata"
+              />
+            )}
+
+            {/* No-content placeholder — only when neither audio nor video */}
+            {!anchor?.videoUrl && !anchor?.audioUrl && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
                 <span
                   aria-hidden
@@ -220,19 +196,75 @@ export function DailyAnchorPane() {
               </div>
             )}
 
-            {/* Play overlay (audio-only mode) */}
+            {/* Audio-only RT mark when no video but we have audio */}
             {anchor?.audioUrl && !anchor?.videoUrl && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span
+                  aria-hidden
+                  className="leading-none"
+                  style={{
+                    color: "var(--gold-bright, #E0C076)",
+                    fontFamily: "var(--font-fraunces), Georgia, serif",
+                    fontSize: "clamp(6rem, 14vw, 12rem)",
+                    fontWeight: 400,
+                    fontStyle: "italic",
+                    fontVariationSettings: '"SOFT" 100, "opsz" 144',
+                    opacity: 0.55,
+                  }}
+                >
+                  RT
+                </span>
+              </div>
+            )}
+
+            {/* Subtle dark gradient over video while paused so the play button reads */}
+            {anchor?.videoUrl && !playing && (
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(5,8,26,0.20) 0%, rgba(5,8,26,0.55) 100%)",
+                }}
+              />
+            )}
+
+            {/* Equalizer at bottom — only on audio-only mode while playing */}
+            {playing && anchor?.audioUrl && !anchor?.videoUrl && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-end gap-1 h-12 pointer-events-none">
+                {Array.from({ length: 16 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="w-1 rounded-t-sm"
+                    style={{
+                      background: "var(--gold-bright, #E0C076)",
+                      height: `${20 + Math.abs(Math.sin(i * 0.7 + Date.now() / 200)) * 80}%`,
+                      animation: `anchor-eq 0.${(i % 9) + 2}s ease-in-out infinite alternate`,
+                      animationDelay: `${i * 30}ms`,
+                      opacity: 0.85,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Play / pause overlay — ALWAYS shown when we have audio or video.
+                Pulses gently when paused to invite the click. */}
+            {(anchor?.audioUrl || anchor?.videoUrl) && (
               <button
                 onClick={playing ? pause : play}
                 aria-label={playing ? "Pause anchor" : "Play anchor"}
                 data-magnetic
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full flex items-center justify-center transition-all hover:scale-110"
                 style={{
                   background:
                     "radial-gradient(circle at 30% 30%, #E0C076, #A88945)",
-                  boxShadow: "0 12px 36px rgba(201,169,97,0.6), 0 0 0 4px rgba(201,169,97,0.18)",
+                  boxShadow:
+                    "0 12px 36px rgba(201,169,97,0.6), 0 0 0 4px rgba(201,169,97,0.18)",
                   color: "#0A1024",
                   fontSize: "1.8rem",
+                  opacity: playing ? 0.55 : 1,
+                  animation: playing ? "none" : "anchor-pulse 2.4s ease-in-out infinite",
                 }}
               >
                 {playing ? "❚❚" : "▶"}
