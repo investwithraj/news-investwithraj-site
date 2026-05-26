@@ -18,15 +18,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { callClaude, isClaudeConfigured } from "@/lib/ai/claude";
 import { synthesise, isElevenConfigured } from "@/lib/voice/elevenlabs";
 import {
-  generateVideo,
-  buildDailyIntroPrompt,
-  isGeminiConfigured,
-} from "@/lib/ai/gemini";
+  startVideoGeneration,
+  pollVideoGeneration,
+  isVertexConfigured,
+} from "@/lib/ai/vertex";
 import { getLatestNews } from "@/content/news";
 import { readCurrentAnchor, writeCurrentAnchor } from "@/lib/anchor/store";
 import type { DailyAnchor } from "@/content/daily-anchor/types";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+// Vertex Veo polling typically completes in 30-60s; allow up to 5 min for the
+// full anchor pipeline (Claude script + ElevenLabs voice + Veo video poll).
+export const maxDuration = 300;
+
+/** Build the cinematic visual prompt that Veo 3 will render. */
+function buildAnchorVideoPrompt(headline: string): string {
+  return [
+    `Cinematic aerial flyover of Dubai skyline at golden hour.`,
+    `Burj Khalifa and Palm Jumeirah and Marina towers in frame.`,
+    `Moody navy-and-gold color grade, 35mm anamorphic lens, slight film grain.`,
+    `Subtle volumetric haze, light sun flares.`,
+    `No people in frame, no text overlays, no logos.`,
+    `Editorial documentary tone matching the headline mood: "${headline}".`,
+  ].join(" ");
+}
 
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
 
@@ -159,26 +175,48 @@ export async function POST(request: NextRequest) {
     await writeCurrentAnchor(anchor);
   }
 
-  // STAGE 3 — video (optional). Without Gemini key, we just mark "ready" with audio only.
-  if ((mode === "video" || mode === "full") && isGeminiConfigured()) {
-    const prompt = buildDailyIntroPrompt({
-      headline,
-      scene: "Raj Tomar speaking to camera, navy blazer, golden hour light, Dubai cityscape softly blurred behind.",
-    });
-    const v = await generateVideo({
-      prompt,
+  // STAGE 3 — video via Vertex Veo 3 (billed against $100/mo Cloud credit).
+  // Async — start operation, poll until done. Veo 3 typically completes a
+  // 4-sec clip in 30-90 sec; we poll up to ~3 min before bailing.
+  if ((mode === "video" || mode === "full") && isVertexConfigured()) {
+    const videoPrompt = buildAnchorVideoPrompt(headline);
+    const start = await startVideoGeneration({
+      prompt: videoPrompt,
       aspectRatio: "16:9",
-      durationSeconds: 8,
+      durationSeconds: 4,
     });
-    if (v.ok && v.operationId) {
-      // Video is async — caller polls /api/daily-intro with operationId
-      anchor.provider = "gemini";
-      // Store operationId in a side field via casting (DailyAnchor doesn't include it)
-      (anchor as DailyAnchor & { operationId?: string }).operationId = v.operationId;
+
+    if (start.ok && start.operationName) {
+      anchor.provider = "veo3";
+      // Persist operation name immediately so the cron can resume polling if
+      // we exceed the maxDuration ceiling
+      (anchor as DailyAnchor & { operationId?: string }).operationId =
+        start.operationName;
+      await writeCurrentAnchor(anchor);
+
+      // Poll inline — Veo 3 usually completes within Vercel's 5-min ceiling
+      const maxPolls = 18; // 18 × 10s = 180s
+      let completed = false;
+      for (let i = 0; i < maxPolls; i++) {
+        await new Promise((r) => setTimeout(r, 10_000));
+        const poll = await pollVideoGeneration(start.operationName);
+        if (!poll.ok) {
+          break;
+        }
+        if (poll.done && poll.videoUri) {
+          anchor.videoUrl = poll.videoUri;
+          completed = true;
+          break;
+        }
+      }
+      if (!completed) {
+        // Video still pending — anchor goes "ready" with audio only; cron can
+        // resume polling later via mode="video-poll"
+      }
     }
   }
 
-  // Final state — ready if we have audio (video is a bonus when Gemini configured)
+  // Final state — ready if we have audio (video is a bonus when Vertex configured)
   anchor.state = anchor.audioUrl ? "ready" : "failed";
   anchor.updatedAt = new Date().toISOString();
   await writeCurrentAnchor(anchor);
