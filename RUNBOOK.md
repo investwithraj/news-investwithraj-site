@@ -198,10 +198,73 @@ voice drift, source failures, or score-threshold misconfiguration.
 
 ---
 
+## Search-engine pings (Block 2.4 — SHIPPED)
+
+After every commit that adds new articles, the schedule-skill Claude
+session calls `POST /api/post-publish` to fan out search-engine pings.
+
+### The webhook
+
+`POST https://news.investwithraj.com/api/post-publish?secret=<POST_PUBLISH_SECRET>`
+
+```json
+{
+  "newUrls": [
+    "https://news.investwithraj.com/news/2026-05-26-modon-hudayriyat-phase-2",
+    "https://news.investwithraj.com/news/2026-05-26-rera-q1-bulletin"
+  ],
+  "deploymentId": "dpl_xyz"
+}
+```
+
+Fans out (in parallel, ~3 sec total):
+- **IndexNow** → Bing + Yandex + Yep (DuckDuckGo + Brave) + Seznam + Naver + IndexNow.org
+- **Google sitemap ping** → https://www.google.com/ping?sitemap=https://news.investwithraj.com/sitemap.xml + same for news-sitemap
+- **Bing sitemap ping** → https://www.bing.com/ping?sitemap=... (redundant with IndexNow but primes crawler for full sitemap)
+
+Returns structured per-engine result. 200 if all OK, 207 if any partial failure.
+
+### One-time setup
+
+Two env vars on Vercel project (Settings → Environment Variables):
+
+1. `INDEXNOW_KEY` = `0d6e3835646ccbe5dba5ed6ab2646308`
+   - Already hard-coded as default in `lib/search/indexnow.ts` — env var is for rotation
+2. `POST_PUBLISH_SECRET` = generate a random 32+ char string
+   - Used to authenticate the post-publish endpoint
+   - Schedule-skill session needs the same secret to call the endpoint
+
+The IndexNow key file is auto-served at `/{INDEXNOW_KEY}.txt` by the route at
+`app/0d6e3835646ccbe5dba5ed6ab2646308.txt/route.ts`. IndexNow servers
+fetch this file to verify host ownership before accepting our URL submissions.
+
+### Manual test (smoke)
+
+```bash
+# Submit a single URL via the public GET endpoint:
+curl "https://news.investwithraj.com/api/indexnow?url=https://news.investwithraj.com/news/some-slug"
+
+# Returns:
+# { "ok": true, "statusCode": 200, "message": "Submitted successfully", "submittedUrls": 1 }
+```
+
+### Integration with the schedule-skill cron
+
+The Phase 2 prompt in the cron registration already includes:
+
+```
+7. After deploy, POST to /api/post-publish with the list of new article URLs.
+```
+
+The Claude session calls the endpoint with the URLs it just committed.
+Engines see the new articles within ~60 seconds of the push.
+
+---
+
 ## Roadmap
 
-- Block 2.4 — IndexNow + Google Indexing API + Bing pings (post-commit)
-- Block 2.5 — Postiz MCP wrapper, schedule 14-channel social posts per article
-- Block 2.6 — Listmonk daily digest builder
-- Block 2.7 — Approval Queue dashboard at `/internal/dashboard` (Reddit + Quora + HARO drafts)
-- Block 2.8 — Klaro consent + 8-pixel network + IMAP press parser
+- ✅ Block 2.4 — IndexNow + Google sitemap ping + post-publish webhook
+- ⏳ Block 2.5 — Postiz MCP wrapper, schedule 14-channel social posts per article
+- ⏳ Block 2.6 — Listmonk daily digest builder
+- ⏳ Block 2.7 — Approval Queue dashboard at `/internal/dashboard` (Reddit + Quora + HARO drafts)
+- ⏳ Block 2.8 — Klaro consent + 8-pixel network + IMAP press parser
