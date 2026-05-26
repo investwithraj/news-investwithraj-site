@@ -18,6 +18,9 @@ export {
   type Cta,
   type DistributionConfig,
   type FaqItem,
+  type ViewFrom,
+  type BrokerTake,
+  type SemaformSections,
 } from "./types";
 
 export const NEWS_ARTICLES: NewsArticle[] = [];

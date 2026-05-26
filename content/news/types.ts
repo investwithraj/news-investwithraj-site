@@ -69,6 +69,44 @@ export interface FaqItem {
   a: string;
 }
 
+/** Semaform-style structured perspective from a named source / stakeholder. */
+export interface ViewFrom {
+  /** Who's speaking — "Modon", "Knight Frank", "DLD spokesperson", "Off-plan buyer", etc. */
+  source: string;
+  /** Optional 1-line role/credential ("VP, Capital Markets") */
+  role?: string;
+  /** The view itself — 1-3 sentences, plain text */
+  view: string;
+}
+
+/** Raj's UHNW broker call — what he'd actually do with the news. */
+export interface BrokerTake {
+  /** Direction — "Buy" | "Watch" | "Avoid" | "Trim" | "Re-rate" */
+  action: "Buy" | "Watch" | "Avoid" | "Trim" | "Re-rate" | "Position";
+  /** 1-2 sentence reasoning */
+  reasoning: string;
+  /** Optional time horizon */
+  horizon?: string;
+}
+
+/**
+ * Semaform-style structured article sections. All optional — articles can
+ * still ship with just title/tldr/body. When present, the Semaform renderer
+ * lays these out as named blocks instead of a flat body.
+ */
+export interface SemaformSections {
+  /** "The Take" — Raj's own POV, 60-120 words */
+  theTake?: string;
+  /** 2-4 stakeholder perspectives */
+  viewsFrom?: ViewFrom[];
+  /** "Reality Check" — counter-perspective, 60-120 words */
+  realityCheck?: string;
+  /** "What Happens Next" — forward-looking, 60-120 words */
+  whatHappensNext?: string;
+  /** "How I'd Trade It" — Raj's UHNW broker call */
+  howIdTradeIt?: BrokerTake;
+}
+
 export interface NewsArticle {
   /** URL slug — kebab-case, no leading slash. Used at /news/{slug}. */
   slug: string;
@@ -109,6 +147,8 @@ export interface NewsArticle {
   metaDescription?: string;
   /** Optional auto-generated speakable selectors for voice-assistant excerpts */
   speakableSelector?: string[];
+  /** Optional Semaform-style structured sections. When present, render via SemaformLayout. */
+  semaform?: SemaformSections;
 }
 
 /** Sort: most-recent first */
