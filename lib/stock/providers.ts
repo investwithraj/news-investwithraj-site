@@ -22,8 +22,14 @@ const UNSPLASH_KEY = process.env.UNSPLASH_ACCESS_KEY || "";
 const PEXELS_KEY = process.env.PEXELS_API_KEY || "";
 const PIXABAY_KEY = process.env.PIXABAY_API_KEY || "";
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+// Imagen 4 family (May 2026):
+//   imagen-4.0-fast-generate-001   — cheapest, fastest, default
+//   imagen-4.0-generate-001        — standard quality
+//   imagen-4.0-ultra-generate-001  — highest quality (most expensive)
+// NB: All Imagen models require GCP billing enabled. Gemini Ultra
+// consumer subscription does NOT include API image generation credit.
 const IMAGEN_MODEL =
-  process.env.IMAGEN_MODEL || "imagen-3.0-fast-generate-001";
+  process.env.IMAGEN_MODEL || "imagen-4.0-fast-generate-001";
 
 /* ─── Unsplash ───────────────────────────────────────────────────────── */
 
