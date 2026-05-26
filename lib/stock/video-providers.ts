@@ -101,27 +101,34 @@ export async function searchPexelsVideos(
         return true;
       })
       .map((v) => {
-        // Prefer hd (1920×1080 or 1280×720) over uhd (4K — too heavy) and sd.
-        // If hd not available, fall back to the largest available.
-        const files = v.video_files.filter((f) => f.file_type === "video/mp4");
-        const hd = files.find((f) => f.quality === "hd");
-        const sd = files.find((f) => f.quality === "sd");
-        const chosen = hd || sd || files[0];
+        // Sort all MP4 files by width descending so we can pick the
+        // sweet-spot resolution (≥720p, ≤1920p — avoid 4K bandwidth hits).
+        const files = v.video_files
+          .filter((f) => f.file_type === "video/mp4")
+          .sort((a, b) => b.width - a.width);
+        const targetFile =
+          files.find((f) => f.width <= 1920 && f.width >= 1280) ||
+          files.find((f) => f.width >= 1000) ||
+          files[0];
+        const previewFile =
+          files.find((f) => f.width <= 960 && f.width >= 640) || targetFile;
         return {
-          url: chosen?.link || "",
-          previewUrl: sd?.link || chosen?.link || "",
+          url: targetFile?.link || "",
+          previewUrl: previewFile?.link || targetFile?.link || "",
           posterUrl: v.image,
           attributionUrl: v.url,
           credit: v.user.name,
           license: "Pexels License (commercial-OK, no attribution required)",
-          width: chosen?.width || v.width,
-          height: chosen?.height || v.height,
+          width: targetFile?.width || v.width,
+          height: targetFile?.height || v.height,
           durationSec: v.duration,
           source: "pexels-video" as const,
           alt: opts.query,
         };
       })
-      .filter((v) => v.url); // drop any without a usable mp4
+      // Drop any without a usable mp4 OR below ~720p — guarantees the
+      // homepage video looks crisp on retina screens.
+      .filter((v) => v.url && v.width >= 1000);
   } catch {
     return [];
   }
