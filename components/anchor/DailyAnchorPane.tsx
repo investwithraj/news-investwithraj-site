@@ -272,9 +272,9 @@ export function DailyAnchorPane() {
             )}
           </div>
 
-          {/* Footer line */}
+          {/* Footer line — generated date + attribution */}
           <div
-            className="mt-4 flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.22em]"
+            className="mt-4 flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.22em] gap-3"
             style={{ color: "rgba(248, 250, 252, 0.45)" }}
           >
             <span>
@@ -282,11 +282,22 @@ export function DailyAnchorPane() {
                 ? `Generated · ${anchor.date}`
                 : "Awaiting first generation"}
             </span>
-            {anchor?.provider && (
-              <span style={{ color: "var(--gold-bright, #E0C076)" }}>
-                Voice · ElevenLabs · {anchor.provider}
-              </span>
-            )}
+            <span className="text-right" style={{ color: "rgba(248, 250, 252, 0.6)" }}>
+              {anchor?.audioUrl && (
+                <span>Voice · ElevenLabs · Raj</span>
+              )}
+              {anchor?.videoCredit && (
+                <>
+                  {anchor.audioUrl && <span aria-hidden> · </span>}
+                  <span style={{ color: "var(--gold-bright, #E0C076)" }}>
+                    Footage · {anchor.videoCredit}
+                  </span>
+                  {anchor.videoSource === "pexels-video" && (
+                    <span style={{ color: "rgba(248,250,252,0.45)" }}> · Pexels</span>
+                  )}
+                </>
+              )}
+            </span>
           </div>
         </div>
       </div>
