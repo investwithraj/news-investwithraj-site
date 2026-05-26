@@ -18,6 +18,10 @@ const SOUND_MAP = {
   "section-reveal": "/audio/ui/section-reveal.mp3", // 2s airy whoosh
   "cursor-tick":    "/audio/ui/cursor-tick.mp3",    // 0.5s hairline tick
   "cmdk-swell":     "/audio/ui/cmdk-swell.mp3",     // 1.5s ascending piano swell
+  // v14.3 — three new cinematic UI sounds
+  "page-turn":      "/audio/ui/page-turn.mp3",      // 2.5s paper rustle (chapter pin)
+  "form-submit":    "/audio/ui/form-submit.mp3",    // 2s brass bell strike (form success)
+  "audio-on":       "/audio/ui/audio-on.mp3",       // 2s ascending swell (toggle on)
 } as const;
 
 export type UISound = keyof typeof SOUND_MAP;
@@ -28,6 +32,9 @@ const VOLUME: Record<UISound, number> = {
   "section-reveal": 0.14,
   "cursor-tick":    0.10,
   "cmdk-swell":     0.32,
+  "page-turn":      0.22,
+  "form-submit":    0.30,
+  "audio-on":       0.35,
 };
 
 // Buffer cache — we preload + reuse, since each sound plays many times
