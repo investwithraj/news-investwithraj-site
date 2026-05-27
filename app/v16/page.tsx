@@ -10,41 +10,44 @@ import DataPanel from "@/components/v16/DataPanel";
  * primary hero (terminal instead of Brandly portrait) reflecting the news
  * subdomain's role: daily UAE real-estate intelligence feed.
  */
+// Pre-launch planned-coverage list. No fictional headlines, no fake timestamps.
+// Replaced with real pieces as they ship via the pipeline at
+// ~/MEDIA/_CATALOG/V16-NEWS-PIPELINE.md.
 const LATEST_READS = [
   {
-    eyebrow: "Hudayriyat · Modon",
-    title: "Phase 2 launch dated September 2026 — pricing leak suggests 8% above phase 1",
-    publishedAt: "2h ago",
+    eyebrow: "Weekly · DLD round-up",
+    title: "Each Monday morning: previous-week DLD transaction round-up",
+    publishedAt: "Upcoming",
     excerpt:
-      "A Modon internal deck circulated last week shows phase 2 indicative pricing at AED 3,020-4,535/sqft, an 8% step above the phase 1 ladder.",
+      "Aggregated DLD weekly transaction CSV → top movers by area, biggest trades, week-on-week price drift. Auto-drafted from raw data, edited by Raj before publish.",
   },
   {
-    eyebrow: "Palm Jebel Ali · Nakheel",
-    title: "Frond G-K opening Q3 2026 — investor allocation guidance tightens",
-    publishedAt: "5h ago",
+    eyebrow: "Monthly · Area deep-dive",
+    title: "One area, read end-to-end",
+    publishedAt: "Upcoming",
     excerpt:
-      "Nakheel has communicated to broker partners that frond G-K will require investor pre-qualification this cycle.",
+      "Rotating across Palm Jebel Ali, Hudayriyat, Saadiyat, MBR City, Wynn / Al Marjan. Each piece walks master plan, current pricing band, supply pipeline, and the case for / against.",
   },
   {
-    eyebrow: "Saadiyat Reserve",
-    title: "First secondary trade since Q4 2024 — AED 6,120/sqft, +5.5% over last comp",
-    publishedAt: "1d ago",
+    eyebrow: "Monthly · Plot watchlist",
+    title: "What plot owners are signalling",
+    publishedAt: "Upcoming",
     excerpt:
-      "TDIC-listed villa traded last week at AED 6,120/sqft, the first comparable secondary trade in 18 months.",
+      "Dubai's secondary land market is the most under-reported tier. Monthly notes on what plot owners are listing, what&apos;s actually trading, and where land prices are reading the cycle ahead of villas.",
   },
   {
-    eyebrow: "Wynn Al Marjan",
-    title: "Pre-opening occupancy projections revised upward by JLL — 71% Y1",
-    publishedAt: "1d ago",
+    eyebrow: "Ad-hoc · Launch notes",
+    title: "Developer launch notes when real launches happen",
+    publishedAt: "Upcoming",
     excerpt:
-      "JLL's updated projection raises Wynn Al Marjan's year-one stabilized occupancy from 64% to 71% based on regional demand data.",
+      "When a real primary launch warrants a piece, we publish a launch note. Spec, pricing band, payment plan, comparable existing stock. Not every launch &mdash; only the ones with a defensible thesis.",
   },
   {
-    eyebrow: "Dubai 2040",
-    title: "RTA confirms Blue Line metro alignment — three new station boundaries published",
-    publishedAt: "2d ago",
+    eyebrow: "Quarterly · Cycle read",
+    title: "Where Dubai is on the cycle — quarterly",
+    publishedAt: "Upcoming",
     excerpt:
-      "The RTA has published final station boundary maps for the Blue Line metro extension, opening September 2029.",
+      "A quarterly long-read on cycle stage. Volume, pricing, primary-vs-secondary split, off-plan vs ready, finance availability. Built from DLD + Knight Frank + JLL + Property Finder data.",
   },
 ];
 
@@ -72,7 +75,7 @@ export default function NewsV16Home() {
           >
             <div>
               <p className="v16-mono" style={{ marginBottom: "16px", color: "var(--v16-electric)" }}>
-                Today · 5 verified-source reads
+                Pre-launch · 5 fixed sections per cycle
               </p>
               <h2 className="v16-h2" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)" }}>
                 The{" "}
@@ -80,7 +83,7 @@ export default function NewsV16Home() {
               </h2>
             </div>
             <CTAPill variant="paper" size="md" href="/v16/articles">
-              All articles
+              Article archive
             </CTAPill>
           </div>
 
@@ -161,7 +164,7 @@ export default function NewsV16Home() {
             }}
             className="v16-sources-grid"
           >
-            {["DLD", "RERA", "Khaleej Times", "Arabian Business", "Knight Frank", "JLL"].map(
+            {["DLD", "RERA", "Property Finder", "Bayut", "Knight Frank", "JLL"].map(
               (s) => (
                 <div
                   key={s}
@@ -212,8 +215,8 @@ export default function NewsV16Home() {
             The Engine · /v16
           </p>
           <h2 className="v16-h2" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", marginBottom: "48px" }}>
-            The numbers behind{" "}
-            <span className="v16-h1-italic">the read.</span>
+            How the publication{" "}
+            <span className="v16-h1-italic">works.</span>
           </h2>
 
           <div
@@ -226,15 +229,15 @@ export default function NewsV16Home() {
             }}
             className="v16-engine-grid"
           >
-            <DataPanel eyebrow="Articles to date" value="2,400+" delta={{ value: "+11 today", trend: "up" }} variant="holo" />
-            <DataPanel eyebrow="Primary sources" value="34" delta={{ value: "Verified", trend: "flat" }} variant="light" />
-            <DataPanel eyebrow="Daily readers" value="8K+" delta={{ value: "+22% MoM", trend: "up" }} variant="light" />
-            <DataPanel eyebrow="Avg time on site" value="6:42" delta={{ value: "Industry: 1:48", trend: "up" }} variant="light" />
+            <DataPanel eyebrow="Status" value="Pre-launch" variant="holo" />
+            <DataPanel eyebrow="Sustainable cadence" value="2–3/wk" variant="light" />
+            <DataPanel eyebrow="Sources" value="DLD · RERA · Reports" variant="light" />
+            <DataPanel eyebrow="Pipeline" value="Brief → Edit → Publish" variant="light" />
           </div>
 
           <div style={{ marginTop: "48px" }}>
             <CTAPill variant="graphite" size="lg" href="/v16/articles">
-              Read today&apos;s edition
+              Archive
             </CTAPill>
           </div>
         </div>

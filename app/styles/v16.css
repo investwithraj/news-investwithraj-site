@@ -286,12 +286,15 @@
 
 /* Italic accent — uses Geist Italic in electric cobalt color.
    The 2040 "Bloomberg accent word" pattern. NOT Fraunces serif.
-   Optional cursive-feel via skew transform on italic axis. */
+   IMPORTANT: font-size INHERITS from parent so when used as an inline
+   accent word inside H2 / H3 / smaller copy, the italic word doesn't
+   blow out the layout. Use inside an H1 and it inherits H1 size; use
+   inside an H2 and it inherits H2 size. */
 .v16-h1-italic {
   font-family: var(--v16-font-display), system-ui, -apple-system, sans-serif;
   font-style: italic;
-  font-size: var(--v16-h1-size);
-  line-height: var(--v16-h1-leading);
+  font-size: inherit;
+  line-height: inherit;
   letter-spacing: -0.03em;
   font-weight: 600;
   color: var(--v16-electric);

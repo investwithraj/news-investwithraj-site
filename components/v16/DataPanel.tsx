@@ -91,7 +91,7 @@ export default function DataPanel({
       variant === "dark"
         ? "var(--v16-ink-card)"
         : "var(--v16-paper-pure)",
-    color: variant === "dark" ? "var(--v16-paper)" : "var(--v16-ink)",
+    color: "var(--v16-ink)",
     border: `1px solid ${
       variant === "holo"
         ? `rgba(91, 165, 245, ${0.3 + pulse * 0.3})`
@@ -158,7 +158,7 @@ export default function DataPanel({
           lineHeight: 1,
           letterSpacing: "-0.03em",
           fontFeatureSettings: '"tnum", "lnum"',
-          color: variant === "dark" ? "var(--v16-paper)" : "var(--v16-ink)",
+          color: "var(--v16-ink)",
         }}
       >
         {value}

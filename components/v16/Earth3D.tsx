@@ -380,10 +380,12 @@ export default function Earth3D({
         position: "relative",
         width: "100%",
         aspectRatio: "1 / 1",
+        minHeight: "320px",
         ...style,
       }}
     >
       <Canvas
+        style={{ position: "absolute", inset: 0 }}
         dpr={dpr}
         camera={{ position: [0, 0, 2.8], fov: 45 }}
         gl={{
