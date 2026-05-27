@@ -18,7 +18,19 @@ export interface Article {
   publishedAt: string;     // "May 27, 2026"
   publishedAtIso: string;  // "2026-05-27"
   readTimeMin: number;
-  body: string;            // MDX-lite plain text for now; upgrade to MDX later
+  /**
+   * Body is GitHub-flavoured Markdown — rendered server-side by
+   * react-markdown + remark-gfm in app/v16/articles/[slug]/page.tsx.
+   *
+   * Supports: headings (## / ###), paragraphs, **bold**, *italic*,
+   * [links](url), bullet + numbered lists, > blockquotes,
+   * `inline code`, ```fenced code blocks```, tables (GFM),
+   * --- horizontal rules, ![alt](src) images.
+   *
+   * Authoring tip: prefer linking sources inline. The "Sources cited"
+   * block at the bottom is a redundancy guard for the reader.
+   */
+  body: string;
   sourcesCited: Array<{ label: string; href: string }>;
   author?: string;
   modifiedAt?: string;

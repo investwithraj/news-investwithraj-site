@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import GlassCard from "@/components/v16/GlassCard";
 import CTAPill from "@/components/v16/CTAPill";
 import { getArticleBySlug, getAllArticles } from "@/content/articles";
@@ -103,8 +105,11 @@ export default async function ArticlePage({ params }: PageProps) {
           </p>
         </header>
 
-        {/* Body — plain text paragraphs; upgrade to MDX later */}
+        {/* Body — GitHub-flavoured markdown rendered by react-markdown.
+            Supports headings, paragraphs, lists, links, blockquotes,
+            tables, code, and emphasis. Inline images use plain <img>. */}
         <div
+          className="v16-article-body"
           style={{
             fontFamily: "var(--v16-font-body), system-ui, sans-serif",
             fontSize: "1.075rem",
@@ -113,11 +118,188 @@ export default async function ArticlePage({ params }: PageProps) {
             marginBottom: "64px",
           }}
         >
-          {article.body.split(/\n\n+/).map((para, i) => (
-            <p key={i} style={{ marginBottom: "24px" }}>
-              {para}
-            </p>
-          ))}
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h2: ({ children }) => (
+                <h2
+                  style={{
+                    fontFamily: "var(--v16-font-display), Georgia, serif",
+                    fontSize: "clamp(1.5rem, 3vw, 2.25rem)",
+                    fontWeight: 500,
+                    lineHeight: 1.15,
+                    letterSpacing: "-0.02em",
+                    margin: "48px 0 16px",
+                  }}
+                >
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3
+                  style={{
+                    fontFamily: "var(--v16-font-display), Georgia, serif",
+                    fontSize: "clamp(1.25rem, 2vw, 1.625rem)",
+                    fontWeight: 500,
+                    lineHeight: 1.2,
+                    margin: "32px 0 12px",
+                  }}
+                >
+                  {children}
+                </h3>
+              ),
+              p: ({ children }) => (
+                <p style={{ marginBottom: "20px" }}>{children}</p>
+              ),
+              ul: ({ children }) => (
+                <ul
+                  style={{
+                    margin: "0 0 24px",
+                    paddingLeft: "1.25rem",
+                    listStyle: "disc",
+                  }}
+                >
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol
+                  style={{
+                    margin: "0 0 24px",
+                    paddingLeft: "1.25rem",
+                    listStyle: "decimal",
+                  }}
+                >
+                  {children}
+                </ol>
+              ),
+              li: ({ children }) => (
+                <li style={{ marginBottom: "6px" }}>{children}</li>
+              ),
+              a: ({ children, href }) => (
+                <a
+                  href={href}
+                  target={href?.startsWith("http") ? "_blank" : undefined}
+                  rel={href?.startsWith("http") ? "noreferrer noopener" : undefined}
+                  style={{
+                    color: "var(--v16-electric)",
+                    textDecoration: "underline",
+                    textDecorationThickness: "1px",
+                    textUnderlineOffset: "3px",
+                  }}
+                >
+                  {children}
+                </a>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote
+                  style={{
+                    borderLeft: "3px solid var(--v16-electric)",
+                    paddingLeft: "20px",
+                    margin: "24px 0",
+                    fontFamily: "var(--v16-font-display), Georgia, serif",
+                    fontSize: "1.2rem",
+                    fontStyle: "italic",
+                    color: "var(--v16-ink-soft)",
+                  }}
+                >
+                  {children}
+                </blockquote>
+              ),
+              code: ({ children }) => (
+                <code
+                  style={{
+                    fontFamily: "var(--v16-font-mono), monospace",
+                    background: "var(--v16-paper-cool)",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    fontSize: "0.9em",
+                  }}
+                >
+                  {children}
+                </code>
+              ),
+              pre: ({ children }) => (
+                <pre
+                  style={{
+                    background: "var(--v16-paper-cool)",
+                    border: "1px solid var(--v16-chrome)",
+                    borderRadius: "var(--v16-radius-md)",
+                    padding: "16px 20px",
+                    overflowX: "auto",
+                    marginBottom: "24px",
+                    fontFamily: "var(--v16-font-mono), monospace",
+                    fontSize: "0.875rem",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {children}
+                </pre>
+              ),
+              table: ({ children }) => (
+                <div style={{ overflowX: "auto", marginBottom: "24px" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    {children}
+                  </table>
+                </div>
+              ),
+              th: ({ children }) => (
+                <th
+                  style={{
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    borderBottom: "1px solid var(--v16-chrome-deep)",
+                    fontFamily: "var(--v16-font-mono), monospace",
+                    fontSize: "0.7rem",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "var(--v16-ink-muted)",
+                  }}
+                >
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td
+                  style={{
+                    padding: "10px 12px",
+                    borderBottom: "1px solid var(--v16-chrome)",
+                  }}
+                >
+                  {children}
+                </td>
+              ),
+              hr: () => (
+                <hr
+                  style={{
+                    border: "none",
+                    borderTop: "1px solid var(--v16-chrome)",
+                    margin: "40px 0",
+                  }}
+                />
+              ),
+              img: ({ src, alt }) => (
+                <img
+                  src={typeof src === "string" ? src : undefined}
+                  alt={alt ?? ""}
+                  style={{
+                    maxWidth: "100%",
+                    height: "auto",
+                    borderRadius: "var(--v16-radius-md)",
+                    margin: "24px 0",
+                  }}
+                />
+              ),
+            }}
+          >
+            {article.body}
+          </ReactMarkdown>
         </div>
 
         {/* Sources cited */}
