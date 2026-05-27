@@ -351,10 +351,17 @@ function EarthGroup({
 }
 
 /** ─── Public component ─────────────────────────────────────────────────── */
+/** Default texture paths — wire the NASA daymap + cloud overlay automatically.
+ *  Any caller can override by passing textureUrl / cloudsUrl props.
+ *  If the files don't exist at these paths, the Suspense fallback in
+ *  EarthGroup catches the loader rejection and ProceduralEarth renders. */
+const DEFAULT_TEXTURE_URL = "/textures/earth-day-8k.jpg";
+const DEFAULT_CLOUDS_URL = "/textures/earth-clouds-4k.jpg";
+
 export default function Earth3D({
   pins = DEFAULT_PINS,
-  textureUrl,
-  cloudsUrl,
+  textureUrl = DEFAULT_TEXTURE_URL,
+  cloudsUrl = DEFAULT_CLOUDS_URL,
   autoRotate = true,
   autoRotateSpeed = 0.15,
   reducedQuality = false,
