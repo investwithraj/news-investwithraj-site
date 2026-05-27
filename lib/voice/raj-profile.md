@@ -260,7 +260,7 @@ developer's own spelling on their published marketing material.
 | **Dates** | Month YYYY for events, Q# YYYY for ranges | `March 2028` `Q1 2026` `H1 2025` |
 | **Months in body** | full name | `September 2030` not `Sep 2030` |
 | **Date in subtitle** | display-friendly | `Released March 2026.` |
-| **Phone** | E.164 with country flag context | `+971 58 996 6085` |
+| **Phone** | E.164 with country flag context | `+971 58 996 6086` |
 
 ---
 

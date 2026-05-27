@@ -10,13 +10,13 @@ export const SITE = {
   tagline:
     "Daily UAE real-estate intelligence. Curated. Cited. Read like an analyst.",
   description:
-    "Independent UAE real-estate market intelligence. 5–15 verified-source articles a day on Dubai, Abu Dhabi, and Ras Al Khaimah. Every piece cites DLD / RERA / Knight Frank / JLL / Khaleej Times / Arabian Business. Written for serious investors.",
+    "Independent UAE real-estate market intelligence. Weekly DLD transaction round-ups, monthly area deep-dives, plot-owner watchlists, and quarterly cycle reads. Every piece cites primary sources: DLD, RERA, Property Finder, Bayut, Knight Frank, JLL. Written for serious investors.",
 };
 
 export const CONTACT = {
   email: "office@investwithraj.com",
-  whatsappNumber: "+971 58 996 6085",
-  whatsappE164: "971589966085",
+  whatsappNumber: "+971 58 996 6086",
+  whatsappE164: "971589966086",
   linkedin: "https://www.linkedin.com/in/raj-tomar-1470a7242/",
   instagram: "https://www.instagram.com/rajtomar.dxb",
   instagramHandle: "@rajtomar.dxb",

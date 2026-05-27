@@ -3,6 +3,10 @@
 import { useState } from "react";
 import CTAPill from "@/components/v16/CTAPill";
 import GlassCard from "@/components/v16/GlassCard";
+import { CONTACT } from "@/lib/constants";
+
+const waUrl = (message: string) =>
+  `https://wa.me/${CONTACT.whatsappE164}?text=${encodeURIComponent(message)}`;
 
 /**
  * v16 EngagementCTA — homepage closing CTA room.
@@ -48,9 +52,9 @@ export default function EngagementCTA() {
       }
       setStatus("success");
       setTimeout(() => {
-        window.location.href = `https://wa.me/971581234567?text=${encodeURIComponent(
+        window.location.href = waUrl(
           "Hi Raj, I just requested the latest Note via the site."
-        )}`;
+        );
       }, 1000);
     } catch (err) {
       setStatus("error");
@@ -155,7 +159,7 @@ export default function EngagementCTA() {
             <CTAPill
               variant="graphite"
               size="md"
-              href="https://wa.me/971581234567?text=Hi%20Raj,%20I%27d%20like%20to%20talk%20about%20UAE%20real%20estate."
+              href={waUrl("Hi Raj, I'd like to talk about UAE real estate.")}
             >
               Open WhatsApp
             </CTAPill>
