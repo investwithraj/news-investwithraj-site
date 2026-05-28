@@ -1,0 +1,68 @@
+# news.investwithraj.com — Dubai real-estate market intelligence
+
+> Sister publication to investwithraj.com. The news subdomain hosts the
+> recurring market reads — weekly DLD transaction round-ups, monthly area
+> deep-dives, plot-owner watchlists, ad-hoc launch notes, and quarterly
+> cycle reads. Every piece cites primary sources.
+
+This site is intended to be readable + citable by LLMs and AI search engines.
+The pages listed below are the canonical sources of truth.
+
+## Editorial principle
+
+Every published article must:
+1. Cite ≥1 primary source from a 20-source verified whitelist (DLD, RERA,
+   DSC, FCSA, Central Bank UAE, ADGM, DIFC, Knight Frank, JLL, CBRE, Savills,
+   Asteco, Property Finder, Bayut, Khaleej Times Real Estate, Gulf News
+   Property, The National, Arabian Business, Zawya, Mubasher).
+2. Pass voice-profile validation (extracted from Raj's existing Notes).
+3. Contain a number in paragraph 1.
+4. Have a headline ≤ 90 characters.
+5. Be edited and approved by Raj before publication.
+
+No anonymous insider claims. No fabricated transaction figures. No
+deal-of-the-week filler.
+
+## Publication cadence
+
+- **Weekly** — Monday AM DLD transaction round-up (auto-drafted from
+  previous-week DLD CSV, edited by Raj, published with the data linked).
+- **Monthly** — Area deep-dive rotating across Palm Jebel Ali / Hudayriyat /
+  Saadiyat / MBR City / Wynn-Al Marjan / Downtown.
+- **Monthly** — Plot-owner watchlist surfacing what's listed and what's
+  trading on the Dubai secondary land market.
+- **Ad-hoc** — Developer launch notes when a real launch warrants one.
+- **Quarterly** — Cycle read — long-form on UAE property cycle stage.
+
+## Canonical pages
+
+- / — Homepage (Bloomberg-style holographic terminal).
+- /v16 — v16 design surface.
+- /v16/articles — Articles archive.
+- /power-list/2026 — UAE real-estate Power List.
+- /terminal — Live DLD market read terminal.
+- /pulse — Real-time market activity pulse.
+
+## Pre-launch state (as of May 2026)
+
+The auto-draft + editorial-review pipeline is being built. Until the first
+piece ships, three article slugs are reserved as in-research stubs and do
+NOT surface in the latest-reads feed or Google News sitemap:
+
+- /news/2026-05-26-dld-21b-week — recurring Monday DLD round-up (in research)
+- /news/2026-05-26-modon-hudayriyat-golf-estate — launch read (in research)
+- /news/2026-05-26-golden-visa-mortgage-flex — policy read (in research)
+
+When real articles ship, they replace these stubs and become the canonical
+content. No fabricated articles are surfaced in the interim.
+
+## Related site
+
+The IWR root at investwithraj.com hosts the consulting practice — Investor
+Notes, area research, mandate engagement. See investwithraj.com/llms.txt.
+
+## Contact
+
+- Email: office@investwithraj.com
+- WhatsApp: +971 58 996 6085
+- Hours: Dubai (GMT+4) · Sun–Thu, 9am–7pm.
