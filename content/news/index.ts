@@ -33,28 +33,39 @@ export const NEWS_ARTICLES: NewsArticle[] = [
   goldenVisaMortgageFlex,
 ];
 
-/** Latest N news articles, most recent first. */
+/** True if the article has shipped (live or status omitted). False for
+ *  in-research stubs that keep slugs warm but should not surface in feeds. */
+function isLive(a: NewsArticle): boolean {
+  return a.status !== "research";
+}
+
+/** Latest N live news articles, most recent first. In-research entries
+ *  are filtered out — they keep their slug but don't appear in feeds. */
 export function getLatestNews(limit = 10): NewsArticle[] {
   return [...NEWS_ARTICLES]
+    .filter(isLive)
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     .slice(0, limit);
 }
 
-/** Get a single article by slug, or null if not found. */
+/** Get a single article by slug, or null if not found. Resolves
+ *  in-research stubs too (slug stays warm). */
 export function getNewsBySlug(slug: string): NewsArticle | null {
   return NEWS_ARTICLES.find((a) => a.slug === slug) ?? null;
 }
 
-/** All slugs for generateStaticParams() in /news/[slug]/page.tsx. */
+/** All slugs for generateStaticParams() in /news/[slug]/page.tsx. Includes
+ *  in-research stubs so the routes still pre-render. */
 export function getAllNewsSlugs(): string[] {
   return NEWS_ARTICLES.map((a) => a.slug);
 }
 
 /** Articles published in the last 48 hours — used by news-sitemap.xml
- *  per Google News spec (only show recent articles). */
+ *  per Google News spec. Excludes in-research stubs (must not be indexed
+ *  as fresh news content). */
 export function getNewsForGoogleNewsSitemap(): NewsArticle[] {
   const cutoffMs = Date.now() - 48 * 60 * 60 * 1000;
-  return NEWS_ARTICLES.filter((a) => {
+  return NEWS_ARTICLES.filter(isLive).filter((a) => {
     const t = new Date(a.publishedAt).getTime();
     return t >= cutoffMs;
   });

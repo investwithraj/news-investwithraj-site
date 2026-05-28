@@ -15,8 +15,8 @@ export const SITE = {
 
 export const CONTACT = {
   email: "office@investwithraj.com",
-  whatsappNumber: "+971 58 996 6086",
-  whatsappE164: "971589966086",
+  whatsappNumber: "+971 58 996 6085",
+  whatsappE164: "971589966085",
   linkedin: "https://www.linkedin.com/in/raj-tomar-1470a7242/",
   instagram: "https://www.instagram.com/rajtomar.dxb",
   instagramHandle: "@rajtomar.dxb",
