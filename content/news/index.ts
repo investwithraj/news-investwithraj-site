@@ -26,8 +26,10 @@ export {
 import { article as dld21bWeek } from "./2026-05-26-dld-21b-week";
 import { article as modonHudayriyatGolfEstate } from "./2026-05-26-modon-hudayriyat-golf-estate";
 import { article as goldenVisaMortgageFlex } from "./2026-05-26-golden-visa-mortgage-flex";
+import { article as art_2026_05_30_al_barari_villa_lease_resets_dubai_ultra_prime_rental_ceilin } from "./2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_05_30_al_barari_villa_lease_resets_dubai_ultra_prime_rental_ceilin,
   dld21bWeek,
   modonHudayriyatGolfEstate,
   goldenVisaMortgageFlex,
