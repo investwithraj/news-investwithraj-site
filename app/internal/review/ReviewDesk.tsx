@@ -57,10 +57,12 @@ export default function ReviewDesk({
   drafts,
   backend,
   stats,
+  actionSecret,
 }: {
   drafts: NewsDraft[];
   backend: string;
   stats: Stats;
+  actionSecret: string;
 }) {
   return (
     <div
@@ -182,7 +184,7 @@ export default function ReviewDesk({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
             {drafts.map((d) => (
-              <DraftSlab key={d.id} draft={d} />
+              <DraftSlab key={d.id} draft={d} actionSecret={actionSecret} />
             ))}
           </div>
         )}
@@ -217,7 +219,7 @@ function EmptyState() {
 
 type View = "verify" | "preview" | "edit";
 
-function DraftSlab({ draft }: { draft: NewsDraft }) {
+function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [view, setView] = useState<View>("verify");
@@ -263,7 +265,12 @@ function DraftSlab({ draft }: { draft: NewsDraft }) {
   }
 
   async function api(path: string, method: string, body?: unknown) {
-    const res = await fetch(path, {
+    // Basic-Auth is scoped to /internal/* by the browser, so authenticate the
+    // /api/news/draft/* mutations with the action secret instead.
+    const url = actionSecret
+      ? `${path}${path.includes("?") ? "&" : "?"}secret=${encodeURIComponent(actionSecret)}`
+      : path;
+    const res = await fetch(url, {
       method,
       credentials: "include",
       headers: { "Content-Type": "application/json" },

@@ -47,11 +47,16 @@ export default async function ReviewPage() {
             100,
         );
 
+  // The browser scopes its Basic-Auth creds to /internal/* (where proxy.ts
+  // challenged it), so the cockpit's fetches to /api/news/draft/* arrive
+  // unauthenticated → 401. Pass the action secret down so the client appends
+  // ?secret=; only authenticated operators ever render this page.
   return (
     <ReviewDesk
       drafts={drafts}
       backend={backend}
       stats={{ awaiting: drafts.length, publishedToday, publishedThisWeek, avgConfidence }}
+      actionSecret={process.env.POST_PUBLISH_SECRET ?? ""}
     />
   );
 }
