@@ -112,13 +112,14 @@ export async function fetchRssFeed(
     const xml = await res.text();
     const domain = new URL(source.url).hostname.replace("www.", "");
     const isAtom = /<feed[\s>]/i.test(xml);
+    const isGoogleNews = domain === "news.google.com";
 
     let entries: RawEntry[];
 
     if (isAtom) {
       entries = parseAtomEntries(xml, source.name, source.tier, domain, limit);
     } else {
-      entries = parseRssItems(xml, source.name, source.tier, domain, limit);
+      entries = parseRssItems(xml, source.name, source.tier, domain, limit, isGoogleNews);
     }
 
     return {
@@ -144,7 +145,8 @@ function parseRssItems(
   sourceName: string,
   sourceTier: VerifiedSource["tier"],
   domain: string,
-  limit: number
+  limit: number,
+  isGoogleNews = false,
 ): RawEntry[] {
   const itemBlocks = xml
     .split(/<item[\s>]/i)
@@ -153,7 +155,7 @@ function parseRssItems(
 
   const entries: RawEntry[] = [];
   for (const block of itemBlocks.slice(0, limit)) {
-    const title = extract(/<title[^>]*>([\s\S]*?)<\/title>/, block);
+    let title = extract(/<title[^>]*>([\s\S]*?)<\/title>/, block);
     const link = extract(/<link[^>]*>([\s\S]*?)<\/link>/, block);
     const guid = extract(/<guid[^>]*>([\s\S]*?)<\/guid>/, block);
     const pubDate = extract(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/, block);
@@ -165,13 +167,35 @@ function parseRssItems(
 
     if (!title || !link) continue;
 
+    // Per-entry attribution. Google News tags each item with its real
+    // publisher: <source url="https://publisher.com">Publisher</source>.
+    // Lift it so the entry is attributed (and citable) to the actual outlet,
+    // and strip the " - Publisher" suffix Google appends to the headline.
+    let entryName = sourceName;
+    let entryDomain = domain;
+    if (isGoogleNews) {
+      const sm = block.match(/<source[^>]*url="([^"]+)"[^>]*>([\s\S]*?)<\/source>/i);
+      if (sm) {
+        const pubName = decodeXml(sm[2]);
+        try {
+          entryDomain = new URL(sm[1]).hostname.replace("www.", "");
+        } catch {
+          /* keep aggregator domain */
+        }
+        entryName = pubName || sourceName;
+        if (pubName && title.endsWith(` - ${pubName}`)) {
+          title = title.slice(0, -(` - ${pubName}`.length)).trim();
+        }
+      }
+    }
+
     entries.push({
       id: guid || hashUrl(link),
       title,
       url: link,
       publishedAt: toIso(pubDate),
       summary: stripHtml(descriptionRaw).slice(0, 600),
-      source: { name: sourceName, tier: sourceTier, domain },
+      source: { name: entryName, tier: sourceTier, domain: entryDomain },
       categories: categories.length > 0 ? categories : undefined,
     });
   }

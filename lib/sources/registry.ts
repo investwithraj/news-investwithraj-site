@@ -25,6 +25,9 @@ export interface VerifiedSource {
   rssUrl?: string;
   /** Optional notes for the pipeline (e.g. paywall, scrape-rate-limit) */
   notes?: string;
+  /** False = discovery feed only (e.g. Google News) — surfaces stories but is
+   *  never itself a valid citation target. Defaults to true. */
+  citable?: boolean;
 }
 
 /**
@@ -203,6 +206,57 @@ export const SOURCE_WHITELIST: VerifiedSource[] = [
   },
 ];
 
+/* ─── Discovery feeds — Google News RSS (the fetch workhorses) ──────────
+ *
+ * Why: the direct-publisher RSS paths above rot constantly (May 2026: 14/20
+ * were 404/403). Google News RSS is standard RSS 2.0 (our parser handles it),
+ * never 404s, scopes by query + recency, and tags each item with its REAL
+ * publisher via the <source url> element — which the RSS parser lifts so each
+ * entry is attributed (and citable) to the actual outlet, not to Google.
+ *
+ * These are discovery-only (citable:false) — articles cite the underlying
+ * publisher (already in SOURCE_WHITELIST), never news.google.com. */
+
+function googleNews(query: string): string {
+  // AE locale + 7-day recency window; encodeURIComponent handles operators.
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(
+    `${query} when:7d`,
+  )}&hl=en-AE&gl=AE&ceid=AE:en`;
+}
+
+function discovery(name: string, query: string, market: VerifiedSource["market"]): VerifiedSource {
+  return {
+    name,
+    url: "https://news.google.com",
+    tier: "national-press",
+    market,
+    fetchType: "rss",
+    rssUrl: googleNews(query),
+    citable: false,
+  };
+}
+
+export const DISCOVERY_FEEDS: VerifiedSource[] = [
+  discovery("Dubai real estate", "Dubai real estate", ["Dubai"]),
+  discovery("Dubai property market", "Dubai property market price", ["Dubai"]),
+  discovery("Dubai off-plan", "Dubai off-plan property launch", ["Dubai"]),
+  discovery("Dubai developers", "Emaar OR Nakheel OR Meraas OR Sobha OR Damac Dubai property", ["Dubai"]),
+  discovery("Abu Dhabi real estate", "Abu Dhabi real estate Aldar OR Modon", ["Abu Dhabi"]),
+  discovery("Hudayriyat / Saadiyat", "Hudayriyat OR Saadiyat island property", ["Abu Dhabi"]),
+  discovery("Ras Al Khaimah", "Ras Al Khaimah Wynn Al Marjan real estate", ["Ras Al Khaimah"]),
+  discovery("Golden Visa", "UAE Golden Visa property investment", ["UAE"]),
+  discovery("DLD transactions", "Dubai Land Department transactions volume", ["Dubai"]),
+  discovery("RERA / regulation", "Dubai RERA property regulation mortgage", ["Dubai"]),
+  discovery("Branded residences", "Dubai branded residences ultra luxury", ["Dubai"]),
+  discovery("UAE rental market", "UAE Dubai rental market rents yield", ["UAE", "Dubai"]),
+];
+
+/** What the orchestrator actually pulls from each run. Discovery feeds carry
+ *  the load; the citable SOURCE_WHITELIST entries with a live rssUrl are added
+ *  for primary-source coverage. (Dead direct feeds stay in SOURCE_WHITELIST as
+ *  citation anchors but are not fetched.) */
+export const FETCH_SOURCES: VerifiedSource[] = [...DISCOVERY_FEEDS];
+
 /** Per-tier weight for ranking which articles to draft first.
  *  Higher weight → article scored higher in the daily cluster ranking. */
 export const TIER_WEIGHT: Record<SourceTier, number> = {
@@ -226,9 +280,11 @@ export function findSourceByUrl(url: string): VerifiedSource | undefined {
   }
 }
 
-/** Returns just the whitelisted domains for fast bulk-checking. */
+/** Returns just the citable whitelisted domains for fast bulk-checking.
+ *  Discovery feeds (citable:false, e.g. news.google.com) are excluded — an
+ *  article cites the underlying publisher, never the aggregator. */
 export function getWhitelistDomains(): string[] {
-  return SOURCE_WHITELIST.map((s) =>
-    new URL(s.url).hostname.replace("www.", "")
+  return SOURCE_WHITELIST.filter((s) => s.citable !== false).map((s) =>
+    new URL(s.url).hostname.replace("www.", ""),
   );
 }
