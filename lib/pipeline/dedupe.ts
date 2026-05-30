@@ -26,7 +26,7 @@ function canonicalUrl(url: string): string {
 }
 
 /** Normalize a title for similarity comparison */
-function normalizeTitle(t: string): string {
+export function normalizeTitle(t: string): string {
   return t
     .toLowerCase()
     .replace(/[^\w\s]/g, " ")
@@ -35,7 +35,7 @@ function normalizeTitle(t: string): string {
 }
 
 /** Jaccard similarity over word sets — fast + good enough for headlines */
-function similarity(a: string, b: string): number {
+export function similarity(a: string, b: string): number {
   const sa = new Set(normalizeTitle(a).split(" ").filter((w) => w.length > 2));
   const sb = new Set(normalizeTitle(b).split(" ").filter((w) => w.length > 2));
   if (sa.size === 0 || sb.size === 0) return 0;

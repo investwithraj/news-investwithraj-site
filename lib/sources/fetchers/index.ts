@@ -6,6 +6,7 @@ export type { RawEntry, FetchResult, FetchRun } from "./types";
 import { FETCH_SOURCES } from "@/lib/sources/registry";
 import { fetchRssFeed } from "./rss";
 import { fetchWebPage } from "./webfetch";
+import { fetchReddit } from "./reddit";
 
 /** Run all fetch sources in parallel. Each source has its own timeout
  *  + graceful failure — a single source erroring never blocks the rest. */
@@ -14,9 +15,8 @@ export async function fetchAllSources(): Promise<FetchRun> {
   const startMs = performance.now();
 
   const promises = FETCH_SOURCES.map((source) => {
-    if (source.fetchType === "rss") {
-      return fetchRssFeed(source);
-    }
+    if (source.fetchType === "rss") return fetchRssFeed(source);
+    if (source.fetchType === "reddit") return fetchReddit(source);
     return fetchWebPage(source);
   });
 
