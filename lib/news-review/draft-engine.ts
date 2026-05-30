@@ -11,6 +11,7 @@
 
 import { callClaudeResearch } from "@/lib/ai/claude";
 import { validateDraft, type DraftArticle as ValidatorInput } from "@/lib/voice/validator";
+import { fetchArticleText } from "@/lib/sources/extract";
 import { rootCtaUrl } from "@/lib/constants";
 import type { Cluster } from "@/lib/pipeline/types";
 import type { DraftArticle, NewsDraftProvenance } from "./types";
@@ -223,10 +224,20 @@ export async function draftFromCluster(
   const provenance = buildProvenance(cluster);
   const seenUrls = new Set(provenance.sources.map((s) => s.url));
   const extra: typeof provenance.sources = [];
-  for (const c of citations) {
+  // Fetch the REAL text of each cited article so the cockpit verifies figures
+  // against the actual reporting, not a snippet (the autochecker's teeth).
+  const citedTexts = await Promise.all(
+    citations.map(async (c) => ({ c, text: await fetchArticleText(c.url) })),
+  );
+  for (const { c, text } of citedTexts) {
     if (seenUrls.has(c.url)) continue;
     seenUrls.add(c.url);
-    extra.push({ name: c.source, tier: "national-press", url: c.url, summary: "Cited in the article — figures drawn from this source." });
+    extra.push({
+      name: c.source,
+      tier: "national-press",
+      url: c.url,
+      summary: text || "Cited in the article — figures drawn from this source.",
+    });
   }
   for (const u of res.searchedUrls ?? []) {
     if (seenUrls.has(u)) continue;

@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/news-review/auth";
 import { updateDraft, deleteDraft } from "@/lib/news-review/storage";
-import type { DraftArticle } from "@/lib/news-review/types";
+import type { DraftArticle, NewsDraft } from "@/lib/news-review/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +25,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     article?: DraftArticle;
     reviewNote?: string;
     verifiedSources?: string[];
+    provenance?: NewsDraft["provenance"];
   };
   try {
     body = await req.json();
@@ -36,6 +37,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if (body.article) patch.article = body.article;
   if (typeof body.reviewNote === "string") patch.reviewNote = body.reviewNote;
   if (Array.isArray(body.verifiedSources)) patch.verifiedSources = body.verifiedSources;
+  if (body.provenance) patch.provenance = body.provenance;
 
   const draft = await updateDraft(id, patch);
   if (!draft) return NextResponse.json({ error: "Draft not found" }, { status: 404 });

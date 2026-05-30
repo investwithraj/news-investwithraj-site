@@ -132,7 +132,7 @@ export async function addDraft(input: NewsDraftInput): Promise<NewsDraft> {
 /** Patch a draft. When the article changes, the validator is recomputed. */
 export async function updateDraft(
   id: string,
-  patch: Partial<Pick<NewsDraft, "article" | "reviewNote" | "verifiedSources">>,
+  patch: Partial<Pick<NewsDraft, "article" | "reviewNote" | "verifiedSources" | "provenance">>,
 ): Promise<NewsDraft | null> {
   const all = await getAllDrafts();
   const idx = all.findIndex((d) => d.id === id);
