@@ -9,9 +9,13 @@ jobs:
   draft:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger draft
-        run: |
-          curl -sS -X POST \
-            "https://news.investwithraj.com/api/cron/draft?secret=${{ secrets.POST_PUBLISH_SECRET }}" \
-            -H "content-type: application/json" --max-time 120
-            
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx tsx scripts/draft-once.ts
+        env:
+          SITE_URL: https://news.investwithraj.com
+          POST_PUBLISH_SECRET: ${{ secrets.POST_PUBLISH_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
