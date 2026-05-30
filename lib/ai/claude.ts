@@ -22,6 +22,8 @@ export interface ClaudeOptions {
   maxTokens?: number;
   /** Temperature 0-1 */
   temperature?: number;
+  /** Model override (e.g. a faster model for time-boxed serverless work). */
+  model?: string;
 }
 
 export interface ClaudeResult {
@@ -46,7 +48,7 @@ export async function callClaude(opts: ClaudeOptions): Promise<ClaudeResult> {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
+        model: opts.model ?? ANTHROPIC_MODEL,
         max_tokens: opts.maxTokens ?? 1500,
         temperature: opts.temperature ?? 0.4,
         system: opts.system,
@@ -122,7 +124,7 @@ export async function callClaudeResearch(
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: ANTHROPIC_MODEL,
+          model: opts.model ?? ANTHROPIC_MODEL,
           max_tokens: opts.maxTokens ?? 4000,
           temperature: opts.temperature ?? 0.4,
           system: opts.system,

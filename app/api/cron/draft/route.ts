@@ -161,9 +161,12 @@ async function draftCluster(
     .join("\n\n");
 
   const res = await callClaudeResearch({
+    // Haiku is ~2-3× faster than Sonnet — essential to finish a web-research
+    // draft inside Vercel Hobby's 60s function cap. Override via DRAFT_MODEL.
+    model: process.env.DRAFT_MODEL ?? "claude-haiku-4-5-20251001",
     system: SYSTEM_PROMPT,
-    maxSearches: 4,
-    maxTokens: 4200,
+    maxSearches: 2,
+    maxTokens: 3000,
     temperature: 0.4,
     messages: [
       {
@@ -259,7 +262,9 @@ async function run(req: NextRequest) {
   // Try candidates in score order until one stages — if the top cluster turns
   // out off-topic and Claude skips it, fall through to the next. Capped to
   // respect the 60s function budget (each web-research draft is ~20-40s).
-  const MAX_ATTEMPTS = parseInt(process.env.PIPELINE_MAX_ATTEMPTS ?? "2", 10);
+  // One web-research draft per run keeps us inside Vercel Hobby's 60s cap
+  // (each is ~25-40s). Staggered runs cover the next stories.
+  const MAX_ATTEMPTS = parseInt(process.env.PIPELINE_MAX_ATTEMPTS ?? "1", 10);
   const whitelist = getWhitelistDomains();
   const results: { topic: string; ok: boolean; reason?: string }[] = [];
   let staged = 0;
