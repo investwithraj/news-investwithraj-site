@@ -125,12 +125,12 @@ export function SemaformLayout({ article }: Props) {
         </Section>
       )}
 
-      {/* LEGACY BODY — only render if Semaform not in use, otherwise body is
-          assumed already split into the structured fields above */}
+      {/* FEATURE BODY — flat-body articles (the daily auto-drafts) render as a
+          premium feature read: drop-cap, larger measure, flowing prose. */}
       {!hasSemaform && article.body && (
-        <Section eyebrow="The Story" idx={2}>
-          <Prose text={article.body} />
-        </Section>
+        <div className="my-12 md:my-14">
+          <FeatureProse text={article.body} />
+        </div>
       )}
 
       {/* FAQ — if present */}
@@ -257,6 +257,52 @@ function Prose({ text }: { text: string }) {
           {p}
         </p>
       ))}
+    </div>
+  );
+}
+
+/** Premium feature-article prose for flat-body articles — drop-cap on the
+ *  opening paragraph, generous reading measure. Server-component-safe (inline
+ *  styles + a manual drop-cap span; no ::first-letter, no styled-jsx). */
+function FeatureProse({ text }: { text: string }) {
+  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim());
+  const proseStyle: React.CSSProperties = {
+    color: "var(--ink-soft)",
+    fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)",
+    lineHeight: 1.75,
+  };
+  return (
+    <div className="space-y-6">
+      {paragraphs.map((p, i) => {
+        if (i === 0 && p.length > 1) {
+          return (
+            <p key={i} style={proseStyle}>
+              <span
+                aria-hidden
+                style={{
+                  float: "left",
+                  fontFamily: "var(--font-fraunces), Georgia, serif",
+                  fontSize: "3.6rem",
+                  lineHeight: 0.8,
+                  paddingRight: "0.09em",
+                  marginTop: "0.05em",
+                  color: "var(--gold-deep)",
+                  fontWeight: 500,
+                  fontVariationSettings: '"SOFT" 40, "opsz" 144',
+                }}
+              >
+                {p[0]}
+              </span>
+              {p.slice(1)}
+            </p>
+          );
+        }
+        return (
+          <p key={i} style={proseStyle}>
+            {p}
+          </p>
+        );
+      })}
     </div>
   );
 }
