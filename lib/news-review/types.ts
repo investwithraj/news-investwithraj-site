@@ -35,6 +35,11 @@ export interface NewsDraftProvenance {
     rajAngle: number;
   };
   sources: ProvenanceSource[];
+  /** Concatenated text the web-research drafter wrapped in <cite> tags — i.e.
+   *  figures Claude attributed to a real source. The cockpit treats a figure
+   *  found here as source-backed (gold), so only genuinely-uncited figures get
+   *  flagged for manual checking. */
+  citedText?: string;
 }
 
 /** A staged article draft (status always "review" while in KV). */

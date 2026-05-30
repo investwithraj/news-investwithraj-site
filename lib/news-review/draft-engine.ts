@@ -164,6 +164,18 @@ export async function draftFromCluster(
     return { ok: false, reason: parsed.reason ?? "drafter skipped (unverifiable)" };
   }
 
+  // web_search wraps cited spans in <cite index="…">…</cite>. Capture that text
+  // (the figures Claude attributed to a source) for the cockpit's verify gate,
+  // then strip the tags so the published body is clean prose.
+  const citedText = (parsed.body.match(/<cite[^>]*>[\s\S]*?<\/cite>/gi) ?? [])
+    .map((m) => m.replace(/<[^>]+>/g, ""))
+    .join("  ");
+  const cleanBody = parsed.body
+    .replace(/<cite[^>]*>/gi, "")
+    .replace(/<\/cite>/gi, "")
+    .replace(/&nbsp;/gi, " ")
+    .trim();
+
   const citations = buildCitations(parsed.citations, cluster, whitelist, now);
   if (citations.length === 0) return { ok: false, reason: "no whitelisted citation" };
 
@@ -186,7 +198,7 @@ export async function draftFromCluster(
     category,
     market: cluster.suggestedMarkets,
     tldr: tldr3,
-    body: parsed.body,
+    body: cleanBody,
     faq: Array.isArray(parsed.faq) ? parsed.faq.slice(0, 5) : [],
     citations,
     heroImage: { src: `/news/${slug}/cover.jpg`, alt: parsed.title, credit: "To be set at review" },
@@ -205,5 +217,30 @@ export async function draftFromCluster(
     };
   }
 
-  return { ok: true, article, provenance: buildProvenance(cluster) };
+  // Provenance = the cluster's sources + the sources Claude actually used
+  // (its citations + the URLs web_search surfaced), so the cockpit's source
+  // rail reflects the real research — not just the one thin cluster entry.
+  const provenance = buildProvenance(cluster);
+  const seenUrls = new Set(provenance.sources.map((s) => s.url));
+  const extra: typeof provenance.sources = [];
+  for (const c of citations) {
+    if (seenUrls.has(c.url)) continue;
+    seenUrls.add(c.url);
+    extra.push({ name: c.source, tier: "national-press", url: c.url, summary: "Cited in the article — figures drawn from this source." });
+  }
+  for (const u of res.searchedUrls ?? []) {
+    if (seenUrls.has(u)) continue;
+    seenUrls.add(u);
+    let name = u;
+    try {
+      name = new URL(u).hostname.replace(/^www\./, "");
+    } catch {
+      /* keep raw */
+    }
+    extra.push({ name, tier: "national-press", url: u, summary: "Consulted during web research." });
+  }
+  provenance.sources = [...provenance.sources, ...extra].slice(0, 24);
+  provenance.citedText = citedText;
+
+  return { ok: true, article, provenance };
 }

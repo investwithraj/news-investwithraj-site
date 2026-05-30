@@ -44,10 +44,12 @@ function digitsOf(s: string): string {
   return s.replace(/[^\d]/g, "");
 }
 
-/** Is this figure's digit-core present in any provenance source summary? */
-function figureBacked(figure: string, sources: ProvenanceSource[]): boolean {
+/** Is this figure's digit-core attributed to a source — either present in a
+ *  provenance source summary, or inside the text the drafter cited (citedText)? */
+function figureBacked(figure: string, sources: ProvenanceSource[], citedText = ""): boolean {
   const core = digitsOf(figure);
   if (core.length < 2) return true; // single digits ("3 beats") — don't nag
+  if (citedText && digitsOf(citedText).includes(core)) return true;
   return sources.some((s) => digitsOf(s.summary).includes(core));
 }
 
@@ -247,8 +249,10 @@ function DraftSlab({ draft }: { draft: NewsDraft }) {
   // Figures flagged as not-found-in-any-source (the fabrication signal).
   const unbackedCount = useMemo(() => {
     const figs = draft.article.body.match(NUMBER_RE) ?? [];
-    return figs.filter((f) => digitsOf(f).length >= 2 && !figureBacked(f, draft.provenance.sources))
-      .length;
+    const cited = draft.provenance.citedText ?? "";
+    return figs.filter(
+      (f) => digitsOf(f).length >= 2 && !figureBacked(f, draft.provenance.sources, cited),
+    ).length;
   }, [draft]);
 
   const canPublish = v.ok && figuresVerified;
@@ -571,6 +575,7 @@ function VerifySplit({
   setActiveSource: (u: string | null) => void;
 }) {
   const sources = draft.provenance.sources;
+  const citedText = draft.provenance.citedText ?? "";
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)", gap: "24px" }} className="desk-verify-grid">
@@ -590,7 +595,7 @@ function VerifySplit({
         </p>
         {draft.article.body.split(/\n\n+/).map((para, i) => (
           <p key={i} style={{ marginBottom: "14px", lineHeight: 1.7, fontSize: "1rem", color: "var(--v16-ink-soft, #2A3038)" }}>
-            {highlightFigures(para, sources, setActiveSource)}
+            {highlightFigures(para, sources, setActiveSource, citedText)}
           </p>
         ))}
       </div>
@@ -679,19 +684,22 @@ function highlightFigures(
   text: string,
   sources: ProvenanceSource[],
   setActiveSource: (u: string | null) => void,
+  citedText = "",
 ) {
   const out: React.ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
   const re = new RegExp(NUMBER_RE.source, "gi");
+  const citedDigits = digitsOf(citedText);
   let key = 0;
   while ((m = re.exec(text)) !== null) {
     const fig = m[0];
     if (!/\d/.test(fig)) continue;
     if (m.index > last) out.push(text.slice(last, m.index));
     const core = digitsOf(fig);
-    const backed = core.length < 2 || sources.some((s) => digitsOf(s.summary).includes(core));
+    const inCited = core.length >= 2 && citedDigits.includes(core);
     const match = sources.find((s) => digitsOf(s.summary).includes(core));
+    const backed = core.length < 2 || inCited || Boolean(match);
     out.push(
       <mark
         key={`f${key++}`}
