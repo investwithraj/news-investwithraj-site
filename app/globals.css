@@ -45,12 +45,18 @@
      ≤3% of total pixels per viewport (Cartier/Aman/Cucinelli rule).
      Used on: brand mark, primary CTA, editorial italic accents, 1px hairlines.
      NEVER used on body links, NEVER as a fill, NEVER on backgrounds. */
-  --gold:        #C9A961; /* The brand brass — kept */
-  --gold-deep:   #A8854B; /* Slightly deeper than v12 for restraint */
-  --gold-bright: #DCBE7A; /* Highlights only */
-  --gold-rich:   #8B6F33; /* Deepest — for cream-on-cream hairlines */
-  --gold-soft:   rgba(201, 169, 97, 0.10);
-  --gold-glow:   rgba(201, 169, 97, 0.22);
+  /* 31 May 2026 — ACCENT FLIPPED gold → cobalt blue to match the main site's
+     electric-blue signature (investwithraj.com). Token NAMES kept (--gold-*) so
+     every component inherits the new hue with zero per-component edits; the role
+     is unchanged (brand mark, primary CTA, editorial italic accents, 1px
+     hairlines — never a fill, never a background). Values = the main-site v16
+     blue family (#2563EB / #5BA5F5 / #1E3A8A). */
+  --gold:        #2563EB; /* Primary accent — royal cobalt (main-site blue) */
+  --gold-deep:   #1D4ED8; /* Deeper — italic headline words + CTAs on light */
+  --gold-bright: #5BA5F5; /* Highlights only */
+  --gold-rich:   #1E3A8A; /* Deepest — for hairlines */
+  --gold-soft:   rgba(37, 99, 235, 0.10);
+  --gold-glow:   rgba(37, 99, 235, 0.22);
 
   /* v12 — paper-warm / paper-cream moved up into the primary surface block
      above. The duplicates here are retained as semantic aliases so legacy
@@ -89,13 +95,13 @@
      v11 — gold-grad is the new primary editorial accent (replaces
      v10 cyan-grad). Used for headline accent words, hero ring, brand mark.
      Cyan grad kept for live-signal moments only (scroll progress, etc). */
-  --grad-gold: linear-gradient(135deg, #A88945, #E0C076, #C9A961);
-  --grad-gold-rich: linear-gradient(135deg, #8B6F2E, #C9A961, #B8943D);
+  --grad-gold: linear-gradient(135deg, #1D4ED8, #5BA5F5, #2563EB);
+  --grad-gold-rich: linear-gradient(135deg, #1E3A8A, #2563EB, #1D4ED8);
   --grad-holo: linear-gradient(135deg, #0091EA, #00BCD4, #006FB4);
   --grad-holo-soft: linear-gradient(135deg, #4DD0E1, #0091EA, #4DD0E1);
   --grad-chrome: linear-gradient(180deg, #F8FAFC, #E8ECF2);
   --grad-navy: linear-gradient(180deg, #050817 0%, #0A1024 50%, #141A2C 100%);
-  --grad-aurora: linear-gradient(135deg, rgba(201, 169, 97, 0.3), rgba(248, 250, 252, 0.15), rgba(184, 148, 61, 0.2));
+  --grad-aurora: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(248, 250, 252, 0.15), rgba(91, 165, 245, 0.2));
 
   /* v12 SOTM RESET — shadows.
      SOTM rule: NO drop-shadows. Elevation comes from color + 1px hairlines + scale,
