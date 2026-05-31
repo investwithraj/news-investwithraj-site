@@ -5,7 +5,8 @@
 //
 // Three states:
 //   - loading:     shimmer skeleton (~1s before first fetch)
-//   - live/mock:   actual ticker data (small "DLD · MOCK" or "DLD · LIVE" tag)
+//   - live/ref:    real ticker data — "DLD · LIVE" (Dubai Pulse feed) or
+//                  "DLD · OFFICIAL" (latest cited DLD print). Never fabricated.
 //   - error:       silent fail — strip just doesn't render
 
 import { useEffect, useState } from "react";
@@ -68,7 +69,7 @@ export function DldTicker() {
             }}
           />
           <span style={{ color: "var(--gold-bright, #E0C076)" }}>
-            DLD · {pulse?.source === "live" ? "LIVE" : pulse ? "MOCK" : "…"}
+            DLD · {pulse?.source === "live" ? "LIVE" : pulse ? "OFFICIAL" : "…"}
           </span>
         </div>
 
@@ -124,18 +125,20 @@ function buildTickerItems(p: DldDailyPulse): TickerItemData[] {
     value: <Price amount={p.volumeAed} compact />,
     delta: p.dodVolumeChangePct,
   });
-  out.push({ label: "TXNS", value: `${p.txnCount}` });
+  out.push({ label: "TXNS", value: p.txnCount.toLocaleString("en-US") });
   out.push({ label: "AVG", value: <Price amount={p.avgPriceAed} compact /> });
-  out.push({ label: "PPSF", value: <Price amount={p.medianPpsfAed} /> });
-  out.push({
-    label: "HOTTEST",
-    value: `${p.hottestArea.name} · ${formatAed(p.hottestArea.volumeAed)}`,
-  });
-  out.push({
-    label: "TOP DEV",
-    value: `${p.topDeveloper.name} · ${p.topDeveloper.txnCount} txns`,
-  });
-  out.push({ label: "AS OF", value: p.date });
+  if (p.medianPpsfAed) out.push({ label: "PPSF", value: <Price amount={p.medianPpsfAed} /> });
+  if (p.hottestArea)
+    out.push({
+      label: "HOTTEST",
+      value: `${p.hottestArea.name} · ${formatAed(p.hottestArea.volumeAed)}`,
+    });
+  if (p.topDeveloper)
+    out.push({
+      label: "TOP DEV",
+      value: `${p.topDeveloper.name} · ${p.topDeveloper.txnCount} txns`,
+    });
+  out.push({ label: "AS OF", value: p.sourceNote || p.periodLabel || p.date });
   return out;
 }
 
