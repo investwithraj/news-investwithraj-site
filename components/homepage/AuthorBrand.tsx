@@ -74,7 +74,7 @@ export function AuthorBrand() {
                 className="editorial-h1-italic"
                 style={{ color: "var(--gold-deep)" }}
               >
-                Broker, builder,&nbsp;writer.
+                Planner, analyst,&nbsp;writer.
               </span>
             </h2>
 
@@ -82,9 +82,10 @@ export function AuthorBrand() {
               className="mt-7 text-base md:text-lg leading-[1.65] max-w-[58ch]"
               style={{ color: "var(--ink-soft)" }}
             >
-              DLD-licensed broker, Dubai-based. I publish what I'd otherwise email
-              to one client — the daily prints, the off-plan reads, the UHNW trades,
-              and the slow essays nobody else writes about UAE real estate.
+              DLD-registered spatial planner and analyst, Dubai-based. I publish
+              what I'd otherwise email to one client — the daily prints, the
+              off-plan reads, the UHNW trades, and the slow essays nobody else
+              writes about UAE real estate.
             </p>
 
             {/* Credential line */}

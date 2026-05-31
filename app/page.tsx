@@ -117,15 +117,15 @@ function CapitalFlowSection() {
 function Hero() {
   return (
     <section
-      className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden gold-mesh-hero"
+      className="relative min-h-[100svh] flex items-center overflow-hidden"
       style={{ background: "var(--paper-warm)" }}
     >
-      {/* v14.1 — native <video> hero background (Nelemson G, Pexels Videos
-          #31942008, Dubai skyline aerial sunset). Replaces the broken
-          v14.0 FrameScroll-as-background attempt (FrameScroll needs a
-          multi-viewport container; the hero is 100svh). Smooth cinematic
-          motion via auto-play loop. ~12MB MP4, preload=metadata, no scroll
-          dependency. */}
+      {/* Full-bleed cinematic skyline (Pexels Dubai aerial sunset), kept at
+          FULL opacity. v16 hero pass (31 May 2026): per the 28-May direction
+          — "keep the videos full, just put a box behind the text" — the cream
+          readability wash that was flattening the footage is gone; the frosted
+          glass card is now the only thing competing with the video, mirroring
+          the main-site hero grammar (full-bleed motion + single glass panel). */}
       <video
         className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
         src="/hero.mp4"
@@ -137,91 +137,100 @@ function Hero() {
         aria-hidden="true"
       />
 
-      {/* F12 — aurora overlay layered above skyline for soft brand wash */}
-      <AuroraBackground opacity={0.32} />
+      {/* Whisper-soft brand shimmer — far below the old 0.32 wash so the
+          skyline stays vivid. */}
+      <AuroraBackground opacity={0.14} />
 
-      {/* Readability gradient so headline pops over the 3D scene */}
+      {/* Minimal depth only: a soft darkening on the left third so the glass
+          card separates from the sky, plus a thin fade into the next section
+          at the very bottom. The centre + right of the skyline stay untouched. */}
       <div
         aria-hidden
         className="absolute inset-0 z-[1] pointer-events-none"
         style={{
           background:
-            "linear-gradient(180deg, rgba(249, 246, 240, 0.65) 0%, rgba(249, 246, 240, 0.25) 38%, rgba(249, 246, 240, 0.55) 78%, rgba(249, 246, 240, 0.95) 100%)",
+            "linear-gradient(100deg, rgba(12,16,22,0.5) 0%, rgba(12,16,22,0.2) 32%, rgba(12,16,22,0) 58%), linear-gradient(180deg, transparent 78%, var(--paper-warm) 100%)",
         }}
       />
 
-      {/* v13 SOTY — flat editorial eyebrow, no glass */}
-      <div className="relative z-20 w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-24 md:pt-28 flex justify-center">
-        <span className="editorial-eyebrow-sotm">
-          news.investwithraj.com
-        </span>
-      </div>
-
-      {/* Main composition */}
-      <div className="relative z-20 flex-1 w-full max-w-[980px] mx-auto px-6 md:px-12 flex flex-col items-center justify-center text-center -mt-10">
-        {/* F11 — kinetic Fraunces variable headline */}
-        <KineticHeadline
-          className="editorial-h1"
+      {/* Left-aligned frosted-glass card — main-site hero grammar */}
+      <div className="relative z-20 w-full max-w-[1320px] mx-auto px-6 md:px-12">
+        <div
           style={{
-            fontSize: "clamp(2.75rem, 8.4vw, 7.75rem)",
-            maxWidth: "16ch",
+            maxWidth: "640px",
+            background: "rgba(252, 249, 242, 0.7)",
+            backdropFilter: "blur(22px) saturate(1.08)",
+            WebkitBackdropFilter: "blur(22px) saturate(1.08)",
+            border: "1px solid rgba(255, 255, 255, 0.55)",
+            borderRadius: "28px",
+            boxShadow:
+              "0 28px 90px rgba(18, 16, 10, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.55)",
+            padding: "38px clamp(28px, 4vw, 44px) 34px",
           }}
         >
-          The daily{" "}
-          <span
-            className="editorial-h1-italic"
-            style={{ color: "var(--gold-deep)" }}
-          >
-            UAE real-estate
-          </span>{" "}
-          read.
-        </KineticHeadline>
-
-        <p
-          className="mt-8 md:mt-10 text-base md:text-xl leading-relaxed max-w-2xl"
-          style={{
-            color: "var(--ink-soft)",
-            textShadow: "0 1px 2px rgba(249, 246, 240, 0.6)",
-          }}
-        >
-          Independent intelligence on Dubai, Abu Dhabi, and Ras Al Khaimah.
-          5–15 verified-source articles a day. Every piece cites DLD, RERA,
-          Knight Frank, JLL, Khaleej Times, Arabian Business. Written for
-          serious investors.
-        </p>
-
-        <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <a
-            href={CONTACT.linkedinNewsletter}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-graphite group"
-            data-cursor-label="OPEN"
-            data-magnetic
-          >
-            <span>Subscribe to Beyond the Deal</span>
-            <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
-              →
-            </span>
-          </a>
-          <Link
-            href={rootCtaUrl({ campaign: "subdomain-hero", content: "request-note" })}
-            className="btn-ghost group"
-            data-cursor-label="OPEN"
-            data-magnetic
-          >
-            <span>Request the current Note</span>
-            <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
-              ↗
-            </span>
-          </Link>
-        </div>
-
-        {/* Status pill */}
-        <div className="mt-14 inline-flex items-center gap-3">
-          <span className="eyebrow-live">
-            <span>Publishing imminently</span>
+          <span className="editorial-eyebrow-sotm" style={{ display: "inline-flex" }}>
+            news.investwithraj.com · live
           </span>
+
+          <KineticHeadline
+            className="editorial-h1 mt-6"
+            style={{
+              fontSize: "clamp(2.5rem, 5.6vw, 4.75rem)",
+              maxWidth: "13ch",
+              lineHeight: 0.98,
+            }}
+          >
+            The daily{" "}
+            <span
+              className="editorial-h1-italic"
+              style={{ color: "var(--gold-deep)" }}
+            >
+              UAE real-estate
+            </span>{" "}
+            read.
+          </KineticHeadline>
+
+          <p
+            className="mt-6 text-base md:text-lg leading-[1.6]"
+            style={{ color: "var(--ink-soft)", maxWidth: "46ch" }}
+          >
+            Independent intelligence on Dubai, Abu Dhabi, and Ras Al Khaimah —
+            5–15 verified-source articles a day, every figure cited to DLD, RERA,
+            Knight Frank, JLL, and the UAE desks. Written for serious investors.
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <a
+              href={CONTACT.linkedinNewsletter}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-graphite group"
+              data-cursor-label="OPEN"
+              data-magnetic
+            >
+              <span>Subscribe to Beyond the Deal</span>
+              <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
+                →
+              </span>
+            </a>
+            <Link
+              href={rootCtaUrl({ campaign: "subdomain-hero", content: "request-note" })}
+              className="btn-ghost group"
+              data-cursor-label="OPEN"
+              data-magnetic
+            >
+              <span>Request the current Note</span>
+              <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
+                ↗
+              </span>
+            </Link>
+          </div>
+
+          <div className="mt-8 inline-flex items-center gap-3">
+            <span className="eyebrow-live">
+              <span>Publishing imminently</span>
+            </span>
+          </div>
         </div>
       </div>
     </section>
