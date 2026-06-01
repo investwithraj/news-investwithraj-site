@@ -43,16 +43,17 @@ if (typeof window !== "undefined") {
 
 const WHATSAPP_HREF = "https://wa.me/971589966085";
 
-/* Frosted-glass surface — translucent warm-white, backdrop-blur, hairline,
- * ~28px radius. Built from cobalt tokens so it tracks the brand. */
+/* Frosted-glass surface — translucent DARK glass (v17 dark register), backdrop-
+ * blur, cobalt hairline, ~28px radius. Lets the persistent WebGL world bleed
+ * through. Built from cobalt tokens so it tracks the brand. */
 const glassSurface: CSSProperties = {
-  background: "rgba(255, 255, 255, 0.55)",
+  background: "var(--v17-surface, rgba(16,24,44,0.55))",
   backdropFilter: "blur(20px) saturate(160%)",
   WebkitBackdropFilter: "blur(20px) saturate(160%)",
-  border: "1px solid rgba(37, 99, 235, 0.16)",
+  border: "1px solid var(--v17-hairline, rgba(120,160,240,0.18))",
   borderRadius: "28px",
   boxShadow:
-    "0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px -28px rgba(15, 23, 42, 0.28), 0 0 0 1px var(--gold-soft, rgba(37,99,235,0.10))",
+    "0 1px 0 rgba(120,160,240,0.10) inset, 0 24px 60px -28px rgba(3, 4, 10, 0.6), 0 0 0 1px var(--gold-soft, rgba(37,99,235,0.10))",
 };
 
 export default function TerminalAct() {
@@ -192,8 +193,8 @@ export default function TerminalAct() {
         minHeight: "100svh",
         overflow: "hidden",
         background:
-          "radial-gradient(120% 90% at 50% -10%, rgba(37,99,235,0.10), transparent 60%), var(--paper-warm, #E8DFD0)",
-        color: "var(--ink, #2B2621)",
+          "radial-gradient(120% 90% at 50% -10%, rgba(37,99,235,0.10), transparent 60%), transparent",
+        color: "var(--ink, #EAF0FA)",
         display: "flex",
         flexDirection: "column",
       }}
@@ -409,20 +410,20 @@ export default function TerminalAct() {
               eyebrow="Median PSF"
               value="AED 1,662"
               delta={{ value: "+3.2%", trend: "up" }}
-              variant="light"
+              variant="dark"
               size="sm"
             />
             <DataPanel
               eyebrow="Avg ticket"
               value="AED 4M"
-              variant="light"
+              variant="dark"
               size="sm"
             />
             <DataPanel
               eyebrow="Verified today"
               value="11"
               delta={{ value: "5 sourced", trend: "flat" }}
-              variant="light"
+              variant="dark"
               size="sm"
             />
           </div>
@@ -504,7 +505,7 @@ export default function TerminalAct() {
                 }}
               >
                 {sceneReady ? (
-                  <HolographicRadial density="high" variant="light" />
+                  <HolographicRadial density="high" variant="dark" />
                 ) : (
                   <ScenePlaceholder />
                 )}

@@ -63,7 +63,7 @@ function CapitalFlowSection() {
               style={{
                 width: "22px",
                 height: "1px",
-                background: "var(--gold-bright, #E0C076)",
+                background: "var(--gold-bright, #5BA5F5)",
               }}
             />
             Capital flow · live
@@ -80,7 +80,7 @@ function CapitalFlowSection() {
             Where the{" "}
             <span
               className="editorial-h1-italic"
-              style={{ color: "var(--gold-bright, #E0C076)" }}
+              style={{ color: "var(--gold-bright, #5BA5F5)" }}
             >
               UAE money
             </span>{" "}

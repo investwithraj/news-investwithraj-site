@@ -19,7 +19,7 @@
 // analyst — never a "broker". WhatsApp: +971 58 996 6085.
 
 import { useEffect, useRef, useState } from "react";
-import { AuroraBackground } from "@/components/futurism/AuroraBackground";
+import { AuroraBackground, AURORA_COBALT_STOPS } from "@/components/futurism/AuroraBackground";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
 
@@ -149,13 +149,13 @@ export default function DailyAnchorAct() {
         display: "flex",
         alignItems: "center",
         overflow: "hidden",
-        background: "var(--ink)",
-        color: "var(--paper-warm)",
+        background: "transparent",
+        color: "var(--v17-text, #EAF0FA)",
         paddingBlock: "clamp(4rem, 9vw, 7.5rem)",
       }}
     >
       {/* Cobalt aurora wash — the booth's ambient backlight. */}
-      <AuroraBackground speed={0.65} opacity={0.4} />
+      <AuroraBackground speed={0.65} opacity={0.4} stops={AURORA_COBALT_STOPS} />
 
       {/* Cobalt vignette + grain to seat the booth in a dark studio. */}
       <div
@@ -220,7 +220,7 @@ export default function DailyAnchorAct() {
               as="h2"
               style={{
                 marginTop: "1.25rem",
-                color: "var(--paper-warm)",
+                color: "var(--v17-text, #EAF0FA)",
                 fontSize: "clamp(2rem, 5.4vw, 3.75rem)",
                 lineHeight: 1.04,
                 fontWeight: 400,

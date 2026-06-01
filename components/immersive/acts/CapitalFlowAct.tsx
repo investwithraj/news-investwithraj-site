@@ -28,7 +28,7 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
-import { AuroraBackground } from "@/components/futurism/AuroraBackground";
+import { AuroraBackground, AURORA_COBALT_STOPS } from "@/components/futurism/AuroraBackground";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 
 // Register the ScrollTrigger plugin exactly once, client-side only.
@@ -134,10 +134,11 @@ export default function CapitalFlowAct() {
         isolation: "isolate",
       }}
     >
-      {/* Aurora field — cobalt/cream, behind all content */}
+      {/* Aurora field — cobalt glow on the dark world, behind all content */}
       <AuroraBackground
         speed={0.7}
         opacity={0.4}
+        stops={AURORA_COBALT_STOPS}
         style={{ zIndex: 0 }}
       />
 

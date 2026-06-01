@@ -189,8 +189,8 @@ export default function CrossLinkAct() {
         alignItems: "center",
         justifyContent: "center",
         padding: "clamp(4rem, 10vh, 7rem) var(--pad, clamp(1rem, 4vw, 4rem))",
-        background: "var(--paper-warm, #E8DFD0)",
-        color: "var(--ink, #2B2621)",
+        background: "transparent",
+        color: "var(--ink, #EAF0FA)",
         overflow: "hidden",
         isolation: "isolate",
       }}
@@ -207,7 +207,7 @@ export default function CrossLinkAct() {
           background:
             "radial-gradient(48% 42% at 78% 18%, var(--gold-glow, rgba(37,99,235,0.22)) 0%, transparent 62%)," +
             "radial-gradient(42% 38% at 14% 82%, rgba(91,165,245,0.16) 0%, transparent 65%)," +
-            "radial-gradient(54% 46% at 50% 50%, rgba(248,250,252,0.55) 22%, transparent 72%)",
+            "radial-gradient(54% 46% at 50% 50%, rgba(37,99,235,0.14) 22%, transparent 72%)",
           filter: "blur(46px)",
           willChange: "transform",
         }}
@@ -238,10 +238,10 @@ export default function CrossLinkAct() {
           width: "min(100%, 880px)",
           padding: "clamp(2rem, 5vw, 3.5rem)",
           borderRadius: "28px",
-          background: "rgba(251, 248, 242, 0.62)",
-          border: "1px solid var(--chrome-deep, #B5A998)",
+          background: "var(--v17-surface, rgba(16,24,44,0.55))",
+          border: "1px solid var(--chrome-deep, rgba(120,160,240,0.18))",
           boxShadow:
-            "0 1px 0 rgba(255,255,255,0.55) inset, 0 0 0 1px rgba(37,99,235,0.06), 0 30px 80px -36px rgba(10,16,36,0.30)",
+            "0 1px 0 rgba(120,160,240,0.10) inset, 0 0 0 1px rgba(37,99,235,0.10), 0 30px 80px -36px rgba(3,4,10,0.6)",
           backdropFilter: "blur(20px) saturate(170%)",
           WebkitBackdropFilter: "blur(20px) saturate(170%)",
         }}
@@ -381,14 +381,14 @@ export default function CrossLinkAct() {
               gap: "0.6rem",
               padding: "0.95rem 1.5rem",
               borderRadius: "999px",
-              background: "rgba(251, 248, 242, 0.6)",
-              color: "var(--ink, #2B2621)",
+              background: "var(--v17-surface, rgba(16,24,44,0.55))",
+              color: "var(--ink, #EAF0FA)",
               fontFamily: "var(--font-body), system-ui, sans-serif",
               fontSize: "0.9375rem",
               fontWeight: 500,
               letterSpacing: "-0.01em",
               textDecoration: "none",
-              border: "1px solid var(--chrome-deep, #B5A998)",
+              border: "1px solid var(--chrome-deep, rgba(120,160,240,0.18))",
               transition:
                 "border-color 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), color 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), transform 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1))",
             }}

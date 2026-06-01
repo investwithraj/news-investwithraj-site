@@ -42,7 +42,7 @@ export const VERTICALS: Vertical[] = [
       "Every Dubai Land Department transaction print, parsed and contextualized. Daily volume, sale velocity by area, the unusual trades. Bloomberg-tier data, broker-tier commentary.",
     categories: ["market-pulse"],
     gradient:
-      "linear-gradient(135deg, rgba(201, 169, 97, 0.18), rgba(168, 137, 69, 0.06))",
+      "linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(29, 78, 216, 0.06))",
     accent: "var(--gold-deep)",
     glyph: "◐",
     cadence: "Daily · 07:00 GST",
@@ -68,7 +68,7 @@ export const VERTICALS: Vertical[] = [
       "The trophy trades — penthouses on the Palm, mansions on Saadiyat, branded residences in Downtown. Every transaction above AED 25M, who bought, who sold, and what the comp tells you about the next print.",
     categories: ["market-pulse", "developer-corporate"],
     gradient:
-      "linear-gradient(135deg, rgba(168, 137, 69, 0.22), rgba(224, 192, 118, 0.06))",
+      "linear-gradient(135deg, rgba(30, 58, 138, 0.22), rgba(91, 165, 245, 0.06))",
     accent: "var(--gold-rich)",
     glyph: "✦",
     cadence: "Weekly + ad-hoc",
@@ -81,7 +81,7 @@ export const VERTICALS: Vertical[] = [
       "Tracking sovereign wealth + UAE-holding moves in real estate — Mubadala's Aldar plays, ADQ's Modon, PIF crossings into the UAE, IHC's land bank. The map of what the smart money is doing before the announcement.",
     categories: ["developer-corporate", "infrastructure", "macro"],
     gradient:
-      "linear-gradient(135deg, rgba(10, 16, 36, 0.15), rgba(168, 137, 69, 0.05))",
+      "linear-gradient(135deg, rgba(10, 16, 36, 0.15), rgba(37, 99, 235, 0.05))",
     accent: "var(--navy)",
     glyph: "◈",
     cadence: "Weekly",
@@ -94,7 +94,7 @@ export const VERTICALS: Vertical[] = [
       "The signature Beyond the Deal newsletter — 1500-word essays on what's actually moving the UAE market. Goes out on LinkedIn first, archived here. The slow-read pair to the daily firehose.",
     categories: ["macro", "policy", "regulatory"],
     gradient:
-      "linear-gradient(135deg, rgba(249, 246, 240, 1), rgba(201, 169, 97, 0.15))",
+      "linear-gradient(135deg, rgba(249, 246, 240, 1), rgba(37, 99, 235, 0.15))",
     accent: "var(--gold-deep)",
     glyph: "❖",
     cadence: "Twice weekly · Wed + Sat",

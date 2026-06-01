@@ -386,7 +386,7 @@ export default function VerticalsAct() {
                   height: "100%",
                   transformStyle: "preserve-3d",
                   borderRadius: "28px",
-                  background: "var(--paper-glass, rgba(251, 248, 242, 0.66))",
+                  background: "var(--paper-glass, rgba(16, 24, 44, 0.55))",
                   border: "1px solid var(--chrome-deep)",
                   backdropFilter: "blur(20px) saturate(170%)",
                   WebkitBackdropFilter: "blur(20px) saturate(170%)",
@@ -528,7 +528,7 @@ export default function VerticalsAct() {
               style={{
                 height: "100%",
                 borderRadius: "28px",
-                background: "var(--paper-glass, rgba(251, 248, 242, 0.6))",
+                background: "var(--paper-glass, rgba(16, 24, 44, 0.55))",
                 border: "1px solid var(--chrome-deep)",
                 backdropFilter: "blur(18px) saturate(160%)",
                 WebkitBackdropFilter: "blur(18px) saturate(160%)",
