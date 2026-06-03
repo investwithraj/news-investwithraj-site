@@ -13,7 +13,6 @@
 // CapitalFlowGlobe) lazy-mounts in-view via each act's IntersectionObserver.
 
 import type { Metadata } from "next";
-import ImmersiveWorld from "@/components/immersive/ImmersiveWorld";
 import TerminalAct from "@/components/immersive/acts/TerminalAct";
 import CapitalFlowAct from "@/components/immersive/acts/CapitalFlowAct";
 import DailyAnchorAct from "@/components/immersive/acts/DailyAnchorAct";
@@ -28,12 +27,20 @@ export const metadata: Metadata = {
 
 export default function V17News() {
   return (
-    <div className="v17-dark v17-cobalt" style={{ position: "relative", background: "var(--v17-bg, #05070d)" }}>
-      {/* The ONE persistent dark WebGL world — fixed, z-0, behind all acts. */}
-      <ImmersiveWorld />
-
-      {/* Acts sit above the world (z-1); each is translucent dark glass so the
-          dust + cobalt glow shows through. */}
+    <div
+      className="v17-dark v17-cobalt"
+      style={{
+        position: "relative",
+        // Hybrid conversion: the persistent dark WebGL world is removed; the
+        // shell base is a soft dark gradient. DATA-VIZ acts (Terminal, Capital
+        // Flow) carry their own Dubai photo + STRONG dark scrim so the luminous
+        // viz stays readable; CONTENT acts carry their own photo + lighter scrim
+        // and white frosted-glass cards (matching the main site).
+        background: "linear-gradient(180deg, #0a0f1a, #0e1422)",
+      }}
+    >
+      {/* Acts are self-contained: each renders its own full-bleed Dubai still +
+          scrim, so the shell no longer needs a shared WebGL world behind them. */}
       <main style={{ position: "relative", zIndex: 1, minHeight: "100svh" }}>
         <TerminalAct />
         <CapitalFlowAct />

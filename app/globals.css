@@ -1482,3 +1482,22 @@ body {
   -webkit-backdrop-filter: blur(20px) saturate(125%);
   border: 1px solid var(--v17-hairline);
 }
+
+/* v17 LIGHT-GLASS conversion (hybrid) — WHITE frosted-glass card that sits over
+   a full-bleed real-photo Dubai still (with a legibility scrim). Ported from the
+   MAIN repo so the /v17 CONTENT acts (Daily Brief, The Beats, the Bridge) match
+   the main site exactly: photographic + cinematic but light. Text INSIDE this
+   card uses INK values (heading #14203a, body #38445c, faint #6b7488) with the
+   DEEP cobalt accent (#1D4ED8 / #2563EB on white). The DATA-VIZ acts (Terminal,
+   Capital Flow) keep their dark .v17-glass panels so the luminous charts/globe
+   stay readable. Scoped under .v17-dark to inherit only on the immersive shell. */
+.v17-dark .v17-glass-white {
+  position: relative;
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(30px) saturate(125%);
+  -webkit-backdrop-filter: blur(30px) saturate(125%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 28px 70px -24px rgba(6, 12, 28, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}

@@ -43,6 +43,14 @@ const ROOT_URL = "https://investwithraj.com";
 const WHATSAPP_E164 = "971589966085";
 const WHATSAPP_DISPLAY = "+971 58 996 6085";
 
+/**
+ * Self-contained full-bleed Dubai still for this CONTENT act (hybrid conversion).
+ * A night skyline suits the closing "go deeper" bridge. The card above it is
+ * white frosted glass (.v17-glass-white); a lighter legibility scrim sits over
+ * the photo so the header reads light-on-photo while the card stays light.
+ */
+const BG_IMG = "/cinema/v17/bg/dubai-night.jpg";
+
 /** The four currencies surfaced in the bridge note, in spec order. */
 const NOTE_CURRENCIES: Currency[] = ["AED", "USD", "INR", "GBP"];
 
@@ -195,14 +203,31 @@ export default function CrossLinkAct() {
         isolation: "isolate",
       }}
     >
-      {/* Ambient cobalt wash — drifts on scroll (parallax). Decorative only. */}
+      {/* Full-bleed real Dubai still + lighter legibility scrim (self-contained).
+          This CONTENT act carries its own photo background — the shell no longer
+          provides a shared WebGL world behind it. */}
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0, overflow: "hidden" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={BG_IMG} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(8,14,28,0.62) 0%, rgba(8,14,28,0.34) 42%, rgba(8,14,28,0.62) 100%)",
+          }}
+        />
+      </div>
+
+      {/* Ambient cobalt grade over the photo — drifts on scroll (parallax).
+          Keeps the cinematic register; decorative only. */}
       <div
         ref={washRef}
         aria-hidden="true"
         style={{
           position: "absolute",
           inset: "-18% -10%",
-          zIndex: 0,
+          zIndex: 1,
           pointerEvents: "none",
           background:
             "radial-gradient(48% 42% at 78% 18%, var(--gold-glow, rgba(37,99,235,0.22)) 0%, transparent 62%)," +
@@ -225,28 +250,20 @@ export default function CrossLinkAct() {
           background:
             "linear-gradient(to right, transparent, var(--gold-soft, rgba(37,99,235,0.10)) 18%, var(--gold, #2563EB) 50%, var(--gold-soft, rgba(37,99,235,0.10)) 82%, transparent)",
           opacity: 0.7,
-          zIndex: 1,
+          zIndex: 2,
         }}
       />
 
-      {/* Frosted glass bridge card */}
+      {/* Section header — light-on-photo (sits above the white card). */}
       <div
         ref={revealRef}
         style={{
           position: "relative",
           zIndex: 2,
           width: "min(100%, 880px)",
-          padding: "clamp(2rem, 5vw, 3.5rem)",
-          borderRadius: "28px",
-          background: "var(--v17-surface, rgba(16,24,44,0.55))",
-          border: "1px solid var(--chrome-deep, rgba(120,160,240,0.18))",
-          boxShadow:
-            "0 1px 0 rgba(120,160,240,0.10) inset, 0 0 0 1px rgba(37,99,235,0.10), 0 30px 80px -36px rgba(3,4,10,0.6)",
-          backdropFilter: "blur(20px) saturate(170%)",
-          WebkitBackdropFilter: "blur(20px) saturate(170%)",
         }}
       >
-        {/* Eyebrow */}
+        {/* Eyebrow — light-on-photo */}
         <div
           data-reveal-item
           style={{
@@ -258,7 +275,7 @@ export default function CrossLinkAct() {
             fontWeight: 500,
             letterSpacing: "0.28em",
             textTransform: "uppercase",
-            color: "var(--ink-muted, #7C7268)",
+            color: "rgba(234,240,250,0.78)",
             marginBottom: "1.25rem",
           }}
         >
@@ -267,52 +284,66 @@ export default function CrossLinkAct() {
             style={{
               width: "26px",
               height: "1px",
-              background: "var(--gold, #2563EB)",
+              // bright cobalt on the dark photo
+              background: "var(--gold-bright, #5BA5F5)",
               flexShrink: 0,
             }}
           />
           05 / Go Deeper
         </div>
 
-        {/* Kinetic Fraunces heading — ONE cobalt-italic accent word. */}
-        <KineticHeadline
-          as="h2"
-          className="editorial-h2"
+        {/* Frosted WHITE-glass bridge card (CONTENT act) — ink text inside. */}
+        <div
+          className="v17-glass-white"
           style={{
-            margin: 0,
-            fontSize: "clamp(2rem, 5.2vw, 3.4rem)",
-            lineHeight: 1.02,
-            letterSpacing: "-0.025em",
-            color: "var(--ink, #2B2621)",
-            maxWidth: "18ch",
+            position: "relative",
+            width: "100%",
+            padding: "clamp(2rem, 5vw, 3.5rem)",
+            borderRadius: "28px",
           }}
         >
-          <span data-reveal-item style={{ display: "inline" }}>
-            For the institutional Note — and{" "}
-            <em
-              className="editorial-italic"
-              style={{
-                fontStyle: "italic",
-                color: "var(--gold-deep, #1D4ED8)",
-              }}
-            >
-              mandates.
-            </em>
-          </span>
-        </KineticHeadline>
+          {/* Kinetic Fraunces heading — ONE cobalt-italic accent word. */}
+          <KineticHeadline
+            as="h2"
+            className="editorial-h2"
+            style={{
+              margin: 0,
+              fontSize: "clamp(2rem, 5.2vw, 3.4rem)",
+              lineHeight: 1.02,
+              letterSpacing: "-0.025em",
+              // INK heading on the white card
+              color: "#14203a",
+              maxWidth: "18ch",
+            }}
+          >
+            <span data-reveal-item style={{ display: "inline" }}>
+              For the institutional Note — and{" "}
+              <em
+                className="editorial-italic"
+                style={{
+                  fontStyle: "italic",
+                  // DEEP cobalt accent on white
+                  color: "#1D4ED8",
+                }}
+              >
+                mandates.
+              </em>
+            </span>
+          </KineticHeadline>
 
-        {/* Sub-copy — qualitative only, no fabricated figures. */}
-        <p
-          data-reveal-item
-          style={{
-            margin: "1.25rem 0 0",
-            maxWidth: "54ch",
-            fontFamily: "var(--font-body), system-ui, sans-serif",
-            fontSize: "clamp(1rem, 1.4vw, 1.125rem)",
-            lineHeight: 1.6,
-            color: "var(--ink-soft, #4A413A)",
-          }}
-        >
+          {/* Sub-copy — qualitative only, no fabricated figures. */}
+          <p
+            data-reveal-item
+            style={{
+              margin: "1.25rem 0 0",
+              maxWidth: "54ch",
+              fontFamily: "var(--font-body), system-ui, sans-serif",
+              fontSize: "clamp(1rem, 1.4vw, 1.125rem)",
+              lineHeight: 1.6,
+              // INK body on white
+              color: "#38445c",
+            }}
+          >
           This desk is the public read. The deeper work — feasibility studies,
           area underwriting, and advisory mandates — lives on the main practice,
           where Raj works as a real-estate consultant, urban &amp; regional
@@ -369,7 +400,7 @@ export default function CrossLinkAct() {
             <ArrowGlyph />
           </a>
 
-          {/* WhatsApp — direct line */}
+          {/* WhatsApp — direct line (white-card ghost: ink text, cobalt hover) */}
           <a
             href={`https://wa.me/${WHATSAPP_E164}`}
             target="_blank"
@@ -381,25 +412,25 @@ export default function CrossLinkAct() {
               gap: "0.6rem",
               padding: "0.95rem 1.5rem",
               borderRadius: "999px",
-              background: "var(--v17-surface, rgba(16,24,44,0.55))",
-              color: "var(--ink, #EAF0FA)",
+              background: "rgba(255,255,255,0.5)",
+              color: "#14203a",
               fontFamily: "var(--font-body), system-ui, sans-serif",
               fontSize: "0.9375rem",
               fontWeight: 500,
               letterSpacing: "-0.01em",
               textDecoration: "none",
-              border: "1px solid var(--chrome-deep, rgba(120,160,240,0.18))",
+              border: "1px solid rgba(20,32,58,0.16)",
               transition:
                 "border-color 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), color 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), transform 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1))",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--gold, #2563EB)";
-              e.currentTarget.style.color = "var(--gold-deep, #1D4ED8)";
+              e.currentTarget.style.borderColor = "#2563EB";
+              e.currentTarget.style.color = "#1D4ED8";
               e.currentTarget.style.transform = "translateY(-1px)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--chrome-deep, #B5A998)";
-              e.currentTarget.style.color = "var(--ink, #2B2621)";
+              e.currentTarget.style.borderColor = "rgba(20,32,58,0.16)";
+              e.currentTarget.style.color = "#14203a";
               e.currentTarget.style.transform = "translateY(0)";
             }}
           >
@@ -420,7 +451,7 @@ export default function CrossLinkAct() {
             gap: "0.75rem 1rem",
             marginTop: "2.25rem",
             paddingTop: "1.5rem",
-            borderTop: "1px solid var(--gold-soft, rgba(37,99,235,0.10))",
+            borderTop: "1px solid rgba(37,99,235,0.16)",
           }}
         >
           <span
@@ -430,7 +461,8 @@ export default function CrossLinkAct() {
               fontWeight: 500,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
-              color: "var(--ink-faint, #A89D8E)",
+              // INK faint on white
+              color: "#6b7488",
             }}
           >
             Read in your currency
@@ -457,19 +489,16 @@ export default function CrossLinkAct() {
                     padding: "0.3rem 0.6rem",
                     borderRadius: "100px",
                     border: `1px solid ${
-                      active
-                        ? "var(--gold, #2563EB)"
-                        : "var(--chrome-deep, #B5A998)"
+                      active ? "#2563EB" : "rgba(20,32,58,0.16)"
                     }`,
                     background: active
-                      ? "var(--gold-soft, rgba(37,99,235,0.10))"
+                      ? "rgba(37,99,235,0.10)"
                       : "transparent",
                     fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontSize: "0.6875rem",
                     letterSpacing: "0.12em",
-                    color: active
-                      ? "var(--gold-deep, #1D4ED8)"
-                      : "var(--ink-muted, #7C7268)",
+                    // INK muted (inactive) / DEEP cobalt (active) on white
+                    color: active ? "#1D4ED8" : "#6b7488",
                     transition: "border-color 200ms ease, background 200ms ease, color 200ms ease",
                   }}
                 >
@@ -478,7 +507,8 @@ export default function CrossLinkAct() {
                     <span
                       style={{
                         fontVariantNumeric: "tabular-nums",
-                        color: "var(--ink-soft, #4A413A)",
+                        // INK body on white
+                        color: "#38445c",
                       }}
                     >
                       {value}
@@ -491,6 +521,7 @@ export default function CrossLinkAct() {
 
           {/* The real, persisted site-wide currency picker. */}
           <CurrencyPicker className="ml-auto" />
+        </div>
         </div>
       </div>
     </section>
