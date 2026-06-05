@@ -63,6 +63,17 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // ── v1.0 cutover (June 2026): news homepage = the v17 immersive Terminal.
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/v17",
+        permanent: false, // soft — revert by removing this rule
+      },
+    ];
+  },
+
   // ── Experimental performance flags ────────────────────────────────────
   experimental: {
     // Optimize CSS — inline critical, defer the rest

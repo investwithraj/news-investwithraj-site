@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   title: "The Terminal — Dubai Real Estate in Real Time | Invest With Raj",
   description:
     "An immersive market-intelligence terminal for Dubai real estate — live DLD pulse, capital-flow globe, the daily brief, and the five beats that move the market.",
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
 
 export default function V17News() {
