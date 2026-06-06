@@ -465,7 +465,7 @@ function DeskPane() {
         which before lunch.”
       </p>
       <p className="text-[10px] font-mono uppercase tracking-[0.18em]" style={{ color: "var(--gold-bright, #E0C076)" }}>
-        — Raj · DLD-licensed broker · Dubai
+        — Raj · real-estate consultant · Dubai
       </p>
       <div className="pt-3 mt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "rgba(201,169,97,0.18)" }}>
         <Link href="/ask" data-magnetic className="px-2 py-1 border text-[10px] uppercase tracking-[0.18em]" style={{ borderColor: "rgba(201,169,97,0.3)", color: "var(--gold-bright, #E0C076)" }}>

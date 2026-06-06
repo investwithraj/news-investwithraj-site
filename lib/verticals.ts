@@ -39,7 +39,7 @@ export const VERTICALS: Vertical[] = [
     name: "DLD Pulse",
     tagline: "Daily prints. Volume, velocity, who moved.",
     description:
-      "Every Dubai Land Department transaction print, parsed and contextualized. Daily volume, sale velocity by area, the unusual trades. Bloomberg-tier data, broker-tier commentary.",
+      "Every Dubai Land Department transaction print, parsed and contextualized. Daily volume, sale velocity by area, the unusual trades. Bloomberg-tier data, desk-tier commentary.",
     categories: ["market-pulse"],
     gradient:
       "linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(29, 78, 216, 0.06))",

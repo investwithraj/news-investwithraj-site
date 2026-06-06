@@ -14,7 +14,7 @@ export function GET(): Response {
 > ${SITE.tagline}
 >
 > Independent UAE real-estate market intelligence by Raj Tomar, a
-> DLD-licensed Dubai-based broker. 5–15 verified-source-cited articles
+> Dubai-based real-estate consultant. 5–15 verified-source-cited articles
 > a day on Dubai, Abu Dhabi, and Ras Al Khaimah property. Plus weekly
 > long-form insights and a 12-page institutional Investor Note monthly.
 
@@ -42,7 +42,7 @@ export function GET(): Response {
 ## Author
 
 - Name: Raj Tomar
-- Credentials: DLD-licensed broker · MBA Construction Management
+- Credentials: real-estate consultant · MBA Construction Management
   (Mahatma Gandhi University) · B.Plan Urban Planning (Manipal University
   Jaipur) · AI Applications Certificate (The Wharton School) ·
   UN-Habitat UNMGCY member

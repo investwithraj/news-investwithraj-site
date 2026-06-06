@@ -363,7 +363,7 @@ function BrokerCard({ call }: { call: BrokerTake }) {
         className="text-[11px] font-mono uppercase tracking-[0.18em] mt-1"
         style={{ color: "var(--ink-faint)" }}
       >
-        — Raj Tomar · DLD-licensed broker
+        — Raj Tomar · real-estate consultant
       </p>
     </div>
   );

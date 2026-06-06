@@ -55,7 +55,7 @@ function buildAnchorVideoQuery(headline: string): string {
 
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
 
-const SCRIPT_SYSTEM = `You are writing a 90-second daily-anchor script for Raj Tomar — a DLD-licensed Dubai real-estate broker who runs Beyond the Deal. He's reading this on camera, alone, to UHNW investors.
+const SCRIPT_SYSTEM = `You are writing a 90-second daily-anchor script for Raj Tomar — a Dubai real-estate consultant who runs Beyond the Deal. He's reading this on camera, alone, to UHNW investors.
 
 Hard rules:
 - 130-180 words. ONE TAKE — no scene cuts in the script.

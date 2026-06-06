@@ -77,7 +77,7 @@ function buildQuoraDraft(article: NewsArticle): DraftSeed {
     `A few specifics worth noting:`,
     ...article.tldr.slice(1, 3).map((t) => `- ${t}`),
     ``,
-    `I cover Dubai + UAE real estate full-time (DLD-licensed broker). If you want my full breakdown with the underlying source documents, I keep it up to date here: ${link}`,
+    `I cover Dubai + UAE real estate full-time (real-estate consultant). If you want my full breakdown with the underlying source documents, I keep it up to date here: ${link}`,
   ].join("\n");
 
   return {
@@ -101,7 +101,7 @@ function buildHaroDraft(article: NewsArticle): DraftSeed {
     ``,
     `The key number is in the data: ${article.tldr.find((t) => /\d/.test(t)) || article.tldr[0] || ""}."`,
     ``,
-    `— Raj Tomar, DLD-licensed broker, Dubai. Cover ${article.market.slice(0, 2).join(" + ")} as a full-time mandate.`,
+    `— Raj Tomar, real-estate consultant, Dubai. Cover ${article.market.slice(0, 2).join(" + ")} as a full-time mandate.`,
     ``,
     `Bio: Founder, news.investwithraj.com. Daily UAE real-estate intelligence for UHNW investors. Linked sources: ${SITE.url}/news/${article.slug}`,
   ].join("\n");
@@ -129,7 +129,7 @@ function buildFeaturedDraft(article: NewsArticle): DraftSeed {
     article.body.split("\n\n").slice(0, 2).join("\n\n"),
     ``,
     `Source: ${link}`,
-    `— Raj Tomar, DLD-licensed broker, Dubai`,
+    `— Raj Tomar, real-estate consultant, Dubai`,
   ].join("\n");
 
   return {

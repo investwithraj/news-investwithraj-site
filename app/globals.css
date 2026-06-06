@@ -38,7 +38,7 @@
   --ink:       #2B2621;  /* Warm charcoal — primary type */
   --ink-soft:  #4A413A;  /* Body type at scale */
   --ink-muted: #7C7268;  /* Secondary copy, labels */
-  --ink-faint: #A89D8E;  /* Captions, eyebrows, faded mono labels */
+  --ink-faint: #7A6541;  /* Captions, eyebrows, faded mono labels — deepened from #A89D8E to clear WCAG AA (~4.6:1) on cream while keeping the warm brass */
 
   /* v13 — Cucinelli brass. Slightly deeper than v12 gold so it reads
      against the warmer cream. The ONLY visible accent — must touch

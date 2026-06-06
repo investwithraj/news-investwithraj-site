@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 - Proper nouns (Modon, Emaar, DLD, etc.) — leave in English unless there's a widely-used localized form
 - Numeric values + units (AED, sqft, %)
 - Markdown structure if present (line breaks, lists)
-- Brand voice — measured, broker-tier, never marketing-y
+- Brand voice — measured, institutional, never marketing-y
 
 Output ONLY the translation. No commentary, no "here's the translation", just the translated text.`,
     messages: [{ role: "user", content: text }],

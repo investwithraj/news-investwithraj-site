@@ -190,7 +190,7 @@ export default async function DeveloperPage({
                 className="mt-5 text-[10px] font-mono uppercase tracking-[0.22em]"
                 style={{ color: "var(--ink-faint)" }}
               >
-                — Raj Tomar · DLD-licensed broker
+                — Raj Tomar · real-estate consultant
               </p>
             </div>
           </div>
