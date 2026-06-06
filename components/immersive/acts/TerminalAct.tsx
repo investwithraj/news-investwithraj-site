@@ -403,7 +403,7 @@ export default function TerminalAct() {
               value="AED 11.97B"
               delta={{ value: "+12.4%", trend: "up" }}
               sparkline={[12, 18, 15, 22, 19, 26, 24, 31, 28, 34, 32, 38]}
-              variant="holo"
+              variant="dark"
               size="sm"
             />
             <DataPanel
@@ -518,12 +518,22 @@ export default function TerminalAct() {
                   FxProvider keeps <Price/> happy when this Act is a
                   standalone front-door (graceful fallback if no backend). */}
               <div
-                style={{
-                  marginTop: "16px",
-                  borderRadius: "14px",
-                  overflow: "hidden",
-                  border: "1px solid rgba(37,99,235,0.16)",
-                }}
+                style={
+                  {
+                    marginTop: "16px",
+                    borderRadius: "14px",
+                    overflow: "hidden",
+                    border: "1px solid rgba(37,99,235,0.16)",
+                    // DldTicker is inverted by design (background:var(--ink),
+                    // color:var(--paper)) for the cream site. Under .v17-dark
+                    // those tokens are swapped (--ink resolves light), which
+                    // would render the strip light with invisible faint-white
+                    // labels. Re-pin them locally so the embedded ticker stays a
+                    // dark strip with readable light type.
+                    "--ink": "#0b1220",
+                    "--paper": "#EAF0FA",
+                  } as CSSProperties
+                }
               >
                 <FxProvider>
                   <DldTicker />
