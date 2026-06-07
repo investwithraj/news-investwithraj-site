@@ -345,7 +345,7 @@ export default function TerminalAct() {
               }}
             >
               <a
-                href="/v16/articles"
+                href="/news"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",

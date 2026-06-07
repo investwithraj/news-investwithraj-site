@@ -23,10 +23,10 @@ const MAIN_URL =
   process.env.NEXT_PUBLIC_MAIN_URL ?? "https://investwithraj.com";
 
 const LINKS = [
-  { href: `${MAIN_URL}/v17#operator`, label: "Operator", external: true },
+  { href: `${MAIN_URL}/#operator`, label: "Operator", external: true },
   { href: "#note", label: "Note", external: false },
   { href: "#map", label: "Map", external: false },
-  { href: `${MAIN_URL}/v17#engage`, label: "Engage", external: true },
+  { href: `${MAIN_URL}/#engage`, label: "Engage", external: true },
 ] as const;
 
 export default function V17EdgeNav() {
@@ -34,7 +34,7 @@ export default function V17EdgeNav() {
     <>
       {/* TL — wordmark */}
       <Link
-        href="/v17"
+        href="/"
         aria-label="Invest With Raj News — terminal home"
         data-cursor-label="TERMINAL"
         style={{
@@ -60,7 +60,7 @@ export default function V17EdgeNav() {
         }}
       >
         <span style={{ color: "#5BA5F5" }}>IWR</span>
-        <span style={{ opacity: 0.55, marginLeft: 8 }}>/ news / v17</span>
+        <span style={{ opacity: 0.55, marginLeft: 8 }}>/ news</span>
       </Link>
 
       {/* TR — tiny anchor links */}
@@ -128,9 +128,9 @@ export default function V17EdgeNav() {
         ))}
       </nav>
 
-      {/* BR — Talk to Raj pill (cross-domain to MAIN /v17#engage) */}
+      {/* BR — Talk to Raj pill (cross-domain to MAIN /#engage) */}
       <a
-        href={`${MAIN_URL}/v17#engage`}
+        href={`${MAIN_URL}/#engage`}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Talk to Raj — opens engagement section on the main site"
