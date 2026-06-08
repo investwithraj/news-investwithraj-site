@@ -160,7 +160,7 @@ export async function searchWikimedia(
       titles: titles.join("|"),
       prop: "imageinfo",
       iiprop: "url|size|extmetadata",
-      iiurlwidth: "1600",
+      iiurlwidth: "2400", // server-side render width — crisp hero (capped at native, never upscales)
       format: "json",
       origin: "*",
     });
@@ -507,9 +507,31 @@ const JUNK_TITLE =
 // Wrong-country tells in a file title. The photographer credit often says
 // "Dubai" even when the photo is elsewhere, so geo-gate on the TITLE only.
 const NON_UAE =
-  /(niagara|canada|\bunited states\b|\busa\b|\blondon\b|\bparis\b|new york|singapore|mumbai|\bindia\b|\beurope\b|\bspain\b|\bitaly\b|toronto|sydney|\bchina\b|\bjapan\b)/i;
+  /(niagara|canada|\bunited states\b|\busa\b|\blondon\b|\bparis\b|new york|singapore|mumbai|\bindia\b|\beurope\b|\bspain\b|\bitaly\b|toronto|sydney|\bchina\b|\bjapan\b|chicago|willis tower|sears|manhattan|brooklyn|los angeles|san francisco|las vegas|hong kong|shanghai|kuala lumpur|petronas|frankfurt|moscow|bangkok|cape town)/i;
 
-/** Relevance to the query + provider trust + hero-friendly aspect − wrong-subject/geo penalty. */
+/**
+ * Best estimate of the ACTUAL served pixel width of img.url — NOT the native
+ * metadata. Some aggregators (Openverse, esp. rawpixel-sourced files) report a
+ * large native `width` while the `url` field serves a downscaled variant
+ * (rawpixel's `editor_1024` = 1024px, and rawpixel 404s on any larger token —
+ * verified, so we can't upgrade the URL; we just score it honestly). Reading
+ * the size token off the URL keeps the resolution score truthful so a genuinely
+ * crisp render wins the hero slot. Conservative: only trusts well-known size
+ * tokens; otherwise falls back to the reported native width.
+ */
+function servedWidth(img: StockImage): number {
+  const u = img.url || "";
+  let w = 0;
+  const rawpixel = u.match(/editor_(\d{3,5})/i); // rawpixel CDN size token
+  const wikiThumb = u.match(/\/(\d{3,5})px-/); // Wikimedia thumb render
+  const querySized = u.match(/[?&](?:w|width)=(\d{3,5})/i); // ?w= / ?width= (Unsplash/Pexels)
+  for (const m of [rawpixel, wikiThumb, querySized]) if (m) w = Math.max(w, parseInt(m[1], 10));
+  if (!w) return img.width || 0; // no recognizable token → trust native metadata
+  return img.width ? Math.min(w, img.width) : w; // served can never exceed native
+}
+
+/** Relevance to the query + provider trust + hero-friendly aspect + TRUE resolution
+ *  − wrong-subject/geo + soft-image penalties. */
 function rankStock(img: StockImage, tokens: string[]): number {
   const providerBonus =
     img.source === "wikimedia" ? 300
@@ -518,14 +540,18 @@ function rankStock(img: StockImage, tokens: string[]): number {
     : 400; // unsplash / pexels / pixabay
   const aspect = img.width / Math.max(img.height, 1);
   const aspectBonus = aspect >= 1.4 && aspect <= 2.1 ? 200 : 0;
-  const resBonus = Math.min(img.width, 4000) / 25;
+  // Resolution scored on the ACTUAL served width (see servedWidth), so a 1024px
+  // variant hiding behind a large native `width` can't steal a crisp hero slot.
+  const sw = servedWidth(img);
+  const resBonus = Math.min(sw, 3000) / 12; // 2400px→200 · 1600→133 · 1024→85
+  const lowResPenalty = sw && sw < 1400 ? 350 : 0; // soft heroes lose to crisp — but stay as fallback
   // Score relevance on the file TITLE (what's actually IN the image), never the
   // credit (photographer + home city — which is what put a Niagara photo top).
   const title = (img.alt ?? "").toLowerCase();
   const relevance = tokens.filter((t) => t.length > 2 && title.includes(t)).length * 180;
   const junk = JUNK_TITLE.test(title) ? 800 : 0;
   const offGeo = NON_UAE.test(title) ? 1200 : 0;
-  return providerBonus + aspectBonus + resBonus + relevance - junk - offGeo;
+  return providerBonus + aspectBonus + resBonus + relevance - junk - offGeo - lowResPenalty;
 }
 
 /** Convenience — return the single best match (relevance-ranked, dedup-aware). */
