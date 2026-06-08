@@ -11,6 +11,7 @@
 // `article.semaform` fields OR fall back to the legacy `body` string.
 
 import type { NewsArticle, ViewFrom, BrokerTake } from "@/content/news/types";
+import { ArticleHero } from "./ArticleHero";
 
 interface Props {
   article: NewsArticle;
@@ -65,6 +66,19 @@ export function SemaformLayout({ article }: Props) {
       >
         {article.subtitle}
       </p>
+
+      {/* Hero image — blog-style figure (auto-sourced; self-hides if missing) */}
+      {article.heroImage?.src ? (
+        <ArticleHero
+          src={article.heroImage.src}
+          alt={article.heroImage.alt}
+          credit={
+            article.heroImage.credit && article.heroImage.credit !== "To be set at review"
+              ? article.heroImage.credit
+              : undefined
+          }
+        />
+      ) : null}
 
       {/* THE FACTS — TLDR */}
       <Section eyebrow="The Facts" idx={1}>

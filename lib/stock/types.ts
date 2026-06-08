@@ -4,6 +4,7 @@ export type StockSource =
   | "unsplash"
   | "pexels"
   | "wikimedia"
+  | "openverse"
   | "pixabay"
   | "imagen";
 
@@ -42,4 +43,10 @@ export interface StockSearchOptions {
   minWidth?: number;
   /** Number of results to return */
   perPage?: number;
+  /** Allow the synthetic (Imagen / Vertex AI) last-resort fallback. Default
+   *  true; news heroes pass false so an article never ships an AI-generated
+   *  photo presented as real reporting. */
+  allowSynthetic?: boolean;
+  /** Source/attribution URLs to skip — dedupe against recently-used images. */
+  excludeUrls?: string[];
 }

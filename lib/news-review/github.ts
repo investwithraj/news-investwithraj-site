@@ -60,8 +60,50 @@ export async function publishArticleCommit(
   const currentIndex = Buffer.from(indexFile.content, "base64").toString("utf-8");
   const nextIndex = patchIndex(currentIndex, slug);
 
+  // 2b. Self-host the hero image. The auto-sourcer stores a remote CDN URL on
+  //     the draft (for The Desk preview); at publish we download it and add it
+  //     to THIS atomic commit as public/news/<slug>/cover.<ext>, then rewrite
+  //     heroImage.src to the local path. Any failure is non-fatal — we keep the
+  //     remote URL so the article still renders via the source CDN.
+  let finalArticle = article;
+  const heroTree: Array<{ path: string; mode: "100644"; type: "blob"; sha: string }> = [];
+  const remoteHero = article.heroImage?.src ?? "";
+  if (/^https?:\/\//i.test(remoteHero)) {
+    try {
+      // For Wikimedia originals, fetch a 1600px thumbnail (caps a 15MB original
+      // to a web-sized cover). Non-Wikimedia URLs pass through unchanged.
+      const dlUrl = remoteHero.includes("/thumb/")
+        ? remoteHero
+        : remoteHero.replace(
+            /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons)\/([0-9a-f])\/([0-9a-f]{2})\/(.+\.(?:jpe?g|png|webp))$/i,
+            "$1/thumb/$2/$3/$4/1600px-$4",
+          );
+      const imgRes = await fetch(dlUrl, {
+        headers: {
+          "User-Agent": "InvestWithRajNewsBot/1.0 (https://news.investwithraj.com)",
+          Referer: "https://commons.wikimedia.org/",
+        },
+      });
+      const ct = (imgRes.headers.get("content-type") || "").split(";")[0].toLowerCase();
+      if (imgRes.ok && ct.startsWith("image/")) {
+        const buf = Buffer.from(await imgRes.arrayBuffer());
+        if (buf.length > 3000) {
+          const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+          const imgBlob = await gh<{ sha: string }>(`${base}/git/blobs`, {
+            method: "POST",
+            body: JSON.stringify({ content: buf.toString("base64"), encoding: "base64" }),
+          });
+          heroTree.push({ path: `public/news/${slug}/cover.${ext}`, mode: "100644", type: "blob", sha: imgBlob.sha });
+          finalArticle = { ...article, heroImage: { ...article.heroImage, src: `/news/${slug}/cover.${ext}` } };
+        }
+      }
+    } catch {
+      // non-fatal — keep the remote heroImage.src; article renders via the CDN.
+    }
+  }
+
   // 3. Blobs for both files.
-  const articleTs = serializeArticle(article);
+  const articleTs = serializeArticle(finalArticle);
   const [articleBlob, indexBlob] = await Promise.all([
     gh<{ sha: string }>(`${base}/git/blobs`, {
       method: "POST",
@@ -81,6 +123,7 @@ export async function publishArticleCommit(
       tree: [
         { path: `content/news/${slug}.ts`, mode: "100644", type: "blob", sha: articleBlob.sha },
         { path: "content/news/index.ts", mode: "100644", type: "blob", sha: indexBlob.sha },
+        ...heroTree,
       ],
     }),
   });

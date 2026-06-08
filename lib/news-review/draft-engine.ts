@@ -13,9 +13,11 @@ import { callClaudeResearch } from "@/lib/ai/claude";
 import { validateDraft, type DraftArticle as ValidatorInput } from "@/lib/voice/validator";
 import { fetchArticleText } from "@/lib/sources/extract";
 import { rootCtaUrl } from "@/lib/constants";
+import { findBestStockImage } from "@/lib/stock/providers";
+import { buildQueryForArticle } from "@/lib/stock/query-builder";
 import type { Cluster } from "@/lib/pipeline/types";
 import type { DraftArticle, NewsDraftProvenance } from "./types";
-import type { NewsCategory } from "@/content/news/types";
+import type { NewsCategory, NewsArticle } from "@/content/news/types";
 
 const VALID_CATEGORIES: NewsCategory[] = [
   "market-pulse", "launch", "regulatory", "macro",
@@ -209,6 +211,23 @@ export async function draftFromCluster(
     },
     distribution: {},
   };
+
+  // ── Auto-source a rights-clean hero image (keyless: Wikimedia + Openverse;
+  //    no AI for news). The remote URL rides the draft for The Desk preview;
+  //    publishArticleCommit self-hosts it as /news/<slug>/cover.* at publish.
+  try {
+    const hero = await findBestStockImage({
+      query: buildQueryForArticle(article as unknown as NewsArticle),
+      orientation: "landscape",
+      minWidth: 1400,
+      allowSynthetic: false,
+    });
+    if (hero) {
+      article.heroImage = { src: hero.url, alt: parsed.title.slice(0, 120), credit: hero.credit };
+    }
+  } catch {
+    // Keep the placeholder; The Desk surfaces "no auto-image — set manually".
+  }
 
   const validation = validateDraft(article as unknown as ValidatorInput);
   if (!validation.ok) {

@@ -224,6 +224,54 @@ export async function searchWikimedia(
   }
 }
 
+/* ─── Openverse (keyless CC aggregator — 2nd keyless source w/ Wikimedia) ── */
+
+export async function searchOpenverse(opts: StockSearchOptions): Promise<StockImage[]> {
+  const minWidth = opts.minWidth ?? 1200;
+  const aspect =
+    opts.orientation === "portrait" ? "tall" : opts.orientation === "square" ? "square" : "wide";
+  const params = new URLSearchParams({
+    q: opts.query,
+    license_type: "commercial",
+    size: "large",
+    aspect_ratio: aspect,
+    mature: "false",
+    page_size: String(Math.max(opts.perPage ?? 5, 5)),
+  });
+  try {
+    const res = await fetch(`https://api.openverse.org/v1/images/?${params.toString()}`, {
+      headers: {
+        "User-Agent": "InvestWithRajNewsBot/1.0 (https://news.investwithraj.com)",
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { results?: Array<Record<string, unknown>> };
+    const results = json?.results ?? [];
+    return results
+      .filter((r) => typeof r.url === "string" && (!minWidth || ((r.width as number) ?? 0) >= minWidth))
+      .map((r): StockImage => {
+        const license = `${String(r.license ?? "").toUpperCase()}${r.license_version ? " " + r.license_version : ""}`.trim();
+        return {
+          url: r.url as string,
+          thumbnailUrl: (r.thumbnail as string) || (r.url as string),
+          attributionUrl: (r.foreign_landing_url as string) || (r.url as string),
+          credit: String(r.attribution || `${r.creator || "Unknown"} — ${license} (via Openverse)`)
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 200),
+          license: license || "CC (Openverse)",
+          width: (r.width as number) ?? 0,
+          height: (r.height as number) ?? 0,
+          source: "openverse",
+          alt: (r.title as string) || opts.query,
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
 /* ─── Pixabay ────────────────────────────────────────────────────────── */
 
 export async function searchPixabay(
@@ -424,6 +472,7 @@ export async function searchStock(
     if (UNSPLASH_KEY) promises.push(searchUnsplash(subOpts));
     if (PEXELS_KEY) promises.push(searchPexels(subOpts));
     promises.push(searchWikimedia(subOpts)); // keyless — always run
+    promises.push(searchOpenverse(subOpts)); // keyless — always run
     if (PIXABAY_KEY) promises.push(searchPixabay(subOpts));
     return (await Promise.all(promises)).flat();
   }
@@ -443,18 +492,54 @@ export async function searchStock(
     }
   }
 
-  // 3. Last resort — Imagen 4 via Vertex AI (covered by $100 GCP credit)
-  // generateImagen() internally checks vertex.isVertexConfigured() and
-  // returns [] silently if WIF env vars missing, so it's safe to always call.
+  // 3. Last resort — Imagen 4 via Vertex AI (covered by $100 GCP credit).
+  // Skipped when allowSynthetic === false — news heroes must be real photos,
+  // never AI-generated imagery presented as reporting.
+  if (opts.allowSynthetic === false) return [];
   return generateImagen(opts);
 }
 
-/** Convenience — return the single best match. */
+// Titles/credits that signal the wrong subject (automated relevance can't see
+// pixels, so we read the text for obvious non-place shots).
+const JUNK_TITLE =
+  /(navy|nimitz|warship|\bship\b|aircraft|soldier|portrait|wedding|\blogo\b|\bflag\b|\bmap\b|diagram|chart|\bcoin\b|stamp|banknote|interior|bedroom|protest)/i;
+
+// Wrong-country tells in a file title. The photographer credit often says
+// "Dubai" even when the photo is elsewhere, so geo-gate on the TITLE only.
+const NON_UAE =
+  /(niagara|canada|\bunited states\b|\busa\b|\blondon\b|\bparis\b|new york|singapore|mumbai|\bindia\b|\beurope\b|\bspain\b|\bitaly\b|toronto|sydney|\bchina\b|\bjapan\b)/i;
+
+/** Relevance to the query + provider trust + hero-friendly aspect − wrong-subject/geo penalty. */
+function rankStock(img: StockImage, tokens: string[]): number {
+  const providerBonus =
+    img.source === "wikimedia" ? 300
+    : img.source === "openverse" ? 250
+    : img.source === "imagen" ? -1000 // synthetic never wins over a real photo
+    : 400; // unsplash / pexels / pixabay
+  const aspect = img.width / Math.max(img.height, 1);
+  const aspectBonus = aspect >= 1.4 && aspect <= 2.1 ? 200 : 0;
+  const resBonus = Math.min(img.width, 4000) / 25;
+  // Score relevance on the file TITLE (what's actually IN the image), never the
+  // credit (photographer + home city — which is what put a Niagara photo top).
+  const title = (img.alt ?? "").toLowerCase();
+  const relevance = tokens.filter((t) => t.length > 2 && title.includes(t)).length * 180;
+  const junk = JUNK_TITLE.test(title) ? 800 : 0;
+  const offGeo = NON_UAE.test(title) ? 1200 : 0;
+  return providerBonus + aspectBonus + resBonus + relevance - junk - offGeo;
+}
+
+/** Convenience — return the single best match (relevance-ranked, dedup-aware). */
 export async function findBestStockImage(
   opts: StockSearchOptions
 ): Promise<StockImage | null> {
-  const results = await searchStock(opts);
-  return results[0] || null;
+  let results = await searchStock(opts);
+  const exclude = new Set(opts.excludeUrls ?? []);
+  if (exclude.size) {
+    results = results.filter((r) => !exclude.has(r.attributionUrl) && !exclude.has(r.url));
+  }
+  if (results.length === 0) return null;
+  const tokens = opts.query.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return [...results].sort((a, b) => rankStock(b, tokens) - rankStock(a, tokens))[0];
 }
 
 export function isAnyStockConfigured(): boolean {

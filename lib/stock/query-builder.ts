@@ -46,10 +46,33 @@ const AREA_QUERIES: Record<string, string> = {
   "al-marjan-island": "Al Marjan Island Ras Al Khaimah aerial",
   "mina-al-arab": "Ras Al Khaimah coastline waterfront resort",
   "al-hamra-village": "Al Hamra Village Ras Al Khaimah marina golf",
+  // ── Added so niche subjects map to a SPECIFIC UAE query (otherwise they
+  //    fell through to a generic category query that returned wrong-country
+  //    photos via the Wikimedia search). ──
+  "al-barari": "Dubai Al Barari green villa community aerial",
+  "arabian-ranches": "Arabian Ranches Dubai villa community",
+  "emaar-beachfront": "Dubai Harbour Emaar Beachfront towers waterfront",
+  "the-valley": "Dubai Emaar The Valley community aerial",
+  "jumeirah-golf-estates": "Jumeirah Golf Estates Dubai golf villas",
+  "emirates-hills": "Emirates Hills Dubai luxury villas lake",
+  "district-one": "Mohammed Bin Rashid City Dubai crystal lagoon",
+  "dubai-islands": "Dubai Islands waterfront beach aerial",
+  "bluewaters-island": "Bluewaters Island Dubai Ain Dubai aerial",
+  "jumeirah-bay-island": "Jumeirah Bay Island Dubai aerial",
+  "port-de-la-mer": "Port de la Mer La Mer Dubai marina",
+  "dubai-maritime-city": "Dubai Maritime City waterfront skyline",
+  "jumeirah-village-circle": "Jumeirah Village Circle Dubai aerial",
+  "saadiyat-reserve": "Saadiyat Island Abu Dhabi villas reserve",
+  "jubail-island": "Jubail Island Abu Dhabi mangroves aerial",
+  "nareel-island": "Nareel Island Abu Dhabi waterfront",
+  "yas-acres": "Yas Island Abu Dhabi aerial",
+  "burj-khalifa": "Burj Khalifa Downtown Dubai skyline",
+  "ain-dubai": "Ain Dubai Bluewaters Island Dubai",
+  "louvre-abu-dhabi": "Louvre Abu Dhabi architecture",
 };
 
 const CATEGORY_QUERIES: Record<string, string> = {
-  "market-pulse": "Dubai skyline sunset financial",
+  "market-pulse": "Dubai skyline aerial cityscape",
   launch: "Dubai luxury property launch architecture",
   regulatory: "Dubai government building architecture",
   macro: "Dubai cityscape aerial business",
