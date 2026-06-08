@@ -11,7 +11,7 @@ import type { DraftArticle } from "./types";
 const TOKEN = process.env.GITHUB_TOKEN || "";
 const OWNER = process.env.GITHUB_OWNER || "investwithraj";
 const REPO = process.env.GITHUB_REPO || "news-investwithraj-site";
-const BRANCH = process.env.GITHUB_BRANCH || "v16-futurevision";
+const BRANCH = process.env.GITHUB_BRANCH || "main";
 const API = "https://api.github.com";
 
 export function githubConfigured(): boolean {
