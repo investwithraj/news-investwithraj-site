@@ -62,7 +62,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-06-dubai-s-off-plan-dominance-66-900-sales-in-five-months-as-ma/cover.jpg",
     "alt": "Dubai's Off-Plan Dominance: 66,900 Sales in Five Months as Market Shifts",
-    "credit": "To be set at review"
+    "credit": "Nelemson G"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

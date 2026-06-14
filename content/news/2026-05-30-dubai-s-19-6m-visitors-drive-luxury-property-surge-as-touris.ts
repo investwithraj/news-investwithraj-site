@@ -57,7 +57,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-05-30-dubai-s-19-6m-visitors-drive-luxury-property-surge-as-touris/cover.jpg",
     "alt": "Dubai's 19.6M Visitors Drive Luxury Property Surge as Tourism Fuels Real Estate",
-    "credit": "To be set at review"
+    "credit": "Magda Ehlers"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

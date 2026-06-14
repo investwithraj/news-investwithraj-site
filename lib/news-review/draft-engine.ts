@@ -212,21 +212,33 @@ export async function draftFromCluster(
     distribution: {},
   };
 
-  // ── Auto-source a rights-clean hero image (keyless: Wikimedia + Openverse;
-  //    no AI for news). The remote URL rides the draft for The Desk preview;
-  //    publishArticleCommit self-hosts it as /news/<slug>/cover.* at publish.
+  // ── Auto-source a rights-clean hero image (Wikimedia + Openverse + any keyed
+  //    providers; no AI for news). The remote URL rides the draft for The Desk
+  //    preview; publishArticleCommit self-hosts it as /news/<slug>/cover.* at
+  //    publish. The CI runner has no stock API keys, so sourcing can come up
+  //    empty — in that case fall back to a market skyline so the article NEVER
+  //    ships with the dead placeholder cover (the 404-cover bug class).
+  const MARKET_HERO_FALLBACK =
+    "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg";
   try {
     const hero = await findBestStockImage({
       query: buildQueryForArticle(article as unknown as NewsArticle),
       orientation: "landscape",
-      minWidth: 1400,
+      minWidth: 1200,
       allowSynthetic: false,
     });
     if (hero) {
       article.heroImage = { src: hero.url, alt: parsed.title.slice(0, 120), credit: hero.credit };
     }
   } catch {
-    // Keep the placeholder; The Desk surfaces "no auto-image — set manually".
+    // fall through to the market fallback below
+  }
+  if (!/^https?:\/\//i.test(article.heroImage.src)) {
+    article.heroImage = {
+      src: MARKET_HERO_FALLBACK,
+      alt: parsed.title.slice(0, 120),
+      credit: "Wikimedia Commons",
+    };
   }
 
   const validation = validateDraft(article as unknown as ValidatorInput);

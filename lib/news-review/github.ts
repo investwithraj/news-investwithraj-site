@@ -78,24 +78,32 @@ export async function publishArticleCommit(
             /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons)\/([0-9a-f])\/([0-9a-f]{2})\/(.+\.(?:jpe?g|png|webp))$/i,
             "$1/thumb/$2/$3/$4/1600px-$4",
           );
-      const imgRes = await fetch(dlUrl, {
-        headers: {
-          "User-Agent": "InvestWithRajNewsBot/1.0 (https://news.investwithraj.com)",
-          Referer: "https://commons.wikimedia.org/",
-        },
-      });
-      const ct = (imgRes.headers.get("content-type") || "").split(";")[0].toLowerCase();
-      if (imgRes.ok && ct.startsWith("image/")) {
-        const buf = Buffer.from(await imgRes.arrayBuffer());
-        if (buf.length > 3000) {
-          const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-          const imgBlob = await gh<{ sha: string }>(`${base}/git/blobs`, {
-            method: "POST",
-            body: JSON.stringify({ content: buf.toString("base64"), encoding: "base64" }),
-          });
-          heroTree.push({ path: `public/news/${slug}/cover.${ext}`, mode: "100644", type: "blob", sha: imgBlob.sha });
-          finalArticle = { ...article, heroImage: { ...article.heroImage, src: `/news/${slug}/cover.${ext}` } };
+      // Wikimedia 404s the 1600px thumbnail when the original is narrower than
+      // that, so retry the original URL before giving up (the missed-self-host
+      // bug that left some articles on a generic remote cover).
+      const fetchImage = async (u: string) => {
+        const r = await fetch(u, {
+          headers: {
+            "User-Agent": "InvestWithRajNewsBot/1.0 (https://news.investwithraj.com)",
+            Referer: "https://commons.wikimedia.org/",
+          },
+        });
+        const c = (r.headers.get("content-type") || "").split(";")[0].toLowerCase();
+        if (r.ok && c.startsWith("image/")) {
+          const b = Buffer.from(await r.arrayBuffer());
+          if (b.length > 3000) return { buf: b, ct: c };
         }
+        return null;
+      };
+      const got = (await fetchImage(dlUrl)) || (dlUrl !== remoteHero ? await fetchImage(remoteHero) : null);
+      if (got) {
+        const ext = got.ct.includes("png") ? "png" : got.ct.includes("webp") ? "webp" : "jpg";
+        const imgBlob = await gh<{ sha: string }>(`${base}/git/blobs`, {
+          method: "POST",
+          body: JSON.stringify({ content: got.buf.toString("base64"), encoding: "base64" }),
+        });
+        heroTree.push({ path: `public/news/${slug}/cover.${ext}`, mode: "100644", type: "blob", sha: imgBlob.sha });
+        finalArticle = { ...article, heroImage: { ...article.heroImage, src: `/news/${slug}/cover.${ext}` } };
       }
     } catch {
       // non-fatal — keep the remote heroImage.src; article renders via the CDN.

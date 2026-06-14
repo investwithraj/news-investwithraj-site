@@ -76,7 +76,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-05-abu-dhabi-s-rent-freeze-a-structural-intervention-in-the-cap/cover.jpg",
     "alt": "Abu Dhabi's Rent Freeze: A Structural Intervention in the Capital's Precinct",
-    "credit": "To be set at review"
+    "credit": "Mikhail Nilov"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",
