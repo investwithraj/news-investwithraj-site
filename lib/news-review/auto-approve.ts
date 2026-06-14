@@ -162,3 +162,62 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     reasons,
   };
 }
+
+export interface AutoApproveSummary {
+  total: number;
+  approved: number;
+  published: number;
+  failed: number;
+  held: number;
+}
+
+/** Orchestrator: list The Desk's drafts, assess each, and (when publish=true)
+ *  publish the auto-approvable ones via the live /publish route — which itself
+ *  re-checks the gates server-side. Used by both the CLI and the cron. */
+export async function runAutoApprove(opts: {
+  site: string;
+  secret: string;
+  publish: boolean;
+  log?: (msg: string) => void;
+}): Promise<AutoApproveSummary> {
+  const log = opts.log ?? ((m: string) => console.log(m));
+  const base = opts.site.replace(/\/$/, "");
+  const q = `secret=${encodeURIComponent(opts.secret)}`;
+
+  const res = await fetch(`${base}/api/news/draft?${q}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`draft list failed (${res.status})`);
+  const { drafts } = (await res.json()) as { drafts: NewsDraft[] };
+
+  const assessments = drafts.map(assessDraft);
+  const approve = assessments.filter((a) => a.verdict === "auto-approve");
+  const held = assessments.filter((a) => a.verdict === "manual");
+
+  log(
+    `auto-approve: ${drafts.length} draft(s) · ${approve.length} pass · ${held.length} held · ` +
+      `mode ${opts.publish ? "PUBLISH" : "DRY RUN"} (>= ${MIN_WHITELIST_CITATIONS} whitelisted cites)`,
+  );
+  for (const a of approve) {
+    log(`  ok  ${a.slug}  (${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);
+  }
+  for (const a of held) log(`  hold ${a.slug} -> ${a.reasons.join("; ")}`);
+
+  if (!opts.publish) {
+    return { total: drafts.length, approved: approve.length, published: 0, failed: 0, held: held.length };
+  }
+
+  let published = 0;
+  let failed = 0;
+  for (const a of approve) {
+    const r = await fetch(`${base}/api/news/draft/${a.id}/publish?${q}`, { method: "POST" });
+    if (r.ok) {
+      published++;
+      const b = (await r.json().catch(() => ({}))) as { url?: string };
+      log(`  published ${a.slug}${b.url ? `  -> ${b.url}` : ""}`);
+    } else {
+      failed++;
+      const t = await r.text().catch(() => "");
+      log(`  FAILED ${a.slug}: ${r.status} ${t.slice(0, 120)}`);
+    }
+  }
+  return { total: drafts.length, approved: approve.length, published, failed, held: held.length };
+}
