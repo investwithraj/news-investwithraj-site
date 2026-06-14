@@ -31,8 +31,10 @@ import { article as art_2026_05_30_dubai_s_19_6m_visitors_drive_luxury_property_
 import { article as art_2026_06_14_branded_residences_command_64_premium_as_dubai_buyers_chase_ } from "./2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-";
 import { article as art_2026_06_13_palm_jumeirah_handover_2026_two_sold_out_towers_test_the_cre } from "./2026-06-13-palm-jumeirah-handover-2026-two-sold-out-towers-test-the-cre";
 import { article as art_2026_06_12_dubai_luxury_off_plan_sales_hit_aed4_96bn_in_may } from "./2026-06-12-dubai-luxury-off-plan-sales-hit-aed4-96bn-in-may";
+import { article as art_2026_06_11_emaar_unveils_dh200bn_masterplan_for_150_000_residents_in_du } from "./2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_11_emaar_unveils_dh200bn_masterplan_for_150_000_residents_in_du,
   art_2026_06_12_dubai_luxury_off_plan_sales_hit_aed4_96bn_in_may,
   art_2026_06_13_palm_jumeirah_handover_2026_two_sold_out_towers_test_the_cre,
   art_2026_06_14_branded_residences_command_64_premium_as_dubai_buyers_chase_,
