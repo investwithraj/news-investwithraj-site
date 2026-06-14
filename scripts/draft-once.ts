@@ -16,6 +16,7 @@ import { clusterAndScore } from "../lib/pipeline/cluster.js";
 import { getWhitelistDomains } from "../lib/sources/registry.js";
 import { draftFromCluster } from "../lib/news-review/draft-engine.js";
 import { NEWS_ARTICLES } from "../content/news/index.js";
+import { runAutoApprove } from "../lib/news-review/auto-approve.js";
 
 const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
@@ -83,6 +84,19 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n━━━ done: ${staged} staged from ${attempts} attempt(s) ━━━\n`);
+
+  // Autonomous publish — push every verified-source draft live (every figure
+  // traces to a whitelisted cited source; the rest wait in The Desk). Raj's
+  // call, Jun 14. Set AUTO_APPROVE=0 to disable. Guarded so an auto-approve
+  // hiccup can never fail the drafting run.
+  if (process.env.AUTO_APPROVE !== "0") {
+    try {
+      const s = await runAutoApprove({ site: SITE, secret: SECRET, publish: true });
+      console.log(`auto-approve: published ${s.published}/${s.approved}, ${s.failed} failed, ${s.held} held`);
+    } catch (e) {
+      console.error("auto-approve step failed (drafting unaffected):", e);
+    }
+  }
 }
 
 main().catch((e) => {
