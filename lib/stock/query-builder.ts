@@ -100,15 +100,17 @@ export function buildQueryForArticle(article: NewsArticle): string {
     }
   }
 
-  // 3. Fallback to category-based query
+  // 3. Non-Dubai emirates skip the Dubai-centric category queries and use an
+  //    emirate-correct generic — so an Abu Dhabi / RAK story never inherits a
+  //    Dubai skyline from the category fallback below.
+  const emirate = article.market[0]?.toLowerCase() || "dubai";
+  if (emirate.includes("abu dhabi")) return "Abu Dhabi skyline corniche aerial";
+  if (emirate.includes("ras al khaimah")) return "Ras Al Khaimah coastline resort waterfront";
+
+  // 4. Dubai / UAE — category-based query, else a generic Dubai skyline.
   if (article.category in CATEGORY_QUERIES) {
     return CATEGORY_QUERIES[article.category];
   }
-
-  // 4. Last resort — emirate-driven generic query
-  const emirate = article.market[0]?.toLowerCase() || "dubai";
-  if (emirate.includes("abu dhabi")) return "Abu Dhabi skyline corniche aerial";
-  if (emirate.includes("ras al khaimah")) return "Ras Al Khaimah coastline resort";
   return "Dubai skyline aerial golden hour";
 }
 

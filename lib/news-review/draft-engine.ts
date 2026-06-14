@@ -226,6 +226,7 @@ export async function draftFromCluster(
       orientation: "landscape",
       minWidth: 1200,
       allowSynthetic: false,
+      emirate: (article.market?.[0] as string) || undefined,
     });
     if (hero) {
       article.heroImage = { src: hero.url, alt: parsed.title.slice(0, 120), credit: hero.credit };

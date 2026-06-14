@@ -49,4 +49,8 @@ export interface StockSearchOptions {
   allowSynthetic?: boolean;
   /** Source/attribution URLs to skip — dedupe against recently-used images. */
   excludeUrls?: string[];
+  /** Target emirate ("Dubai" | "Abu Dhabi" | "Ras Al Khaimah" | "UAE" | "GCC").
+   *  When set, an image whose title signals a DIFFERENT emirate is penalised —
+   *  so an Abu Dhabi story never lands a Dubai skyline. */
+  emirate?: string;
 }

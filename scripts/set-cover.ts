@@ -42,12 +42,21 @@ async function main() {
   let url = directUrl;
   let credit = directCredit || "";
   if (!url) {
+    // detect the article's emirate so the geo-gate keeps the image on-emirate
+    let emirate: string | undefined;
+    try {
+      const tsRaw = await fs.readFile(path.join(ROOT, "content", "news", `${slug}.ts`), "utf-8");
+      emirate = tsRaw.match(/"market":\s*\[\s*"([^"]+)"/)?.[1];
+    } catch {
+      /* no article on disk — skip the geo-gate */
+    }
     const img = await findBestStockImage({
       query,
       orientation: "landscape",
       minWidth: 1600,
       allowSynthetic: false,
       excludeUrls: [...GENERIC_EXCLUDE, ...extraExclude],
+      emirate,
     });
     if (!img) {
       console.error(`No rights-clean image found for "${query}".`);

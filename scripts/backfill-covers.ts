@@ -68,9 +68,10 @@ async function patchCredit(slug: string, credit: string): Promise<boolean> {
 }
 
 async function main() {
+  const force = process.argv.includes("--force");
   const live = NEWS_ARTICLES.filter((a) => a.status !== "research");
   const broken: NewsArticle[] = [];
-  for (const a of live) if (!(await coverExists(a.slug))) broken.push(a);
+  for (const a of live) if (force || !(await coverExists(a.slug))) broken.push(a);
 
   console.log(`\n${live.length} live articles · ${broken.length} missing a self-hosted cover · mode: ${WRITE ? "WRITE" : "REPORT"}\n`);
 
@@ -92,6 +93,7 @@ async function main() {
       minWidth: 1200,
       allowSynthetic: false,
       excludeUrls: [...used],
+      emirate: market,
     });
     if (img) {
       used.add(img.url);
