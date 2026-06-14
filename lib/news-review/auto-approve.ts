@@ -20,8 +20,10 @@
 
 import type { NewsDraft } from "./types";
 
-/** Need at least this many whitelisted citations to auto-publish (corroboration). */
-export const MIN_WHITELIST_CITATIONS = 2;
+/** Need at least this many whitelisted citations to auto-publish. Raj's call
+ *  (Jun 14): 1 verified source qualifies — single-source drafts can auto-publish
+ *  as long as that source is whitelisted AND every figure traces to it. */
+export const MIN_WHITELIST_CITATIONS = 1;
 
 export interface AutoApproveAssessment {
   id: string;
