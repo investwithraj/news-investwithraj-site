@@ -35,8 +35,10 @@ import { article as art_2026_06_11_emaar_unveils_dh200bn_masterplan_for_150_000_
 import { article as art_2026_06_10_shangri_la_dubai_sells_for_dh1_1bn_as_sheikh_zayed_road_valu } from "./2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu";
 import { article as art_2026_06_10_cbd_and_dubai_holding_real_estate_launch_aed_157_9bn_backed_ } from "./2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-";
 import { article as art_2026_06_07_dubai_logs_dhs28_51bn_in_may_property_deals_as_off_plan_abso } from "./2026-06-07-dubai-logs-dhs28-51bn-in-may-property-deals-as-off-plan-abso";
+import { article as art_2026_06_06_dubai_s_off_plan_dominance_66_900_sales_in_five_months_as_ma } from "./2026-06-06-dubai-s-off-plan-dominance-66-900-sales-in-five-months-as-ma";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_06_dubai_s_off_plan_dominance_66_900_sales_in_five_months_as_ma,
   art_2026_06_07_dubai_logs_dhs28_51bn_in_may_property_deals_as_off_plan_abso,
   art_2026_06_10_cbd_and_dubai_holding_real_estate_launch_aed_157_9bn_backed_,
   art_2026_06_10_shangri_la_dubai_sells_for_dh1_1bn_as_sheikh_zayed_road_valu,
