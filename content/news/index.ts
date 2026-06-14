@@ -28,8 +28,10 @@ import { article as modonHudayriyatGolfEstate } from "./2026-05-26-modon-hudayri
 import { article as goldenVisaMortgageFlex } from "./2026-05-26-golden-visa-mortgage-flex";
 import { article as art_2026_05_30_al_barari_villa_lease_resets_dubai_ultra_prime_rental_ceilin } from "./2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin";
 import { article as art_2026_05_30_dubai_s_19_6m_visitors_drive_luxury_property_surge_as_touris } from "./2026-05-30-dubai-s-19-6m-visitors-drive-luxury-property-surge-as-touris";
+import { article as art_2026_06_14_branded_residences_command_64_premium_as_dubai_buyers_chase_ } from "./2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_14_branded_residences_command_64_premium_as_dubai_buyers_chase_,
   art_2026_05_30_dubai_s_19_6m_visitors_drive_luxury_property_surge_as_touris,
   art_2026_05_30_al_barari_villa_lease_resets_dubai_ultra_prime_rental_ceilin,
   dld21bWeek,
