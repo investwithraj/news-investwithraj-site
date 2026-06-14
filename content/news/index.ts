@@ -33,8 +33,10 @@ import { article as art_2026_06_13_palm_jumeirah_handover_2026_two_sold_out_towe
 import { article as art_2026_06_12_dubai_luxury_off_plan_sales_hit_aed4_96bn_in_may } from "./2026-06-12-dubai-luxury-off-plan-sales-hit-aed4-96bn-in-may";
 import { article as art_2026_06_11_emaar_unveils_dh200bn_masterplan_for_150_000_residents_in_du } from "./2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du";
 import { article as art_2026_06_10_shangri_la_dubai_sells_for_dh1_1bn_as_sheikh_zayed_road_valu } from "./2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu";
+import { article as art_2026_06_10_cbd_and_dubai_holding_real_estate_launch_aed_157_9bn_backed_ } from "./2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_10_cbd_and_dubai_holding_real_estate_launch_aed_157_9bn_backed_,
   art_2026_06_10_shangri_la_dubai_sells_for_dh1_1bn_as_sheikh_zayed_road_valu,
   art_2026_06_11_emaar_unveils_dh200bn_masterplan_for_150_000_residents_in_du,
   art_2026_06_12_dubai_luxury_off_plan_sales_hit_aed4_96bn_in_may,
