@@ -67,7 +67,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-07-dubai-logs-dhs28-51bn-in-may-property-deals-as-off-plan-abso/cover.jpg",
     "alt": "Dubai logs Dhs28.51bn in May property deals as off-plan absorbs 64% of value",
-    "credit": "To be set at review"
+    "credit": "Nihongraphy"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

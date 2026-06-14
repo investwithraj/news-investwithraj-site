@@ -52,7 +52,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-05-31-al-barari-villa-leased-for-aed-14-million-sets-dubai-rental-/cover.jpg",
     "alt": "Al Barari villa leased for AED 14 million sets Dubai rental record",
-    "credit": "To be set at review"
+    "credit": "Nino Verde"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",
