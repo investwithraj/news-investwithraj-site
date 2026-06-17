@@ -38,8 +38,10 @@ import { article as art_2026_06_07_dubai_logs_dhs28_51bn_in_may_property_deals_a
 import { article as art_2026_06_06_dubai_s_off_plan_dominance_66_900_sales_in_five_months_as_ma } from "./2026-06-06-dubai-s-off-plan-dominance-66-900-sales-in-five-months-as-ma";
 import { article as art_2026_06_05_abu_dhabi_s_rent_freeze_a_structural_intervention_in_the_cap } from "./2026-06-05-abu-dhabi-s-rent-freeze-a-structural-intervention-in-the-cap";
 import { article as art_2026_05_31_al_barari_villa_leased_for_aed_14_million_sets_dubai_rental_ } from "./2026-05-31-al-barari-villa-leased-for-aed-14-million-sets-dubai-rental-";
+import { article as art_2026_06_17_dir_completes_189_villa_delivery_at_danah_bay_as_rak_absorbs } from "./2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-absorbs";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_17_dir_completes_189_villa_delivery_at_danah_bay_as_rak_absorbs,
   art_2026_05_31_al_barari_villa_leased_for_aed_14_million_sets_dubai_rental_,
   art_2026_06_05_abu_dhabi_s_rent_freeze_a_structural_intervention_in_the_cap,
   art_2026_06_06_dubai_s_off_plan_dominance_66_900_sales_in_five_months_as_ma,
