@@ -41,8 +41,10 @@ import { article as art_2026_05_31_al_barari_villa_leased_for_aed_14_million_set
 import { article as art_2026_06_17_dir_completes_189_villa_delivery_at_danah_bay_as_rak_absorbs } from "./2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-absorbs";
 import { article as art_2026_06_17_dir_completes_189_villa_delivery_at_danah_bay_as_rak_gains_i } from "./2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i";
 import { article as art_2026_06_18_abu_dhabi_residential_sales_hit_dh38_1bn_in_record_q1_2026 } from "./2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026";
+import { article as art_2026_06_18_dld_expands_barwa_programme_with_workshops_after_serving_18_ } from "./2026-06-18-dld-expands-barwa-programme-with-workshops-after-serving-18-";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_18_dld_expands_barwa_programme_with_workshops_after_serving_18_,
   art_2026_06_18_abu_dhabi_residential_sales_hit_dh38_1bn_in_record_q1_2026,
   art_2026_06_17_dir_completes_189_villa_delivery_at_danah_bay_as_rak_gains_i,
   art_2026_06_17_dir_completes_189_villa_delivery_at_danah_bay_as_rak_absorbs,
