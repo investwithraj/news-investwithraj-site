@@ -43,8 +43,10 @@ import { article as art_2026_06_17_dir_completes_189_villa_delivery_at_danah_bay
 import { article as art_2026_06_18_abu_dhabi_residential_sales_hit_dh38_1bn_in_record_q1_2026 } from "./2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026";
 import { article as art_2026_06_18_dld_expands_barwa_programme_with_workshops_after_serving_18_ } from "./2026-06-18-dld-expands-barwa-programme-with-workshops-after-serving-18-";
 import { article as art_2026_06_20_ahs_properties_acquires_shangri_la_dubai_for_dh1_1bn_eyes_dh } from "./2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh";
+import { article as art_2026_06_22_from_dhoom_to_dubai_how_rimi_sen_traded_bollywood_for_luxury } from "./2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_22_from_dhoom_to_dubai_how_rimi_sen_traded_bollywood_for_luxury,
   art_2026_06_20_ahs_properties_acquires_shangri_la_dubai_for_dh1_1bn_eyes_dh,
   art_2026_06_18_dld_expands_barwa_programme_with_workshops_after_serving_18_,
   art_2026_06_18_abu_dhabi_residential_sales_hit_dh38_1bn_in_record_q1_2026,
