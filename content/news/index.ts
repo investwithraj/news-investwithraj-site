@@ -45,8 +45,10 @@ import { article as art_2026_06_18_dld_expands_barwa_programme_with_workshops_af
 import { article as art_2026_06_20_ahs_properties_acquires_shangri_la_dubai_for_dh1_1bn_eyes_dh } from "./2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh";
 import { article as art_2026_06_22_from_dhoom_to_dubai_how_rimi_sen_traded_bollywood_for_luxury } from "./2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury";
 import { article as art_2026_06_22_oman_scraps_sponsor_mandate_for_property_linked_residency_pe } from "./2026-06-22-oman-scraps-sponsor-mandate-for-property-linked-residency-pe";
+import { article as art_2026_06_23_dubai_launches_flexi_rent_12_landlords_offer_monthly_instalm } from "./2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_23_dubai_launches_flexi_rent_12_landlords_offer_monthly_instalm,
   art_2026_06_22_oman_scraps_sponsor_mandate_for_property_linked_residency_pe,
   art_2026_06_22_from_dhoom_to_dubai_how_rimi_sen_traded_bollywood_for_luxury,
   art_2026_06_20_ahs_properties_acquires_shangri_la_dubai_for_dh1_1bn_eyes_dh,
