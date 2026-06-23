@@ -21,8 +21,25 @@ const WRITE = process.argv.includes("--write");
 const ROOT = process.cwd();
 const EXTS = ["jpg", "jpeg", "png", "webp", "avif"] as const;
 
-// Known-good rights-clean Wikimedia fallbacks per market — only if live sourcing
-// returns nothing, so every article still ends up with a real, licensed photo.
+// Distinct broader landmark queries — when an article's specific subject query
+// returns nothing, we source one of THESE live (with the global `used` set
+// excluding anything already taken) so every fallback article still gets a
+// DISTINCT, real, licensed photo instead of one identical aerial repeated across
+// the whole feed. (This + subject-specific queries is the fix for "same image in
+// every news".)
+const FALLBACK_QUERIES = [
+  "Burj Khalifa Downtown Dubai skyline",
+  "Dubai Marina skyline aerial",
+  "Palm Jumeirah Dubai aerial",
+  "Sheikh Zayed Road Dubai towers",
+  "Dubai Creek Harbour waterfront",
+  "Business Bay Dubai canal towers",
+  "Abu Dhabi Corniche skyline aerial",
+  "Al Marjan Island Ras Al Khaimah coastline",
+];
+
+// Absolute last resort — only if the specific query AND every distinct broader
+// query above also return nothing for this article.
 const MARKET_FALLBACK: Record<string, string> = {
   Dubai: "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
   "Abu Dhabi": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
@@ -67,6 +84,19 @@ async function patchCredit(slug: string, credit: string): Promise<boolean> {
   return true;
 }
 
+/** Repoint a legacy REMOTE heroImage.src (a raw http(s) URL) to the now
+ *  self-hosted local cover path. Only the heroImage src is touched. */
+async function patchHeroSrc(slug: string, localSrc: string): Promise<void> {
+  const file = path.join(ROOT, "content", "news", `${slug}.ts`);
+  try {
+    const src = await fs.readFile(file, "utf-8");
+    const next = src.replace(/("src":\s*")https?:\/\/[^"]+(")/, `$1${localSrc}$2`);
+    if (next !== src) await fs.writeFile(file, next, "utf-8");
+  } catch {
+    /* ignore */
+  }
+}
+
 async function main() {
   const force = process.argv.includes("--force");
   const live = NEWS_ARTICLES.filter((a) => a.status !== "research");
@@ -87,7 +117,7 @@ async function main() {
     } catch {
       /* keep default */
     }
-    const img = await findBestStockImage({
+    let img = await findBestStockImage({
       query,
       orientation: "landscape",
       minWidth: 1200,
@@ -95,6 +125,24 @@ async function main() {
       excludeUrls: [...used],
       emirate: market,
     });
+    // Specific subject found nothing → source a DISTINCT broader landmark (the
+    // `used` set guarantees no two articles share one) before any static aerial.
+    if (!img) {
+      for (const fq of FALLBACK_QUERIES) {
+        const alt = await findBestStockImage({
+          query: fq,
+          orientation: "landscape",
+          minWidth: 1200,
+          allowSynthetic: false,
+          excludeUrls: [...used],
+          emirate: market,
+        });
+        if (alt) {
+          img = alt;
+          break;
+        }
+      }
+    }
     if (img) {
       used.add(img.url);
       if (img.attributionUrl) used.add(img.attributionUrl);
@@ -116,12 +164,20 @@ async function main() {
       if (res.ok && ct.startsWith("image/")) {
         const buf = Buffer.from(await res.arrayBuffer());
         if (buf.length > 3000) {
-          const dir = path.join(ROOT, "public", "news", a.slug);
-          await fs.mkdir(dir, { recursive: true });
-          await fs.writeFile(path.join(dir, "cover.jpg"), buf);
+          // Write to the EXACT local path the article references (cover.jpg OR
+          // cover.webp) so the file always matches heroImage.src — this fixes the
+          // .webp articles' 404. If the article still carries a legacy REMOTE url
+          // as its src, self-host at the conventional cover.jpg AND repoint local.
+          const isLocal = /^\/news\//.test(a.heroImage.src);
+          const dest = isLocal
+            ? path.join(ROOT, "public", a.heroImage.src.replace(/^\/+/, ""))
+            : path.join(ROOT, "public", "news", a.slug, "cover.jpg");
+          await fs.mkdir(path.dirname(dest), { recursive: true });
+          await fs.writeFile(dest, buf);
+          if (!isLocal) await patchHeroSrc(a.slug, `/news/${a.slug}/cover.jpg`);
           const credited = await patchCredit(a.slug, credit);
           wrote++;
-          console.log(`     ✓ cover.jpg (${Math.round(buf.length / 1024)} KB)${credited ? " + credit" : ""}`);
+          console.log(`     ✓ ${path.basename(dest)} (${Math.round(buf.length / 1024)} KB)${credited ? " + credit" : ""}`);
         } else {
           failed++;
           console.log(`     ✗ too small (${buf.length} bytes)`);

@@ -81,6 +81,31 @@ const CATEGORY_QUERIES: Record<string, string> = {
   policy: "Dubai government emirates flag building",
 };
 
+// Notable subjects/landmarks that show up in headlines but aren't a known
+// developer or area — mapped to a SUBJECT-specific query so the story doesn't
+// inherit the same generic skyline. (This is the main thing that was making
+// unrelated news all share one cover.)
+const LANDMARK_QUERIES: Record<string, string> = {
+  "sheikh zayed road": "Sheikh Zayed Road Dubai skyline towers aerial",
+  "shangri-la": "Sheikh Zayed Road Dubai skyline towers",
+  "downtown": "Downtown Dubai Burj Khalifa skyline",
+  "burj khalifa": "Burj Khalifa Downtown Dubai skyline",
+  difc: "DIFC Dubai International Financial Centre towers",
+  "business bay": "Business Bay Dubai canal towers",
+  "dubai water canal": "Dubai Water Canal Business Bay aerial",
+  expo: "Expo City Dubai architecture aerial",
+  "jebel ali": "Jebel Ali Dubai aerial coast",
+  deira: "Deira Dubai creek waterfront",
+  corniche: "Abu Dhabi Corniche skyline aerial",
+  saadiyat: "Saadiyat Island Abu Dhabi beach aerial",
+  "yas island": "Yas Island Abu Dhabi aerial",
+  "reem island": "Al Reem Island Abu Dhabi towers waterfront",
+  "al bahia": "Abu Dhabi residential coast aerial",
+  "danah bay": "Al Marjan Island Ras Al Khaimah coastline",
+  "al marjan": "Al Marjan Island Ras Al Khaimah aerial",
+  wynn: "Al Marjan Island Ras Al Khaimah resort coastline",
+};
+
 /** Build the search query for a given article. */
 export function buildQueryForArticle(article: NewsArticle): string {
   // 1. If article references a known developer, prefer that
@@ -98,6 +123,14 @@ export function buildQueryForArticle(article: NewsArticle): string {
     if (titleLower.includes(areaName) || titleLower.includes(slug)) {
       return q;
     }
+  }
+
+  // 2b. Notable landmark / subject in the title (Sheikh Zayed Road, Shangri-La,
+  //     Danah Bay, …) → a SUBJECT-specific query BEFORE any generic market or
+  //     category fallback. This is what stops unrelated stories all resolving to
+  //     the same generic Dubai skyline.
+  for (const [kw, q] of Object.entries(LANDMARK_QUERIES)) {
+    if (titleLower.includes(kw)) return q;
   }
 
   // 3. Non-Dubai emirates skip the Dubai-centric category queries and use an
