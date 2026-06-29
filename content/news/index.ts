@@ -48,8 +48,10 @@ import { article as art_2026_06_22_oman_scraps_sponsor_mandate_for_property_link
 import { article as art_2026_06_23_dubai_launches_flexi_rent_12_landlords_offer_monthly_instalm } from "./2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm";
 import { article as art_2026_06_24_oman_tenders_1_035bn_solar_mandate_as_vision_2040_absorbs_1_ } from "./2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-";
 import { article as art_2026_06_28_dubai_mandates_monthly_rent_option_across_12_landlords_in_fl } from "./2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl";
+import { article as art_2026_06_29_dar_global_launches_19_fendi_casa_villas_at_oman_s_aida_clif } from "./2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_06_29_dar_global_launches_19_fendi_casa_villas_at_oman_s_aida_clif,
   art_2026_06_28_dubai_mandates_monthly_rent_option_across_12_landlords_in_fl,
   art_2026_06_24_oman_tenders_1_035bn_solar_mandate_as_vision_2040_absorbs_1_,
   art_2026_06_23_dubai_launches_flexi_rent_12_landlords_offer_monthly_instalm,
