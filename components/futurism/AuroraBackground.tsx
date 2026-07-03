@@ -11,6 +11,14 @@
 
 import { useEffect, useRef } from "react";
 
+/** A single aurora color stop (0–255 RGB + 0–1 alpha). */
+export interface AuroraStop {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
 interface Props {
   /** Animation speed multiplier */
   speed?: number;
@@ -19,13 +27,26 @@ interface Props {
   /** className passthrough */
   className?: string;
   style?: React.CSSProperties;
+  /** Override the 4 color stops — e.g. the v17 dark register passes a cobalt
+   *  set so the aurora reads as a cobalt glow on the true-black world instead
+   *  of the live site's warm gold/cream. Defaults to the brand brass+cream. */
+  stops?: AuroraStop[];
 }
+
+/** v17 dark-cinematic cobalt aurora stops (cobalt glow on the true-black void). */
+export const AURORA_COBALT_STOPS: AuroraStop[] = [
+  { r: 37, g: 99, b: 235, a: 0.30 },   // cobalt
+  { r: 91, g: 165, b: 245, a: 0.20 },  // bright cobalt
+  { r: 30, g: 58, b: 138, a: 0.26 },   // deep cobalt
+  { r: 5, g: 7, b: 13, a: 0.10 },      // void wash
+];
 
 export function AuroraBackground({
   speed = 1,
   opacity = 0.55,
   className = "",
   style,
+  stops: stopsProp,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -54,13 +75,17 @@ export function AuroraBackground({
     resize();
     window.addEventListener("resize", resize);
 
-    // Color stops in brand palette (gold + navy + warm cream)
-    const stops = [
-      { r: 201, g: 169, b: 97, a: 0.32 },   // brand gold
-      { r: 224, g: 192, b: 118, a: 0.22 },  // bright gold
-      { r: 249, g: 246, b: 240, a: 0.45 },  // paper-warm
-      { r: 10, g: 16, b: 36, a: 0.10 },     // ink wash
-    ];
+    // Color stops in brand palette (gold + navy + warm cream) — overridable
+    // via the `stops` prop (the v17 dark register passes a cobalt set).
+    const stops: AuroraStop[] =
+      stopsProp && stopsProp.length >= 4
+        ? stopsProp
+        : [
+            { r: 201, g: 169, b: 97, a: 0.32 },   // brand gold
+            { r: 224, g: 192, b: 118, a: 0.22 },  // bright gold
+            { r: 249, g: 246, b: 240, a: 0.45 },  // paper-warm
+            { r: 10, g: 16, b: 36, a: 0.10 },     // ink wash
+          ];
 
     let t = 0;
     let rafId = 0;
@@ -123,7 +148,7 @@ export function AuroraBackground({
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
     };
-  }, [speed]);
+  }, [speed, stopsProp]);
 
   return (
     <canvas

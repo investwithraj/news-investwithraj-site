@@ -1,337 +1,116 @@
-import Link from "next/link";
-import { SITE, CONTACT, rootCtaUrl } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
-import { AuroraBackground } from "@/components/futurism/AuroraBackground";
-import { CurrencyPicker } from "@/components/ticker/FxProvider";
-import { AuthorBrand } from "@/components/homepage/AuthorBrand";
-import { VerticalsBento } from "@/components/homepage/VerticalsBento";
-import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
-import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
-import MaterialDivider from "@/components/MaterialDivider";
+// news.investwithraj.com home — the immersive "Terminal" (promoted from /v17 in
+// the v1.1 cutover). The REST of the news site (articles, verticals, /terminal,
+// /pulse, /areas, …) keeps the cream chrome + DldTicker from the root layout;
+// this home wears the dark v17 register and suppresses the root ticker/curtain
+// via <V17BodyFlag/> (sets body[data-v17-route] → the scoped CSS below). This is
+// the same chrome the old app/v17/layout.tsx applied — folded onto the root home
+// so the Terminal serves at "/" directly (no redirect hop).
+import type { Metadata } from "next";
+import V17EdgeNav from "@/components/v17/chrome/V17EdgeNav";
+import V17BodyFlag from "@/components/v17/chrome/V17BodyFlag";
+import TerminalAct from "@/components/immersive/acts/TerminalAct";
+import CapitalFlowAct from "@/components/immersive/acts/CapitalFlowAct";
+import DailyAnchorAct from "@/components/immersive/acts/DailyAnchorAct";
+import VerticalsAct from "@/components/immersive/acts/VerticalsAct";
+import CrossLinkAct from "@/components/immersive/acts/CrossLinkAct";
 import SectionWipe from "@/components/v21/SectionWipe";
 import GiantWordmark from "@/components/v21/GiantWordmark";
 
-/**
- * news.investwithraj.com homepage — Block 3 Wave 4.
- *
- * Restructured from "latest articles" feed into a Puck / Information /
- * Mansion Global author-as-brand layout:
- *
- *   1. Hero        — brand promise, kinetic Fraunces, magnetic CTAs
- *   2. AuthorBrand — Raj's masthead, credentials, the operator identity
- *   3. Verticals   — 5-card bento grid (DLD Pulse / Off-Plan Watch /
- *                    UHNW Trades / Sovereign Plays / Beyond the Deal)
- *   4. CrossLink   — back to investwithraj.com for the Note + mandates
- *   5. Footer      — links + currency picker
- */
+export const metadata: Metadata = {
+  title: "The Terminal — Dubai Real Estate in Real Time | Invest With Raj",
+  description:
+    "An immersive market-intelligence terminal for Dubai real estate — live DLD pulse, capital-flow globe, the daily brief, and the five beats that move the market.",
+  robots: { index: true, follow: true },
+};
+
 export default function Home() {
   return (
-    <main>
-      <Hero />
-      <MaterialDivider material="brass-strip" />
-      <DailyAnchorPane />
-      <MaterialDivider material="cashmere" />
-      {/* V21 brand-motion unification — the main site's SectionWipe
-          (B&C page-change wipe, gold leading edge) on the three main
-          below-the-fold rooms. Hero/anchor stay untouched. */}
-      <SectionWipe>
-        <AuthorBrand />
-      </SectionWipe>
-      <MaterialDivider material="ink-cream" />
-      <SectionWipe>
-        <CapitalFlowSection />
-      </SectionWipe>
-      <MaterialDivider material="cream-fade" />
-      <SectionWipe>
-        <VerticalsBento />
-      </SectionWipe>
-      <MaterialDivider material="brass-strip" />
-      <CrossLink />
-    </main>
-  );
-}
+    <>
+      {/* Sets data-v17-route on <body> → the scoped CSS below hides the root
+          DldTicker/curtain/ambient on the home only, and cleans up on unmount. */}
+      <V17BodyFlag />
 
-function CapitalFlowSection() {
-  return (
-    <section
-      className="relative py-20 md:py-28 overflow-hidden"
-      style={{ background: "var(--navy)", color: "var(--paper)" }}
-      data-section="dark"
-    >
-      <div className="max-w-[1240px] mx-auto px-6 md:px-10 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-        <div className="lg:col-span-5 order-2 lg:order-1">
-          <span
-            className="font-mono inline-flex items-center gap-2.5 uppercase"
-            style={{
-              fontSize: "0.6875rem",
-              letterSpacing: "0.28em",
-              color: "rgba(245, 239, 227, 0.6)",
-            }}
-          >
-            <span
-              aria-hidden="true"
-              className="block"
-              style={{
-                width: "22px",
-                height: "1px",
-                background: "var(--gold-bright, #E0C076)",
-              }}
-            />
-            Capital flow · live
-          </span>
-          <KineticHeadline
-            as="h2"
-            className="editorial-h1 mt-6"
-            style={{
-              color: "var(--paper)",
-              fontSize: "clamp(2rem, 4.5vw, 3.75rem)",
-              maxWidth: "16ch",
-            }}
-          >
-            Where the{" "}
-            <span
-              className="editorial-h1-italic"
-              style={{ color: "var(--gold-bright, #E0C076)" }}
-            >
-              UAE money
-            </span>{" "}
-            comes from.
-          </KineticHeadline>
-          <p
-            className="mt-6 text-base md:text-lg leading-[1.65] max-w-[44ch]"
-            style={{ color: "rgba(248, 250, 252, 0.78)" }}
-          >
-            Every dot is a buyer-nationality lane feeding into Dubai land
-            registry prints. Comet brightness ≈ DLD volume share. Live data
-            wires up when the DLD nationality feed is connected.
-          </p>
-          <div
-            className="mt-8 grid grid-cols-2 gap-4 text-xs font-mono uppercase tracking-[0.16em]"
-            style={{ color: "rgba(248, 250, 252, 0.55)" }}
-          >
-            <span>India · #1 buyer</span>
-            <span>UK · #2</span>
-            <span>Russia · #3</span>
-            <span>Pakistan · #4</span>
-            <span>China · #5</span>
-            <span>+ 5 more</span>
-          </div>
-        </div>
-        <div className="lg:col-span-7 order-1 lg:order-2">
-          <CapitalFlowGlobeLoader height="560px" />
-        </div>
-      </div>
-    </section>
-  );
-}
+      <a href="#main" className="v17-skip-link">
+        Skip to content
+      </a>
 
-function Hero() {
-  return (
-    <section
-      className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-hidden gold-mesh-hero"
-      style={{ background: "var(--paper-warm)" }}
-    >
-      {/* v14.1 — native <video> hero background (Nelemson G, Pexels Videos
-          #31942008, Dubai skyline aerial sunset). Replaces the broken
-          v14.0 FrameScroll-as-background attempt (FrameScroll needs a
-          multi-viewport container; the hero is 100svh). Smooth cinematic
-          motion via auto-play loop. ~12MB MP4, preload=metadata, no scroll
-          dependency. */}
-      <video
-        className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
-        src="/hero.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        aria-hidden="true"
-      />
+      {/* Corner-only dark chrome (replaces the cream ticker nav on the home) */}
+      <V17EdgeNav />
 
-      {/* F12 — aurora overlay layered above skyline for soft brand wash */}
-      <AuroraBackground opacity={0.32} />
-
-      {/* Readability gradient so headline pops over the 3D scene */}
       <div
-        aria-hidden
-        className="absolute inset-0 z-[1] pointer-events-none"
+        id="main"
+        className="v17-dark v17-cobalt"
         style={{
-          background:
-            "linear-gradient(180deg, rgba(249, 246, 240, 0.65) 0%, rgba(249, 246, 240, 0.25) 38%, rgba(249, 246, 240, 0.55) 78%, rgba(249, 246, 240, 0.95) 100%)",
+          position: "relative",
+          background: "linear-gradient(180deg, #0a0f1a, #0e1422)",
         }}
-      />
-
-      {/* v13 SOTY — flat editorial eyebrow, no glass */}
-      <div className="relative z-20 w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-24 md:pt-28 flex justify-center">
-        <span className="editorial-eyebrow-sotm">
-          news.investwithraj.com
-        </span>
-      </div>
-
-      {/* Main composition */}
-      <div className="relative z-20 flex-1 w-full max-w-[980px] mx-auto px-6 md:px-12 flex flex-col items-center justify-center text-center -mt-10">
-        {/* F11 — kinetic Fraunces variable headline */}
-        <KineticHeadline
-          className="editorial-h1"
-          style={{
-            fontSize: "clamp(2.75rem, 8.4vw, 7.75rem)",
-            maxWidth: "16ch",
-          }}
-        >
-          The daily{" "}
-          <span
-            className="editorial-h1-italic"
-            style={{ color: "var(--gold-deep)" }}
-          >
-            UAE real-estate
-          </span>{" "}
-          read.
-        </KineticHeadline>
-
-        <p
-          className="mt-8 md:mt-10 text-base md:text-xl leading-relaxed max-w-2xl"
-          style={{
-            color: "var(--ink-soft)",
-            textShadow: "0 1px 2px rgba(249, 246, 240, 0.6)",
-          }}
-        >
-          Independent intelligence on Dubai, Abu Dhabi, and Ras Al Khaimah.
-          5–15 verified-source articles a day. Every piece cites DLD, RERA,
-          Knight Frank, JLL, Khaleej Times, Arabian Business. Written for
-          serious investors.
-        </p>
-
-        <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <a
-            href={CONTACT.linkedinNewsletter}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-graphite group"
-            data-cursor-label="OPEN"
-            data-magnetic
-          >
-            <span>Subscribe to Beyond the Deal</span>
-            <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
-              →
-            </span>
-          </a>
-          <Link
-            href={rootCtaUrl({ campaign: "subdomain-hero", content: "request-note" })}
-            className="btn-ghost group"
-            data-cursor-label="OPEN"
-            data-magnetic
-          >
-            <span>Request the current Note</span>
-            <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">
-              ↗
-            </span>
-          </Link>
-        </div>
-
-        {/* Status pill */}
-        <div className="mt-14 inline-flex items-center gap-3">
-          <span className="eyebrow-live">
-            <span>Publishing imminently</span>
-          </span>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CrossLink() {
-  return (
-    <section
-      className="relative py-24 md:py-32"
-      style={{ background: "var(--paper-warm)" }}
-    >
-      <div className="relative max-w-[920px] mx-auto px-6 md:px-12 text-center">
-        <span className="eyebrow-holo justify-center" style={{ display: "inline-flex" }}>
-          The home page
-        </span>
-        <KineticHeadline
-          as="h2"
-          className="editorial-display mt-6"
-          style={{
-            color: "var(--ink)",
-            fontSize: "clamp(1.75rem, 4vw, 3rem)",
-            fontWeight: 500,
-          }}
-        >
-          For the 12-page institutional Note + curated mandates →{" "}
-          <Link
-            href={rootCtaUrl({ campaign: "subdomain-footer", content: "back-to-iwr" })}
-            className="editorial-italic text-gold-grad"
-            data-cursor-label="OPEN"
-            data-magnetic
-          >
-            investwithraj.com
-          </Link>
-        </KineticHeadline>
-      </div>
-
-      <footer
-        className="relative mt-20 pt-12 pb-10 border-t"
-        style={{ borderColor: "var(--gold-soft)" }}
       >
-        <div className="max-w-[920px] mx-auto px-6 md:px-12 flex flex-wrap items-center justify-between gap-6 font-mono text-xs tracking-[0.22em] uppercase">
-          <span style={{ color: "var(--ink-muted)" }}>
-            © 2026 Raj Tomar
-          </span>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2" style={{ color: "var(--ink-muted)" }}>
-            <CurrencyPicker />
-            <Link
-              href={`${SITE.rootUrl}/legal/privacy`}
-              className="transition-colors hover:text-[var(--gold-deep)]"
-              data-cursor="active"
-            >
-              Privacy
-            </Link>
-            <a
-              href={CONTACT.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-[var(--gold-deep)]"
-              data-cursor="active"
-            >
-              LinkedIn ↗
-            </a>
-            <a
-              href={`mailto:${CONTACT.email}`}
-              className="transition-colors hover:text-[var(--gold-deep)]"
-              data-cursor="active"
-            >
-              {CONTACT.email}
-            </a>
-          </div>
-        </div>
+        <main style={{ position: "relative", zIndex: 1, minHeight: "100svh" }}>
+          <TerminalAct />
+          {/* V21 brand-motion unification — the main site's SectionWipe
+              (B&C page-change wipe, gold leading edge) on the three content
+              rooms below the fold. The Terminal hero and the Daily Anchor
+              stay untouched (terminal identity preserved). */}
+          <SectionWipe>
+            <CapitalFlowAct />
+          </SectionWipe>
+          <DailyAnchorAct />
+          <SectionWipe>
+            <VerticalsAct />
+          </SectionWipe>
+          <SectionWipe>
+            <CrossLinkAct />
+          </SectionWipe>
 
-        {/* V21 — the main-site footer's giant "INVEST WITH RAJ" sign-off
-            (GiantWordmark, B&C edge-spanning bottom wordmark). Words spread
-            across the full width like the main footer; each word keeps the
-            tracking-breathe scroll-in inside its own clip mask. Decorative —
-            the accessible brand name lives in the copyright line above. */}
-        <div
-          aria-hidden="true"
-          className="max-w-[1240px] mx-auto px-6 md:px-10 mt-16 flex items-end justify-between w-full"
-          style={{ gap: "clamp(8px, 2vw, 40px)", lineHeight: 0.72 }}
-        >
-          {"INVEST WITH RAJ".split(" ").map((word, i) => (
-            <span
-              key={`${word}-${i}`}
-              className="block overflow-hidden"
-              style={{ paddingBottom: "0.06em", marginBottom: "-0.06em" }}
-            >
-              <GiantWordmark
-                text={word}
-                sizeClamp="clamp(2.25rem, 9.5vw, 9.5rem)"
-                trackingBreathe
-                decorative
-              />
-            </span>
-          ))}
-        </div>
-      </footer>
-    </section>
+          {/* V21 — the main-site footer's giant "INVEST WITH RAJ" sign-off
+              (GiantWordmark, B&C edge-spanning bottom wordmark). Words spread
+              across the full width; each keeps the tracking-breathe scroll-in
+              inside its own clip mask. Decorative — the accessible brand name
+              lives in the acts above. Light ink for the dark v17 register. */}
+          <div
+            aria-hidden="true"
+            className="mx-auto flex w-full max-w-[1240px] items-end justify-between px-6 pb-10 pt-4 md:px-10"
+            style={{ gap: "clamp(8px, 2vw, 40px)", lineHeight: 0.72 }}
+          >
+            {"INVEST WITH RAJ".split(" ").map((word, i) => (
+              <span
+                key={`${word}-${i}`}
+                className="block overflow-hidden"
+                style={{ paddingBottom: "0.06em", marginBottom: "-0.06em" }}
+              >
+                <GiantWordmark
+                  text={word}
+                  sizeClamp="clamp(2.25rem, 9.5vw, 9.5rem)"
+                  trackingBreathe
+                  decorative
+                  style={{ color: "rgba(234, 240, 250, 0.9)" }}
+                />
+              </span>
+            ))}
+          </div>
+        </main>
+      </div>
+
+      {/* Scoped chrome override — only active while this home is mounted. */}
+      <style>{`
+        body[data-v17-route="true"] .dld-ticker,
+        body[data-v17-route="true"] [data-iwr-page-load-curtain],
+        body[data-v17-route="true"] [data-iwr-ambient-audio] {
+          display: none !important;
+        }
+        body[data-v17-route="true"] { background: #05070d !important; }
+        .v17-skip-link {
+          position: fixed; top: 12px; left: 12px; z-index: 100;
+          padding: 10px 16px; background: #05070d; color: #EAF0FA;
+          border: 1px solid #2563EB; border-radius: 6px;
+          font-family: var(--font-inter), system-ui, sans-serif;
+          font-size: 13px; font-weight: 600; text-decoration: none;
+          transform: translateY(-200%); transition: transform 160ms ease;
+        }
+        .v17-skip-link:focus, .v17-skip-link:focus-visible {
+          transform: translateY(0); outline: 2px solid #5BA5F5; outline-offset: 2px;
+        }
+      `}</style>
+    </>
   );
 }

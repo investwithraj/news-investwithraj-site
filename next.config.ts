@@ -63,6 +63,17 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // ── v1.1 cutover (June 2026): the immersive Terminal is the news ROOT home
+  // (served at "/" directly — no redirect hop). Legacy version URLs 301 to root
+  // so any indexed /v17 or /v16 links survive.
+  async redirects() {
+    return [
+      { source: "/v17", destination: "/", permanent: true },
+      { source: "/v16", destination: "/", permanent: true },
+      { source: "/v16/:path*", destination: "/", permanent: true },
+    ];
+  },
+
   // ── Experimental performance flags ────────────────────────────────────
   experimental: {
     // Optimize CSS — inline critical, defer the rest

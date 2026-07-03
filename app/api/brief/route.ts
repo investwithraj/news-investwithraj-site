@@ -16,7 +16,7 @@ import { DEVELOPERS } from "@/lib/developers";
 
 export const dynamic = "force-dynamic";
 
-const SYSTEM_PROMPT = `You are "Beyond the Deal" — the editorial voice of Raj Tomar, a DLD-licensed Dubai real-estate broker. You write briefs for UHNW investors. Hard rules:
+const SYSTEM_PROMPT = `You are "Beyond the Deal" — the editorial voice of Raj Tomar, a Dubai real-estate consultant. You write briefs for UHNW investors. Hard rules:
 
 - 400-600 words.
 - Concrete numbers from cited sources only — never invent data.

@@ -1,0 +1,406 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   v16.2 — "2040 SOVEREIGN AEROSPACE" design tokens
+   Locked May 27 2026. Pivoted from v16.1 (Fraunces serif + warm brass) to
+   a true 2040 aerospace register: Geist Sans Bold uppercase + electric
+   cobalt + holographic cyan + neon green data signals + deep blue-black
+   on cool silver-white surfaces.
+
+   PIVOT RATIONALE
+     v16.1 used Fraunces (designer serif, 2020s fashion) + brass gold
+     accent (2020s luxury). User feedback May 27 2026: "the colours and
+     fonts are still outdated, we gotta be 2040". v16.2 strips the
+     designer-fashion + warm-luxury register entirely. Goes pure tech-
+     aerospace: Anthropic / Vercel / Apple Vision Pro / Spatial.com.
+
+   TYPE STACK (2040)
+     Display: Geist Sans Bold uppercase (NEVER Fraunces)
+     Italic accent: Geist Sans Italic in --v16-electric (cobalt)
+     Body: Geist Sans regular
+     Mono: Geist Mono (tabular numerals everywhere)
+     Fraunces preserved as fallback only — kept loaded for v15 routes
+     and rare editorial moments (e.g. portrait caption italic).
+
+   PALETTE (2040)
+     Surfaces: cool silver-white (NEVER pure white, NEVER warm cream)
+     Ink: deep blue-black (NEVER warm charcoal, NEVER pure black)
+     Primary accent: electric cobalt #0066FF (Anthropic/Vision Pro blue)
+     Holographic: cyan #00D9FF (data viz, glow rings)
+     Live signal: neon green #00FF94 (terminal "running" indicators)
+     Brass/mahogany/oxblood preserved as portrait-scene tokens only —
+     never on the page itself.
+
+   See ~/.claude/plans/tingly-singing-karp.md for the full v16 plan.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ═══════════════════════════════════════════════════════════════════════
+     PRIMARY SURFACES — cool silver-white aerospace
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-paper:        #F2F4F7;   /* Main background — cool silver, NEVER pure white */
+  --v16-paper-pure:   #FFFFFF;   /* Card surfaces only */
+  --v16-paper-cool:   #E5E9F0;   /* Sub-surface — section bands, footer */
+  --v16-paper-deeper: #D8DDE6;   /* Deepest cool surface */
+  --v16-paper-glass:  rgba(255, 255, 255, 0.55);   /* More transparent than v16.1 — Vision Pro depth */
+
+  /* Chrome — silver borders + hairlines */
+  --v16-chrome:        #D6DBE4;
+  --v16-chrome-deep:   #ABB3C3;
+  --v16-chrome-darker: #828B9F;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     INK — deep blue-black, NEVER warm
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-ink:          #050811;   /* Deep blue-black for type */
+  --v16-ink-soft:     #1A2236;   /* Body type at scale */
+  --v16-ink-muted:    #4A5570;   /* Labels, captions */
+  --v16-ink-faint:    #8088A0;   /* Eyebrows, faded mono */
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ACCENT — electric cobalt (replaces brass)
+     Apple Vision Pro UI blue / Anthropic / Linear. Used for accent words,
+     CTA hover, brand mark, primary signals. The 2040 brand color.
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-electric:        #0066FF;   /* PRIMARY accent — cobalt */
+  --v16-electric-bright: #3D85FF;
+  --v16-electric-deep:   #0044CC;
+  --v16-electric-soft:   rgba(0, 102, 255, 0.10);
+  --v16-electric-glow:   rgba(0, 102, 255, 0.25);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     HOLOGRAPHIC — cyan for data viz + glow only
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-cyan:        #00D9FF;
+  --v16-cyan-bright: #5EE9FF;
+  --v16-cyan-deep:   #00A8CC;
+  --v16-cyan-soft:   rgba(0, 217, 255, 0.10);
+  --v16-cyan-glow:   rgba(0, 217, 255, 0.22);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     LIVE SIGNAL — neon green for terminal "running" indicators
+     Used SPARINGLY — only for genuine live-data moments (terminal pulse,
+     "now publishing", DLD ticker active state).
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-neon:        #00FF94;
+  --v16-neon-deep:   #00CC76;
+  --v16-neon-soft:   rgba(0, 255, 148, 0.12);
+  --v16-neon-glow:   rgba(0, 255, 148, 0.35);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     LEGACY ALIASES — for v16 components built in Phases 2-4 that used
+     --v16-brass / --v16-holo-blue / --v16-holo-cyan etc. Mapped to the
+     new electric/cyan tokens so existing components pick up the 2040
+     palette automatically without per-file edits.
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-brass:        var(--v16-electric);
+  --v16-brass-bright: var(--v16-electric-bright);
+  --v16-brass-deep:   var(--v16-electric-deep);
+  --v16-holo-blue:    var(--v16-electric);
+  --v16-holo-cyan:    var(--v16-cyan);
+  --v16-holo-deep:    var(--v16-electric-deep);
+  --v16-holo-bright:  var(--v16-cyan-bright);
+  --v16-holo-soft:    var(--v16-electric-soft);
+  --v16-holo-glow:    var(--v16-electric-glow);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     PORTRAIT-SCENE TOKENS — warm anchor for SETTING-V2 photography only.
+     NEVER referenced on the page itself. Only present in @RT portrait
+     videos generated under SETTING-V2 (mahogany desk + oxblood Chesterfield
+     INSIDE futuristic glass shell).
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-portrait-mahogany: #3A2418;
+  --v16-portrait-oxblood:  #5C1F1F;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     DARK ACCENT REGISTER
+     Selectively used on /notes/[slug], /media, /podcast, /press where
+     rich media + bento layouts dominate. Toggle via [data-theme="dark"]
+     on a section or globally.
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-ink-deep:        #020409;
+  --v16-ink-card:        #0E1219;
+  --v16-ink-card-hover:  #161B26;
+  --v16-ink-card-border: #232936;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     GRADIENTS — 2040 holographic
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-grad-electric: linear-gradient(135deg, #0066FF, #3D85FF, #00D9FF);
+  --v16-grad-holo:     linear-gradient(135deg, #00D9FF, #5EE9FF, #00A8CC);
+  --v16-grad-glass:    linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.35));
+  --v16-grad-chrome:   linear-gradient(180deg, #FFFFFF, #D6DBE4);
+  --v16-grad-radial-holo: radial-gradient(circle at center, rgba(0, 217, 255, 0.25) 0%, transparent 70%);
+  --v16-grad-radial-electric: radial-gradient(circle at center, rgba(0, 102, 255, 0.30) 0%, transparent 65%);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     TYPOGRAPHY — Geist Sans (display + body) + Geist Mono
+     Geist is Vercel's font, the de-facto 2040-aerospace tech sans. Variable
+     weight 100-900 + italic. Replaces Fraunces from v16.1.
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-font-display: var(--font-geist-sans);
+  --v16-font-body:    var(--font-geist-sans);
+  --v16-font-mono:    var(--font-geist-mono);
+  /* Fraunces kept as legacy fallback for v15 routes + rare italic moments */
+  --v16-font-editorial: var(--font-fraunces);
+
+  /* Display H1 — uppercase chunky Geist Bold
+     clamp(4rem, 12vw, 14rem) = 64px on phones, 224px on 4K desktops */
+  --v16-h1-size:        clamp(4rem, 12vw, 14rem);
+  --v16-h1-leading:     0.92;
+  --v16-h1-tracking:    -0.04em;
+  --v16-h1-weight:      700;
+
+  /* H2 — section headlines */
+  --v16-h2-size:        clamp(2.5rem, 6vw, 5.5rem);
+  --v16-h2-leading:     0.95;
+  --v16-h2-tracking:    -0.035em;
+  --v16-h2-weight:      600;
+
+  /* H3 — card titles */
+  --v16-h3-size:        clamp(1.5rem, 2.5vw, 2.25rem);
+  --v16-h3-leading:     1.1;
+  --v16-h3-tracking:    -0.02em;
+  --v16-h3-weight:      600;
+
+  /* Body */
+  --v16-body-size:      1rem;
+  --v16-body-leading:   1.55;
+  --v16-body-weight:    400;
+
+  /* Mono — eyebrows + stat units + tickers */
+  --v16-mono-size:      0.6875rem;
+  --v16-mono-tracking:  0.22em;
+  --v16-mono-weight:    500;
+
+  /* Stat numerals — chunky Geist tabular */
+  --v16-stat-size:      clamp(2rem, 4vw, 3.5rem);
+  --v16-stat-leading:   1;
+  --v16-stat-weight:    600;
+  --v16-stat-tracking:  -0.04em;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     SPACING — 4px base scale
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-space-1:   4px;
+  --v16-space-2:   8px;
+  --v16-space-3:   12px;
+  --v16-space-4:   16px;
+  --v16-space-6:   24px;
+  --v16-space-8:   32px;
+  --v16-space-12:  48px;
+  --v16-space-16:  64px;
+  --v16-space-24:  96px;
+  --v16-space-32:  128px;
+
+  /* Section + container */
+  --v16-section-pad-y: clamp(64px, 12vh, 96px);
+  --v16-container-max: 1440px;
+  --v16-content-max:   1280px;
+  --v16-gutter:        24px;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     BORDER RADIUS
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-radius-pill:    9999px;
+  --v16-radius-lg:      24px;
+  --v16-radius-md:      16px;
+  --v16-radius-sm:      8px;
+  --v16-radius-xs:      4px;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     MOTION — easing + duration tokens
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --v16-ease-display:   cubic-bezier(0.25, 1, 0.5, 1);
+  --v16-ease-smooth:    cubic-bezier(0.4, 0, 0.2, 1);
+  --v16-ease-curtain:   cubic-bezier(0.75, 0, 0.25, 1);
+
+  --v16-dur-micro:      200ms;
+  --v16-dur-reveal:     600ms;
+  --v16-dur-hero:       1200ms;
+  --v16-dur-curtain:    2000ms;
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     ELEVATION — Vision Pro soft shadows
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-shadow-glass:    0 4px 24px -8px rgba(5, 8, 17, 0.08), 0 0 0 1px rgba(214, 219, 228, 0.5);
+  --v16-shadow-card:     0 8px 32px -12px rgba(5, 8, 17, 0.12), 0 0 0 1px var(--v16-chrome);
+  --v16-shadow-portrait: 0 24px 80px -16px rgba(5, 8, 17, 0.18), 0 0 0 1px var(--v16-chrome);
+  --v16-shadow-floating: 0 16px 48px -8px rgba(5, 8, 17, 0.14);
+  --v16-shadow-electric: 0 0 32px var(--v16-electric-glow);
+  --v16-shadow-cyan:     0 0 32px var(--v16-cyan-glow);
+  --v16-shadow-holo:     0 0 32px var(--v16-electric-glow);
+
+  --v16-shadow-glass-dark:    0 4px 24px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(35, 41, 54, 0.6);
+  --v16-shadow-card-dark:     0 8px 32px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--v16-ink-card-border);
+  --v16-shadow-portrait-dark: 0 24px 80px -16px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--v16-ink-card-border);
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     Z-INDEX scale
+     ═══════════════════════════════════════════════════════════════════════ */
+  --v16-z-base:       1;
+  --v16-z-elevated:   10;
+  --v16-z-sticky:     100;
+  --v16-z-nav:        500;
+  --v16-z-overlay:    1000;
+  --v16-z-modal:      5000;
+  --v16-z-cursor:     9999;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK ACCENT REGISTER
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  --v16-paper:        #050811;
+  --v16-paper-pure:   #0E1219;
+  --v16-paper-cool:   #0A0E18;
+  --v16-paper-glass:  rgba(14, 18, 25, 0.55);
+
+  --v16-chrome:       #232936;
+  --v16-chrome-deep:  #3A4150;
+  --v16-chrome-darker: #5A6280;
+
+  --v16-ink:          #F2F4F7;
+  --v16-ink-soft:     #D6DBE4;
+  --v16-ink-muted:    #828B9F;
+  --v16-ink-faint:    #4A5570;
+
+  --v16-shadow-glass:    var(--v16-shadow-glass-dark);
+  --v16-shadow-card:     var(--v16-shadow-card-dark);
+  --v16-shadow-portrait: var(--v16-shadow-portrait-dark);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v16 UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Display headline — chunky Geist Bold uppercase. The 2040 brutalist look. */
+.v16-h1 {
+  font-family: var(--v16-font-display), system-ui, -apple-system, sans-serif;
+  font-size: var(--v16-h1-size);
+  line-height: var(--v16-h1-leading);
+  letter-spacing: var(--v16-h1-tracking);
+  font-weight: var(--v16-h1-weight);
+  color: var(--v16-ink);
+  text-transform: uppercase;
+}
+
+/* Italic accent — uses Geist Italic in electric cobalt color.
+   The 2040 "Bloomberg accent word" pattern. NOT Fraunces serif.
+   IMPORTANT: font-size INHERITS from parent so when used as an inline
+   accent word inside H2 / H3 / smaller copy, the italic word doesn't
+   blow out the layout. Use inside an H1 and it inherits H1 size; use
+   inside an H2 and it inherits H2 size. */
+.v16-h1-italic {
+  font-family: var(--v16-font-display), system-ui, -apple-system, sans-serif;
+  font-style: italic;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  color: var(--v16-electric);
+  text-transform: lowercase;
+}
+
+.v16-h2 {
+  font-family: var(--v16-font-display), system-ui, sans-serif;
+  font-size: var(--v16-h2-size);
+  line-height: var(--v16-h2-leading);
+  letter-spacing: var(--v16-h2-tracking);
+  font-weight: var(--v16-h2-weight);
+  color: var(--v16-ink);
+}
+
+.v16-h3 {
+  font-family: var(--v16-font-display), system-ui, sans-serif;
+  font-size: var(--v16-h3-size);
+  line-height: var(--v16-h3-leading);
+  letter-spacing: var(--v16-h3-tracking);
+  font-weight: var(--v16-h3-weight);
+  color: var(--v16-ink);
+}
+
+.v16-body {
+  font-family: var(--v16-font-body), system-ui, sans-serif;
+  font-size: var(--v16-body-size);
+  line-height: var(--v16-body-leading);
+  font-weight: var(--v16-body-weight);
+  color: var(--v16-ink-soft);
+}
+
+.v16-mono {
+  font-family: var(--v16-font-mono), ui-monospace, monospace;
+  font-size: var(--v16-mono-size);
+  font-weight: var(--v16-mono-weight);
+  letter-spacing: var(--v16-mono-tracking);
+  text-transform: uppercase;
+  color: var(--v16-ink-muted);
+}
+
+.v16-stat {
+  font-family: var(--v16-font-display), system-ui, sans-serif;
+  font-size: var(--v16-stat-size);
+  line-height: var(--v16-stat-leading);
+  letter-spacing: var(--v16-stat-tracking);
+  font-weight: var(--v16-stat-weight);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "lnum", "ss01", "ss02";
+  color: var(--v16-ink);
+}
+
+/* Section padding helper */
+.v16-section {
+  padding-top: var(--v16-section-pad-y);
+  padding-bottom: var(--v16-section-pad-y);
+}
+
+/* Container */
+.v16-container {
+  max-width: var(--v16-container-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--v16-gutter);
+  padding-right: var(--v16-gutter);
+}
+
+/* Glass surface — frosted Vision Pro depth */
+.v16-glass {
+  background: var(--v16-paper-glass);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--v16-chrome);
+  border-radius: var(--v16-radius-lg);
+  box-shadow: var(--v16-shadow-glass);
+}
+
+/* Pill chip */
+.v16-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--v16-space-2);
+  padding: var(--v16-space-2) var(--v16-space-4);
+  border-radius: var(--v16-radius-pill);
+  border: 1px solid var(--v16-chrome-deep);
+  background: var(--v16-paper-pure);
+  font-family: var(--v16-font-mono), monospace;
+  font-size: var(--v16-mono-size);
+  font-weight: var(--v16-mono-weight);
+  letter-spacing: var(--v16-mono-tracking);
+  text-transform: uppercase;
+  color: var(--v16-ink-muted);
+}
+
+/* Holographic glow — electric cobalt + cyan ring */
+.v16-glow-electric {
+  filter: drop-shadow(0 0 24px var(--v16-electric-glow));
+}
+.v16-glow-cyan {
+  filter: drop-shadow(0 0 24px var(--v16-cyan-glow));
+}
+.v16-glow-neon {
+  filter: drop-shadow(0 0 16px var(--v16-neon-glow));
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .v16-h1, .v16-h1-italic, .v16-h2, .v16-h3 { /* type-only — handled per-component */ }
+}

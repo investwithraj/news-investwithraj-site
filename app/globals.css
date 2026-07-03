@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/v16.css";  /* v16 Future Vision tokens — additive, namespaced --v16-* */
 
 /* ─────────────────────────────────────────────────────────────────────────
    v10 — "White Futuristic" design system
@@ -37,19 +38,25 @@
   --ink:       #2B2621;  /* Warm charcoal — primary type */
   --ink-soft:  #4A413A;  /* Body type at scale */
   --ink-muted: #7C7268;  /* Secondary copy, labels */
-  --ink-faint: #A89D8E;  /* Captions, eyebrows, faded mono labels */
+  --ink-faint: #7A6541;  /* Captions, eyebrows, faded mono labels — deepened from #A89D8E to clear WCAG AA (~4.6:1) on cream while keeping the warm brass */
 
   /* v13 — Cucinelli brass. Slightly deeper than v12 gold so it reads
      against the warmer cream. The ONLY visible accent — must touch
      ≤3% of total pixels per viewport (Cartier/Aman/Cucinelli rule).
      Used on: brand mark, primary CTA, editorial italic accents, 1px hairlines.
      NEVER used on body links, NEVER as a fill, NEVER on backgrounds. */
-  --gold:        #C9A961; /* The brand brass — kept */
-  --gold-deep:   #A8854B; /* Slightly deeper than v12 for restraint */
-  --gold-bright: #DCBE7A; /* Highlights only */
-  --gold-rich:   #8B6F33; /* Deepest — for cream-on-cream hairlines */
-  --gold-soft:   rgba(201, 169, 97, 0.10);
-  --gold-glow:   rgba(201, 169, 97, 0.22);
+  /* 31 May 2026 — ACCENT FLIPPED gold → cobalt blue to match the main site's
+     electric-blue signature (investwithraj.com). Token NAMES kept (--gold-*) so
+     every component inherits the new hue with zero per-component edits; the role
+     is unchanged (brand mark, primary CTA, editorial italic accents, 1px
+     hairlines — never a fill, never a background). Values = the main-site v16
+     blue family (#2563EB / #5BA5F5 / #1E3A8A). */
+  --gold:        #2563EB; /* Primary accent — royal cobalt (main-site blue) */
+  --gold-deep:   #1D4ED8; /* Deeper — italic headline words + CTAs on light */
+  --gold-bright: #5BA5F5; /* Highlights only */
+  --gold-rich:   #1E3A8A; /* Deepest — for hairlines */
+  --gold-soft:   rgba(37, 99, 235, 0.10);
+  --gold-glow:   rgba(37, 99, 235, 0.22);
 
   /* v12 — paper-warm / paper-cream moved up into the primary surface block
      above. The duplicates here are retained as semantic aliases so legacy
@@ -88,13 +95,13 @@
      v11 — gold-grad is the new primary editorial accent (replaces
      v10 cyan-grad). Used for headline accent words, hero ring, brand mark.
      Cyan grad kept for live-signal moments only (scroll progress, etc). */
-  --grad-gold: linear-gradient(135deg, #A88945, #E0C076, #C9A961);
-  --grad-gold-rich: linear-gradient(135deg, #8B6F2E, #C9A961, #B8943D);
+  --grad-gold: linear-gradient(135deg, #1D4ED8, #5BA5F5, #2563EB);
+  --grad-gold-rich: linear-gradient(135deg, #1E3A8A, #2563EB, #1D4ED8);
   --grad-holo: linear-gradient(135deg, #0091EA, #00BCD4, #006FB4);
   --grad-holo-soft: linear-gradient(135deg, #4DD0E1, #0091EA, #4DD0E1);
   --grad-chrome: linear-gradient(180deg, #F8FAFC, #E8ECF2);
   --grad-navy: linear-gradient(180deg, #050817 0%, #0A1024 50%, #141A2C 100%);
-  --grad-aurora: linear-gradient(135deg, rgba(201, 169, 97, 0.3), rgba(248, 250, 252, 0.15), rgba(184, 148, 61, 0.2));
+  --grad-aurora: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(248, 250, 252, 0.15), rgba(91, 165, 245, 0.2));
 
   /* v12 SOTM RESET — shadows.
      SOTM rule: NO drop-shadows. Elevation comes from color + 1px hairlines + scale,
@@ -1396,3 +1403,101 @@ body {
 }
 .curtain-down { transform: translateY(0); transition: transform 700ms var(--ease-curtain); }
 .curtain-up   { transform: translateY(100%); transition: transform 700ms var(--ease-curtain); }
+
+/* ─── 10. v17 immersive — DARK-CINEMATIC register (ported from MAIN) ─────── */
+
+/* Scoped to the /v17 immersive NEWS terminal shell ONLY (paired on the same
+   root as .v17-cobalt). The live news site keeps its warm-cream + cobalt-accent
+   register; this class flips the /v17 subtree to the MAIN repo's true-black
+   dark-cinematic world so the persistent <ImmersiveWorld/> WebGL atmosphere
+   shows through translucent dark-glass acts. NEWS --gold* tokens are already
+   cobalt, so .v17-cobalt below is a defensive re-assertion that matches MAIN. */
+.v17-cobalt {
+  --gold: #2563EB;
+  --gold-deep: #1D4ED8;
+  --gold-bright: #5BA5F5;
+  --gold-rich: #1E3A8A;
+  --gold-soft: rgba(37, 99, 235, 0.10);
+  --gold-glow: rgba(37, 99, 235, 0.22);
+}
+
+/* Pure-black base #05070d, cobalt hairlines, near-white text. The semantic
+   remaps let the existing v16 / immersive components read --ink / --paper /
+   --chrome / --navy correctly on the dark base WITHOUT per-component edits. */
+.v17-dark {
+  /* Canonical dark tokens (per spec) */
+  --v17-bg:        #05070d;                         /* true-black void */
+  --v17-surface:   rgba(16, 24, 44, 0.55);          /* translucent dark glass */
+  --v17-surface-2: rgba(20, 30, 56, 0.72);          /* denser glass (cards/elevated) */
+  --v17-hairline:  rgba(120, 160, 240, 0.18);       /* cobalt-tinted 1px lines */
+  --v17-text:      #EAF0FA;                          /* near-white body/display */
+  --v17-text-soft: rgba(234, 240, 250, 0.74);       /* secondary copy */
+  --v17-text-faint:rgba(234, 240, 250, 0.46);       /* eyebrows, captions, mono */
+
+  /* Semantic remaps — dark surfaces + light ink so the v16/immersive glass
+     components invert cleanly (they read these vars, not literal whites). */
+  --background:   var(--v17-bg);
+  --foreground:   var(--v17-text);
+  --paper:        var(--v17-bg);
+  --paper-pure:   var(--v17-surface);
+  --paper-warm:   var(--v17-surface);
+  --paper-cream:  var(--v17-surface-2);
+  --paper-glass:  var(--v17-surface);   /* VerticalsAct GlassCards read this */
+  --surface-card: var(--v17-surface-2);
+
+  /* Semantic navy backdrop tokens also flip to the void */
+  --navy:      var(--v17-bg);
+  --navy-deep: #03040a;
+  --navy-rich: var(--v17-surface-2);
+
+  --ink:       var(--v17-text);
+  --ink-soft:  var(--v17-text-soft);
+  --ink-muted: var(--v17-text-soft);
+  --ink-faint: var(--v17-text-faint);
+
+  --chrome:      var(--v17-hairline);
+  --chrome-deep: var(--v17-hairline);
+
+  /* Elevation on dark = cobalt hairline (no chunky shadow) */
+  --shadow-card:      0 0 0 1px var(--v17-hairline);
+  --shadow-glass:     0 0 0 1px var(--v17-hairline);
+  --shadow-editorial: 0 0 0 1px var(--v17-hairline);
+  --shadow-lift:      0 1px 0 rgba(120, 160, 240, 0.10) inset, 0 0 0 1px var(--v17-hairline);
+
+  background: var(--v17-bg);
+  color: var(--v17-text);
+}
+
+/* Helper surfaces for v17 dark sections — translucent glass that lets the
+   persistent WebGL world bleed through. */
+.v17-dark .v17-glass {
+  background: var(--v17-surface);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  border: 1px solid var(--v17-hairline);
+}
+.v17-dark .v17-glass-strong {
+  background: var(--v17-surface-2);
+  backdrop-filter: blur(20px) saturate(125%);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  border: 1px solid var(--v17-hairline);
+}
+
+/* v17 LIGHT-GLASS conversion (hybrid) — WHITE frosted-glass card that sits over
+   a full-bleed real-photo Dubai still (with a legibility scrim). Ported from the
+   MAIN repo so the /v17 CONTENT acts (Daily Brief, The Beats, the Bridge) match
+   the main site exactly: photographic + cinematic but light. Text INSIDE this
+   card uses INK values (heading #14203a, body #38445c, faint #6b7488) with the
+   DEEP cobalt accent (#1D4ED8 / #2563EB on white). The DATA-VIZ acts (Terminal,
+   Capital Flow) keep their dark .v17-glass panels so the luminous charts/globe
+   stay readable. Scoped under .v17-dark to inherit only on the immersive shell. */
+.v17-dark .v17-glass-white {
+  position: relative;
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(30px) saturate(125%);
+  -webkit-backdrop-filter: blur(30px) saturate(125%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 28px 70px -24px rgba(6, 12, 28, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}

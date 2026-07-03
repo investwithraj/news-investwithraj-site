@@ -5,7 +5,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getMockSentimentSnapshot } from "@/lib/sentiment/mock";
-import { scoreToColor } from "@/lib/sentiment/types";
+import { scoreToColor, scoreToInk } from "@/lib/sentiment/types";
 import { SITE } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 
@@ -153,7 +153,8 @@ function SignalCard({
 }: {
   signal: ReturnType<typeof getMockSentimentSnapshot>["signals"][0];
 }) {
-  const color = scoreToColor(signal.score);
+  const color = scoreToColor(signal.score); // vivid — progress-bar fill (data viz)
+  const ink = scoreToInk(signal.score); // AA-on-light — the score TEXT on the card
   const href =
     signal.kind === "area" ? `/areas/${signal.subject}` : `/developer/${signal.subject}`;
 
@@ -185,7 +186,7 @@ function SignalCard({
         </div>
         <div
           className="text-right tabular-nums shrink-0"
-          style={{ color, fontFamily: "var(--font-fraunces), Georgia, serif" }}
+          style={{ color: ink, fontFamily: "var(--font-fraunces), Georgia, serif" }}
         >
           <div className="text-xl md:text-2xl leading-none">
             {signal.score >= 0 ? "+" : ""}

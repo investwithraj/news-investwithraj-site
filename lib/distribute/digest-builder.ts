@@ -5,7 +5,7 @@
 // v11 navy/gold register applied. Mobile-responsive via fluid widths
 // + max-widths instead of media queries (some clients ignore @media).
 
-import { SITE } from "@/lib/constants";
+import { SITE, CONTACT } from "@/lib/constants";
 import type { NewsArticle } from "@/content/news/types";
 import type { CampaignDraft } from "./listmonk";
 
@@ -73,7 +73,7 @@ export function buildDigestTextBody(articles: NewsArticle[], date = new Date()):
       return `${num}. ${a.title}\n${a.subtitle}\n→ ${articleLink(a.slug)}\n`;
     })
     .join("\n");
-  const footer = `\n────────────────────\n\nThe 12-page institutional Note publishes monthly at:\n${rootLink()}\n\nReply to this email or WhatsApp +971 58 996 6085 to reach Raj directly.\n\nUnsubscribe: {{ UnsubscribeURL }}\n`;
+  const footer = `\n────────────────────\n\nInvestor Notes publish at:\n${rootLink()}\n\nReply to this email or WhatsApp ${CONTACT.whatsappNumber} to reach Raj directly.\n\nUnsubscribe: {{ UnsubscribeURL }}\n`;
   return header + items + footer;
 }
 
@@ -147,8 +147,8 @@ ${escapeHtml(articles[0]?.subtitle ?? "Daily UAE real-estate intelligence.")}
         <!-- Sub-footer -->
         <tr>
           <td style="padding:18px 32px;background:${COL.paperWarm};text-align:center;font-family:'Inter',Helvetica,Arial,sans-serif;font-size:11px;line-height:1.6;color:${COL.inkMuted};">
-            Raj Tomar · DLD-Licensed Broker · Dubai<br />
-            Reply to this email or WhatsApp <a href="https://wa.me/971589966085" style="color:${COL.goldDeep};text-decoration:none;">+971 58 996 6085</a> to reach Raj directly.<br />
+            Raj Tomar · Real-estate consultant · Dubai · DLD-registered<br />
+            Reply to this email or WhatsApp <a href="https://wa.me/${CONTACT.whatsappE164}" style="color:${COL.goldDeep};text-decoration:none;">${CONTACT.whatsappNumber}</a> to reach Raj directly.<br />
             <br />
             <a href="{{ UnsubscribeURL }}" style="color:${COL.inkMuted};text-decoration:underline;">Unsubscribe</a> &nbsp;·&nbsp; <a href="${SITE.url}" style="color:${COL.inkMuted};text-decoration:none;">news.investwithraj.com</a>
           </td>

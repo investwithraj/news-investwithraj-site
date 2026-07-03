@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
           <span>By Raj Tomar</span>
           <span style={{ opacity: 0.5 }}>·</span>
           <span style={{ color: PAPER, opacity: 0.7 }}>
-            DLD-licensed broker
+            real-estate consultant
           </span>
         </div>
 

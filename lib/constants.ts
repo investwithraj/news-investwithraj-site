@@ -10,7 +10,7 @@ export const SITE = {
   tagline:
     "Daily UAE real-estate intelligence. Curated. Cited. Read like an analyst.",
   description:
-    "Independent UAE real-estate market intelligence. 5–15 verified-source articles a day on Dubai, Abu Dhabi, and Ras Al Khaimah. Every piece cites DLD / RERA / Knight Frank / JLL / Khaleej Times / Arabian Business. Written for serious investors.",
+    "Independent UAE real-estate market intelligence. Weekly DLD transaction round-ups, monthly area deep-dives, plot-owner watchlists, and quarterly cycle reads. Every piece cites primary sources: DLD, RERA, Property Finder, Bayut, Knight Frank, JLL. Written for serious investors.",
 };
 
 export const CONTACT = {

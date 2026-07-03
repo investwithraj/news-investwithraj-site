@@ -277,18 +277,35 @@ function PulsePane({ pulse }: { pulse: DldDailyPulse | null }) {
       <KV label="Date" value={pulse.date} />
       <KV label="Txn count" value={String(pulse.txnCount)} accent />
       <KV label="Volume AED" value={formatAed(pulse.volumeAed)} accent />
-      <KV
-        label="DoD volume"
-        value={`${pulse.dodVolumeChangePct >= 0 ? "▲" : "▼"} ${Math.abs(pulse.dodVolumeChangePct).toFixed(1)}%`}
-        color={pulse.dodVolumeChangePct >= 0 ? "#7ED99F" : "#E58E89"}
-      />
+      {pulse.dodVolumeChangePct !== undefined && (
+        <KV
+          label="DoD volume"
+          value={`${pulse.dodVolumeChangePct >= 0 ? "▲" : "▼"} ${Math.abs(pulse.dodVolumeChangePct).toFixed(1)}%`}
+          color={pulse.dodVolumeChangePct >= 0 ? "#7ED99F" : "#E58E89"}
+        />
+      )}
       <KV label="Avg AED" value={formatAed(pulse.avgPriceAed)} />
-      <KV label="Median PSF" value={`${pulse.medianPpsfAed.toFixed(0)} AED`} />
-      <hr style={{ borderColor: "rgba(201, 169, 97, 0.18)", margin: "8px 0" }} />
-      <KV label="Hottest" value={pulse.hottestArea.name} accent />
-      <KV label="• Volume" value={formatAed(pulse.hottestArea.volumeAed)} />
-      <KV label="Top dev" value={pulse.topDeveloper.name} accent />
-      <KV label="• Txns" value={String(pulse.topDeveloper.txnCount)} />
+      {pulse.medianPpsfAed !== undefined && (
+        <KV label="Median PSF" value={`${pulse.medianPpsfAed.toFixed(0)} AED`} />
+      )}
+      {(pulse.hottestArea || pulse.topDeveloper) && (
+        <hr style={{ borderColor: "rgba(201, 169, 97, 0.18)", margin: "8px 0" }} />
+      )}
+      {pulse.hottestArea && (
+        <>
+          <KV label="Hottest" value={pulse.hottestArea.name} accent />
+          <KV label="• Volume" value={formatAed(pulse.hottestArea.volumeAed)} />
+        </>
+      )}
+      {pulse.topDeveloper && (
+        <>
+          <KV label="Top dev" value={pulse.topDeveloper.name} accent />
+          <KV label="• Txns" value={String(pulse.topDeveloper.txnCount)} />
+        </>
+      )}
+      {pulse.sourceNote && (
+        <KV label="Source" value={pulse.sourceNote} />
+      )}
     </div>
   );
 }
@@ -448,7 +465,7 @@ function DeskPane() {
         which before lunch.”
       </p>
       <p className="text-[10px] font-mono uppercase tracking-[0.18em]" style={{ color: "var(--gold-bright, #E0C076)" }}>
-        — Raj · DLD-licensed broker · Dubai
+        — Raj · real-estate consultant · Dubai
       </p>
       <div className="pt-3 mt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "rgba(201,169,97,0.18)" }}>
         <Link href="/ask" data-magnetic className="px-2 py-1 border text-[10px] uppercase tracking-[0.18em]" style={{ borderColor: "rgba(201,169,97,0.3)", color: "var(--gold-bright, #E0C076)" }}>

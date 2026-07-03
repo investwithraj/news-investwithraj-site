@@ -107,9 +107,16 @@ export interface SemaformSections {
   howIdTradeIt?: BrokerTake;
 }
 
+/** Publication state. Research = slug warm but content not yet defensible;
+ *  excluded from "latest" feeds + Google News sitemap but still resolves
+ *  at /news/[slug]. Live = published article, all gates passed. */
+export type NewsArticleStatus = "live" | "research";
+
 export interface NewsArticle {
   /** URL slug — kebab-case, no leading slash. Used at /news/{slug}. */
   slug: string;
+  /** Publication state. Omitted = live (back-compat with existing entries). */
+  status?: NewsArticleStatus;
   /** Headline ≤ 90 chars (validator gate 3) */
   title: string;
   /** One-line dek shown under title + in OG description */

@@ -1,32 +1,33 @@
 // DLD (Dubai Land Department) data shapes.
 //
-// DLD publishes daily transaction data via dxbinteract.com + their open
-// data portal. Until the live feed is wired up, the API route returns
-// deterministic mock data that mirrors realistic DLD shapes so the UI
-// can ship Day-1 and the ticker stays alive.
-//
-// When the real DLD API is hooked up (Q3 2026 target), the route's
-// internals get replaced — UI doesn't change.
+// Data is REAL: either a live aggregate from the Dubai Pulse DLD open-data API
+// (source: "live") or the latest cited official DLD print (source: "reference").
+// Optional metrics are present only when the source actually provides them —
+// the ticker omits any field left undefined rather than inventing a value.
 
 export interface DldDailyPulse {
   /** ISO date the pulse represents (YYYY-MM-DD UAE time) */
   date: string;
-  /** Total transaction count for the day */
+  /** Human label for the period — "today" / ISO date (live) or "week ending …" (reference) */
+  periodLabel?: string;
+  /** Total transaction count */
   txnCount: number;
   /** Total transaction volume in AED */
   volumeAed: number;
   /** Average transaction price in AED */
   avgPriceAed: number;
-  /** Median per-sqft price in AED */
-  medianPpsfAed: number;
-  /** Hottest area (highest volume) */
-  hottestArea: { name: string; volumeAed: number; txnCount: number };
-  /** Top developer by volume */
-  topDeveloper: { name: string; volumeAed: number; txnCount: number };
-  /** Day-over-day percentage change in volume */
-  dodVolumeChangePct: number;
-  /** Source — "live" when DLD API wired, "mock" otherwise */
-  source: "live" | "mock";
+  /** Median per-sqft price in AED — optional (only when size data is available) */
+  medianPpsfAed?: number;
+  /** Hottest area (highest volume) — optional */
+  hottestArea?: { name: string; volumeAed: number; txnCount: number };
+  /** Top project/developer by volume — optional */
+  topDeveloper?: { name: string; volumeAed: number; txnCount: number };
+  /** Day-over-day percentage change in volume — optional */
+  dodVolumeChangePct?: number;
+  /** "live" = Dubai Pulse DLD open-data API · "reference" = latest cited official DLD print */
+  source: "live" | "reference";
+  /** Short human label shown in the ticker's AS-OF slot (e.g. "Dubai Pulse · DLD open data") */
+  sourceNote?: string;
   /** ISO timestamp when the data was last refreshed */
   fetchedAt: string;
 }

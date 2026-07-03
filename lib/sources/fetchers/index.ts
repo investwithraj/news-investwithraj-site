@@ -3,20 +3,20 @@
 
 import type { FetchRun, FetchResult } from "./types";
 export type { RawEntry, FetchResult, FetchRun } from "./types";
-import { SOURCE_WHITELIST } from "@/lib/sources/registry";
+import { FETCH_SOURCES } from "@/lib/sources/registry";
 import { fetchRssFeed } from "./rss";
 import { fetchWebPage } from "./webfetch";
+import { fetchReddit } from "./reddit";
 
-/** Run all verified sources in parallel. Each source has its own timeout
+/** Run all fetch sources in parallel. Each source has its own timeout
  *  + graceful failure — a single source erroring never blocks the rest. */
 export async function fetchAllSources(): Promise<FetchRun> {
   const startedAt = new Date().toISOString();
   const startMs = performance.now();
 
-  const promises = SOURCE_WHITELIST.map((source) => {
-    if (source.fetchType === "rss") {
-      return fetchRssFeed(source);
-    }
+  const promises = FETCH_SOURCES.map((source) => {
+    if (source.fetchType === "rss") return fetchRssFeed(source);
+    if (source.fetchType === "reddit") return fetchReddit(source);
     return fetchWebPage(source);
   });
 
@@ -44,7 +44,7 @@ export function flattenEntries(run: FetchRun) {
 /** Log a structured pipeline summary for the schedule-skill run logs. */
 export function summarizeFetchRun(run: FetchRun): string {
   const lines: string[] = [];
-  lines.push(`📰 Fetched ${run.totalEntries} entries from ${run.okCount}/${SOURCE_WHITELIST.length} sources`);
+  lines.push(`📰 Fetched ${run.totalEntries} entries from ${run.okCount}/${FETCH_SOURCES.length} sources`);
   if (run.errorCount > 0) {
     lines.push(`⚠️  ${run.errorCount} source(s) errored:`);
     for (const r of run.results.filter((r) => r.error)) {

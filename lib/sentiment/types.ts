@@ -42,3 +42,13 @@ export function scoreToColor(score: number): string {
   if (score > -0.4) return "#F4A582"; // soft red
   return "#E58E89"; // bearish red
 }
+
+/** AA-on-light variant of scoreToColor — deep tones that clear WCAG AA on the
+ *  cream/white cards, for the score TEXT only. Keep scoreToColor for fills,
+ *  borders, and text on the dark hero (where the vivid tones read fine).
+ *  Ratios on the cream --paper (#FBF8F2): green ~4.7:1, bronze ~4.8:1, red ~6:1. */
+export function scoreToInk(score: number): string {
+  if (score > 0.1) return "#15803D"; // bullish — deep green
+  if (score > -0.1) return "#8A6A1F"; // neutral — deep bronze
+  return "#B42318"; // bearish — deep red
+}

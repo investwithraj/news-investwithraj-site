@@ -11,6 +11,7 @@
 // `article.semaform` fields OR fall back to the legacy `body` string.
 
 import type { NewsArticle, ViewFrom, BrokerTake } from "@/content/news/types";
+import { ArticleHero } from "./ArticleHero";
 
 interface Props {
   article: NewsArticle;
@@ -65,6 +66,19 @@ export function SemaformLayout({ article }: Props) {
       >
         {article.subtitle}
       </p>
+
+      {/* Hero image — blog-style figure (auto-sourced; self-hides if missing) */}
+      {article.heroImage?.src ? (
+        <ArticleHero
+          src={article.heroImage.src}
+          alt={article.heroImage.alt}
+          credit={
+            article.heroImage.credit && article.heroImage.credit !== "To be set at review"
+              ? article.heroImage.credit
+              : undefined
+          }
+        />
+      ) : null}
 
       {/* THE FACTS — TLDR */}
       <Section eyebrow="The Facts" idx={1}>
@@ -125,12 +139,12 @@ export function SemaformLayout({ article }: Props) {
         </Section>
       )}
 
-      {/* LEGACY BODY — only render if Semaform not in use, otherwise body is
-          assumed already split into the structured fields above */}
+      {/* FEATURE BODY — flat-body articles (the daily auto-drafts) render as a
+          premium feature read: drop-cap, larger measure, flowing prose. */}
       {!hasSemaform && article.body && (
-        <Section eyebrow="The Story" idx={2}>
-          <Prose text={article.body} />
-        </Section>
+        <div className="my-12 md:my-14">
+          <FeatureProse text={article.body} />
+        </div>
       )}
 
       {/* FAQ — if present */}
@@ -261,6 +275,52 @@ function Prose({ text }: { text: string }) {
   );
 }
 
+/** Premium feature-article prose for flat-body articles — drop-cap on the
+ *  opening paragraph, generous reading measure. Server-component-safe (inline
+ *  styles + a manual drop-cap span; no ::first-letter, no styled-jsx). */
+function FeatureProse({ text }: { text: string }) {
+  const paragraphs = text.split(/\n\n+/).filter((p) => p.trim());
+  const proseStyle: React.CSSProperties = {
+    color: "var(--ink-soft)",
+    fontSize: "clamp(1.05rem, 1.5vw, 1.2rem)",
+    lineHeight: 1.75,
+  };
+  return (
+    <div className="space-y-6">
+      {paragraphs.map((p, i) => {
+        if (i === 0 && p.length > 1) {
+          return (
+            <p key={i} style={proseStyle}>
+              <span
+                aria-hidden
+                style={{
+                  float: "left",
+                  fontFamily: "var(--font-fraunces), Georgia, serif",
+                  fontSize: "3.6rem",
+                  lineHeight: 0.8,
+                  paddingRight: "0.09em",
+                  marginTop: "0.05em",
+                  color: "var(--gold-deep)",
+                  fontWeight: 500,
+                  fontVariationSettings: '"SOFT" 40, "opsz" 144',
+                }}
+              >
+                {p[0]}
+              </span>
+              {p.slice(1)}
+            </p>
+          );
+        }
+        return (
+          <p key={i} style={proseStyle}>
+            {p}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 function ViewCard({ view }: { view: ViewFrom }) {
   return (
     <figure
@@ -317,7 +377,7 @@ function BrokerCard({ call }: { call: BrokerTake }) {
         className="text-[11px] font-mono uppercase tracking-[0.18em] mt-1"
         style={{ color: "var(--ink-faint)" }}
       >
-        — Raj Tomar · DLD-licensed broker
+        — Raj Tomar · real-estate consultant
       </p>
     </div>
   );

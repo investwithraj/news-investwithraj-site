@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     organizationName: "Invest With Raj",
     description: "Beyond the Deal · Daily Digest",
     headline: latest?.title || "Today's UAE real-estate read",
-    subtitle: "Curated by Raj · DLD-licensed broker",
+    subtitle: "Curated by Raj · real-estate consultant",
     barcodeMessage: `https://news.investwithraj.com/${latest?.slug ? `news/${latest.slug}` : ""}`,
     foregroundColor: "rgb(249, 246, 240)",
     backgroundColor: "rgb(10, 16, 36)",
