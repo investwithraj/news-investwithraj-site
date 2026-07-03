@@ -97,7 +97,36 @@ export default async function NewsArticlePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
       />
-      <SemaformLayout article={article} />
+      {/* V21 brand-motion unification — ONE static atmosphere touch: the
+          main site's cinema plate (plate-1.webp) as a low-opacity masthead
+          accent behind the article head, faded out by a paper scrim so the
+          text keeps full priority. Decorative only; no motion on the
+          article body; the article hero photo itself stays a REAL photo. */}
+      <div className="relative">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 pointer-events-none select-none"
+          style={{
+            height: "clamp(240px, 34vh, 380px)",
+            backgroundImage: "url(/cinema/v21/plate-1.webp)",
+            backgroundSize: "cover",
+            backgroundPosition: "center 30%",
+            opacity: 0.14,
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 pointer-events-none"
+          style={{
+            height: "clamp(240px, 34vh, 380px)",
+            background:
+              "linear-gradient(180deg, rgba(245, 241, 237, 0.45) 0%, rgba(245, 241, 237, 0.72) 55%, var(--paper) 100%)",
+          }}
+        />
+        <div className="relative">
+          <SemaformLayout article={article} />
+        </div>
+      </div>
     </>
   );
 }

@@ -8,6 +8,8 @@ import { VerticalsBento } from "@/components/homepage/VerticalsBento";
 import { CapitalFlowGlobeLoader } from "@/components/futurism/CapitalFlowGlobeLoader";
 import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
 import MaterialDivider from "@/components/MaterialDivider";
+import SectionWipe from "@/components/v21/SectionWipe";
+import GiantWordmark from "@/components/v21/GiantWordmark";
 
 /**
  * news.investwithraj.com homepage — Block 3 Wave 4.
@@ -29,11 +31,20 @@ export default function Home() {
       <MaterialDivider material="brass-strip" />
       <DailyAnchorPane />
       <MaterialDivider material="cashmere" />
-      <AuthorBrand />
+      {/* V21 brand-motion unification — the main site's SectionWipe
+          (B&C page-change wipe, gold leading edge) on the three main
+          below-the-fold rooms. Hero/anchor stay untouched. */}
+      <SectionWipe>
+        <AuthorBrand />
+      </SectionWipe>
       <MaterialDivider material="ink-cream" />
-      <CapitalFlowSection />
+      <SectionWipe>
+        <CapitalFlowSection />
+      </SectionWipe>
       <MaterialDivider material="cream-fade" />
-      <VerticalsBento />
+      <SectionWipe>
+        <VerticalsBento />
+      </SectionWipe>
       <MaterialDivider material="brass-strip" />
       <CrossLink />
     </main>
@@ -293,6 +304,32 @@ function CrossLink() {
               {CONTACT.email}
             </a>
           </div>
+        </div>
+
+        {/* V21 — the main-site footer's giant "INVEST WITH RAJ" sign-off
+            (GiantWordmark, B&C edge-spanning bottom wordmark). Words spread
+            across the full width like the main footer; each word keeps the
+            tracking-breathe scroll-in inside its own clip mask. Decorative —
+            the accessible brand name lives in the copyright line above. */}
+        <div
+          aria-hidden="true"
+          className="max-w-[1240px] mx-auto px-6 md:px-10 mt-16 flex items-end justify-between w-full"
+          style={{ gap: "clamp(8px, 2vw, 40px)", lineHeight: 0.72 }}
+        >
+          {"INVEST WITH RAJ".split(" ").map((word, i) => (
+            <span
+              key={`${word}-${i}`}
+              className="block overflow-hidden"
+              style={{ paddingBottom: "0.06em", marginBottom: "-0.06em" }}
+            >
+              <GiantWordmark
+                text={word}
+                sizeClamp="clamp(2.25rem, 9.5vw, 9.5rem)"
+                trackingBreathe
+                decorative
+              />
+            </span>
+          ))}
         </div>
       </footer>
     </section>
