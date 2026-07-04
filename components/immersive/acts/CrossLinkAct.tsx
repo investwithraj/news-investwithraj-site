@@ -345,7 +345,7 @@ export default function CrossLinkAct() {
             }}
           >
           This desk is the public read. The deeper work — feasibility studies,
-          area underwriting, and advisory mandates — lives on the main practice,
+          area analysis, and advisory mandates — lives on the main practice,
           where Raj works as a real-estate consultant, urban &amp; regional
           planner, and feasibility analyst.
         </p>
