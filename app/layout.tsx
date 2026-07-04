@@ -10,6 +10,7 @@ import CustomCursor from "@/components/CustomCursor";
 import { FxProvider } from "@/components/ticker/FxProvider";
 import { DldTicker } from "@/components/ticker/DldTicker";
 import PageLoadCurtain from "@/components/PageLoadCurtain";
+import NavCurtain from "@/components/v21/NavCurtain";
 import AmbientAudio from "@/components/AmbientAudio";
 import KonamiEasterEgg from "@/components/KonamiEasterEgg";
 import UISounds from "@/components/UISounds";
@@ -199,6 +200,14 @@ export default function RootLayout({
         {/* v13 SOTY — page-load curtain. RT monogram strokes draw on,
             then curtain wipes up over ~1.9s on first paint. */}
         <PageLoadCurtain />
+
+        {/* V21 brand-motion unification — the main site's NavCurtain
+            (B&C route-change wipe: wordmark panel covers down, client
+            router.push, reveal up). No double-fire: PageLoadCurtain is
+            first-paint only, and app/template.tsx's curtain div never
+            paints (its transform is identical in both phases) — only its
+            subtle 320ms content fade runs, underneath this cover. */}
+        <NavCurtain />
 
         <FxProvider>
           {/* DLD daily-pulse ticker — Bloomberg-style strip pinned to top */}
