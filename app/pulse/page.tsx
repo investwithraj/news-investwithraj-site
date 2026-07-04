@@ -8,6 +8,9 @@ import { getMockSentimentSnapshot } from "@/lib/sentiment/mock";
 import { scoreToColor, scoreToInk } from "@/lib/sentiment/types";
 import { SITE } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import DrawLine from "@/components/v21/DrawLine";
+import CountUp from "@/components/v21/CountUp";
+import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +38,38 @@ export default function PulsePage() {
     <main className="min-h-screen" style={{ background: "var(--paper)" }}>
       {/* Hero */}
       <section
-        className="relative pt-20 md:pt-28 pb-12 md:pb-16"
+        className="relative pt-20 md:pt-28 pb-12 md:pb-16 overflow-hidden"
         style={{ background: "var(--ink)", color: "var(--paper)" }}
       >
-        <div className="max-w-[1240px] mx-auto px-6 md:px-12">
+        {/* V21 data-cinematics — pulse-loop.mp4 masthead backdrop (the main
+            site's cinema loop) behind a dark scrim. Reduced-motion hides the
+            video (CSS below) and the static gradient underneath shows; if
+            autoplay is blocked the gradient shows too. Decorative only. */}
+        <div aria-hidden="true" className="absolute inset-0 pointer-events-none select-none">
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(160deg, #0A0E1C 0%, #131B33 55%, #0A0E1C 100%)" }}
+          />
+          <video
+            className="v21-pulse-loop absolute inset-0 h-full w-full object-cover"
+            src="/cinema/v21/pulse-loop.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(6, 9, 20, 0.66) 0%, rgba(6, 9, 20, 0.74) 60%, rgba(6, 9, 20, 0.9) 100%)",
+            }}
+          />
+        </div>
+        <style>{`@media (prefers-reduced-motion: reduce) { .v21-pulse-loop { display: none !important; } }`}</style>
+
+        <div className="relative max-w-[1240px] mx-auto px-6 md:px-12">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8 opacity-70 hover:opacity-100"
@@ -68,6 +99,14 @@ export default function PulsePage() {
               whispering.
             </span>
           </KineticHeadline>
+
+          {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
+          <DrawLine
+            className="mt-6 max-w-[520px]"
+            color="var(--gold-bright, #E0C076)"
+            style={{ opacity: 0.9 }}
+          />
+
           <p
             className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
             style={{ color: "rgba(248, 250, 252, 0.78)" }}
@@ -89,8 +128,12 @@ export default function PulsePage() {
                   className="mt-1 text-xl tabular-nums"
                   style={{ color: scoreToColor(c.score), fontFamily: "var(--font-fraunces), Georgia, serif" }}
                 >
-                  {c.score >= 0 ? "+" : ""}
-                  {c.score.toFixed(2)}
+                  {/* V21 data-cinematics — once-on-enter count-up on the
+                      EXISTING SSR numeral (no invented numbers) */}
+                  <CountUp value={c.score} decimals={2} plus>
+                    {c.score >= 0 ? "+" : ""}
+                    {c.score.toFixed(2)}
+                  </CountUp>
                 </div>
                 <div className="text-[10px] font-mono uppercase tracking-[0.18em] mt-1" style={{ color: "rgba(248,250,252,0.45)" }}>
                   vol {c.volume}
@@ -144,6 +187,9 @@ export default function PulsePage() {
           </div>
         </div>
       </section>
+
+      {/* V21 — giant INVEST WITH RAJ sign-off (same band as the Terminal home) */}
+      <WordmarkSignoff />
     </main>
   );
 }

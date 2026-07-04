@@ -5,6 +5,8 @@ import Link from "next/link";
 import { CLOSING_BELLS, sortBells } from "@/content/closing-bell";
 import { SITE } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import DrawLine from "@/components/v21/DrawLine";
+import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
 export const dynamic = "force-static";
 
@@ -43,6 +45,14 @@ export default function ClosingBellIndex() {
           >
             Closing Bell.
           </KineticHeadline>
+
+          {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
+          <DrawLine
+            className="mt-6 max-w-[520px]"
+            color="var(--gold-bright, #E0C076)"
+            style={{ opacity: 0.9 }}
+          />
+
           <p
             className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
             style={{ color: "rgba(248, 250, 252, 0.78)" }}
@@ -105,6 +115,9 @@ export default function ClosingBellIndex() {
           )}
         </div>
       </section>
+
+      {/* V21 — giant INVEST WITH RAJ sign-off (same band as the Terminal home) */}
+      <WordmarkSignoff />
     </main>
   );
 }
