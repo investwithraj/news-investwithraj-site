@@ -13,7 +13,6 @@ import CapitalFlowAct from "@/components/immersive/acts/CapitalFlowAct";
 import DailyAnchorAct from "@/components/immersive/acts/DailyAnchorAct";
 import VerticalsAct from "@/components/immersive/acts/VerticalsAct";
 import CrossLinkAct from "@/components/immersive/acts/CrossLinkAct";
-import SectionWipe from "@/components/v21/SectionWipe";
 import GiantWordmark from "@/components/v21/GiantWordmark";
 
 export const metadata: Metadata = {
@@ -47,20 +46,14 @@ export default function Home() {
       >
         <main style={{ position: "relative", zIndex: 1, minHeight: "100svh" }}>
           <TerminalAct />
-          {/* V21 brand-motion unification — the main site's SectionWipe
-              (B&C page-change wipe, gold leading edge) on the three content
-              rooms below the fold. The Terminal hero and the Daily Anchor
-              stay untouched (terminal identity preserved). */}
-          <SectionWipe>
-            <CapitalFlowAct />
-          </SectionWipe>
+          {/* V21 restraint cut-line — NO SectionWipe on the home: the whole
+              subtree is ONE dark register (.v17-dark remaps --paper dark),
+              so every act seam here is a same-register seam. SectionWipe is
+              reserved for genuine light⇄dark register flips only. */}
+          <CapitalFlowAct />
           <DailyAnchorAct />
-          <SectionWipe>
-            <VerticalsAct />
-          </SectionWipe>
-          <SectionWipe>
-            <CrossLinkAct />
-          </SectionWipe>
+          <VerticalsAct />
+          <CrossLinkAct />
 
           {/* V21 — the main-site footer's giant "INVEST WITH RAJ" sign-off
               (GiantWordmark, B&C edge-spanning bottom wordmark). Words spread
