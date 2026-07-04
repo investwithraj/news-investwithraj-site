@@ -13,6 +13,7 @@ import { NEWS_ARTICLES } from "@/content/news";
 import { getDevelopersForArea } from "@/lib/developers";
 import { SITE } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import PageMotion from "@/components/v21/PageMotion";
 import { Price } from "@/components/ticker/FxProvider";
 import {
   placeSchema,
@@ -78,6 +79,10 @@ export default async function AreaPage({
       />
 
       <main className="min-h-screen">
+        {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
+            reveal (no data-split → no double-mount); motion here is ONE grid
+            stagger on the Active-developers cards via data-reveal. */}
+        <PageMotion />
         {/* Hero */}
         <section className="relative pt-20 md:pt-28 pb-12 md:pb-16 overflow-hidden" style={{ background: "var(--paper-warm)" }}>
           <div className="max-w-[1080px] mx-auto px-6 md:px-12">
@@ -220,6 +225,7 @@ export default async function AreaPage({
                     key={d.slug}
                     href={`/developer/${d.slug}`}
                     data-magnetic
+                    data-reveal=""
                     className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
                     style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
                   >

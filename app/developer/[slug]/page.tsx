@@ -16,6 +16,7 @@ import { AREAS } from "@/content/areas";
 import { NEWS_ARTICLES } from "@/content/news";
 import { SITE } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import PageMotion from "@/components/v21/PageMotion";
 
 export const dynamicParams = false;
 export const dynamic = "force-static";
@@ -84,6 +85,10 @@ export default async function DeveloperPage({
       />
 
       <main className="min-h-screen">
+        {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
+            reveal (no data-split → no double-mount); motion here is ONE grid
+            stagger on the Active-areas cards via data-reveal. */}
+        <PageMotion />
         {/* Hero */}
         <section
           className="relative pt-20 md:pt-28 pb-12 md:pb-16"
@@ -223,6 +228,7 @@ export default async function DeveloperPage({
                     key={a.slug}
                     href={`/areas/${a.slug}`}
                     data-magnetic
+                    data-reveal=""
                     className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
                     style={{
                       borderColor: "var(--gold-soft)",

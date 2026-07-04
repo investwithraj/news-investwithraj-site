@@ -5,6 +5,8 @@ import Link from "next/link";
 import { DEVELOPERS } from "@/lib/developers";
 import { SITE } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import PageMotion from "@/components/v21/PageMotion";
+import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
 export const dynamic = "force-static";
 
@@ -18,6 +20,10 @@ export const metadata: Metadata = {
 export default function DevelopersIndex() {
   return (
     <main className="min-h-screen" style={{ background: "var(--paper)" }}>
+      {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
+          reveal (no data-split → no double-mount); motion here is ONE grid
+          stagger on the roster cards via data-reveal. */}
+      <PageMotion />
       <section
         className="relative pt-20 md:pt-28 pb-12 md:pb-16"
         style={{ background: "var(--paper-warm)" }}
@@ -68,6 +74,7 @@ export default function DevelopersIndex() {
                 key={d.slug}
                 href={`/developer/${d.slug}`}
                 data-magnetic
+                data-reveal=""
                 className="group rounded-2xl border p-6 hover:-translate-y-1 transition-transform flex flex-col"
                 style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
               >
@@ -124,6 +131,9 @@ export default function DevelopersIndex() {
           </div>
         </div>
       </section>
+
+      {/* V21 — giant INVEST WITH RAJ sign-off (same band as the Terminal home) */}
+      <WordmarkSignoff />
     </main>
   );
 }

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { AREAS, sortAreas, filterByEmirate } from "@/content/areas";
 import { SITE } from "@/lib/constants";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import PageMotion from "@/components/v21/PageMotion";
+import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
 export const dynamic = "force-static";
 
@@ -22,6 +24,10 @@ export default function AreasIndex() {
 
   return (
     <main className="min-h-screen" style={{ background: "var(--paper)" }}>
+      {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
+          reveal (no data-split → no double-mount); motion here is ONE grid
+          stagger on the Dubai block's cards via data-reveal. */}
+      <PageMotion />
       <section
         className="relative pt-20 md:pt-28 pb-12 md:pb-16"
         style={{ background: "var(--paper-warm)" }}
@@ -63,9 +69,12 @@ export default function AreasIndex() {
         </div>
       </section>
 
-      <EmirateBlock title="Dubai" items={dubai} />
+      <EmirateBlock title="Dubai" items={dubai} stagger />
       <EmirateBlock title="Abu Dhabi" items={abuDhabi} accent="dark" />
       <EmirateBlock title="Ras Al Khaimah" items={rak} />
+
+      {/* V21 — giant INVEST WITH RAJ sign-off (same band as the Terminal home) */}
+      <WordmarkSignoff />
     </main>
   );
 }
@@ -74,10 +83,13 @@ function EmirateBlock({
   title,
   items,
   accent,
+  stagger,
 }: {
   title: string;
   items: typeof AREAS;
   accent?: "dark";
+  /** V21 — one grid stagger MAX per page: only the first block sets it. */
+  stagger?: boolean;
 }) {
   if (items.length === 0) return null;
   return (
@@ -103,6 +115,7 @@ function EmirateBlock({
               key={a.slug}
               href={`/areas/${a.slug}`}
               data-magnetic
+              data-reveal={stagger ? "" : undefined}
               className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
               style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
             >
