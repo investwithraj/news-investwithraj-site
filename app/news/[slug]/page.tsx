@@ -5,8 +5,10 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getNewsBySlug, getAllNewsSlugs } from "@/content/news";
+import Link from "next/link";
+import { getNewsBySlug, getAllNewsSlugs, NEWS_ARTICLES } from "@/content/news";
 import { SemaformLayout } from "@/components/article/SemaformLayout";
+import PageMotion from "@/components/v21/PageMotion";
 import {
   newsArticleSchema,
   faqPageSchema,
@@ -91,6 +93,15 @@ export default async function NewsArticlePage({
   void articleUrl;
   void speakableSchema;
 
+  // Prev/next — chronological neighbours from the live registry (research
+  // stubs excluded). "Newer" = published after this one, "older" = before.
+  const live = [...NEWS_ARTICLES]
+    .filter((a) => a.status !== "research")
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  const idx = live.findIndex((a) => a.slug === slug);
+  const newer = idx > 0 ? live[idx - 1] : null;
+  const older = idx >= 0 && idx < live.length - 1 ? live[idx + 1] : null;
+
   return (
     <>
       <script
@@ -124,7 +135,62 @@ export default async function NewsArticlePage({
           }}
         />
         <div className="relative">
+          {/* V21 kinetic head — arms the data-split line-cascade on the h1
+              inside SemaformLayout. Only the headline moves; the article
+              BODY gets zero motion (restraint cut-line). */}
+          <PageMotion />
           <SemaformLayout article={article} />
+
+          {/* Prev/next article nav — registry-chronological, mono links,
+              deliberately static (no motion). */}
+          {(older || newer) && (
+            <nav
+              aria-label="More from the desk"
+              className="max-w-[760px] mx-auto px-6 md:px-8 pb-16 md:pb-24"
+            >
+              <div
+                className="pt-8 border-t grid grid-cols-1 md:grid-cols-2 gap-6"
+                style={{ borderColor: "var(--gold-soft)" }}
+              >
+                <div>
+                  {older && (
+                    <Link href={`/news/${older.slug}`} className="group block">
+                      <span
+                        className="block text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
+                        style={{ color: "var(--ink-faint)" }}
+                      >
+                        ← Previous · {older.displayDate}
+                      </span>
+                      <span
+                        className="block text-sm font-mono leading-[1.5] transition-colors group-hover:text-[var(--gold-deep)]"
+                        style={{ color: "var(--ink-soft)" }}
+                      >
+                        {older.title}
+                      </span>
+                    </Link>
+                  )}
+                </div>
+                <div className="md:text-right">
+                  {newer && (
+                    <Link href={`/news/${newer.slug}`} className="group block">
+                      <span
+                        className="block text-[10px] font-mono uppercase tracking-[0.22em] mb-2"
+                        style={{ color: "var(--ink-faint)" }}
+                      >
+                        Next · {newer.displayDate} →
+                      </span>
+                      <span
+                        className="block text-sm font-mono leading-[1.5] transition-colors group-hover:text-[var(--gold-deep)]"
+                        style={{ color: "var(--ink-soft)" }}
+                      >
+                        {newer.title}
+                      </span>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </nav>
+          )}
         </div>
       </div>
     </>

@@ -43,9 +43,13 @@ export function SemaformLayout({ article }: Props) {
         <time dateTime={article.publishedAt}>{article.displayDate}</time>
       </div>
 
-      {/* Title — v13 editorial-h1 (Fraunces variable SOFT 50 opsz 144 wt 500) */}
+      {/* Title — v13 editorial-h1 (Fraunces variable SOFT 50 opsz 144 wt 500).
+          data-split = V21 kinetic head: the masked SplitText line-cascade,
+          armed ONLY where PageMotion is mounted (/news/[slug]); inert in the
+          internal ReviewDesk. Article BODY below stays motion-free. */}
       <h1
         className="editorial-h1 mb-6"
+        data-split
         style={{
           fontSize: "clamp(2.25rem, 5.5vw, 4.5rem)",
           maxWidth: "20ch",
