@@ -51,8 +51,10 @@ import { article as art_2026_06_28_dubai_mandates_monthly_rent_option_across_12_
 import { article as art_2026_06_29_dar_global_launches_19_fendi_casa_villas_at_oman_s_aida_clif } from "./2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif";
 import { article as art_2026_07_01_uk_buyers_lead_dubai_property_demand_but_banks_tighten_the_g } from "./2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g";
 import { article as art_2026_07_02_dubai_real_estate_sets_historic_high_water_mark_with_aed_252 } from "./2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252";
+import { article as art_2026_07_06_bugatti_residences_closes_aed_270mn_in_june_penthouse_sales } from "./2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_06_bugatti_residences_closes_aed_270mn_in_june_penthouse_sales,
   art_2026_07_02_dubai_real_estate_sets_historic_high_water_mark_with_aed_252,
   art_2026_07_01_uk_buyers_lead_dubai_property_demand_but_banks_tighten_the_g,
   art_2026_06_29_dar_global_launches_19_fendi_casa_villas_at_oman_s_aida_clif,
