@@ -53,8 +53,10 @@ import { article as art_2026_07_01_uk_buyers_lead_dubai_property_demand_but_bank
 import { article as art_2026_07_02_dubai_real_estate_sets_historic_high_water_mark_with_aed_252 } from "./2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252";
 import { article as art_2026_07_06_bugatti_residences_closes_aed_270mn_in_june_penthouse_sales } from "./2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales";
 import { article as art_2026_07_08_dubai_ultra_prime_sales_hit_5_1bn_as_296_homes_above_10m_tra } from "./2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra";
+import { article as art_2026_07_09_modon_and_adib_launch_75_off_plan_financing_for_abu_dhabi_co } from "./2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_09_modon_and_adib_launch_75_off_plan_financing_for_abu_dhabi_co,
   art_2026_07_08_dubai_ultra_prime_sales_hit_5_1bn_as_296_homes_above_10m_tra,
   art_2026_07_06_bugatti_residences_closes_aed_270mn_in_june_penthouse_sales,
   art_2026_07_02_dubai_real_estate_sets_historic_high_water_mark_with_aed_252,
