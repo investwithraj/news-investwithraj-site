@@ -70,8 +70,8 @@ export default function ReviewDesk({
         position: "relative",
         minHeight: "100vh",
         background:
-          "radial-gradient(1200px 800px at 50% -10%, #0d1530 0%, #070b18 55%, #05070f 100%)",
-        color: "var(--v16-paper, #FBFBFC)",
+          "radial-gradient(1200px 800px at 50% -10%, #24241E 0%, #1A1A1B 55%, #141414 100%)",
+        color: "var(--v16-paper, #F2EEE7)",
         overflow: "hidden",
         fontFamily: "var(--v16-font-body), system-ui, sans-serif",
       }}
@@ -99,7 +99,7 @@ export default function ReviewDesk({
               fontSize: "0.6875rem",
               letterSpacing: "0.24em",
               textTransform: "uppercase",
-              color: "var(--v16-holo-blue, #5BA5F5)",
+              color: "var(--v16-holo-blue, #C9A961)",
             }}
           >
             <span
@@ -107,14 +107,14 @@ export default function ReviewDesk({
                 width: "6px",
                 height: "6px",
                 borderRadius: "50%",
-                background: "var(--v16-holo-blue, #5BA5F5)",
-                boxShadow: "0 0 10px var(--v16-holo-blue, #5BA5F5)",
+                background: "var(--v16-holo-blue, #C9A961)",
+                boxShadow: "0 0 10px var(--v16-holo-blue, #C9A961)",
               }}
             />
             news.investwithraj.com · editorial desk · {backend}
             <a
               href="/internal/dashboard"
-              style={{ marginLeft: "auto", color: "var(--v16-ink-faint, #9AA0AB)", textDecoration: "none" }}
+              style={{ marginLeft: "auto", color: "var(--v16-ink-faint, rgba(242,238,231,0.42))", textDecoration: "none" }}
             >
               outreach queue →
             </a>
@@ -136,7 +136,7 @@ export default function ReviewDesk({
             style={{
               marginTop: "14px",
               maxWidth: "60ch",
-              color: "var(--v16-ink-soft, #C8CDD3)",
+              color: "var(--v16-ink-soft, #D8D3CA)",
               fontSize: "1.02rem",
               lineHeight: 1.55,
             }}
@@ -207,7 +207,7 @@ function EmptyState() {
       >
         The desk is clear.
       </p>
-      <p style={{ color: "var(--v16-ink-faint, #9AA0AB)", fontSize: "0.95rem", lineHeight: 1.6 }}>
+      <p style={{ color: "var(--v16-ink-faint, rgba(242,238,231,0.42))", fontSize: "0.95rem", lineHeight: 1.6 }}>
         The morning run posts the day&apos;s drafts here around 07:00 GST. When one lands,
         it&apos;ll appear as a slab to verify and publish.
       </p>
@@ -347,12 +347,12 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
               lineHeight: 1.12,
               letterSpacing: "-0.02em",
               margin: 0,
-              color: "var(--v16-ink, #0A0E14)",
+              color: "var(--v16-ink, #F2EEE7)",
             }}
           >
             {draft.article.title}
           </h2>
-          <p style={{ marginTop: "6px", color: "var(--v16-ink-muted, #5A6470)", fontSize: "0.95rem" }}>
+          <p style={{ marginTop: "6px", color: "var(--v16-ink-muted, rgba(242,238,231,0.62))", fontSize: "0.95rem" }}>
             {draft.article.subtitle}
           </p>
         </div>
@@ -399,7 +399,7 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "2px", padding: "0 24px", borderBottom: "1px solid var(--v16-chrome, rgba(255,255,255,0.08))" }}>
+      <div style={{ display: "flex", gap: "2px", padding: "0 24px", borderBottom: "1px solid var(--v16-chrome, rgba(242,238,231,0.12))" }}>
         {(["verify", "preview", "edit"] as View[]).map((t) => (
           <button
             key={t}
@@ -408,8 +408,8 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
               padding: "10px 16px",
               background: "transparent",
               border: "none",
-              borderBottom: `2px solid ${view === t ? "var(--v16-holo-blue, #5BA5F5)" : "transparent"}`,
-              color: view === t ? "var(--v16-ink, #0A0E14)" : "var(--v16-ink-muted, #5A6470)",
+              borderBottom: `2px solid ${view === t ? "var(--v16-holo-blue, #C9A961)" : "transparent"}`,
+              color: view === t ? "var(--v16-ink, #F2EEE7)" : "var(--v16-ink-muted, rgba(242,238,231,0.62))",
               fontFamily: "var(--v16-font-mono), monospace",
               fontSize: "0.7rem",
               letterSpacing: "0.14em",
@@ -423,7 +423,7 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
       </div>
 
       {/* Body of the active view */}
-      <div style={{ padding: "24px", background: "var(--v16-paper-pure, #fff)", color: "var(--v16-ink, #0A0E14)" }}>
+      <div style={{ padding: "24px", background: "rgba(242,238,231,0.04)", color: "var(--v16-ink, #F2EEE7)" }}>
         {view === "verify" && (
           <VerifySplit
             draft={draft}
@@ -432,7 +432,7 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
           />
         )}
         {view === "preview" && (
-          <div style={{ borderRadius: "12px", overflow: "hidden", background: "#fff" }}>
+          <div style={{ borderRadius: "12px", overflow: "hidden", background: "rgba(242,238,231,0.04)" }}>
             <SemaformLayout article={{ ...draft.article, status: "live" } as NewsArticle} />
           </div>
         )}
@@ -445,8 +445,8 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
       <div
         style={{
           padding: "18px 24px 24px",
-          background: "var(--v16-ink-card, #14181F)",
-          borderTop: "1px solid var(--v16-ink-card-border, rgba(255,255,255,0.06))",
+          background: "var(--v16-ink-card, #1A1A1B)",
+          borderTop: "1px solid var(--v16-ink-card-border, rgba(242,238,231,0.1))",
         }}
       >
         {/* The human gate */}
@@ -467,12 +467,12 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
               width: "20px",
               height: "20px",
               borderRadius: "6px",
-              border: `1.5px solid ${figuresVerified ? "#3FCF8E" : "var(--v16-ink-faint, #9AA0AB)"}`,
+              border: `1.5px solid ${figuresVerified ? "#3FCF8E" : "var(--v16-ink-faint, rgba(242,238,231,0.42))"}`,
               background: figuresVerified ? "#3FCF8E" : "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#05070f",
+              color: "#141414",
               fontSize: "0.8rem",
               boxShadow: figuresVerified ? "0 0 12px #3FCF8E80" : "none",
               transition: "all 200ms var(--v16-ease-out, ease)",
@@ -480,7 +480,7 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
           >
             {figuresVerified ? "✓" : ""}
           </span>
-          <span style={{ fontSize: "0.85rem", color: "var(--v16-paper, #FBFBFC)" }}>
+          <span style={{ fontSize: "0.85rem", color: "var(--v16-paper, #F2EEE7)" }}>
             I&apos;ve checked every figure against its source
             {unbackedCount > 0 && (
               <span style={{ color: "#E0A33B" }}> — {unbackedCount} not found in any source</span>
@@ -555,12 +555,12 @@ function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: st
             zIndex: 50,
             padding: "12px 18px",
             borderRadius: "10px",
-            background: "var(--v16-ink-card, #14181F)",
-            border: "1px solid var(--v16-holo-blue, #5BA5F5)",
-            color: "var(--v16-paper, #FBFBFC)",
+            background: "var(--v16-ink-card, #1A1A1B)",
+            border: "1px solid var(--v16-holo-blue, #C9A961)",
+            color: "var(--v16-paper, #F2EEE7)",
             fontFamily: "var(--v16-font-mono), monospace",
             fontSize: "0.8rem",
-            boxShadow: "0 12px 40px rgba(0,0,0,0.5), 0 0 20px var(--v16-holo-glow, rgba(91,165,245,0.2))",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.5), 0 0 20px var(--v16-holo-glow, rgba(178,146,79,0.24))",
           }}
         >
           {toast}
@@ -594,14 +594,14 @@ function VerifySplit({
             fontSize: "0.62rem",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
-            color: "var(--v16-holo-deep, #2563EB)",
+            color: "var(--v16-holo-deep, #C9A961)",
             marginBottom: "12px",
           }}
         >
           Draft body — figures glow gold
         </p>
         {draft.article.body.split(/\n\n+/).map((para, i) => (
-          <p key={i} style={{ marginBottom: "14px", lineHeight: 1.7, fontSize: "1rem", color: "var(--v16-ink-soft, #2A3038)" }}>
+          <p key={i} style={{ marginBottom: "14px", lineHeight: 1.7, fontSize: "1rem", color: "var(--v16-ink-soft, #D8D3CA)" }}>
             {highlightFigures(para, sources, setActiveSource, citedText)}
           </p>
         ))}
@@ -615,7 +615,7 @@ function VerifySplit({
             fontSize: "0.62rem",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
-            color: "var(--v16-holo-deep, #2563EB)",
+            color: "var(--v16-holo-deep, #C9A961)",
             marginBottom: "12px",
           }}
         >
@@ -623,7 +623,7 @@ function VerifySplit({
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {sources.length === 0 && (
-            <p style={{ fontSize: "0.85rem", color: "var(--v16-ink-muted, #5A6470)" }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--v16-ink-muted, rgba(242,238,231,0.62))" }}>
               No source cluster attached to this draft.
             </p>
           )}
@@ -642,29 +642,29 @@ function VerifySplit({
                   padding: "14px",
                   borderRadius: "12px",
                   textDecoration: "none",
-                  background: "var(--v16-paper-pure, #fff)",
-                  border: `1px solid ${active ? "var(--v16-holo-blue, #5BA5F5)" : "var(--v16-chrome, #E8EBEE)"}`,
-                  boxShadow: active ? "0 0 22px var(--v16-holo-glow, rgba(91,165,245,0.25))" : "none",
+                  background: "rgba(242,238,231,0.05)",
+                  border: `1px solid ${active ? "var(--v16-holo-blue, #C9A961)" : "var(--v16-chrome, rgba(242,238,231,0.12))"}`,
+                  boxShadow: active ? "0 0 22px var(--v16-holo-glow, rgba(178,146,79,0.24))" : "none",
                   transition: "all 180ms var(--v16-ease-out, ease)",
                   transform: active ? "translateY(-1px)" : "none",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", marginBottom: "6px" }}>
-                  <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--v16-ink, #0A0E14)" }}>{s.name}</span>
+                  <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--v16-ink, #F2EEE7)" }}>{s.name}</span>
                   <span
                     style={{
                       fontFamily: "var(--v16-font-mono), monospace",
                       fontSize: "0.58rem",
                       letterSpacing: "0.12em",
                       textTransform: "uppercase",
-                      color: "var(--v16-holo-deep, #2563EB)",
+                      color: "var(--v16-holo-deep, #C9A961)",
                       whiteSpace: "nowrap",
                     }}
                   >
                     {s.tier}
                   </span>
                 </div>
-                <p style={{ fontSize: "0.8rem", lineHeight: 1.5, color: "var(--v16-ink-muted, #5A6470)", margin: 0 }}>
+                <p style={{ fontSize: "0.8rem", lineHeight: 1.5, color: "var(--v16-ink-muted, rgba(242,238,231,0.62))", margin: 0 }}>
                   {s.summary.slice(0, 220)}
                   {s.summary.length > 220 ? "…" : ""}
                 </p>
@@ -714,7 +714,7 @@ function highlightFigures(
         onMouseLeave={() => setActiveSource(null)}
         style={{
           background: backed ? "rgba(201,169,97,0.18)" : "rgba(224,163,59,0.12)",
-          color: backed ? "var(--v16-brass-deep, #8B6F2E)" : "#A86A1F",
+          color: backed ? "var(--v16-brass, #D8C089)" : "#E0A33B",
           padding: "0 3px",
           borderRadius: "4px",
           borderBottom: `1.5px solid ${backed ? "var(--v16-brass, #C9A961)" : "#E0A33B"}`,
@@ -749,12 +749,12 @@ function EditForm({
   const field: React.CSSProperties = {
     width: "100%",
     padding: "10px 12px",
-    background: "var(--v16-paper-cool, #F4F6F9)",
-    border: "1px solid var(--v16-chrome, #E8EBEE)",
+    background: "rgba(242,238,231,0.05)",
+    border: "1px solid var(--v16-chrome, rgba(242,238,231,0.12))",
     borderRadius: "8px",
     fontFamily: "inherit",
     fontSize: "0.95rem",
-    color: "var(--v16-ink, #0A0E14)",
+    color: "var(--v16-ink, #F2EEE7)",
     marginBottom: "14px",
   };
   return (
@@ -786,7 +786,7 @@ function ConfidenceArc({ pct }: { pct: number }) {
   return (
     <div style={{ position: "relative", width: "64px", height: "64px", flexShrink: 0 }}>
       <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: "rotate(-90deg)" }}>
-        <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="5" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(242,238,231,0.12)" strokeWidth="5" />
         <circle
           cx="32"
           cy="32"
@@ -809,7 +809,7 @@ function ConfidenceArc({ pct }: { pct: number }) {
           fontFamily: "var(--v16-font-display), Georgia, serif",
           fontSize: "1rem",
           fontWeight: 500,
-          color: "var(--v16-ink, #0A0E14)",
+          color: "var(--v16-ink, #F2EEE7)",
         }}
       >
         {pct}
@@ -820,10 +820,10 @@ function ConfidenceArc({ pct }: { pct: number }) {
 
 function Chip({ children, tone }: { children: React.ReactNode; tone: "gold" | "holo" | "muted" | "warn" }) {
   const map = {
-    gold: { bg: "rgba(201,169,97,0.16)", fg: "#8B6F2E", bd: "rgba(201,169,97,0.5)" },
-    holo: { bg: "rgba(91,165,245,0.14)", fg: "#2563EB", bd: "rgba(91,165,245,0.5)" },
-    muted: { bg: "rgba(90,100,112,0.12)", fg: "#5A6470", bd: "rgba(90,100,112,0.3)" },
-    warn: { bg: "rgba(224,163,59,0.16)", fg: "#A86A1F", bd: "rgba(224,163,59,0.5)" },
+    gold: { bg: "rgba(201,169,97,0.16)", fg: "#C9A961", bd: "rgba(201,169,97,0.5)" },
+    holo: { bg: "rgba(178,146,79,0.14)", fg: "#D8C089", bd: "rgba(178,146,79,0.5)" },
+    muted: { bg: "rgba(242,238,231,0.08)", fg: "rgba(242,238,231,0.62)", bd: "rgba(242,238,231,0.2)" },
+    warn: { bg: "rgba(224,163,59,0.16)", fg: "#E0A33B", bd: "rgba(224,163,59,0.5)" },
   }[tone];
   return (
     <span
@@ -856,7 +856,7 @@ function MetricRow({ items }: { items: [string, string][] }) {
               fontFamily: "var(--v16-font-display), Georgia, serif",
               fontSize: "1.05rem",
               fontWeight: 500,
-              color: "var(--v16-ink, #0A0E14)",
+              color: "var(--v16-ink, #F2EEE7)",
               fontVariantNumeric: "tabular-nums",
               lineHeight: 1,
             }}
@@ -869,7 +869,7 @@ function MetricRow({ items }: { items: [string, string][] }) {
               fontSize: "0.56rem",
               letterSpacing: "0.16em",
               textTransform: "uppercase",
-              color: "var(--v16-ink-muted, #5A6470)",
+              color: "var(--v16-ink-muted, rgba(242,238,231,0.62))",
               marginTop: "3px",
             }}
           >
@@ -890,7 +890,7 @@ function Label({ children }: { children: React.ReactNode }) {
         fontSize: "0.6rem",
         letterSpacing: "0.18em",
         textTransform: "uppercase",
-        color: "var(--v16-ink-muted, #5A6470)",
+        color: "var(--v16-ink-muted, rgba(242,238,231,0.62))",
         marginBottom: "6px",
       }}
     >
@@ -919,8 +919,8 @@ function LaunchConsole({ distribution }: { distribution: NewsArticle["distributi
             textTransform: "uppercase",
             padding: "3px 8px",
             borderRadius: "999px",
-            color: c.on ? "#3FCF8E" : "var(--v16-ink-faint, #9AA0AB)",
-            border: `1px solid ${c.on ? "rgba(63,207,142,0.4)" : "rgba(154,160,171,0.25)"}`,
+            color: c.on ? "#3FCF8E" : "var(--v16-ink-faint, rgba(242,238,231,0.42))",
+            border: `1px solid ${c.on ? "rgba(63,207,142,0.4)" : "rgba(242,238,231,0.2)"}`,
             background: c.on ? "rgba(63,207,142,0.1)" : "transparent",
             opacity: c.on ? 1 : 0.6,
           }}
@@ -948,10 +948,10 @@ function PillButton({
   title?: string;
 }) {
   const map = {
-    primary: { bg: "var(--v16-holo-blue, #5BA5F5)", fg: "#05070f", bd: "transparent" },
-    confirm: { bg: "#3FCF8E", fg: "#05070f", bd: "transparent" },
+    primary: { bg: "var(--v16-holo-blue, #C9A961)", fg: "#141414", bd: "transparent" },
+    confirm: { bg: "#3FCF8E", fg: "#141414", bd: "transparent" },
     danger: { bg: "#FF6B6B", fg: "#1a0606", bd: "transparent" },
-    ghost: { bg: "transparent", fg: "var(--v16-ink-faint, #9AA0AB)", bd: "rgba(255,255,255,0.18)" },
+    ghost: { bg: "transparent", fg: "var(--v16-ink-faint, rgba(242,238,231,0.42))", bd: "rgba(242,238,231,0.18)" },
   }[tone];
   return (
     <button

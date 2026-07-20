@@ -30,7 +30,7 @@ const CSS = `
 .v21-sw-cover {
   position: absolute; inset: 0; z-index: 6; pointer-events: none;
   will-change: transform; transform: translateZ(0);
-  background: linear-gradient(105deg, var(--navy-deep, #050817) 0%, var(--navy-rich, #141A2C) 50%, var(--navy-deep, #050817) 100%);
+  background: linear-gradient(105deg, var(--navy-deep, #080808) 0%, var(--navy-rich, #171717) 50%, var(--navy-deep, #080808) 100%);
   border-left: 3px solid var(--gold, #C9A961);
 }
 @media (max-width: 767px), (prefers-reduced-motion: reduce) {

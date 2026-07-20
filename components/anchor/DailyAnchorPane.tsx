@@ -61,8 +61,8 @@ export function DailyAnchorPane() {
     <section
       className="relative overflow-hidden"
       style={{
-        background: "var(--ink)",
-        color: "var(--paper)",
+        background: "var(--paper)",
+        color: "var(--ink)",
       }}
       data-section="dark"
     >
@@ -106,7 +106,7 @@ export function DailyAnchorPane() {
 
           <p
             className="mt-5 text-base md:text-lg leading-[1.65] max-w-[44ch]"
-            style={{ color: "rgba(248, 250, 252, 0.78)" }}
+            style={{ color: "rgba(242, 238, 231, 0.78)" }}
           >
             {anchor?.state === "ready"
               ? "A 90-second open from Raj — script generated from the day's lead story, voiced in his own voice, ready before you've had coffee."
@@ -118,7 +118,7 @@ export function DailyAnchorPane() {
               className="mt-6 rounded-2xl border p-4 text-sm leading-[1.65]"
               style={{
                 borderColor: "rgba(201,169,97,0.25)",
-                background: "rgba(255,255,255,0.03)",
+                background: "rgba(242,238,231,0.05)",
               }}
             >
               <summary
@@ -127,7 +127,7 @@ export function DailyAnchorPane() {
               >
                 Read the transcript
               </summary>
-              <div className="mt-3 whitespace-pre-wrap" style={{ color: "rgba(248,250,252,0.85)" }}>
+              <div className="mt-3 whitespace-pre-wrap" style={{ color: "rgba(242,238,231,0.85)" }}>
                 {anchor.script}
               </div>
             </details>
@@ -140,7 +140,7 @@ export function DailyAnchorPane() {
             className="relative aspect-video overflow-hidden"
             style={{
               background:
-                "radial-gradient(ellipse at top, #1a2540, #05081A 70%)",
+                "radial-gradient(ellipse at top, #2A2A2B, #141414 70%)",
               border: "1px solid rgba(201, 169, 97, 0.3)",
               borderRadius: "4px",
             }}
@@ -192,7 +192,7 @@ export function DailyAnchorPane() {
                 >
                   RT
                 </span>
-                <div className="text-[10px] font-mono uppercase tracking-[0.22em]" style={{ color: "rgba(248,250,252,0.55)" }}>
+                <div className="text-[10px] font-mono uppercase tracking-[0.22em]" style={{ color: "rgba(242,238,231,0.55)" }}>
                   {loading
                     ? "Anchor loading…"
                     : "First Anchor generates with the morning cron · 07:00 GST"}
@@ -228,7 +228,7 @@ export function DailyAnchorPane() {
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background:
-                    "linear-gradient(180deg, rgba(5,8,26,0.20) 0%, rgba(5,8,26,0.55) 100%)",
+                    "linear-gradient(180deg, rgba(20,20,20,0.20) 0%, rgba(20,20,20,0.55) 100%)",
                 }}
               />
             )}
@@ -264,7 +264,7 @@ export function DailyAnchorPane() {
                 style={{
                   background:
                     "radial-gradient(circle at 30% 30%, #E0C076, #A88945)",
-                  color: "#0A1024",
+                  color: "#141414",
                   fontSize: "1.8rem",
                   opacity: playing ? 0.55 : 1,
                   animation: playing ? "none" : "anchor-pulse 2.4s ease-in-out infinite",
@@ -278,14 +278,14 @@ export function DailyAnchorPane() {
           {/* Footer line — generated date + attribution */}
           <div
             className="mt-4 flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.22em] gap-3"
-            style={{ color: "rgba(248, 250, 252, 0.45)" }}
+            style={{ color: "rgba(242, 238, 231, 0.45)" }}
           >
             <span>
               {anchor?.date
                 ? `Generated · ${anchor.date}`
                 : "Awaiting first generation"}
             </span>
-            <span className="text-right" style={{ color: "rgba(248, 250, 252, 0.6)" }}>
+            <span className="text-right" style={{ color: "rgba(242, 238, 231, 0.6)" }}>
               {anchor?.audioUrl && (
                 <span>Voice · ElevenLabs · Raj</span>
               )}
@@ -296,7 +296,7 @@ export function DailyAnchorPane() {
                     Footage · {anchor.videoCredit}
                   </span>
                   {anchor.videoSource === "pexels-video" && (
-                    <span style={{ color: "rgba(248,250,252,0.45)" }}> · Pexels</span>
+                    <span style={{ color: "rgba(242,238,231,0.45)" }}> · Pexels</span>
                   )}
                 </>
               )}

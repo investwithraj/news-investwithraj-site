@@ -21,12 +21,12 @@ export default function ClosingBellIndex() {
   const bells = sortBells(CLOSING_BELLS);
   return (
     <main className="min-h-screen" style={{ background: "var(--paper)" }}>
-      <section className="relative pt-20 md:pt-28 pb-12 md:pb-16" style={{ background: "var(--ink)", color: "var(--paper)" }}>
+      <section className="relative pt-20 md:pt-28 pb-12 md:pb-16" style={{ background: "var(--paper)", color: "var(--ink)" }}>
         <div className="max-w-[1080px] mx-auto px-6 md:px-12">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8 opacity-70 hover:opacity-100"
-            style={{ color: "var(--paper)" }}
+            style={{ color: "var(--ink)" }}
             data-magnetic
           >
             <span aria-hidden>←</span>
@@ -38,7 +38,7 @@ export default function ClosingBellIndex() {
           <KineticHeadline
             className="mt-3 leading-[1.02] tracking-[-0.025em]"
             style={{
-              color: "var(--paper)",
+              color: "var(--ink)",
               fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
               fontWeight: 500,
             }}
@@ -55,7 +55,7 @@ export default function ClosingBellIndex() {
 
           <p
             className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-            style={{ color: "rgba(248, 250, 252, 0.78)" }}
+            style={{ color: "rgba(242, 238, 231, 0.78)" }}
           >
             The Dubai-business-day close, in three bullets and a line. Drops
             on Telegram and Discord at 16:30 GST. The desk's last word before
@@ -87,7 +87,7 @@ export default function ClosingBellIndex() {
                   href={`/closing-bell/${b.slug}`}
                   data-magnetic
                   className="group block rounded-2xl border p-6 md:p-8 transition-transform hover:-translate-y-0.5"
-                  style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+                  style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #202021)" }}
                 >
                   <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--gold-deep)" }}>
                     {b.displayDate} · 16:30 GST

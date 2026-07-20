@@ -39,7 +39,7 @@ export default function PulsePage() {
       {/* Hero */}
       <section
         className="relative pt-20 md:pt-28 pb-12 md:pb-16 overflow-hidden"
-        style={{ background: "var(--ink)", color: "var(--paper)" }}
+        style={{ background: "var(--paper)", color: "var(--ink)" }}
       >
         {/* V21 data-cinematics — pulse-loop.mp4 masthead backdrop (the main
             site's cinema loop) behind a dark scrim. Reduced-motion hides the
@@ -48,7 +48,7 @@ export default function PulsePage() {
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none select-none">
           <div
             className="absolute inset-0"
-            style={{ background: "linear-gradient(160deg, #0A0E1C 0%, #131B33 55%, #0A0E1C 100%)" }}
+            style={{ background: "linear-gradient(160deg, #141414 0%, #202021 55%, #141414 100%)" }}
           />
           <video
             className="v21-pulse-loop absolute inset-0 h-full w-full object-cover"
@@ -73,7 +73,7 @@ export default function PulsePage() {
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8 opacity-70 hover:opacity-100"
-            style={{ color: "var(--paper)" }}
+            style={{ color: "var(--ink)" }}
             data-magnetic
           >
             <span aria-hidden>←</span>
@@ -89,7 +89,7 @@ export default function PulsePage() {
           <KineticHeadline
             className="mt-3 leading-[1.02] tracking-[-0.025em]"
             style={{
-              color: "var(--paper)",
+              color: "var(--ink)",
               fontSize: "clamp(2.25rem, 5vw, 4rem)",
               fontWeight: 500,
             }}
@@ -109,7 +109,7 @@ export default function PulsePage() {
 
           <p
             className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-            style={{ color: "rgba(248, 250, 252, 0.78)" }}
+            style={{ color: "rgba(242, 238, 231, 0.78)" }}
           >
             Reddit threads, X replies, Telegram channels, trade press, and
             LinkedIn — scraped, scored, and plotted. Green = bullish chatter,
@@ -121,7 +121,7 @@ export default function PulsePage() {
           <div className="mt-10 grid grid-cols-2 md:grid-cols-5 gap-4">
             {channels.map((c) => (
               <div key={c.name} className="border-l-2 pl-4" style={{ borderColor: scoreToColor(c.score) }}>
-                <div className="text-[10px] font-mono uppercase tracking-[0.22em]" style={{ color: "rgba(248,250,252,0.5)" }}>
+                <div className="text-[10px] font-mono uppercase tracking-[0.22em]" style={{ color: "rgba(242,238,231,0.5)" }}>
                   {c.name}
                 </div>
                 <div
@@ -135,7 +135,7 @@ export default function PulsePage() {
                     {c.score.toFixed(2)}
                   </CountUp>
                 </div>
-                <div className="text-[10px] font-mono uppercase tracking-[0.18em] mt-1" style={{ color: "rgba(248,250,252,0.45)" }}>
+                <div className="text-[10px] font-mono uppercase tracking-[0.18em] mt-1" style={{ color: "rgba(242,238,231,0.45)" }}>
                   vol {c.volume}
                 </div>
               </div>
@@ -211,7 +211,7 @@ function SignalCard({
       className="group rounded-2xl border p-5 transition-transform hover:-translate-y-0.5"
       style={{
         borderColor: "var(--gold-soft)",
-        background: "var(--paper-pure, #FFFFFF)",
+        background: "var(--paper-pure, #202021)",
       }}
     >
       <div className="flex items-start justify-between mb-3">
@@ -245,7 +245,7 @@ function SignalCard({
       </p>
       <div
         className="mt-4 h-1.5 rounded-full overflow-hidden"
-        style={{ background: "rgba(10, 16, 36, 0.08)" }}
+        style={{ background: "rgba(242, 238, 231, 0.10)" }}
       >
         <div
           className="h-full"

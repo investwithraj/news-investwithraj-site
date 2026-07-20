@@ -146,7 +146,7 @@ function BentoCard({
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle at 30% 0%, rgba(255,255,255,0.25), transparent 60%)",
+            "radial-gradient(circle at 30% 0%, rgba(242,238,231,0.10), transparent 60%)",
         }}
       />
     </Link>

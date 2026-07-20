@@ -41,7 +41,7 @@ export default function Home() {
         className="v17-dark v17-cobalt"
         style={{
           position: "relative",
-          background: "linear-gradient(180deg, #0a0f1a, #0e1422)",
+          background: "linear-gradient(180deg, #141414, #1A1A1B)",
         }}
       >
         <main style={{ position: "relative", zIndex: 1, minHeight: "100svh" }}>
@@ -76,7 +76,7 @@ export default function Home() {
                   sizeClamp="clamp(2.25rem, 9.5vw, 9.5rem)"
                   trackingBreathe
                   decorative
-                  style={{ color: "rgba(234, 240, 250, 0.9)" }}
+                  style={{ color: "rgba(242, 238, 231, 0.9)" }}
                 />
               </span>
             ))}
@@ -91,17 +91,17 @@ export default function Home() {
         body[data-v17-route="true"] [data-iwr-ambient-audio] {
           display: none !important;
         }
-        body[data-v17-route="true"] { background: #05070d !important; }
+        body[data-v17-route="true"] { background: #141414 !important; }
         .v17-skip-link {
           position: fixed; top: 12px; left: 12px; z-index: 100;
-          padding: 10px 16px; background: #05070d; color: #EAF0FA;
-          border: 1px solid #2563EB; border-radius: 6px;
+          padding: 10px 16px; background: #1A1A1B; color: #F2EEE7;
+          border: 1px solid #B2924F; border-radius: 6px;
           font-family: var(--font-inter), system-ui, sans-serif;
           font-size: 13px; font-weight: 600; text-decoration: none;
           transform: translateY(-200%); transition: transform 160ms ease;
         }
         .v17-skip-link:focus, .v17-skip-link:focus-visible {
-          transform: translateY(0); outline: 2px solid #5BA5F5; outline-offset: 2px;
+          transform: translateY(0); outline: 2px solid #C9A961; outline-offset: 2px;
         }
       `}</style>
     </>

@@ -10,7 +10,7 @@ import { useEffect, useRef, CSSProperties } from "react";
  *   • N orbiting node circles arranged in concentric rings
  *   • Connecting arcs (curved bezier) from hub → each orbit node
  *   • Pulse cycle (~8s): nodes expand/contract, arcs fade-shift
- *   • Holographic blue color palette with soft glow blur
+ *   • Holographic gold color palette with soft glow blur
  *
  * Used on:
  *   • TheNote chapter backdrops (chapter 02 "the numbers")
@@ -40,18 +40,18 @@ const NODE_COUNTS: Record<Density, number> = {
 const COLOR_PALETTE = {
   light: {
     hub:       "#0A0E14",
-    node:      "#5BA5F5",
-    nodeGlow:  "rgba(91, 165, 245, 0.45)",
-    arc:       "rgba(91, 165, 245, 0.35)",
-    arcGlow:   "rgba(77, 208, 225, 0.18)",
+    node:      "#B2924F",
+    nodeGlow:  "rgba(178, 146, 79, 0.45)",
+    arc:       "rgba(178, 146, 79, 0.35)",
+    arcGlow:   "rgba(201, 169, 97, 0.18)",
     background: "transparent",
   },
   dark: {
-    hub:       "#5BA5F5",
-    node:      "#80E5F0",
-    nodeGlow:  "rgba(128, 229, 240, 0.55)",
-    arc:       "rgba(128, 229, 240, 0.45)",
-    arcGlow:   "rgba(91, 165, 245, 0.22)",
+    hub:       "#B2924F",
+    node:      "#D8C089",
+    nodeGlow:  "rgba(216, 192, 137, 0.55)",
+    arc:       "rgba(216, 192, 137, 0.45)",
+    arcGlow:   "rgba(178, 146, 79, 0.22)",
     background: "transparent",
   },
 };
@@ -160,7 +160,7 @@ export default function HolographicRadial({
         // Arc gradient — fade from hub to node
         const grad = ctx.createLinearGradient(cx, cy, nx, ny);
         grad.addColorStop(0, colors.arc);
-        grad.addColorStop(1, "rgba(91, 165, 245, 0)");
+        grad.addColorStop(1, "rgba(178, 146, 79, 0)");
 
         ctx.strokeStyle = grad;
         ctx.beginPath();
@@ -172,9 +172,9 @@ export default function HolographicRadial({
       // 2. Draw outer glow ring (atmosphere)
       const ringRadius = baseSize * 0.92;
       const ringGrad = ctx.createRadialGradient(cx, cy, ringRadius * 0.85, cx, cy, ringRadius * 1.05);
-      ringGrad.addColorStop(0, "rgba(91, 165, 245, 0)");
+      ringGrad.addColorStop(0, "rgba(178, 146, 79, 0)");
       ringGrad.addColorStop(0.5, colors.arcGlow);
-      ringGrad.addColorStop(1, "rgba(91, 165, 245, 0)");
+      ringGrad.addColorStop(1, "rgba(178, 146, 79, 0)");
       ctx.fillStyle = ringGrad;
       ctx.beginPath();
       ctx.arc(cx, cy, ringRadius * 1.05, 0, Math.PI * 2);
@@ -191,7 +191,7 @@ export default function HolographicRadial({
         // Glow
         const glowGrad = ctx.createRadialGradient(nx, ny, 0, nx, ny, nodeSize * 4);
         glowGrad.addColorStop(0, colors.nodeGlow);
-        glowGrad.addColorStop(1, "rgba(91, 165, 245, 0)");
+        glowGrad.addColorStop(1, "rgba(178, 146, 79, 0)");
         ctx.fillStyle = glowGrad;
         ctx.beginPath();
         ctx.arc(nx, ny, nodeSize * 4, 0, Math.PI * 2);
@@ -208,7 +208,7 @@ export default function HolographicRadial({
       const hubSize = (6 + pulse * 3) * dpr;
       const hubGlowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, hubSize * 5);
       hubGlowGrad.addColorStop(0, colors.nodeGlow);
-      hubGlowGrad.addColorStop(1, "rgba(91, 165, 245, 0)");
+      hubGlowGrad.addColorStop(1, "rgba(178, 146, 79, 0)");
       ctx.fillStyle = hubGlowGrad;
       ctx.beginPath();
       ctx.arc(cx, cy, hubSize * 5, 0, Math.PI * 2);

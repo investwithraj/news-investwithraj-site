@@ -76,7 +76,7 @@ export default function DevelopersIndex() {
                 data-magnetic
                 data-reveal=""
                 className="group rounded-2xl border p-6 hover:-translate-y-1 transition-transform flex flex-col"
-                style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+                style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
               >
                 <div className="flex items-start justify-between mb-4">
                   <span

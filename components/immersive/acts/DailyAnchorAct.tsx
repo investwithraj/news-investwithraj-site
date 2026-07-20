@@ -19,11 +19,19 @@
 // analyst — never a "broker". WhatsApp: +971 58 996 6085.
 
 import { useEffect, useRef, useState } from "react";
-import { AuroraBackground, AURORA_COBALT_STOPS } from "@/components/futurism/AuroraBackground";
+import { AuroraBackground, type AuroraStop } from "@/components/futurism/AuroraBackground";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
 
 const WHATSAPP_URL = "https://wa.me/971589966085";
+
+// Pangea dark-register gold aurora stops (real-gold glow on the warm-black void).
+const AURORA_GOLD_STOPS: AuroraStop[] = [
+  { r: 178, g: 146, b: 79, a: 0.30 },   // gold
+  { r: 201, g: 169, b: 97, a: 0.20 },   // bright gold
+  { r: 126, g: 102, b: 54, a: 0.26 },   // deep gold
+  { r: 13, g: 11, b: 7, a: 0.10 },      // warm void wash
+];
 
 // Broadcast-status rails shown beside the booth. Qualitative only — no numbers.
 const SIGNAL_RAILS: ReadonlyArray<{ label: string; value: string }> = [
@@ -150,12 +158,12 @@ export default function DailyAnchorAct() {
         alignItems: "center",
         overflow: "hidden",
         background: "transparent",
-        color: "var(--v17-text, #EAF0FA)",
+        color: "var(--v17-text, #F2EEE7)",
         paddingBlock: "clamp(4rem, 9vw, 7.5rem)",
       }}
     >
       {/* Cobalt aurora wash — the booth's ambient backlight. */}
-      <AuroraBackground speed={0.65} opacity={0.4} stops={AURORA_COBALT_STOPS} />
+      <AuroraBackground speed={0.65} opacity={0.4} stops={AURORA_GOLD_STOPS} />
 
       {/* Cobalt vignette + grain to seat the booth in a dark studio. */}
       <div
@@ -165,7 +173,7 @@ export default function DailyAnchorAct() {
           inset: 0,
           pointerEvents: "none",
           background:
-            "radial-gradient(120% 90% at 50% 0%, rgba(37,99,235,0.18), transparent 55%), radial-gradient(100% 100% at 50% 120%, rgba(0,0,0,0.55), transparent 60%)",
+            "radial-gradient(120% 90% at 50% 0%, rgba(178,146,79,0.18), transparent 55%), radial-gradient(100% 100% at 50% 120%, rgba(0,0,0,0.55), transparent 60%)",
         }}
       />
 
@@ -220,7 +228,7 @@ export default function DailyAnchorAct() {
               as="h2"
               style={{
                 marginTop: "1.25rem",
-                color: "var(--v17-text, #EAF0FA)",
+                color: "var(--v17-text, #F2EEE7)",
                 fontSize: "clamp(2rem, 5.4vw, 3.75rem)",
                 lineHeight: 1.04,
                 fontWeight: 400,
@@ -245,7 +253,7 @@ export default function DailyAnchorAct() {
                 maxWidth: "52ch",
                 fontSize: "clamp(1rem, 1.4vw, 1.15rem)",
                 lineHeight: 1.65,
-                color: "rgba(240, 245, 255, 0.74)",
+                color: "rgba(242, 238, 231, 0.74)",
               }}
             >
               Step into the booth. Each morning the lead story becomes a short,
@@ -265,11 +273,11 @@ export default function DailyAnchorAct() {
               fontSize: "0.625rem",
               letterSpacing: "0.3em",
               textTransform: "uppercase",
-              color: "rgba(240, 245, 255, 0.6)",
+              color: "rgba(242, 238, 231, 0.6)",
               padding: "0.5rem 0.85rem",
               borderRadius: "999px",
-              border: "1px solid rgba(91, 165, 245, 0.3)",
-              background: "rgba(37, 99, 235, 0.08)",
+              border: "1px solid rgba(178, 146, 79, 0.3)",
+              background: "rgba(178, 146, 79, 0.12)",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
             }}
@@ -315,8 +323,8 @@ export default function DailyAnchorAct() {
                 key={rail.label}
                 style={{
                   borderRadius: "18px",
-                  border: "1px solid rgba(91, 165, 245, 0.18)",
-                  background: "rgba(240, 245, 255, 0.04)",
+                  border: "1px solid rgba(242, 238, 231, 0.12)",
+                  background: "rgba(242, 238, 231, 0.05)",
                   backdropFilter: "blur(14px)",
                   WebkitBackdropFilter: "blur(14px)",
                   padding: "0.9rem 1.05rem",
@@ -339,7 +347,7 @@ export default function DailyAnchorAct() {
                     fontFamily: "var(--font-editorial, var(--font-fraunces, Georgia))",
                     fontSize: "0.95rem",
                     lineHeight: 1.3,
-                    color: "rgba(240, 245, 255, 0.9)",
+                    color: "rgba(242, 238, 231, 0.9)",
                   }}
                 >
                   {rail.value}
@@ -355,8 +363,8 @@ export default function DailyAnchorAct() {
             style={{
               position: "relative",
               borderRadius: "28px",
-              border: "1px solid rgba(91, 165, 245, 0.28)",
-              background: "rgba(12, 18, 38, 0.55)",
+              border: "1px solid rgba(242, 238, 231, 0.14)",
+              background: "rgba(26, 26, 27, 0.55)",
               backdropFilter: "blur(20px) saturate(160%)",
               WebkitBackdropFilter: "blur(20px) saturate(160%)",
               boxShadow:
@@ -388,12 +396,12 @@ export default function DailyAnchorAct() {
                 justifyContent: "space-between",
                 gap: "1rem",
                 padding: "0.85rem clamp(1rem, 2.5vw, 1.6rem)",
-                borderBottom: "1px solid rgba(91, 165, 245, 0.14)",
+                borderBottom: "1px solid rgba(242, 238, 231, 0.12)",
                 fontFamily: "var(--font-mono)",
                 fontSize: "0.5625rem",
                 letterSpacing: "0.26em",
                 textTransform: "uppercase",
-                color: "rgba(240, 245, 255, 0.55)",
+                color: "rgba(242, 238, 231, 0.55)",
               }}
             >
               <span>Broadcast booth</span>
@@ -421,7 +429,7 @@ export default function DailyAnchorAct() {
             fontSize: "0.6875rem",
             letterSpacing: "0.16em",
             textTransform: "uppercase",
-            color: "rgba(240, 245, 255, 0.5)",
+            color: "rgba(242, 238, 231, 0.5)",
           }}
         >
           <span>Want the read in person?</span>

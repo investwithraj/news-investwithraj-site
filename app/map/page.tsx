@@ -64,13 +64,13 @@ export default function MapPage() {
   }));
 
   return (
-    <main className="min-h-screen" style={{ background: "var(--ink)", color: "var(--paper)" }}>
+    <main className="min-h-screen" style={{ background: "var(--paper)", color: "var(--ink)" }}>
       <section className="relative pt-16 md:pt-24 pb-8">
         <div className="max-w-[1240px] mx-auto px-6 md:px-12">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-6 opacity-70 hover:opacity-100"
-            style={{ color: "var(--paper)" }}
+            style={{ color: "var(--ink)" }}
             data-magnetic
           >
             <span aria-hidden>←</span>
@@ -88,7 +88,7 @@ export default function MapPage() {
               <KineticHeadline
                 className="mt-3 leading-[1.02] tracking-[-0.025em]"
                 style={{
-                  color: "var(--paper)",
+                  color: "var(--ink)",
                   fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
                   fontWeight: 500,
                 }}

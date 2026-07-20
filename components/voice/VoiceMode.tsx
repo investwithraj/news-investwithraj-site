@@ -186,8 +186,8 @@ export function VoiceMode() {
         <div
           className="rounded-2xl border max-w-sm p-4 shadow-xl"
           style={{
-            background: "rgba(10, 16, 36, 0.92)",
-            color: "var(--paper)",
+            background: "rgba(20, 20, 20, 0.92)",
+            color: "var(--ink)",
             borderColor: "rgba(201, 169, 97, 0.35)",
             backdropFilter: "blur(20px)",
           }}
@@ -197,7 +197,7 @@ export function VoiceMode() {
               <div className="text-[9px] font-mono uppercase tracking-[0.22em] mb-1" style={{ color: "rgba(248,250,252,0.45)" }}>
                 You asked
               </div>
-              <div className="text-sm mb-3" style={{ color: "var(--paper)" }}>
+              <div className="text-sm mb-3" style={{ color: "var(--ink)" }}>
                 {transcript}
               </div>
             </>

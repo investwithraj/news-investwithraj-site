@@ -33,18 +33,18 @@ interface Props {
 }
 
 const CHANNEL_CHIP_COLORS: Record<QueueChannel, string> = {
-  reddit: "bg-orange-100 text-orange-900 border-orange-200",
-  quora: "bg-red-100 text-red-900 border-red-200",
-  haro: "bg-blue-100 text-blue-900 border-blue-200",
-  qwoted: "bg-cyan-100 text-cyan-900 border-cyan-200",
-  featured: "bg-violet-100 text-violet-900 border-violet-200",
-  stackexchange: "bg-amber-100 text-amber-900 border-amber-200",
-  biggerpockets: "bg-emerald-100 text-emerald-900 border-emerald-200",
-  propertyhub: "bg-teal-100 text-teal-900 border-teal-200",
-  "discord-investor": "bg-indigo-100 text-indigo-900 border-indigo-200",
-  "linkedin-comment": "bg-sky-100 text-sky-900 border-sky-200",
-  "twitter-reply": "bg-slate-100 text-slate-900 border-slate-200",
-  "telegram-group": "bg-blue-100 text-blue-900 border-blue-200",
+  reddit: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+  quora: "bg-red-500/15 text-red-300 border-red-500/30",
+  haro: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  qwoted: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+  featured: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+  stackexchange: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  biggerpockets: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  propertyhub: "bg-teal-500/15 text-teal-300 border-teal-500/30",
+  "discord-investor": "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
+  "linkedin-comment": "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  "twitter-reply": "bg-slate-500/15 text-slate-300 border-slate-500/30",
+  "telegram-group": "bg-blue-500/15 text-blue-300 border-blue-500/30",
 };
 
 function timeUntil(iso: string): string {
@@ -136,20 +136,20 @@ export function DashboardClient({
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0A1024]">
+    <div className="min-h-screen bg-[#141414] text-[#F2EEE7]">
       {/* Header */}
-      <header className="border-b border-[#0A1024]/10 bg-white sticky top-0 z-10">
+      <header className="border-b border-[rgba(242,238,231,0.12)] bg-[#1A1A1B] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="font-serif text-xl tracking-tight">Outreach Queue</h1>
-            <p className="text-xs text-[#0A1024]/50 mt-1">
+            <p className="text-xs text-[rgba(242,238,231,0.46)] mt-1">
               news.investwithraj.com · backend: <span className="font-mono">{backend}</span>
             </p>
           </div>
           <button
             onClick={() => startTransition(() => router.refresh())}
             disabled={isPending}
-            className="text-sm px-4 py-2 rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5 disabled:opacity-50"
+            className="text-sm px-4 py-2 rounded-md border border-[rgba(242,238,231,0.14)] hover:bg-[rgba(242,238,231,0.06)] disabled:opacity-50"
           >
             {isPending ? "Refreshing…" : "Refresh"}
           </button>
@@ -157,30 +157,30 @@ export function DashboardClient({
 
         {/* Stats strip */}
         <div className="max-w-7xl mx-auto px-6 pb-4 flex flex-wrap gap-3 text-xs">
-          <StatChip label="pending" value={stats.pending} color="bg-[#C9A961]/15 text-[#A88945]" />
-          <StatChip label="urgent" value={urgent.length} color="bg-red-100 text-red-900" />
-          <StatChip label="edited" value={stats.edited} color="bg-amber-100 text-amber-900" />
-          <StatChip label="approved" value={stats.approved} color="bg-emerald-100 text-emerald-900" />
-          <StatChip label="posted" value={stats.posted} color="bg-emerald-200 text-emerald-900" />
-          <StatChip label="skipped" value={stats.skipped} color="bg-slate-100 text-slate-700" />
-          <StatChip label="expired" value={stats.expired} color="bg-red-50 text-red-700" />
-          <StatChip label="total" value={stats.total} color="bg-slate-200 text-slate-700" />
+          <StatChip label="pending" value={stats.pending} color="bg-[#C9A961]/15 text-[#C9A961]" />
+          <StatChip label="urgent" value={urgent.length} color="bg-red-500/15 text-red-300" />
+          <StatChip label="edited" value={stats.edited} color="bg-amber-500/15 text-amber-300" />
+          <StatChip label="approved" value={stats.approved} color="bg-emerald-500/15 text-emerald-300" />
+          <StatChip label="posted" value={stats.posted} color="bg-emerald-500/20 text-emerald-300" />
+          <StatChip label="skipped" value={stats.skipped} color="bg-slate-500/15 text-slate-300" />
+          <StatChip label="expired" value={stats.expired} color="bg-red-500/10 text-red-300" />
+          <StatChip label="total" value={stats.total} color="bg-slate-500/20 text-slate-300" />
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-10">
         {/* Urgent banner */}
         {urgent.length > 0 && (
-          <section className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <section className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-serif text-base text-red-900">
+              <h2 className="font-serif text-base text-red-300">
                 {urgent.length} item{urgent.length === 1 ? "" : "s"} expiring within 4 hours
               </h2>
             </div>
             <div className="space-y-2 text-sm">
               {urgent.map((item) => (
                 <div key={item.id} className="flex items-center justify-between gap-3">
-                  <span className="text-red-900">
+                  <span className="text-red-300">
                     <span className="font-mono text-xs mr-2">{timeUntil(item.expiresAt)}</span>
                     <span className="opacity-70">{channelPolicies[item.channel].label}</span> ·{" "}
                     {item.target}
@@ -216,7 +216,7 @@ export function DashboardClient({
           </div>
 
           {visiblePending.length === 0 ? (
-            <div className="text-center py-16 text-[#0A1024]/40 text-sm">
+            <div className="text-center py-16 text-[rgba(242,238,231,0.42)] text-sm">
               No pending items in this channel.
             </div>
           ) : (
@@ -227,7 +227,7 @@ export function DashboardClient({
                 return (
                   <article
                     key={item.id}
-                    className="bg-white border border-[#0A1024]/10 rounded-lg p-5 shadow-sm"
+                    className="bg-[#202021] border border-[rgba(242,238,231,0.12)] rounded-lg p-5 shadow-sm"
                   >
                     {/* Card header */}
                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -237,28 +237,28 @@ export function DashboardClient({
                         >
                           {policy.label}
                         </span>
-                        <span className="text-xs text-[#0A1024]/60">→ {item.target}</span>
+                        <span className="text-xs text-[rgba(242,238,231,0.62)]">→ {item.target}</span>
                         {item.status === "edited" && (
-                          <span className="text-[10px] uppercase font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                          <span className="text-[10px] uppercase font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded">
                             edited
                           </span>
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="text-xs font-mono text-[#0A1024]/60">
+                        <div className="text-xs font-mono text-[rgba(242,238,231,0.62)]">
                           {timeUntil(item.expiresAt)} left
                         </div>
-                        <div className="text-[10px] text-[#0A1024]/40">
+                        <div className="text-[10px] text-[rgba(242,238,231,0.42)]">
                           created {timeAgo(item.createdAt)}
                         </div>
                       </div>
                     </div>
 
                     {/* Rationale */}
-                    <p className="text-xs text-[#0A1024]/60 italic mb-3">{item.rationale}</p>
+                    <p className="text-xs text-[rgba(242,238,231,0.62)] italic mb-3">{item.rationale}</p>
 
                     {/* Policy note */}
-                    <p className="text-[10px] text-[#0A1024]/40 mb-3 border-l-2 border-[#C9A961]/40 pl-2">
+                    <p className="text-[10px] text-[rgba(242,238,231,0.42)] mb-3 border-l-2 border-[#C9A961]/40 pl-2">
                       <span className="font-mono uppercase mr-1">policy:</span>
                       {policy.policyNote}
                     </p>
@@ -270,18 +270,18 @@ export function DashboardClient({
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
                           rows={12}
-                          className="w-full font-mono text-xs p-3 border border-[#0A1024]/15 rounded bg-[#F8FAFC]"
+                          className="w-full font-mono text-xs p-3 border border-[rgba(242,238,231,0.14)] rounded bg-[rgba(242,238,231,0.04)]"
                         />
                         <input
                           type="text"
                           value={editNote}
                           onChange={(e) => setEditNote(e.target.value)}
                           placeholder="Edit note (optional)"
-                          className="w-full text-xs p-2 border border-[#0A1024]/15 rounded"
+                          className="w-full text-xs p-2 border border-[rgba(242,238,231,0.14)] rounded"
                         />
                       </div>
                     ) : (
-                      <pre className="text-xs font-mono whitespace-pre-wrap bg-[#F8FAFC] p-3 rounded border border-[#0A1024]/5 mb-3 max-h-48 overflow-y-auto">
+                      <pre className="text-xs font-mono whitespace-pre-wrap bg-[rgba(242,238,231,0.04)] p-3 rounded border border-[rgba(242,238,231,0.08)] mb-3 max-h-48 overflow-y-auto">
                         {item.draftText}
                       </pre>
                     )}
@@ -291,25 +291,25 @@ export function DashboardClient({
                         href={`/news/${item.sourceArticleSlug}`}
                         target="_blank"
                         rel="noopener"
-                        className="text-xs text-[#A88945] hover:underline mb-3 inline-block"
+                        className="text-xs text-[#B2924F] hover:underline mb-3 inline-block"
                       >
                         ↗ source article: {item.sourceArticleSlug}
                       </a>
                     )}
 
                     {/* Actions */}
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#0A1024]/5">
+                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[rgba(242,238,231,0.08)]">
                       {isEditing ? (
                         <>
                           <button
                             onClick={() => saveEdit(item.id)}
-                            className="px-3 py-1.5 text-xs rounded-md bg-[#0A1024] text-white hover:bg-[#0A1024]/90"
+                            className="px-3 py-1.5 text-xs rounded-md bg-[#F2EEE7] text-[#141414] hover:bg-white"
                           >
                             Save edit
                           </button>
                           <button
                             onClick={cancelEdit}
-                            className="px-3 py-1.5 text-xs rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5"
+                            className="px-3 py-1.5 text-xs rounded-md border border-[rgba(242,238,231,0.14)] hover:bg-[rgba(242,238,231,0.06)]"
                           >
                             Cancel
                           </button>
@@ -324,7 +324,7 @@ export function DashboardClient({
                           </button>
                           <button
                             onClick={() => copyDraft(item.draftText)}
-                            className="px-3 py-1.5 text-xs rounded-md bg-[#C9A961] text-[#0A1024] hover:bg-[#A88945] hover:text-white"
+                            className="px-3 py-1.5 text-xs rounded-md bg-[#C9A961] text-[#141414] hover:bg-[#B2924F] hover:text-white"
                           >
                             Copy draft
                           </button>
@@ -333,25 +333,25 @@ export function DashboardClient({
                               const url = window.prompt("Posted URL (optional):");
                               callAction(item.id, "mark-posted", { postedUrl: url || undefined });
                             }}
-                            className="px-3 py-1.5 text-xs rounded-md bg-emerald-100 text-emerald-900 hover:bg-emerald-200"
+                            className="px-3 py-1.5 text-xs rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
                           >
                             Mark posted
                           </button>
                           <button
                             onClick={() => startEdit(item)}
-                            className="px-3 py-1.5 text-xs rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5"
+                            className="px-3 py-1.5 text-xs rounded-md border border-[rgba(242,238,231,0.14)] hover:bg-[rgba(242,238,231,0.06)]"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => callAction(item.id, "postpone")}
-                            className="px-3 py-1.5 text-xs rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5"
+                            className="px-3 py-1.5 text-xs rounded-md border border-[rgba(242,238,231,0.14)] hover:bg-[rgba(242,238,231,0.06)]"
                           >
                             Postpone +{policy.expiryHours}h
                           </button>
                           <button
                             onClick={() => callAction(item.id, "skip")}
-                            className="px-3 py-1.5 text-xs rounded-md border border-red-200 text-red-700 hover:bg-red-50"
+                            className="px-3 py-1.5 text-xs rounded-md border border-red-500/30 text-red-300 hover:bg-red-500/10"
                           >
                             Skip
                           </button>
@@ -359,7 +359,7 @@ export function DashboardClient({
                             onClick={() => {
                               if (confirm("Delete this item?")) callAction(item.id, "delete");
                             }}
-                            className="px-3 py-1.5 text-xs rounded-md text-red-700 hover:bg-red-50 ml-auto"
+                            className="px-3 py-1.5 text-xs rounded-md text-red-300 hover:bg-red-500/10 ml-auto"
                           >
                             Delete
                           </button>
@@ -376,12 +376,12 @@ export function DashboardClient({
         {/* Recent activity */}
         {recentActivity.length > 0 && (
           <section>
-            <h2 className="font-serif text-base mb-4 text-[#0A1024]/70">Last 24h activity</h2>
+            <h2 className="font-serif text-base mb-4 text-[rgba(242,238,231,0.74)]">Last 24h activity</h2>
             <div className="space-y-2 text-sm">
               {recentActivity.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-3 px-3 py-2 bg-white border border-[#0A1024]/5 rounded"
+                  className="flex items-center justify-between gap-3 px-3 py-2 bg-[rgba(242,238,231,0.04)] border border-[rgba(242,238,231,0.08)] rounded"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
@@ -389,21 +389,21 @@ export function DashboardClient({
                     >
                       {channelPolicies[item.channel].label}
                     </span>
-                    <span className="text-xs text-[#0A1024]/60">{item.target}</span>
+                    <span className="text-xs text-[rgba(242,238,231,0.62)]">{item.target}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs">
                     <span
                       className={`uppercase font-mono text-[10px] px-2 py-0.5 rounded ${
                         item.status === "posted"
-                          ? "bg-emerald-100 text-emerald-900"
+                          ? "bg-emerald-500/15 text-emerald-300"
                           : item.status === "skipped"
-                            ? "bg-slate-100 text-slate-700"
-                            : "bg-red-50 text-red-700"
+                            ? "bg-slate-500/15 text-slate-300"
+                            : "bg-red-500/10 text-red-300"
                       }`}
                     >
                       {item.status}
                     </span>
-                    <span className="text-[#0A1024]/40">
+                    <span className="text-[rgba(242,238,231,0.42)]">
                       {item.actedAt ? timeAgo(item.actedAt) : ""}
                     </span>
                     {item.postedUrl && (
@@ -411,7 +411,7 @@ export function DashboardClient({
                         href={item.postedUrl}
                         target="_blank"
                         rel="noopener"
-                        className="text-[#A88945] hover:underline"
+                        className="text-[#B2924F] hover:underline"
                       >
                         ↗
                       </a>
@@ -460,8 +460,8 @@ function ChannelTab({
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full border transition ${
         active
-          ? "bg-[#0A1024] text-white border-[#0A1024]"
-          : "bg-white border-[#0A1024]/10 text-[#0A1024]/70 hover:bg-[#0A1024]/5"
+          ? "bg-[#F2EEE7] text-[#141414] border-[#F2EEE7]"
+          : "bg-[rgba(242,238,231,0.04)] border-[rgba(242,238,231,0.12)] text-[rgba(242,238,231,0.74)] hover:bg-[rgba(242,238,231,0.08)]"
       }`}
     >
       {label} <span className="opacity-60 ml-1">{count}</span>

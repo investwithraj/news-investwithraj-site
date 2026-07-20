@@ -51,7 +51,7 @@ export default function PageLoadCurtain() {
       aria-hidden="true"
       className="fixed inset-0 z-[9700] flex items-center justify-center pointer-events-none overflow-hidden"
       style={{
-        background: "var(--ink)",
+        background: "var(--paper)",
         transform: phase === "up" ? "translateY(-100%)" : "translateY(0)",
         transition: "transform 800ms var(--ease-curtain)",
       }}

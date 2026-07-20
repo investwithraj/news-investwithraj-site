@@ -37,7 +37,7 @@ const CSS = `
   line-height: 0.78;
   letter-spacing: -0.02em;
   font-size: var(--gw-size, clamp(3.5rem, 17vw, 17rem));
-  color: var(--ink, #2B2621);
+  color: var(--ink, #F2EEE7);
   white-space: nowrap;
   user-select: none;
 }

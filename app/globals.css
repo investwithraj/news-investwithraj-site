@@ -23,22 +23,31 @@
      Camper & Nicholsons · Montfort. Their cream is warmer than v12's. Their
      ink is charcoal not navy-black. Their hairlines are taupe not slate.
      Pure white is BANNED. Pure black is BANNED. */
-  --paper:        #F5F1ED; /* Cucinelli warm cream — PRIMARY canvas */
-  --paper-pure:   #FBF8F2; /* Lightest surface — never #fff */
-  --paper-warm:   #E8DFD0; /* Secondary surface — cards on canvas, hover lift */
-  --paper-cream:  #DDD0BB; /* Deepest cream — section dividers, footer band */
-  --surface-card: #9B8B7E; /* Warm taupe — used SPARINGLY for elevated cards */
-  --chrome:       #DCD3C2; /* Cucinelli taupe-grey */
-  --chrome-deep:  #B5A998; /* Mid-tone for 1px hairlines */
-  --silver:       #C8CFD9;
+  /* ───────────────────────────────────────────────────────────────────────
+     v22 PANGEA DARK RESET — 20 Jul 2026. The news terminal is re-registered
+     to match investwithraj.com's Pangea×Metropolitan home: dark cinematic
+     editorial luxury. Token NAMES are preserved (zero per-component edits);
+     only VALUES flip — the same strategy this file used for gold→cobalt, now
+     pushed all the way to the dark ground. Pure black + pure white BANNED.
+     Ground #141414 · warm-white ink #F2EEE7 · REAL gold #B2924F (sparing).
+     ─────────────────────────────────────────────────────────────────────── */
+  color-scheme: dark;
+  --paper:        #141414; /* Pangea ground — PRIMARY canvas (was cream) */
+  --paper-pure:   #1A1A1B; /* Base surface — never pure black */
+  --paper-warm:   #202021; /* Secondary surface — cards, hover lift */
+  --paper-cream:  #2A2A2B; /* Deepest raise — section dividers, footer band */
+  --surface-card: #24241E; /* Warm elevated card — used SPARINGLY */
+  --chrome:       #2A2A2B; /* Dark chrome surface */
+  --chrome-deep:  rgba(242, 238, 231, 0.14); /* Light hairline on dark — 1px rules */
+  --silver:       #8A8680; /* Mid grey — secondary chrome text */
 
   /* Ink — Cucinelli warm charcoal, NOT navy-black. Their "black" reads
      as a deep warm brown-grey (#2B2621), not as cool slate. Every ink
      token is warm-toned to harmonise with the cream surface. */
-  --ink:       #2B2621;  /* Warm charcoal — primary type */
-  --ink-soft:  #4A413A;  /* Body type at scale */
-  --ink-muted: #7C7268;  /* Secondary copy, labels */
-  --ink-faint: #7A6541;  /* Captions, eyebrows, faded mono labels — deepened from #A89D8E to clear WCAG AA (~4.6:1) on cream while keeping the warm brass */
+  --ink:       #F2EEE7;  /* Warm white — primary type on dark ground */
+  --ink-soft:  #D8D3CA;  /* Body type at scale */
+  --ink-muted: #9C968C;  /* Secondary copy, labels (~.62 of ink) */
+  --ink-faint: #8B857B;  /* Captions, eyebrows, faded mono labels — light enough to clear WCAG AA (~4.6:1) on #141414 while keeping the warm cast */
 
   /* v13 — Cucinelli brass. Slightly deeper than v12 gold so it reads
      against the warmer cream. The ONLY visible accent — must touch
@@ -51,12 +60,12 @@
      is unchanged (brand mark, primary CTA, editorial italic accents, 1px
      hairlines — never a fill, never a background). Values = the main-site v16
      blue family (#2563EB / #5BA5F5 / #1E3A8A). */
-  --gold:        #2563EB; /* Primary accent — royal cobalt (main-site blue) */
-  --gold-deep:   #1D4ED8; /* Deeper — italic headline words + CTAs on light */
-  --gold-bright: #5BA5F5; /* Highlights only */
-  --gold-rich:   #1E3A8A; /* Deepest — for hairlines */
-  --gold-soft:   rgba(37, 99, 235, 0.10);
-  --gold-glow:   rgba(37, 99, 235, 0.22);
+  --gold:        #B2924F; /* Primary accent — REAL Pangea gold (fixes the cobalt trap) */
+  --gold-deep:   #C9A961; /* Brighter — italic headline words + CTAs pop on dark */
+  --gold-bright: #D8C089; /* Highlights only */
+  --gold-rich:   #7E6636; /* Deepest — for hairlines */
+  --gold-soft:   rgba(178, 146, 79, 0.12);
+  --gold-glow:   rgba(178, 146, 79, 0.24);
 
   /* v12 — paper-warm / paper-cream moved up into the primary surface block
      above. The duplicates here are retained as semantic aliases so legacy
@@ -64,44 +73,44 @@
 
   /* v11 EXPLICIT navy — same as --ink but semantic for hero backdrop
      + footer + the single dark moments. */
-  --navy: #0A1024;
-  --navy-deep: #050817;
-  --navy-rich: #141A2C;
+  --navy: #0E0E0E;
+  --navy-deep: #080808;
+  --navy-rich: #171717;
 
   /* v11 ENERGY accent — cyan holographic, DEMOTED from v10 primary.
      Used ONLY for: live signals (DLD pulse), scroll progress,
      terminal code, "engine running" indicators. NEVER for body text,
      headlines, or primary CTAs. */
-  --holo: #00BCD4;
-  --holo-deep: #0091EA;
-  --holo-bright: #80E5F0;
-  --holo-soft: rgba(0, 188, 212, 0.12);
-  --holo-glow: rgba(0, 188, 212, 0.35);
+  --holo: #3AA6B8;        /* Muted teal — LIVE-DATA signal only (terminal identity, distinct from gold) */
+  --holo-deep: #2A8494;
+  --holo-bright: #6FC9D6;
+  --holo-soft: rgba(58, 166, 184, 0.12);
+  --holo-glow: rgba(58, 166, 184, 0.30);
 
   /* SECONDARY surface accent — organic plant green (very sparing,
      1-2 instances per page max). */
-  --organic: #7CB342;
-  --organic-soft: rgba(124, 179, 66, 0.08);
-  --organic-deep: #558B2F;
+  --organic: #86C255;     /* Positive-delta green — lifted for legibility on dark */
+  --organic-soft: rgba(134, 194, 85, 0.10);
+  --organic-deep: #5E9E38;
 
   /* Magenta accent — used very sparingly for "live" pulse / RT-style hot signal */
   --magenta: #FF006E;
 
   /* The single dark moment — used inside dark stat card on light surface */
-  --graphite: #0A0E1C;
-  --graphite-warm: #141A2C;
+  --graphite: #1C1C1D;
+  --graphite-warm: #232320;
 
   /* Gradients
      v11 — gold-grad is the new primary editorial accent (replaces
      v10 cyan-grad). Used for headline accent words, hero ring, brand mark.
      Cyan grad kept for live-signal moments only (scroll progress, etc). */
-  --grad-gold: linear-gradient(135deg, #1D4ED8, #5BA5F5, #2563EB);
-  --grad-gold-rich: linear-gradient(135deg, #1E3A8A, #2563EB, #1D4ED8);
-  --grad-holo: linear-gradient(135deg, #0091EA, #00BCD4, #006FB4);
-  --grad-holo-soft: linear-gradient(135deg, #4DD0E1, #0091EA, #4DD0E1);
-  --grad-chrome: linear-gradient(180deg, #F8FAFC, #E8ECF2);
-  --grad-navy: linear-gradient(180deg, #050817 0%, #0A1024 50%, #141A2C 100%);
-  --grad-aurora: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(248, 250, 252, 0.15), rgba(91, 165, 245, 0.2));
+  --grad-gold: linear-gradient(135deg, #7E6636, #D8C089, #B2924F);
+  --grad-gold-rich: linear-gradient(135deg, #7E6636, #B2924F, #C9A961);
+  --grad-holo: linear-gradient(135deg, #2A8494, #3AA6B8, #206F80);
+  --grad-holo-soft: linear-gradient(135deg, #6FC9D6, #2A8494, #6FC9D6);
+  --grad-chrome: linear-gradient(180deg, #202021, #141414);
+  --grad-navy: linear-gradient(180deg, #080808 0%, #0E0E0E 50%, #171717 100%);
+  --grad-aurora: linear-gradient(135deg, rgba(178, 146, 79, 0.28), rgba(242, 238, 231, 0.08), rgba(216, 192, 134, 0.18));
 
   /* v12 SOTM RESET — shadows.
      SOTM rule: NO drop-shadows. Elevation comes from color + 1px hairlines + scale,
@@ -113,8 +122,8 @@
   --shadow-gold-glow: 0 0 0 1px var(--gold);
   --shadow-holo: 0 0 0 1px var(--holo-soft);
   --shadow-card: 0 0 0 1px var(--chrome-deep);
-  --shadow-glass: 0 0 0 1px rgba(196, 187, 168, 0.35);
-  --shadow-editorial: 0 0 0 1px rgba(196, 187, 168, 0.5);
+  --shadow-glass: 0 0 0 1px rgba(242, 238, 231, 0.12);
+  --shadow-editorial: 0 0 0 1px rgba(242, 238, 231, 0.18);
 
   /* The only "real" elevation token in v12 — used sparingly, never on every card */
   --shadow-lift: 0 1px 0 var(--paper-pure) inset, 0 0 0 1px var(--chrome-deep);
@@ -1413,12 +1422,14 @@ body {
    shows through translucent dark-glass acts. NEWS --gold* tokens are already
    cobalt, so .v17-cobalt below is a defensive re-assertion that matches MAIN. */
 .v17-cobalt {
-  --gold: #2563EB;
-  --gold-deep: #1D4ED8;
-  --gold-bright: #5BA5F5;
-  --gold-rich: #1E3A8A;
-  --gold-soft: rgba(37, 99, 235, 0.10);
-  --gold-glow: rgba(37, 99, 235, 0.22);
+  /* v22 PANGEA — re-asserts the REAL gold accent on the immersive home subtree
+     (was a cobalt re-assertion; class name kept so app/page.tsx needs no edit). */
+  --gold: #B2924F;
+  --gold-deep: #C9A961;
+  --gold-bright: #D8C089;
+  --gold-rich: #7E6636;
+  --gold-soft: rgba(178, 146, 79, 0.12);
+  --gold-glow: rgba(178, 146, 79, 0.24);
 }
 
 /* Pure-black base #05070d, cobalt hairlines, near-white text. The semantic
@@ -1426,13 +1437,13 @@ body {
    --chrome / --navy correctly on the dark base WITHOUT per-component edits. */
 .v17-dark {
   /* Canonical dark tokens (per spec) */
-  --v17-bg:        #05070d;                         /* true-black void */
-  --v17-surface:   rgba(16, 24, 44, 0.55);          /* translucent dark glass */
-  --v17-surface-2: rgba(20, 30, 56, 0.72);          /* denser glass (cards/elevated) */
-  --v17-hairline:  rgba(120, 160, 240, 0.18);       /* cobalt-tinted 1px lines */
-  --v17-text:      #EAF0FA;                          /* near-white body/display */
-  --v17-text-soft: rgba(234, 240, 250, 0.74);       /* secondary copy */
-  --v17-text-faint:rgba(234, 240, 250, 0.46);       /* eyebrows, captions, mono */
+  --v17-bg:        #0D0D0E;                          /* warm near-black void (Pangea) */
+  --v17-surface:   rgba(28, 28, 30, 0.55);          /* translucent warm dark glass */
+  --v17-surface-2: rgba(34, 34, 32, 0.72);          /* denser glass (cards/elevated) */
+  --v17-hairline:  rgba(242, 238, 231, 0.14);       /* warm-white 1px lines */
+  --v17-text:      #F2EEE7;                          /* warm near-white body/display */
+  --v17-text-soft: rgba(242, 238, 231, 0.74);       /* secondary copy */
+  --v17-text-faint:rgba(242, 238, 231, 0.46);       /* eyebrows, captions, mono */
 
   /* Semantic remaps — dark surfaces + light ink so the v16/immersive glass
      components invert cleanly (they read these vars, not literal whites). */
@@ -1447,7 +1458,7 @@ body {
 
   /* Semantic navy backdrop tokens also flip to the void */
   --navy:      var(--v17-bg);
-  --navy-deep: #03040a;
+  --navy-deep: #060606;
   --navy-rich: var(--v17-surface-2);
 
   --ink:       var(--v17-text);
@@ -1462,7 +1473,7 @@ body {
   --shadow-card:      0 0 0 1px var(--v17-hairline);
   --shadow-glass:     0 0 0 1px var(--v17-hairline);
   --shadow-editorial: 0 0 0 1px var(--v17-hairline);
-  --shadow-lift:      0 1px 0 rgba(120, 160, 240, 0.10) inset, 0 0 0 1px var(--v17-hairline);
+  --shadow-lift:      0 1px 0 rgba(242, 238, 231, 0.08) inset, 0 0 0 1px var(--v17-hairline);
 
   background: var(--v17-bg);
   color: var(--v17-text);
@@ -1493,11 +1504,11 @@ body {
    stay readable. Scoped under .v17-dark to inherit only on the immersive shell. */
 .v17-dark .v17-glass-white {
   position: relative;
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(26, 26, 24, 0.72);
   backdrop-filter: blur(30px) saturate(125%);
   -webkit-backdrop-filter: blur(30px) saturate(125%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(242, 238, 231, 0.14);
   box-shadow:
-    0 28px 70px -24px rgba(6, 12, 28, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    0 28px 70px -24px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(242, 238, 231, 0.08);
 }

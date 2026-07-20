@@ -150,7 +150,7 @@ export default async function VerticalPage({
                   className="group block rounded-2xl border p-6 md:p-8 transition-all hover:-translate-y-0.5 hover:shadow-lg"
                   style={{
                     borderColor: "var(--gold-soft)",
-                    background: "var(--paper-pure, #FFFFFF)",
+                    background: "var(--paper-pure, #1A1A1B)",
                   }}
                 >
                   <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: "var(--ink-faint)" }}>

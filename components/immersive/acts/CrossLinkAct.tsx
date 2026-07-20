@@ -44,6 +44,33 @@ const WHATSAPP_E164 = "971589966085";
 const WHATSAPP_DISPLAY = "+971 58 996 6085";
 
 /**
+ * Cross-property link builder. Every hand-off from the news terminal to the
+ * main practice carries unified attribution (utm_source=news.investwithraj.com,
+ * utm_medium=crosslink) so the practice can see exactly what this act sends
+ * across. Honest tagging only — no redirects, no cloaking.
+ */
+function practiceUrl(path = "", content?: string): string {
+  const params = new URLSearchParams({
+    utm_source: "news.investwithraj.com",
+    utm_medium: "crosslink",
+  });
+  if (content) params.set("utm_content", content);
+  return `${ROOT_URL}${path}?${params.toString()}`;
+}
+
+/**
+ * The main practice's real surfaces, offered as quiet secondary links beneath
+ * the primary CTA: the area studies, the Note, and booking a call. Copy stays
+ * in the terminal's plain-spoken voice — Raj works these as a consultant,
+ * planner, and feasibility analyst, never a broker.
+ */
+const PRACTICE_LINKS = [
+  { label: "Area studies", href: practiceUrl("/areas", "areas") },
+  { label: "The Note", href: practiceUrl("/notes", "notes") },
+  { label: "Book a call", href: practiceUrl("/start", "book-call") },
+] as const;
+
+/**
  * Self-contained full-bleed Dubai still for this CONTENT act (hybrid conversion).
  * A night skyline suits the closing "go deeper" bridge. The card above it is
  * white frosted glass (.v17-glass-white); a lighter legibility scrim sits over
@@ -198,7 +225,7 @@ export default function CrossLinkAct() {
         justifyContent: "center",
         padding: "clamp(4rem, 10vh, 7rem) var(--pad, clamp(1rem, 4vw, 4rem))",
         background: "transparent",
-        color: "var(--ink, #EAF0FA)",
+        color: "var(--ink, #F2EEE7)",
         overflow: "hidden",
         isolation: "isolate",
       }}
@@ -230,9 +257,9 @@ export default function CrossLinkAct() {
           zIndex: 1,
           pointerEvents: "none",
           background:
-            "radial-gradient(48% 42% at 78% 18%, var(--gold-glow, rgba(37,99,235,0.22)) 0%, transparent 62%)," +
-            "radial-gradient(42% 38% at 14% 82%, rgba(91,165,245,0.16) 0%, transparent 65%)," +
-            "radial-gradient(54% 46% at 50% 50%, rgba(37,99,235,0.14) 22%, transparent 72%)",
+            "radial-gradient(48% 42% at 78% 18%, var(--gold-glow, rgba(178,146,79,0.24)) 0%, transparent 62%)," +
+            "radial-gradient(42% 38% at 14% 82%, rgba(178,146,79,0.16) 0%, transparent 65%)," +
+            "radial-gradient(54% 46% at 50% 50%, rgba(178,146,79,0.12) 22%, transparent 72%)",
           filter: "blur(46px)",
           willChange: "transform",
         }}
@@ -248,7 +275,7 @@ export default function CrossLinkAct() {
           right: 0,
           height: "1px",
           background:
-            "linear-gradient(to right, transparent, var(--gold-soft, rgba(37,99,235,0.10)) 18%, var(--gold, #2563EB) 50%, var(--gold-soft, rgba(37,99,235,0.10)) 82%, transparent)",
+            "linear-gradient(to right, transparent, var(--gold-soft, rgba(178,146,79,0.12)) 18%, var(--gold, #B2924F) 50%, var(--gold-soft, rgba(178,146,79,0.12)) 82%, transparent)",
           opacity: 0.7,
           zIndex: 2,
         }}
@@ -275,7 +302,7 @@ export default function CrossLinkAct() {
             fontWeight: 500,
             letterSpacing: "0.28em",
             textTransform: "uppercase",
-            color: "rgba(234,240,250,0.78)",
+            color: "rgba(242,238,231,0.78)",
             marginBottom: "1.25rem",
           }}
         >
@@ -284,8 +311,8 @@ export default function CrossLinkAct() {
             style={{
               width: "26px",
               height: "1px",
-              // bright cobalt on the dark photo
-              background: "var(--gold-bright, #5BA5F5)",
+              // bright gold on the dark photo
+              background: "var(--gold-bright, #C9A961)",
               flexShrink: 0,
             }}
           />
@@ -311,8 +338,8 @@ export default function CrossLinkAct() {
               fontSize: "clamp(2rem, 5.2vw, 3.4rem)",
               lineHeight: 1.02,
               letterSpacing: "-0.025em",
-              // INK heading on the white card
-              color: "#14203a",
+              // LIGHT ink heading on the dark card
+              color: "#F2EEE7",
               maxWidth: "18ch",
             }}
           >
@@ -322,8 +349,8 @@ export default function CrossLinkAct() {
                 className="editorial-italic"
                 style={{
                   fontStyle: "italic",
-                  // DEEP cobalt accent on white
-                  color: "#1D4ED8",
+                  // GOLD accent on the dark card
+                  color: "var(--gold-bright, #C9A961)",
                 }}
               >
                 mandates.
@@ -340,8 +367,8 @@ export default function CrossLinkAct() {
               fontFamily: "var(--font-body), system-ui, sans-serif",
               fontSize: "clamp(1rem, 1.4vw, 1.125rem)",
               lineHeight: 1.6,
-              // INK body on white
-              color: "#38445c",
+              // BODY ink on the dark card
+              color: "rgba(242,238,231,0.74)",
             }}
           >
           This desk is the public read. The deeper work — feasibility studies,
@@ -363,7 +390,7 @@ export default function CrossLinkAct() {
         >
           {/* Primary — the consultancy funnel */}
           <a
-            href={ROOT_URL}
+            href={practiceUrl("", "primary-cta")}
             data-cursor-label="Visit"
             style={{
               display: "inline-flex",
@@ -371,29 +398,29 @@ export default function CrossLinkAct() {
               gap: "0.6rem",
               padding: "0.95rem 1.6rem",
               borderRadius: "999px",
-              background: "var(--gold, #2563EB)",
-              color: "#FBF8F2",
+              background: "var(--gold, #B2924F)",
+              color: "#141414",
               fontFamily: "var(--font-body), system-ui, sans-serif",
               fontSize: "0.9375rem",
               fontWeight: 600,
               letterSpacing: "-0.01em",
               textDecoration: "none",
-              border: "1px solid var(--gold-deep, #1D4ED8)",
-              boxShadow: "0 10px 30px -12px var(--gold-glow, rgba(37,99,235,0.22))",
+              border: "1px solid var(--gold-deep, #7E6636)",
+              boxShadow: "0 10px 30px -12px var(--gold-glow, rgba(178,146,79,0.24))",
               transition:
                 "transform 240ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), box-shadow 240ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), background 240ms ease",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-1px)";
-              e.currentTarget.style.background = "var(--gold-deep, #1D4ED8)";
+              e.currentTarget.style.background = "var(--gold-deep, #7E6636)";
               e.currentTarget.style.boxShadow =
-                "0 16px 38px -12px var(--gold-glow, rgba(37,99,235,0.22))";
+                "0 16px 38px -12px var(--gold-glow, rgba(178,146,79,0.24))";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.background = "var(--gold, #2563EB)";
+              e.currentTarget.style.background = "var(--gold, #B2924F)";
               e.currentTarget.style.boxShadow =
-                "0 10px 30px -12px var(--gold-glow, rgba(37,99,235,0.22))";
+                "0 10px 30px -12px var(--gold-glow, rgba(178,146,79,0.24))";
             }}
           >
             <span>Enter the practice</span>
@@ -412,25 +439,25 @@ export default function CrossLinkAct() {
               gap: "0.6rem",
               padding: "0.95rem 1.5rem",
               borderRadius: "999px",
-              background: "rgba(255,255,255,0.5)",
-              color: "#14203a",
+              background: "rgba(242,238,231,0.06)",
+              color: "#F2EEE7",
               fontFamily: "var(--font-body), system-ui, sans-serif",
               fontSize: "0.9375rem",
               fontWeight: 500,
               letterSpacing: "-0.01em",
               textDecoration: "none",
-              border: "1px solid rgba(20,32,58,0.16)",
+              border: "1px solid rgba(242,238,231,0.14)",
               transition:
                 "border-color 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), color 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1)), transform 280ms var(--ease-out, cubic-bezier(0.16,1,0.3,1))",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#2563EB";
-              e.currentTarget.style.color = "#1D4ED8";
+              e.currentTarget.style.borderColor = "var(--gold, #B2924F)";
+              e.currentTarget.style.color = "var(--gold-bright, #C9A961)";
               e.currentTarget.style.transform = "translateY(-1px)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(20,32,58,0.16)";
-              e.currentTarget.style.color = "#14203a";
+              e.currentTarget.style.borderColor = "rgba(242,238,231,0.14)";
+              e.currentTarget.style.color = "#F2EEE7";
               e.currentTarget.style.transform = "translateY(0)";
             }}
           >
@@ -440,6 +467,55 @@ export default function CrossLinkAct() {
             </span>
           </a>
         </div>
+
+        {/* Deep links into the practice's real surfaces — area studies, the
+            Note, and booking. Quiet secondary links so the primary CTA stays
+            dominant; every href is UTM-tagged via practiceUrl(). */}
+        <nav
+          data-reveal-item
+          aria-label="Go deeper on the main practice"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.55rem 1.4rem",
+            marginTop: "1.5rem",
+          }}
+        >
+          {PRACTICE_LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              data-cursor-label="Visit"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                fontFamily: "var(--font-body), system-ui, sans-serif",
+                fontSize: "0.9375rem",
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+                // LIGHT link on the dark card; gold on hover
+                color: "rgba(242,238,231,0.74)",
+                textDecoration: "none",
+                borderBottom: "1px solid rgba(178,146,79,0.28)",
+                paddingBottom: "1px",
+                transition: "color 220ms ease, border-color 220ms ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--gold-bright, #C9A961)";
+                e.currentTarget.style.borderColor = "var(--gold, #B2924F)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "rgba(242,238,231,0.74)";
+                e.currentTarget.style.borderColor = "rgba(178,146,79,0.28)";
+              }}
+            >
+              <span>{l.label}</span>
+              <ArrowGlyph />
+            </a>
+          ))}
+        </nav>
 
         {/* Currency note — wired to FxProvider. AED / USD / INR / GBP. */}
         <div
@@ -451,7 +527,7 @@ export default function CrossLinkAct() {
             gap: "0.75rem 1rem",
             marginTop: "2.25rem",
             paddingTop: "1.5rem",
-            borderTop: "1px solid rgba(37,99,235,0.16)",
+            borderTop: "1px solid rgba(242,238,231,0.12)",
           }}
         >
           <span
@@ -461,8 +537,8 @@ export default function CrossLinkAct() {
               fontWeight: 500,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
-              // INK faint on white
-              color: "#6b7488",
+              // FAINT ink on the dark card
+              color: "rgba(242,238,231,0.46)",
             }}
           >
             Read in your currency
@@ -489,16 +565,16 @@ export default function CrossLinkAct() {
                     padding: "0.3rem 0.6rem",
                     borderRadius: "100px",
                     border: `1px solid ${
-                      active ? "#2563EB" : "rgba(20,32,58,0.16)"
+                      active ? "var(--gold, #B2924F)" : "rgba(242,238,231,0.14)"
                     }`,
                     background: active
-                      ? "rgba(37,99,235,0.10)"
+                      ? "var(--gold-soft, rgba(178,146,79,0.12))"
                       : "transparent",
                     fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontSize: "0.6875rem",
                     letterSpacing: "0.12em",
-                    // INK muted (inactive) / DEEP cobalt (active) on white
-                    color: active ? "#1D4ED8" : "#6b7488",
+                    // FAINT ink (inactive) / GOLD (active) on the dark card
+                    color: active ? "var(--gold-bright, #C9A961)" : "rgba(242,238,231,0.46)",
                     transition: "border-color 200ms ease, background 200ms ease, color 200ms ease",
                   }}
                 >
@@ -507,8 +583,8 @@ export default function CrossLinkAct() {
                     <span
                       style={{
                         fontVariantNumeric: "tabular-nums",
-                        // INK body on white
-                        color: "#38445c",
+                        // BODY ink on the dark card
+                        color: "rgba(242,238,231,0.74)",
                       }}
                     >
                       {value}

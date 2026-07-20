@@ -22,12 +22,32 @@ import Link from "next/link";
 const MAIN_URL =
   process.env.NEXT_PUBLIC_MAIN_URL ?? "https://investwithraj.com";
 
-const LINKS = [
+/** The main practice home, tagged so it can attribute nav traffic sent over
+ *  from the news terminal (source=news.investwithraj.com · medium=nav). */
+const PRACTICE_HREF = (() => {
+  const params = new URLSearchParams({
+    utm_source: "news.investwithraj.com",
+    utm_medium: "nav",
+    utm_content: "the-practice",
+  });
+  return `${MAIN_URL}/?${params.toString()}`;
+})();
+
+type EdgeLink = {
+  href: string;
+  label: string;
+  external: boolean;
+  /** The cross-property hand-off to the main practice — rendered with a ↗. */
+  corner?: boolean;
+};
+
+const LINKS: EdgeLink[] = [
   { href: `${MAIN_URL}/#operator`, label: "Operator", external: true },
   { href: "#note", label: "Note", external: false },
   { href: "#map", label: "Map", external: false },
   { href: `${MAIN_URL}/#engage`, label: "Engage", external: true },
-] as const;
+  { href: PRACTICE_HREF, label: "The Practice", external: true, corner: true },
+];
 
 export default function V17EdgeNav() {
   return (
@@ -48,9 +68,9 @@ export default function V17EdgeNav() {
           fontWeight: 600,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
-          color: "#EAF0FA",
-          background: "rgba(8, 12, 22, 0.55)",
-          border: "1px solid rgba(91, 165, 245, 0.18)",
+          color: "#F2EEE7",
+          background: "rgba(20, 20, 20, 0.55)",
+          border: "1px solid rgba(242, 238, 231, 0.12)",
           borderRadius: 999,
           backdropFilter: "blur(12px) saturate(140%)",
           WebkitBackdropFilter: "blur(12px) saturate(140%)",
@@ -59,7 +79,7 @@ export default function V17EdgeNav() {
           transition: "border-color 220ms ease, color 220ms ease",
         }}
       >
-        <span style={{ color: "#5BA5F5" }}>IWR</span>
+        <span style={{ color: "#C9A961" }}>IWR</span>
         <span style={{ opacity: 0.55, marginLeft: 8 }}>/ news</span>
       </Link>
 
@@ -79,53 +99,68 @@ export default function V17EdgeNav() {
           fontSize: 11,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
-          background: "rgba(8, 12, 22, 0.55)",
-          border: "1px solid rgba(91, 165, 245, 0.18)",
+          background: "rgba(20, 20, 20, 0.55)",
+          border: "1px solid rgba(242, 238, 231, 0.12)",
           borderRadius: 999,
           backdropFilter: "blur(12px) saturate(140%)",
           WebkitBackdropFilter: "blur(12px) saturate(140%)",
           pointerEvents: "auto",
         }}
       >
-        {LINKS.map((l, i) => (
-          <span key={l.href} style={{ display: "inline-flex", alignItems: "center" }}>
-            {i > 0 && (
-              <span
-                aria-hidden
+        {LINKS.map((l, i) => {
+          // "The Practice" (corner) sits a touch brighter so the cross-property
+          // hand-off reads as distinct from the local section anchors.
+          const base = l.corner
+            ? "rgba(201, 169, 97, 0.95)"
+            : "rgba(242, 238, 231, 0.78)";
+          return (
+            <span key={l.href} style={{ display: "inline-flex", alignItems: "center" }}>
+              {i > 0 && (
+                <span
+                  aria-hidden
+                  style={{
+                    width: 1,
+                    height: 12,
+                    background: "rgba(242, 238, 231, 0.12)",
+                    margin: "0 2px",
+                  }}
+                />
+              )}
+              <a
+                href={l.href}
+                {...(l.external
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+                data-cursor-label={l.label.toUpperCase()}
                 style={{
-                  width: 1,
-                  height: 12,
-                  background: "rgba(91, 165, 245, 0.22)",
-                  margin: "0 2px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "6px 10px",
+                  color: base,
+                  textDecoration: "none",
+                  borderRadius: 999,
+                  transition: "color 220ms ease, background 220ms ease",
                 }}
-              />
-            )}
-            <a
-              href={l.href}
-              {...(l.external
-                ? { target: "_blank", rel: "noopener noreferrer" }
-                : {})}
-              data-cursor-label={l.label.toUpperCase()}
-              style={{
-                padding: "6px 10px",
-                color: "rgba(234, 240, 250, 0.78)",
-                textDecoration: "none",
-                borderRadius: 999,
-                transition: "color 220ms ease, background 220ms ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#EAF0FA";
-                e.currentTarget.style.background = "rgba(91, 165, 245, 0.08)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "rgba(234, 240, 250, 0.78)";
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              {l.label}
-            </a>
-          </span>
-        ))}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#F2EEE7";
+                  e.currentTarget.style.background = "rgba(178, 146, 79, 0.12)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = base;
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                {l.label}
+                {l.corner && (
+                  <span aria-hidden style={{ fontSize: 10, lineHeight: 1 }}>
+                    ↗
+                  </span>
+                )}
+              </a>
+            </span>
+          );
+        })}
       </nav>
 
       {/* BR — Talk to Raj pill (cross-domain to MAIN /#engage) */}
@@ -148,13 +183,13 @@ export default function V17EdgeNav() {
           fontSize: 13,
           fontWeight: 600,
           letterSpacing: "0.04em",
-          color: "#EAF0FA",
+          color: "#F2EEE7",
           background:
-            "linear-gradient(135deg, rgba(37, 99, 235, 0.92), rgba(29, 78, 216, 0.92))",
-          border: "1px solid rgba(91, 165, 245, 0.5)",
+            "linear-gradient(135deg, rgba(42, 42, 43, 0.92), rgba(26, 26, 27, 0.92))",
+          border: "1px solid rgba(178, 146, 79, 0.5)",
           borderRadius: 999,
           boxShadow:
-            "0 8px 28px rgba(37, 99, 235, 0.32), 0 0 0 1px rgba(91, 165, 245, 0.18) inset",
+            "0 8px 28px rgba(178, 146, 79, 0.32), 0 0 0 1px rgba(178, 146, 79, 0.18) inset",
           textDecoration: "none",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
@@ -164,12 +199,12 @@ export default function V17EdgeNav() {
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = "translateY(-2px)";
           e.currentTarget.style.boxShadow =
-            "0 12px 36px rgba(37, 99, 235, 0.42), 0 0 0 1px rgba(91, 165, 245, 0.28) inset";
+            "0 12px 36px rgba(178, 146, 79, 0.42), 0 0 0 1px rgba(178, 146, 79, 0.28) inset";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = "translateY(0)";
           e.currentTarget.style.boxShadow =
-            "0 8px 28px rgba(37, 99, 235, 0.32), 0 0 0 1px rgba(91, 165, 245, 0.18) inset";
+            "0 8px 28px rgba(178, 146, 79, 0.32), 0 0 0 1px rgba(178, 146, 79, 0.18) inset";
         }}
       >
         <span
@@ -178,8 +213,8 @@ export default function V17EdgeNav() {
             width: 8,
             height: 8,
             borderRadius: "50%",
-            background: "#5BA5F5",
-            boxShadow: "0 0 12px #5BA5F5",
+            background: "#C9A961",
+            boxShadow: "0 0 12px #C9A961",
             animation: "v17-pulse 2.2s ease-in-out infinite",
           }}
         />

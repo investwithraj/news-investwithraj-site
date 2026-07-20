@@ -141,7 +141,7 @@ export function TerminalShell({ headlines, areas, bells }: Props) {
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#05081A", color: "var(--paper)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#141414", color: "var(--ink)" }}>
       {/* Header bar */}
       <header
         className="px-5 md:px-8 py-3 border-b flex flex-wrap items-center gap-4 justify-between text-xs font-mono uppercase tracking-[0.15em]"
@@ -151,7 +151,7 @@ export function TerminalShell({ headlines, areas, bells }: Props) {
           <Link href="/" data-magnetic style={{ color: "var(--gold-bright, #E0C076)" }}>
             ← desk
           </Link>
-          <span style={{ color: "rgba(248, 250, 252, 0.45)" }}>terminal · v1</span>
+          <span style={{ color: "rgba(242, 238, 231, 0.45)" }}>terminal · v1</span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: pulse?.source === "live" ? "#22c55e" : "#E0C076", animation: "pulse 1.6s infinite" }} />
             {pulse?.source === "live" ? "live" : pulse ? "mock" : "loading"}
@@ -162,7 +162,7 @@ export function TerminalShell({ headlines, areas, bells }: Props) {
             value={currency}
             onChange={(e) => setCurrency(e.target.value as Currency)}
             className="bg-transparent border-b text-xs uppercase tracking-[0.15em] outline-none cursor-pointer"
-            style={{ color: "var(--paper)", borderColor: "rgba(201,169,97,0.3)" }}
+            style={{ color: "var(--ink)", borderColor: "rgba(201,169,97,0.3)" }}
           >
             {Object.values(CURRENCY_META).map((c) => (
               <option key={c.code} value={c.code} className="text-black">
@@ -184,9 +184,9 @@ export function TerminalShell({ headlines, areas, bells }: Props) {
       {hiddenPanes.length > 0 && (
         <div
           className="px-5 md:px-8 py-2 border-b flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] flex-wrap"
-          style={{ borderColor: "rgba(201, 169, 97, 0.12)", background: "rgba(255,255,255,0.02)" }}
+          style={{ borderColor: "rgba(201, 169, 97, 0.12)", background: "rgba(242,238,231,0.04)" }}
         >
-          <span style={{ color: "rgba(248,250,252,0.45)" }}>hidden:</span>
+          <span style={{ color: "rgba(242,238,231,0.45)" }}>hidden:</span>
           {hiddenPanes.map((k) => (
             <button
               key={k}
@@ -249,7 +249,7 @@ function Pane({
       className="rounded-xl border flex flex-col"
       style={{
         borderColor: "rgba(201, 169, 97, 0.22)",
-        background: "rgba(255, 255, 255, 0.025)",
+        background: "rgba(242, 238, 231, 0.05)",
         backdropFilter: "blur(6px)",
         minHeight: 240,
       }}
@@ -344,7 +344,7 @@ function FxPane({
           </button>
         );
       })}
-      <div className="text-[10px] uppercase tracking-[0.18em] mt-3" style={{ color: "rgba(248,250,252,0.45)" }}>
+      <div className="text-[10px] uppercase tracking-[0.18em] mt-3" style={{ color: "rgba(242,238,231,0.45)" }}>
         {snap.source} · {new Date(snap.fetchedAt).toLocaleTimeString()}
       </div>
     </div>
@@ -369,7 +369,7 @@ function TapePane({ pulse }: { pulse: DldDailyPulse | null }) {
     <div className="font-mono text-[11px] space-y-0.5 max-h-[240px] overflow-y-auto">
       {tape.map((t, i) => (
         <div key={i} className="flex items-center justify-between px-2 py-1 rounded hover:bg-white/5">
-          <span style={{ color: "rgba(248,250,252,0.5)" }}>{t.time}</span>
+          <span style={{ color: "rgba(242,238,231,0.5)" }}>{t.time}</span>
           <span className="flex-1 mx-3 truncate">{t.area}</span>
           <span style={{ color: t.side === "BUY" ? "#7ED99F" : "var(--gold-bright, #E0C076)" }}>
             {t.side}
@@ -384,7 +384,7 @@ function TapePane({ pulse }: { pulse: DldDailyPulse | null }) {
 function HeadlinesPane({ headlines }: { headlines: Props["headlines"] }) {
   if (headlines.length === 0) {
     return (
-      <p className="text-xs" style={{ color: "rgba(248,250,252,0.5)" }}>
+      <p className="text-xs" style={{ color: "rgba(242,238,231,0.5)" }}>
         First headlines drop with the morning cron at 07:00 GST.
       </p>
     );
@@ -394,10 +394,10 @@ function HeadlinesPane({ headlines }: { headlines: Props["headlines"] }) {
       {headlines.slice(0, 8).map((h) => (
         <li key={h.slug}>
           <Link href={`/news/${h.slug}`} className="block hover:bg-white/5 rounded p-2 -mx-2" data-magnetic>
-            <div className="text-[9px] font-mono uppercase tracking-[0.2em] mb-1" style={{ color: "rgba(248,250,252,0.4)" }}>
+            <div className="text-[9px] font-mono uppercase tracking-[0.2em] mb-1" style={{ color: "rgba(242,238,231,0.4)" }}>
               {h.category} · {h.displayDate}
             </div>
-            <div style={{ color: "var(--paper)" }}>{h.title}</div>
+            <div style={{ color: "var(--ink)" }}>{h.title}</div>
           </Link>
         </li>
       ))}
@@ -408,7 +408,7 @@ function HeadlinesPane({ headlines }: { headlines: Props["headlines"] }) {
 function ClosingPane({ bells }: { bells: Props["bells"] }) {
   if (bells.length === 0) {
     return (
-      <p className="text-xs" style={{ color: "rgba(248,250,252,0.5)" }}>
+      <p className="text-xs" style={{ color: "rgba(242,238,231,0.5)" }}>
         First Closing Bell drops with the next business-day close at 16:30 GST.
       </p>
     );
@@ -420,8 +420,8 @@ function ClosingPane({ bells }: { bells: Props["bells"] }) {
           <div className="text-[9px] font-mono uppercase tracking-[0.2em] mb-1" style={{ color: "var(--gold-bright, #E0C076)" }}>
             {b.displayDate} · 16:30 GST
           </div>
-          <div style={{ color: "var(--paper)" }}>{b.title}</div>
-          <ul className="mt-1 space-y-0.5" style={{ color: "rgba(248,250,252,0.6)" }}>
+          <div style={{ color: "var(--ink)" }}>{b.title}</div>
+          <ul className="mt-1 space-y-0.5" style={{ color: "rgba(242,238,231,0.6)" }}>
             {b.highlights.slice(0, 3).map((h, i) => (
               <li key={i}>· {h}</li>
             ))}
@@ -442,10 +442,10 @@ function AreasTapePane({ areas }: { areas: Props["areas"] }) {
           data-magnetic
           className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-white/5"
         >
-          <span className="flex-1 truncate" style={{ color: "var(--paper)" }}>
+          <span className="flex-1 truncate" style={{ color: "var(--ink)" }}>
             {a.name}
           </span>
-          <span style={{ color: "rgba(248,250,252,0.45)" }}>{a.emirate.slice(0, 3).toUpperCase()}</span>
+          <span style={{ color: "rgba(242,238,231,0.45)" }}>{a.emirate.slice(0, 3).toUpperCase()}</span>
           {a.medianPsf && (
             <span className="ml-3 tabular-nums" style={{ color: "var(--gold-bright, #E0C076)" }}>
               {a.medianPsf.toLocaleString()}
@@ -459,8 +459,8 @@ function AreasTapePane({ areas }: { areas: Props["areas"] }) {
 
 function DeskPane() {
   return (
-    <div className="space-y-3 text-xs leading-[1.55]" style={{ color: "var(--paper)" }}>
-      <p className="italic" style={{ color: "rgba(248,250,252,0.85)" }}>
+    <div className="space-y-3 text-xs leading-[1.55]" style={{ color: "var(--ink)" }}>
+      <p className="italic" style={{ color: "rgba(242,238,231,0.85)" }}>
         “Numbers move; theses age. The desk's job is to tell you which one's
         which before lunch.”
       </p>
@@ -492,7 +492,7 @@ function KV({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span style={{ color: "rgba(248,250,252,0.55)" }}>{label}</span>
+      <span style={{ color: "rgba(242,238,231,0.55)" }}>{label}</span>
       <span style={{ color: color || (accent ? "var(--gold-bright, #E0C076)" : "var(--paper)") }} className="tabular-nums">
         {value}
       </span>
@@ -504,7 +504,7 @@ function SkeletonRows() {
   return (
     <div className="space-y-2 animate-pulse">
       {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} className="h-3 rounded" style={{ background: "rgba(248, 250, 252, 0.05)" }} />
+        <div key={i} className="h-3 rounded" style={{ background: "rgba(242, 238, 231, 0.05)" }} />
       ))}
     </div>
   );

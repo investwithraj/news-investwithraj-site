@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"export PATH=\\\"$PATH:/c/Program Files/nodejs:$HOME/AppData/Roaming/npm\\\"\\ncd \\\"/c/Users/RAJTO/news-investwithraj\\\" || exit 1\\nnode -e \\\"\\nconst fs=require('fs'),path=require('path');\\nlet s...",
+  "error": "Exit code 1\nnode:fs:561\r\n  return binding.open(\r\n                 ^\r\n\r\nError: UNKNOWN: unknown error, open 'C:\\Users\\RAJTO\\news-investwithraj\\public\\news\\2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin\\cover.jpg'\r\n    at Object.openSync (node:fs:561:18)\r\n    at Object.writeFileSync (node:fs:2428:35)\r\n    at [eval]:14:7 {\r\n  errno: -4094,\r\n  code: 'UNKNOWN',\r\n  syscall: 'open',\r\n  path: 'C:\\\\Users\\\\RAJTO\\\\news-investwithraj\\\\public\\\\news\\\\2026-05-30-al-barari-villa-lease-r...",
+  "timestamp": "2026-06-23T19:55:23.936Z",
+  "retry_count": 1
+}

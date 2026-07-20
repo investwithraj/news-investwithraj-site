@@ -104,7 +104,7 @@ export function CapitalFlowGlobe({
     // ── Globe — wireframe sphere with dotted overlay for texture
     const globeGeo = new THREE.IcosahedronGeometry(1, 4);
     const globeMat = new THREE.MeshBasicMaterial({
-      color: 0x0a1024,
+      color: 0x141414,
       wireframe: true,
       transparent: true,
       opacity: 0.28,
@@ -114,7 +114,7 @@ export function CapitalFlowGlobe({
 
     // Solid interior sphere so the wireframe reads
     const innerMat = new THREE.MeshBasicMaterial({
-      color: 0x141a2c,
+      color: 0x202021,
       transparent: true,
       opacity: 0.65,
     });

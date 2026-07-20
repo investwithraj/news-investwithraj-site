@@ -90,7 +90,7 @@ export default function NavPill({
     background:
       variant === "dark"
         ? "rgba(20, 24, 31, 0.85)"
-        : "rgba(255, 255, 255, 0.85)",
+        : "rgba(36, 36, 30, 0.85)",
     backdropFilter: "blur(24px) saturate(180%)",
     WebkitBackdropFilter: "blur(24px) saturate(180%)",
     border: `1px solid ${variant === "dark" ? "var(--v16-ink-card-border)" : "var(--v16-chrome)"}`,
@@ -186,8 +186,8 @@ export default function NavPill({
                 ...linkStyle,
                 background: item.isActive
                   ? variant === "dark"
-                    ? "rgba(255,255,255,0.06)"
-                    : "rgba(10, 14, 20, 0.06)"
+                    ? "rgba(242,238,231,0.06)"
+                    : "rgba(242,238,231,0.06)"
                   : "transparent",
               }}
               className="v16-nav-link"
@@ -231,7 +231,7 @@ export default function NavPill({
 
       <style jsx>{`
         .v16-nav-link:hover {
-          background: ${variant === "dark" ? "rgba(255,255,255,0.06)" : "rgba(10, 14, 20, 0.06)"} !important;
+          background: ${variant === "dark" ? "rgba(242,238,231,0.06)" : "rgba(242,238,231,0.06)"} !important;
         }
         @media (max-width: 900px) {
           .v16-nav-links {

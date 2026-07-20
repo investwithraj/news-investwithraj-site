@@ -48,8 +48,8 @@ export function DldTicker() {
       aria-label="Live DLD market pulse"
       className="dld-ticker w-full overflow-hidden border-b"
       style={{
-        background: "var(--ink)",
-        color: "var(--paper)",
+        background: "var(--paper-warm)",
+        color: "var(--ink)",
         borderColor: "rgba(201, 169, 97, 0.25)",
         fontFamily: "var(--font-mono), monospace",
       }}
@@ -152,7 +152,7 @@ function TickerItem({ label, value, delta }: TickerItemData) {
   return (
     <span className="inline-flex items-center gap-2 shrink-0">
       <span style={{ color: "rgba(248, 250, 252, 0.45)" }}>{label}</span>
-      <span style={{ color: "var(--paper)" }} className="font-medium">
+      <span style={{ color: "var(--ink)" }} className="font-medium">
         {value}
       </span>
       {delta !== undefined && (

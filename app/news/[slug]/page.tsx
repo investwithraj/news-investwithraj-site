@@ -131,7 +131,7 @@ export default async function NewsArticlePage({
           style={{
             height: "clamp(240px, 34vh, 380px)",
             background:
-              "linear-gradient(180deg, rgba(245, 241, 237, 0.45) 0%, rgba(245, 241, 237, 0.72) 55%, var(--paper) 100%)",
+              "linear-gradient(180deg, rgba(20, 20, 20, 0.45) 0%, rgba(20, 20, 20, 0.72) 55%, var(--paper) 100%)",
           }}
         />
         <div className="relative">

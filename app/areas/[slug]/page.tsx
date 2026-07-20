@@ -168,7 +168,7 @@ export default async function AreaPage({
               <div
                 className="mt-10 rounded-2xl p-5 md:p-7 flex flex-col md:flex-row md:items-center gap-4 md:gap-10"
                 style={{
-                  background: "rgba(255,255,255,0.6)",
+                  background: "rgba(242,238,231,0.06)",
                   border: "1px solid var(--gold-soft)",
                   backdropFilter: "blur(10px)",
                 }}
@@ -227,7 +227,7 @@ export default async function AreaPage({
                     data-magnetic
                     data-reveal=""
                     className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
-                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
                   >
                     <div className="flex items-center gap-3 mb-3">
                       <span
@@ -288,7 +288,7 @@ export default async function AreaPage({
                     href={`/news/${n.slug}`}
                     data-magnetic
                     className="group block rounded-2xl border p-5 md:p-6 transition-transform hover:-translate-y-0.5"
-                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
                   >
                     <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--ink-faint)" }}>
                       {n.category} · {n.displayDate}

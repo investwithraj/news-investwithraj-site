@@ -126,7 +126,7 @@ export function ConsentBanner() {
       role="dialog"
       aria-labelledby="consent-banner-title"
       aria-describedby="consent-banner-desc"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#0A1024]/10 shadow-2xl"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-[#1A1A1B] border-t border-[#F2EEE7]/12 shadow-2xl"
     >
       <div className="max-w-5xl mx-auto px-6 py-5">
         {!expanded ? (
@@ -136,7 +136,7 @@ export function ConsentBanner() {
               <h2 id="consent-banner-title" className="font-serif text-base mb-1">
                 Cookies, but consensual
               </h2>
-              <p id="consent-banner-desc" className="text-xs text-[#0A1024]/70 leading-relaxed">
+              <p id="consent-banner-desc" className="text-xs text-[#F2EEE7]/74 leading-relaxed">
                 I run analytics + retargeting to keep this site sharp. Pick what you're OK with —
                 or reject everything except the essentials. Either way the site works. (
                 <a href="/legal/privacy" className="underline">
@@ -148,19 +148,19 @@ export function ConsentBanner() {
             <div className="flex flex-wrap gap-2 shrink-0">
               <button
                 onClick={() => setExpanded(true)}
-                className="px-4 py-2 text-xs rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5"
+                className="px-4 py-2 text-xs rounded-md border border-[#F2EEE7]/14 hover:bg-[#F2EEE7]/8"
               >
                 Manage
               </button>
               <button
                 onClick={rejectAll}
-                className="px-4 py-2 text-xs rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5"
+                className="px-4 py-2 text-xs rounded-md border border-[#F2EEE7]/14 hover:bg-[#F2EEE7]/8"
               >
                 Reject all
               </button>
               <button
                 onClick={acceptAll}
-                className="px-4 py-2 text-xs rounded-md bg-[#0A1024] text-white hover:bg-[#0A1024]/90"
+                className="px-4 py-2 text-xs rounded-md bg-[#C9A961] text-[#141414] hover:bg-[#C9A961]/90"
               >
                 Accept all
               </button>
@@ -172,14 +172,14 @@ export function ConsentBanner() {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="font-serif text-lg mb-1">Manage preferences</h2>
-                <p className="text-xs text-[#0A1024]/70">
+                <p className="text-xs text-[#F2EEE7]/74">
                   Toggle individual services or whole categories. Your choice is saved on this
                   device only.
                 </p>
               </div>
               <button
                 onClick={() => setExpanded(false)}
-                className="text-xs text-[#0A1024]/50 hover:text-[#0A1024]"
+                className="text-xs text-[#F2EEE7]/46 hover:text-[#F2EEE7]"
                 aria-label="Close expanded view"
               >
                 ←  Back
@@ -196,11 +196,11 @@ export function ConsentBanner() {
                 const someOn = pixels.some((p) => selections[p.name]);
 
                 return (
-                  <div key={purpose} className="border border-[#0A1024]/10 rounded-lg p-4">
+                  <div key={purpose} className="border border-[#F2EEE7]/12 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h3 className="font-medium text-sm mb-1">{PURPOSE_LABELS[purpose].title}</h3>
-                        <p className="text-xs text-[#0A1024]/60">
+                        <p className="text-xs text-[#F2EEE7]/62">
                           {PURPOSE_LABELS[purpose].description}
                         </p>
                       </div>
@@ -208,10 +208,10 @@ export function ConsentBanner() {
                         onClick={() => toggleGroup(purpose, !allOn)}
                         className={`text-[10px] font-mono uppercase px-2 py-1 rounded ${
                           allOn
-                            ? "bg-emerald-100 text-emerald-900"
+                            ? "bg-[#86C255]/15 text-[#86C255]"
                             : someOn
-                              ? "bg-amber-100 text-amber-900"
-                              : "bg-[#0A1024]/5 text-[#0A1024]/60"
+                              ? "bg-[#B2924F]/12 text-[#D8C089]"
+                              : "bg-[#F2EEE7]/8 text-[#F2EEE7]/62"
                         }`}
                       >
                         {allOn ? "All on" : someOn ? "Some on" : "All off"}
@@ -230,13 +230,13 @@ export function ConsentBanner() {
                             className="mt-0.5 accent-[#C9A961]"
                           />
                           <span className="flex-1">
-                            <span className="font-medium text-[#0A1024]">{p.title}</span>
-                            <span className="block text-[#0A1024]/60 mt-0.5">{p.description}</span>
+                            <span className="font-medium text-[#F2EEE7]">{p.title}</span>
+                            <span className="block text-[#F2EEE7]/62 mt-0.5">{p.description}</span>
                             <a
                               href={p.privacyUrl}
                               target="_blank"
                               rel="noopener"
-                              className="text-[#A88945] hover:underline mt-1 inline-block text-[10px]"
+                              className="text-[#B2924F] hover:underline mt-1 inline-block text-[10px]"
                             >
                               Vendor privacy →
                             </a>
@@ -249,22 +249,22 @@ export function ConsentBanner() {
               })}
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-[#0A1024]/10">
+            <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-[#F2EEE7]/12">
               <button
                 onClick={saveSelection}
-                className="px-4 py-2 text-xs rounded-md bg-[#0A1024] text-white hover:bg-[#0A1024]/90"
+                className="px-4 py-2 text-xs rounded-md bg-[#C9A961] text-[#141414] hover:bg-[#C9A961]/90"
               >
                 Save selection
               </button>
               <button
                 onClick={rejectAll}
-                className="px-4 py-2 text-xs rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5"
+                className="px-4 py-2 text-xs rounded-md border border-[#F2EEE7]/14 hover:bg-[#F2EEE7]/8"
               >
                 Reject all
               </button>
               <button
                 onClick={acceptAll}
-                className="px-4 py-2 text-xs rounded-md border border-[#0A1024]/15 hover:bg-[#0A1024]/5"
+                className="px-4 py-2 text-xs rounded-md border border-[#F2EEE7]/14 hover:bg-[#F2EEE7]/8"
               >
                 Accept all
               </button>
@@ -281,7 +281,7 @@ export function ConsentReopenLink({ className = "" }: { className?: string }) {
   return (
     <button
       onClick={() => window.dispatchEvent(new CustomEvent("iwr-consent-reopen"))}
-      className={`text-xs text-[#0A1024]/50 hover:text-[#0A1024] underline ${className}`}
+      className={`text-xs text-[#F2EEE7]/46 hover:text-[#F2EEE7] underline ${className}`}
     >
       Cookie preferences
     </button>

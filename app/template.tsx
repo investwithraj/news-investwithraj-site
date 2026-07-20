@@ -37,7 +37,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
         aria-hidden="true"
         className="fixed inset-0 z-[9650] pointer-events-none"
         style={{
-          background: "var(--ink)",
+          background: "var(--paper)",
           transform: phase === "in" ? "translateY(-100%)" : "translateY(-100%)",
           transition: "transform 700ms var(--ease-curtain)",
         }}

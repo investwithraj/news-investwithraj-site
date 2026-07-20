@@ -10,12 +10,12 @@ import PostFX from "./PostFX";
  * v17 2.0 · ImmersiveWorld (NEWS) — the ONE persistent WebGL world behind the
  * DOM, ported from the MAIN repo's dark-cinematic register.
  *
- * Dark-cinematic register: true-black void (#05070d) + a faint cobalt core-glow
+ * Dark-cinematic register: warm-black void (#0D0C0A) + a faint gold core-glow
  * + two parallax dust/ember layers that drift and dolly as you scroll
  * (scrollRig.progress). fixed · full-viewport · z-0 · pointer-events:none (the
  * news acts sit above as translucent dark glass and let this bleed through).
  * frameloop="demand" — renders only when scroll moves (RigBridge wires
- * scrollRig.invalidate). The film grade (cobalt bloom + vignette) is composited
+ * scrollRig.invalidate). The film grade (gold bloom + vignette) is composited
  * by <PostFX/> as a DOM overlay sibling (NEWS has no @react-three/postprocessing
  * dependency, so the GPU EffectComposer the MAIN repo uses is reproduced in CSS).
  */
@@ -71,7 +71,7 @@ function Atmosphere() {
         </bufferGeometry>
         <pointsMaterial
           size={0.02}
-          color="#2b4a86"
+          color="#B2924F"
           transparent
           opacity={0.5}
           sizeAttenuation
@@ -85,7 +85,7 @@ function Atmosphere() {
         </bufferGeometry>
         <pointsMaterial
           size={0.03}
-          color="#5BA5F5"
+          color="#C9A961"
           transparent
           opacity={0.85}
           sizeAttenuation
@@ -113,7 +113,7 @@ export default function ImmersiveWorld({ children }: Props) {
         zIndex: 0,
         pointerEvents: "none",
         background:
-          "radial-gradient(120% 90% at 50% 28%, #0a1024 0%, #05070d 58%, #03040a 100%)",
+          "radial-gradient(120% 90% at 50% 28%, #1E1A12 0%, #141414 58%, #0C0B09 100%)",
       }}
     >
       <Canvas
@@ -122,14 +122,14 @@ export default function ImmersiveWorld({ children }: Props) {
         camera={{ position: [0, 0, 6], fov: 50 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       >
-        <color attach="background" args={["#05070d"]} />
-        <fog attach="fog" args={["#05070d", 7, 28]} />
+        <color attach="background" args={["#0D0C0A"]} />
+        <fog attach="fog" args={["#0D0C0A", 7, 28]} />
         <RigBridge />
         <ambientLight intensity={0.4} />
-        <pointLight position={[0, 2, 4]} intensity={9} color="#2563EB" distance={22} decay={2} />
+        <pointLight position={[0, 2, 4]} intensity={9} color="#B2924F" distance={22} decay={2} />
         {children ?? <Atmosphere />}
       </Canvas>
-      {/* DOM film grade (cobalt bloom + vignette) — sits over the canvas, behind DOM content */}
+      {/* DOM film grade (gold bloom + vignette) — sits over the canvas, behind DOM content */}
       <PostFX />
     </div>
   );

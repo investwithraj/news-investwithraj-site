@@ -73,7 +73,7 @@ export function AskRajClient() {
             className="w-full rounded-2xl border p-5 text-base md:text-lg leading-[1.55] resize-none outline-none focus:border-[var(--gold-deep)]"
             style={{
               borderColor: "var(--gold-soft)",
-              background: "var(--paper-pure, #FFFFFF)",
+              background: "var(--paper-pure, #1A1A1B)",
               color: "var(--ink)",
               fontFamily: "var(--font-fraunces), Georgia, serif",
             }}
@@ -131,7 +131,7 @@ export function AskRajClient() {
           style={{
             borderColor: "#E58E89",
             background: "rgba(229, 142, 137, 0.08)",
-            color: "#a03a3a",
+            color: "#E58E89",
           }}
         >
           {error}
@@ -142,7 +142,7 @@ export function AskRajClient() {
       {brief && (
         <article
           className="rounded-2xl border p-8 md:p-10"
-          style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+          style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
         >
           <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-5" style={{ color: "var(--gold-deep)" }}>
             Generated · just now

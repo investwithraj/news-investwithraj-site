@@ -39,9 +39,9 @@ export async function generateMetadata({
 const CATEGORY_COLOR: Record<PowerListCategory, string> = {
   developer: "var(--gold-deep)",
   broker: "var(--gold-rich)",
-  investor: "var(--navy)",
+  investor: "var(--ink)",
   regulator: "var(--ink-soft)",
-  sovereign: "var(--navy)",
+  sovereign: "var(--ink)",
   advisor: "var(--ink-muted)",
   media: "var(--gold-bright)",
 };
@@ -61,13 +61,13 @@ export default async function PowerListPage({
     <main className="min-h-screen" style={{ background: "var(--paper)" }}>
       <section
         className="relative pt-20 md:pt-28 pb-12 md:pb-16"
-        style={{ background: "var(--ink)", color: "var(--paper)" }}
+        style={{ background: "var(--navy)", color: "var(--ink)" }}
       >
         <div className="max-w-[1080px] mx-auto px-6 md:px-12">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8 opacity-70 hover:opacity-100"
-            style={{ color: "var(--paper)" }}
+            style={{ color: "var(--ink)" }}
             data-magnetic
           >
             <span aria-hidden>←</span>
@@ -76,7 +76,7 @@ export default async function PowerListPage({
 
           <span
             className="font-mono text-[10px] uppercase tracking-[0.22em]"
-            style={{ color: "var(--gold-bright, #E0C076)" }}
+            style={{ color: "var(--gold-bright, #D8C089)" }}
           >
             Annual editorial · {year}
           </span>
@@ -84,13 +84,13 @@ export default async function PowerListPage({
           <KineticHeadline
             className="mt-3 leading-[1.02] tracking-[-0.025em]"
             style={{
-              color: "var(--paper)",
+              color: "var(--ink)",
               fontSize: "clamp(2.75rem, 7vw, 5.5rem)",
               fontWeight: 500,
             }}
           >
             The Power List{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-bright, #E0C076)" }}>
+            <span className="editorial-italic" style={{ color: "var(--gold-bright, #D8C089)" }}>
               {year}.
             </span>
           </KineticHeadline>
@@ -98,21 +98,21 @@ export default async function PowerListPage({
           {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
           <DrawLine
             className="mt-6 max-w-[520px]"
-            color="var(--gold-bright, #E0C076)"
+            color="var(--gold-bright, #D8C089)"
             style={{ opacity: 0.9 }}
           />
 
           {list ? (
             <p
               className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-              style={{ color: "rgba(248, 250, 252, 0.78)" }}
+              style={{ color: "rgba(242, 238, 231, 0.78)" }}
             >
               {list.intro}
             </p>
           ) : (
             <p
               className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-              style={{ color: "rgba(248, 250, 252, 0.78)" }}
+              style={{ color: "rgba(242, 238, 231, 0.78)" }}
             >
               The 100 most influential figures in UAE real estate, {year}.
               Curated by Raj — developers, brokers, investors, regulators,
@@ -147,7 +147,7 @@ export default async function PowerListPage({
                 <li
                   key={entry.rank}
                   className="rounded-2xl border p-6 md:p-8 flex gap-6 md:gap-8"
-                  style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+                  style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
                 >
                   <div className="shrink-0 text-right">
                     <div

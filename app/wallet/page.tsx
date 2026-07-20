@@ -71,10 +71,10 @@ export default function WalletPage() {
             className="rounded-3xl overflow-hidden shadow-xl mx-auto max-w-md"
             style={{
               background:
-                "linear-gradient(180deg, #0a1024 0%, #141a2c 100%)",
+                "linear-gradient(180deg, #1A1A18 0%, #24241E 100%)",
               border: "1px solid rgba(201, 169, 97, 0.4)",
               boxShadow:
-                "0 32px 80px -24px rgba(10, 16, 36, 0.35), 0 0 0 1px rgba(201, 169, 97, 0.15) inset",
+                "0 32px 80px -24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(201, 169, 97, 0.15) inset",
             }}
           >
             {/* Pass header */}
@@ -87,14 +87,14 @@ export default function WalletPage() {
             </div>
 
             {/* Pass body */}
-            <div className="px-6 py-8" style={{ color: "var(--paper)" }}>
-              <div className="text-[9px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(248,250,252,0.45)" }}>
+            <div className="px-6 py-8" style={{ color: "#F2EEE7" }}>
+              <div className="text-[9px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(242,238,231,0.45)" }}>
                 Today
               </div>
               <h3
                 className="leading-[1.15] mb-6"
                 style={{
-                  color: "var(--paper)",
+                  color: "#F2EEE7",
                   fontFamily: "var(--font-fraunces), Georgia, serif",
                   fontSize: "1.5rem",
                   fontWeight: 500,
@@ -105,11 +105,11 @@ export default function WalletPage() {
 
               <div className="grid grid-cols-2 gap-4 text-[10px] font-mono uppercase tracking-[0.18em]">
                 <div>
-                  <div style={{ color: "rgba(248,250,252,0.5)" }}>Refreshes</div>
+                  <div style={{ color: "rgba(242,238,231,0.5)" }}>Refreshes</div>
                   <div className="mt-1" style={{ color: "var(--gold-bright, #E0C076)" }}>07:00 GST · Daily</div>
                 </div>
                 <div>
-                  <div style={{ color: "rgba(248,250,252,0.5)" }}>Author</div>
+                  <div style={{ color: "rgba(242,238,231,0.5)" }}>Author</div>
                   <div className="mt-1" style={{ color: "var(--gold-bright, #E0C076)" }}>Raj · DLD-licensed</div>
                 </div>
               </div>
@@ -118,7 +118,7 @@ export default function WalletPage() {
             {/* Pass barcode strip (decorative) */}
             <div
               className="px-6 py-5 flex items-center justify-center"
-              style={{ borderTop: "1px solid rgba(201,169,97,0.2)", background: "rgba(255,255,255,0.04)" }}
+              style={{ borderTop: "1px solid rgba(201,169,97,0.2)", background: "rgba(242,238,231,0.04)" }}
             >
               <div className="flex items-end gap-[2px] h-10">
                 {Array.from({ length: 38 }).map((_, i) => (
@@ -126,7 +126,7 @@ export default function WalletPage() {
                     key={i}
                     className="w-[2px]"
                     style={{
-                      background: i % 3 === 0 ? "var(--paper)" : "var(--gold-bright, #E0C076)",
+                      background: i % 3 === 0 ? "#F2EEE7" : "var(--gold-bright, #E0C076)",
                       height: `${30 + ((i * 37) % 70)}%`,
                     }}
                   />

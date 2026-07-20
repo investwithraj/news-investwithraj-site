@@ -117,7 +117,7 @@ function EmirateBlock({
               data-magnetic
               data-reveal={stagger ? "" : undefined}
               className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
-              style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+              style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #202021)" }}
             >
               <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--gold-deep)" }}>
                 {a.kind.replace(/-/g, " ")}

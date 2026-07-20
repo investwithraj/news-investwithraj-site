@@ -14,11 +14,11 @@
  *   • DataPanel ×4 — count-up stat cards using the SAME real/cited/default
  *     values the existing v16 HolographicTerminal hero already ships. No new
  *     numbers are invented here.
- *   • KineticHeadline — Fraunces variable-font masthead with ONE cobalt-italic
+ *   • KineticHeadline — Fraunces variable-font masthead with ONE gold-italic
  *     accent word.
  *
- * Brand: cobalt accent tokens (--gold = #2563EB et al — already cobalt in this
- * repo, used directly). Raj is a real-estate consultant / urban & regional
+ * Brand: gold accent tokens (--gold = #B2924F et al — Pangea dark register,
+ * used directly). Raj is a real-estate consultant / urban & regional
  * planner / feasibility analyst — never a "broker". No employer names.
  */
 
@@ -44,16 +44,16 @@ if (typeof window !== "undefined") {
 const WHATSAPP_HREF = "https://wa.me/971589966085";
 
 /* Frosted-glass surface — translucent DARK glass (v17 dark register), backdrop-
- * blur, cobalt hairline, ~28px radius. Lets the persistent WebGL world bleed
- * through. Built from cobalt tokens so it tracks the brand. */
+ * blur, gold hairline, ~28px radius. Lets the persistent WebGL world bleed
+ * through. Built from gold tokens so it tracks the brand. */
 const glassSurface: CSSProperties = {
-  background: "var(--v17-surface, rgba(16,24,44,0.55))",
+  background: "var(--v17-surface, rgba(26,26,27,0.55))",
   backdropFilter: "blur(20px) saturate(160%)",
   WebkitBackdropFilter: "blur(20px) saturate(160%)",
-  border: "1px solid var(--v17-hairline, rgba(120,160,240,0.18))",
+  border: "1px solid var(--v17-hairline, rgba(242,238,231,0.12))",
   borderRadius: "28px",
   boxShadow:
-    "0 1px 0 rgba(120,160,240,0.10) inset, 0 24px 60px -28px rgba(3, 4, 10, 0.6), 0 0 0 1px var(--gold-soft, rgba(37,99,235,0.10))",
+    "0 1px 0 rgba(242,238,231,0.10) inset, 0 24px 60px -28px rgba(3, 4, 10, 0.6), 0 0 0 1px var(--gold-soft, rgba(178,146,79,0.12))",
 };
 
 export default function TerminalAct() {
@@ -193,20 +193,20 @@ export default function TerminalAct() {
         minHeight: "100svh",
         overflow: "hidden",
         background:
-          "radial-gradient(120% 90% at 50% -10%, rgba(37,99,235,0.10), transparent 60%), transparent",
-        color: "var(--ink, #EAF0FA)",
+          "radial-gradient(120% 90% at 50% -10%, rgba(178,146,79,0.10), transparent 60%), transparent",
+        color: "var(--ink, #F2EEE7)",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      {/* Ambient cobalt glow field behind the glass */}
+      {/* Ambient gold glow field behind the glass */}
       <div
         aria-hidden="true"
         style={{
           position: "absolute",
           inset: 0,
           background:
-            "radial-gradient(60% 50% at 78% 32%, rgba(91,165,245,0.16), transparent 70%), radial-gradient(50% 40% at 18% 70%, rgba(37,99,235,0.10), transparent 70%)",
+            "radial-gradient(60% 50% at 78% 32%, rgba(201,169,97,0.14), transparent 70%), radial-gradient(50% 40% at 18% 70%, rgba(178,146,79,0.10), transparent 70%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -218,7 +218,7 @@ export default function TerminalAct() {
           position: "absolute",
           inset: 0,
           backgroundImage:
-            "linear-gradient(rgba(37,99,235,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.05) 1px, transparent 1px)",
+            "linear-gradient(rgba(178,146,79,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(178,146,79,0.05) 1px, transparent 1px)",
           backgroundSize: "64px 64px",
           maskImage:
             "radial-gradient(80% 70% at 50% 35%, #000 30%, transparent 80%)",
@@ -259,7 +259,7 @@ export default function TerminalAct() {
               fontSize: "0.7rem",
               letterSpacing: "0.28em",
               textTransform: "uppercase",
-              color: "var(--gold-deep, #1D4ED8)",
+              color: "var(--gold-deep, #7E6636)",
             }}
           >
             <span
@@ -268,8 +268,8 @@ export default function TerminalAct() {
                 width: "7px",
                 height: "7px",
                 borderRadius: "50%",
-                background: "var(--gold, #2563EB)",
-                boxShadow: "0 0 10px var(--gold, #2563EB)",
+                background: "var(--gold, #B2924F)",
+                boxShadow: "0 0 10px var(--gold, #B2924F)",
                 animation: "terminal-act-blink 1.6s ease-in-out infinite",
               }}
             />
@@ -285,7 +285,7 @@ export default function TerminalAct() {
                 fontSize: "0.72rem",
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
-                color: "var(--gold, #2563EB)",
+                color: "var(--gold, #B2924F)",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
@@ -293,7 +293,7 @@ export default function TerminalAct() {
             >
               news.investwithraj.com
               <span aria-hidden="true" style={{ opacity: 0.4 }}>·</span>
-              <span style={{ color: "var(--ink-muted, #7C7268)" }}>
+              <span style={{ color: "var(--ink-muted, rgba(242,238,231,0.62))" }}>
                 Dubai {now || "—"} GST
               </span>
             </p>
@@ -305,14 +305,14 @@ export default function TerminalAct() {
                 fontSize: "clamp(2.6rem, 6vw, 5rem)",
                 lineHeight: 1.02,
                 fontWeight: 500,
-                color: "var(--ink, #2B2621)",
+                color: "var(--ink, #F2EEE7)",
               }}
             >
               Dubai real estate,{" "}
               <em
                 style={{
                   fontStyle: "italic",
-                  color: "var(--gold-deep, #1D4ED8)",
+                  color: "var(--gold-deep, #7E6636)",
                 }}
               >
                 in real time.
@@ -327,7 +327,7 @@ export default function TerminalAct() {
                   "var(--font-editorial, var(--font-fraunces, Georgia)), serif",
                 fontSize: "1.1rem",
                 lineHeight: 1.55,
-                color: "var(--ink-soft, #4A413A)",
+                color: "var(--ink-soft, #D8D3CA)",
               }}
             >
               A live intelligence terminal for the UAE market — the DLD pulse,
@@ -352,14 +352,14 @@ export default function TerminalAct() {
                   gap: "8px",
                   padding: "12px 22px",
                   borderRadius: "999px",
-                  background: "var(--gold-deep, #1D4ED8)",
+                  background: "var(--gold-deep, #7E6636)",
                   color: "#fff",
                   textDecoration: "none",
                   fontFamily: "var(--font-mono), ui-monospace, monospace",
                   fontSize: "0.78rem",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
-                  boxShadow: "0 10px 30px -12px rgba(37,99,235,0.6)",
+                  boxShadow: "0 10px 30px -12px rgba(178,146,79,0.5)",
                 }}
               >
                 Today&apos;s reporting
@@ -373,13 +373,13 @@ export default function TerminalAct() {
                   padding: "12px 22px",
                   borderRadius: "999px",
                   background: "transparent",
-                  color: "var(--gold-deep, #1D4ED8)",
+                  color: "var(--gold-deep, #7E6636)",
                   textDecoration: "none",
                   fontFamily: "var(--font-mono), ui-monospace, monospace",
                   fontSize: "0.78rem",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
-                  border: "1px solid rgba(37,99,235,0.35)",
+                  border: "1px solid rgba(178,146,79,0.35)",
                 }}
               >
                 Talk to Raj
@@ -459,7 +459,7 @@ export default function TerminalAct() {
                     fontSize: "0.62rem",
                     letterSpacing: "0.24em",
                     textTransform: "uppercase",
-                    color: "var(--gold-deep, #1D4ED8)",
+                    color: "var(--gold-deep, #7E6636)",
                   }}
                 >
                   Capital flow · network
@@ -473,7 +473,7 @@ export default function TerminalAct() {
                     fontSize: "0.62rem",
                     letterSpacing: "0.22em",
                     textTransform: "uppercase",
-                    color: "var(--gold, #2563EB)",
+                    color: "var(--gold, #B2924F)",
                   }}
                 >
                   <span
@@ -482,8 +482,8 @@ export default function TerminalAct() {
                       width: "7px",
                       height: "7px",
                       borderRadius: "50%",
-                      background: "var(--gold-bright, #5BA5F5)",
-                      boxShadow: "0 0 8px var(--gold-bright, #5BA5F5)",
+                      background: "var(--gold-bright, #C9A961)",
+                      boxShadow: "0 0 8px var(--gold-bright, #C9A961)",
                       animation: "terminal-act-blink 1.4s ease-in-out infinite",
                     }}
                   />
@@ -498,8 +498,8 @@ export default function TerminalAct() {
                   borderRadius: "20px",
                   overflow: "hidden",
                   background:
-                    "linear-gradient(135deg, rgba(37,99,235,0.06), rgba(91,165,245,0.08))",
-                  border: "1px solid rgba(37,99,235,0.18)",
+                    "linear-gradient(135deg, rgba(178,146,79,0.06), rgba(201,169,97,0.08))",
+                  border: "1px solid rgba(178,146,79,0.18)",
                   padding: "14px",
                   minHeight: "360px",
                 }}
@@ -523,15 +523,15 @@ export default function TerminalAct() {
                     marginTop: "16px",
                     borderRadius: "14px",
                     overflow: "hidden",
-                    border: "1px solid rgba(37,99,235,0.16)",
+                    border: "1px solid rgba(178,146,79,0.16)",
                     // DldTicker is inverted by design (background:var(--ink),
                     // color:var(--paper)) for the cream site. Under .v17-dark
                     // those tokens are swapped (--ink resolves light), which
                     // would render the strip light with invisible faint-white
                     // labels. Re-pin them locally so the embedded ticker stays a
                     // dark strip with readable light type.
-                    "--ink": "#0b1220",
-                    "--paper": "#EAF0FA",
+                    "--ink": "#1A1A1B",
+                    "--paper": "#F2EEE7",
                   } as CSSProperties
                 }
               >
@@ -551,7 +551,7 @@ export default function TerminalAct() {
               fontSize: "0.66rem",
               letterSpacing: "0.16em",
               textTransform: "uppercase",
-              color: "var(--ink-muted, #7C7268)",
+              color: "var(--ink-muted, rgba(242,238,231,0.62))",
             }}
           >
             Live DLD pulse · cited sources only
@@ -603,8 +603,8 @@ function ScenePlaceholder() {
           width: "56px",
           height: "56px",
           borderRadius: "50%",
-          border: "2px solid rgba(37,99,235,0.25)",
-          borderTopColor: "var(--gold, #2563EB)",
+          border: "2px solid rgba(178,146,79,0.25)",
+          borderTopColor: "var(--gold, #B2924F)",
           animation: "terminal-act-spin 1s linear infinite",
         }}
       />
@@ -625,7 +625,7 @@ function Brackets() {
     position: "absolute",
     width: "20px",
     height: "20px",
-    borderColor: "var(--gold, #2563EB)",
+    borderColor: "var(--gold, #B2924F)",
     borderStyle: "solid",
     borderWidth: 0,
     opacity: 0.7,

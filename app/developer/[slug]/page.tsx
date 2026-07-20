@@ -232,7 +232,7 @@ export default async function DeveloperPage({
                     className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
                     style={{
                       borderColor: "var(--gold-soft)",
-                      background: "var(--paper-pure, #FFFFFF)",
+                      background: "var(--paper-pure, #1A1A1B)",
                     }}
                   >
                     <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--ink-faint)" }}>
@@ -327,7 +327,7 @@ export default async function DeveloperPage({
                     href={`/news/${n.slug}`}
                     data-magnetic
                     className="group block rounded-2xl border p-5 md:p-6 transition-transform hover:-translate-y-0.5"
-                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #FFFFFF)" }}
+                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
                   >
                     <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--ink-faint)" }}>
                       {n.category} · {n.displayDate}

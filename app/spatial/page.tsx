@@ -60,7 +60,7 @@ export default function SpatialPage() {
         <span
           className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.22em]"
           style={{
-            background: "rgba(255, 255, 255, 0.55)",
+            background: "rgba(242, 238, 231, 0.06)",
             color: "var(--gold-deep)",
             border: "1px solid var(--gold-soft)",
             backdropFilter: "blur(12px) saturate(180%)",
@@ -105,11 +105,11 @@ export default function SpatialPage() {
               className="group relative rounded-3xl p-7 transition-all hover:-translate-y-1"
               style={{
                 background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.62), rgba(255,255,255,0.32))",
+                  "linear-gradient(180deg, rgba(242,238,231,0.06), rgba(242,238,231,0.03))",
                 backdropFilter: "blur(24px) saturate(180%)",
                 WebkitBackdropFilter: "blur(24px) saturate(180%)",
-                border: "1px solid rgba(255,255,255,0.45)",
-                boxShadow: `0 ${12 + i * 4}px ${36 + i * 6}px -${18 - i * 2}px rgba(10, 16, 36, ${0.14 + i * 0.02}), inset 0 1px 0 rgba(255,255,255,0.6)`,
+                border: "1px solid rgba(242,238,231,0.12)",
+                boxShadow: `0 ${12 + i * 4}px ${36 + i * 6}px -${18 - i * 2}px rgba(10, 16, 36, ${0.14 + i * 0.02}), inset 0 1px 0 rgba(255,255,255,0.08)`,
                 // Spatial depth-tier — closer panels feel nearer in visionOS
                 ["--apple-spatial-depth" as string]: `${0.4 + i * 0.2}rem`,
               } as React.CSSProperties}

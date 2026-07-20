@@ -79,17 +79,18 @@ function ProceduralEarth() {
     canvas.height = 512;
     const ctx = canvas.getContext("2d");
     if (ctx) {
-      // Ocean — vivid mid-blue, NOT navy (so it shows against pale backgrounds)
+      // Ocean — deep Pangea ground tones (dark register); gold is reserved for
+      // continents, atmosphere glow and pins, never the ocean fill
       const og = ctx.createLinearGradient(0, 0, 0, 512);
-      og.addColorStop(0,   "#2563EB"); // holo-deep top
-      og.addColorStop(0.4, "#1E40AF"); // saturated blue mid
-      og.addColorStop(0.6, "#1E3A8A"); // navy belt
-      og.addColorStop(1,   "#2563EB"); // back to bright
+      og.addColorStop(0,   "#2A2A2B"); // deepest raise, top
+      og.addColorStop(0.4, "#202021"); // card/raise mid
+      og.addColorStop(0.6, "#1A1A1B"); // base surface belt
+      og.addColorStop(1,   "#2A2A2B"); // back to raise
       ctx.fillStyle = og;
       ctx.fillRect(0, 0, 1024, 512);
 
-      // Bright continent patches — warm tan/sand on blue ocean
-      ctx.fillStyle = "rgba(168, 133, 75, 0.95)"; // brass-deep tone
+      // Bright continent patches — warm gold/sand on dark ocean
+      ctx.fillStyle = "rgba(168, 133, 75, 0.95)"; // brass-deep gold tone
       for (let i = 0; i < 80; i++) {
         const x = Math.random() * 1024;
         const y = 80 + Math.random() * 360;
@@ -101,7 +102,7 @@ function ProceduralEarth() {
       }
 
       // A few brighter highlight patches (snow / ice caps look)
-      ctx.fillStyle = "rgba(232, 235, 238, 0.7)";
+      ctx.fillStyle = "rgba(242, 238, 231, 0.7)";
       for (let i = 0; i < 8; i++) {
         const x = Math.random() * 1024;
         // Bias toward poles
@@ -194,7 +195,7 @@ function Atmosphere() {
         depthWrite={false}
         side={THREE.BackSide}
         uniforms={{
-          uColor: { value: new THREE.Color("#5BA5F5") },
+          uColor: { value: new THREE.Color("#C9A961") },
         }}
         vertexShader={`
           varying vec3 vNormal;
@@ -232,7 +233,7 @@ function Pin({
 }) {
   const position = useMemo(() => latLonToVec3(pin.lat, pin.lon, 1.015), [pin.lat, pin.lon]);
   const pinSize = pin.isPrimary ? 0.04 : 0.022;
-  const pinColor = pin.isPrimary ? "#80E5F0" : "#5BA5F5";
+  const pinColor = pin.isPrimary ? "#C9A961" : "#B2924F";
 
   return (
     <group position={position}>
@@ -278,12 +279,12 @@ function Pin({
             fontSize: "10px",
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: variant === "dark" ? "#FBFBFC" : "#0A0E14",
+            color: variant === "dark" ? "#F2EEE7" : "#F2EEE7",
             background:
               variant === "dark"
-                ? "rgba(20, 24, 31, 0.95)"
-                : "rgba(255, 255, 255, 0.95)",
-            border: `1px solid ${variant === "dark" ? "rgba(91,165,245,0.4)" : "rgba(91,165,245,0.5)"}`,
+                ? "rgba(32, 32, 33, 0.95)"
+                : "rgba(32, 32, 33, 0.95)",
+            border: `1px solid ${variant === "dark" ? "rgba(178,146,79,0.4)" : "rgba(178,146,79,0.5)"}`,
             borderRadius: "6px",
             padding: "6px 10px",
             whiteSpace: "nowrap",
@@ -293,7 +294,7 @@ function Pin({
         >
           <div style={{ fontWeight: 500 }}>{pin.name}</div>
           {pin.buyerCount && (
-            <div style={{ color: "#5BA5F5", marginTop: "2px" }}>{pin.buyerCount}</div>
+            <div style={{ color: "#C9A961", marginTop: "2px" }}>{pin.buyerCount}</div>
           )}
         </Html>
       )}
@@ -406,7 +407,7 @@ export default function Earth3D({
         <directionalLight
           position={[-3, -1, -2]}
           intensity={0.4}
-          color="#5BA5F5"
+          color="#C9A961"
         />
 
         {/* Optional star backdrop */}

@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"C:/Users/RAJTO/news-investwithraj\\\" && git add lib/stock/providers.ts && git status --short | grep -v '\\\\.omc' && git commit -q -m \\\"fix(stock): crisper + correct-place auto-covers\\n\\...",
+  "error": "Exit code 1\nwarning: in the working copy of 'lib/stock/providers.ts', LF will be replaced by CRLF the next time Git touches it\nM  lib/stock/providers.ts\n--- push ---\nTo https://github.com/investwithraj/news-investwithraj-site.git\n ! [rejected]        news-v1.1-consolidation -> main (non-fast-forward)\nerror: failed to push some refs to 'https://github.com/investwithraj/news-investwithraj-site.git'\nhint: Updates were rejected because a pushed branch tip is behind its remote\nhint: counterpart. If y...",
+  "timestamp": "2026-06-08T09:09:45.983Z",
+  "retry_count": 1
+}
