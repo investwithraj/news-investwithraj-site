@@ -59,8 +59,10 @@ import { article as art_2026_07_10_aldar_unveils_dh6bn_yas_point_1_600_residence
 import { article as art_2026_07_12_kuwait_property_deals_fall_13_as_land_fees_and_war_chill_h1_ } from "./2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-";
 import { article as art_2026_07_14_dubai_property_prices_fall_1_24_in_june_as_yields_hold_at_6_ } from "./2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-";
 import { article as art_2026_07_19_aed_318_billion_q1_transactions_reveal_diverging_investor_ma } from "./2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma";
+import { article as art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop } from "./2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop,
   art_2026_07_19_aed_318_billion_q1_transactions_reveal_diverging_investor_ma,
   art_2026_07_14_dubai_property_prices_fall_1_24_in_june_as_yields_hold_at_6_,
   art_2026_07_12_kuwait_property_deals_fall_13_as_land_fees_and_war_chill_h1_,
