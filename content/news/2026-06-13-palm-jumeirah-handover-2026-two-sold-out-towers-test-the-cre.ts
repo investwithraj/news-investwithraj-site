@@ -50,9 +50,9 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "src": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
+    "src": "/news/2026-06-13-palm-jumeirah-handover-2026-two-sold-out-towers-test-the-cre/cover.jpg",
     "alt": "Palm Jumeirah Handover 2026: Two Sold-Out Towers Test the Crescent Thesis",
-    "credit": "Nino Verde"
+    "credit": "Skatebiker"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",
