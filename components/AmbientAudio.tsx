@@ -125,6 +125,7 @@ export default function AmbientAudio() {
         type="button"
         onClick={toggle}
         aria-label={isOn ? "Mute ambient audio" : "Play ambient audio"}
+        data-iwr-ambient-audio=""
         className="flex items-center gap-2.5 px-3 py-1.5 transition-colors"
         style={{
           // v14.3.1 — inline position to defeat the styled-jsx specificity bug
