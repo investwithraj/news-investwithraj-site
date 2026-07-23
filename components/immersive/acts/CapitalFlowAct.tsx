@@ -129,7 +129,7 @@ export default function CapitalFlowAct() {
         alignItems: "center",
         overflow: "hidden",
         background:
-          "radial-gradient(120% 90% at 78% 20%, rgba(91,165,245,0.10), transparent 60%), var(--paper)",
+          "radial-gradient(120% 90% at 78% 20%, rgba(216,192,137,0.08), transparent 60%), var(--paper)",
         color: "var(--ink)",
         isolation: "isolate",
       }}
@@ -150,7 +150,7 @@ export default function CapitalFlowAct() {
           inset: 0,
           zIndex: 0,
           background:
-            "radial-gradient(70% 70% at 72% 50%, rgba(29,78,216,0.14), transparent 70%)",
+            "radial-gradient(70% 70% at 72% 50%, rgba(178,146,79,0.12), transparent 70%)",
           pointerEvents: "none",
         }}
       />
@@ -216,7 +216,7 @@ export default function CapitalFlowAct() {
             borderRadius: "28px",
             padding: "clamp(22px, 3vw, 40px)",
             boxShadow:
-              "0 24px 60px -18px rgba(15,23,42,0.35), 0 0 0 1px var(--gold-soft)",
+              "0 24px 60px -18px rgba(0,0,0,0.4), 0 0 0 1px var(--gold-soft)",
           }}
         >
           {/* Eyebrow */}

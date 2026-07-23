@@ -1,28 +1,50 @@
-// news.investwithraj.com home — the immersive "Terminal" (promoted from /v17 in
-// the v1.1 cutover). The REST of the news site (articles, verticals, /terminal,
-// /pulse, /areas, …) keeps the cream chrome + DldTicker from the root layout;
-// this home wears the dark v17 register and suppresses the root ticker/curtain
-// via <V17BodyFlag/> (sets body[data-v17-route] → the scoped CSS below). This is
-// the same chrome the old app/v17/layout.tsx applied — folded onto the root home
-// so the Terminal serves at "/" directly (no redirect hop).
+// news.investwithraj.com home — v22 PANGEA COMPLETE REVAMP (20 Jul 2026).
+//
+// The Terminal rebuilt in the same grammar as the main site's Pangea home:
+// real DATA first (live articles, live DLD print), the Pangea LOOK (dark
+// #141414 ground · warm-white ink · real gold), and terminal FUNCTIONALITY
+// (the six desks, the live print, the reporting rail). Structure:
+//
+//   1 · HERO           — the day's lead story under the desk thesis + doors.
+//   2 · THE PRINT      — live DLD signal band (real /api/dld-pulse).
+//   3 · THE REPORTING  — spotlight + rail of the latest live stories.
+//   4 · THE DESKS      — six product doors (Pulse · Bell · Power List · Map ·
+//                        Areas · Developers).
+//   5 · CAPITAL FLOW   — the gold globe act (retained cinematic).
+//   6 · THE DAILY BRIEF— the voice-anchor act (retained cinematic).
+//   7 · THE BRIDGE     — cross-link to the practice, UTM-tagged (retained).
+//   8 · SIGN-OFF       — the giant INVEST WITH RAJ wordmark row.
+//
+// Chrome: NewsNav (Pangea top bar) replaces the corner V17EdgeNav; the root
+// DldTicker/curtain stay suppressed on the home via V17BodyFlag. The retained
+// acts still read the scoped .v17-dark tokens (Pangea-valued in globals.css).
 import type { Metadata } from "next";
-import V17EdgeNav from "@/components/v17/chrome/V17EdgeNav";
 import V17BodyFlag from "@/components/v17/chrome/V17BodyFlag";
-import TerminalAct from "@/components/immersive/acts/TerminalAct";
+import NewsNav from "@/components/v22/pangea/NewsNav";
+import NewsHero from "@/components/v22/pangea/NewsHero";
+import SignalBand from "@/components/v22/pangea/SignalBand";
+import LeadStories from "@/components/v22/pangea/LeadStories";
+import DesksGrid from "@/components/v22/pangea/DesksGrid";
 import CapitalFlowAct from "@/components/immersive/acts/CapitalFlowAct";
 import DailyAnchorAct from "@/components/immersive/acts/DailyAnchorAct";
-import VerticalsAct from "@/components/immersive/acts/VerticalsAct";
 import CrossLinkAct from "@/components/immersive/acts/CrossLinkAct";
 import GiantWordmark from "@/components/v21/GiantWordmark";
+import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 
 export const metadata: Metadata = {
   title: "The Terminal — Dubai Real Estate in Real Time | Invest With Raj",
   description:
-    "An immersive market-intelligence terminal for Dubai real estate — live DLD pulse, capital-flow globe, the daily brief, and the five beats that move the market.",
+    "The UAE property intel terminal — the day's lead story, the live DLD print, the reporting rail, and the six desks: Pulse, Closing Bell, Power List, the Map, Areas and Developers.",
   robots: { index: true, follow: true },
 };
 
 export default function Home() {
+  const live = sortNewsArticles(NEWS_ARTICLES).filter((a) => a.status !== "research");
+  const lead = live[0] ?? null;
+  // The hero features live[0]; the reporting rail spotlights the next story
+  // and rails five more — no duplication between sections.
+  const rest = live.slice(1, 8);
+
   return (
     <>
       {/* Sets data-v17-route on <body> → the scoped CSS below hides the root
@@ -33,8 +55,7 @@ export default function Home() {
         Skip to content
       </a>
 
-      {/* Corner-only dark chrome (replaces the cream ticker nav on the home) */}
-      <V17EdgeNav />
+      <NewsNav />
 
       <div
         id="main"
@@ -45,21 +66,17 @@ export default function Home() {
         }}
       >
         <main style={{ position: "relative", zIndex: 1, minHeight: "100svh" }}>
-          <TerminalAct />
-          {/* V21 restraint cut-line — NO SectionWipe on the home: the whole
-              subtree is ONE dark register (.v17-dark remaps --paper dark),
-              so every act seam here is a same-register seam. SectionWipe is
-              reserved for genuine light⇄dark register flips only. */}
+          <NewsHero lead={lead} />
+          <SignalBand />
+          <LeadStories articles={rest} />
+          <DesksGrid />
+
+          {/* Retained cinematic acts — same-register seams, no wipes. */}
           <CapitalFlowAct />
           <DailyAnchorAct />
-          <VerticalsAct />
           <CrossLinkAct />
 
-          {/* V21 — the main-site footer's giant "INVEST WITH RAJ" sign-off
-              (GiantWordmark, B&C edge-spanning bottom wordmark). Words spread
-              across the full width; each keeps the tracking-breathe scroll-in
-              inside its own clip mask. Decorative — the accessible brand name
-              lives in the acts above. Light ink for the dark v17 register. */}
+          {/* The main-site footer's giant "INVEST WITH RAJ" sign-off. */}
           <div
             aria-hidden="true"
             className="mx-auto flex w-full max-w-[1240px] items-end justify-between px-6 pb-10 pt-4 md:px-10"

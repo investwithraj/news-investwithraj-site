@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DEVELOPERS } from "@/lib/developers";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import PageMotion from "@/components/v21/PageMotion";
 import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
@@ -20,9 +19,9 @@ export const metadata: Metadata = {
 export default function DevelopersIndex() {
   return (
     <main className="min-h-screen" style={{ background: "var(--paper)" }}>
-      {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
-          reveal (no data-split → no double-mount); motion here is ONE grid
-          stagger on the roster cards via data-reveal. */}
+      {/* V21 — PageMotion island. The h1 is a static Space Grotesk masthead
+          (v22 Pangea grammar); motion here is ONE grid stagger on the roster
+          cards via data-reveal. */}
       <PageMotion />
       <section
         className="relative pt-20 md:pt-28 pb-12 md:pb-16"
@@ -36,16 +35,17 @@ export default function DevelopersIndex() {
             data-magnetic
           >
             <span aria-hidden>←</span>
-            <span>Back to the desk</span>
+            <span>Back to the terminal</span>
           </Link>
 
           <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep)" }}>
-            The roster · {DEVELOPERS.length} developers
+            The developer desk · {DEVELOPERS.length} covered
           </span>
-          <KineticHeadline
-            className="mt-3 leading-[1.02] tracking-[-0.025em]"
+          <h1
+            className="mt-3 leading-[1.02] tracking-[-0.02em]"
             style={{
               color: "var(--ink)",
+              fontFamily: "var(--font-space-grotesk), sans-serif",
               fontSize: "clamp(2.25rem, 5vw, 4rem)",
               fontWeight: 500,
             }}
@@ -54,7 +54,7 @@ export default function DevelopersIndex() {
             <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
               scored.
             </span>
-          </KineticHeadline>
+          </h1>
           <p
             className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
             style={{ color: "var(--ink-soft)" }}

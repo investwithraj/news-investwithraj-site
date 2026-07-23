@@ -262,7 +262,7 @@ export function VoiceMode() {
                 : phase === "listening"
                   ? "0 8px 32px rgba(225,68,46,0.6), 0 0 0 4px rgba(225,68,46,0.18)"
                   : phase === "thinking"
-                    ? "0 8px 24px rgba(77,208,225,0.6)"
+                    ? "0 8px 24px rgba(111,201,214,0.5)"
                     : "0 8px 24px rgba(126,217,159,0.6)",
           }}
         >

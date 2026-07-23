@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CLOSING_BELLS, sortBells } from "@/content/closing-bell";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import DrawLine from "@/components/v21/DrawLine";
 import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
@@ -30,21 +29,31 @@ export default function ClosingBellIndex() {
             data-magnetic
           >
             <span aria-hidden>←</span>
-            <span>Back to the desk</span>
+            <span>Back to the terminal</span>
           </Link>
-          <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-bright, #E0C076)" }}>
-            16:30 GST · weekdays
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep, #C9A961)" }}>
+            The closing desk · 16:30 GST · weekdays
           </span>
-          <KineticHeadline
-            className="mt-3 leading-[1.02] tracking-[-0.025em]"
+          <h1
+            className="mt-3 leading-[1.02] tracking-[-0.02em]"
             style={{
               color: "var(--ink)",
+              fontFamily: "var(--font-space-grotesk), sans-serif",
               fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
               fontWeight: 500,
             }}
           >
-            Closing Bell.
-          </KineticHeadline>
+            Closing{" "}
+            <span
+              style={{
+                fontFamily: "var(--font-fraunces), Georgia, serif",
+                fontStyle: "italic",
+                color: "var(--gold-deep, #C9A961)",
+              }}
+            >
+              Bell.
+            </span>
+          </h1>
 
           {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
           <DrawLine

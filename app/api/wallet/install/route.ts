@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
     headline: latest?.title || "Today's UAE real-estate read",
     subtitle: "Curated by Raj · real-estate consultant",
     barcodeMessage: `https://news.investwithraj.com/${latest?.slug ? `news/${latest.slug}` : ""}`,
-    foregroundColor: "rgb(249, 246, 240)",
-    backgroundColor: "rgb(10, 16, 36)",
-    labelColor: "rgb(224, 192, 118)",
+    foregroundColor: "rgb(242, 238, 231)",
+    backgroundColor: "rgb(20, 20, 20)",
+    labelColor: "rgb(201, 169, 97)",
   };
 
   if (platform === "apple") {

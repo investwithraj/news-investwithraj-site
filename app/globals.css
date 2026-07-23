@@ -872,7 +872,7 @@ body {
   pointer-events: none;
   background:
     radial-gradient(55% 45% at 75% 25%, rgba(201, 169, 97, 0.22) 0%, transparent 60%),
-    radial-gradient(40% 35% at 18% 70%, rgba(0, 188, 212, 0.10) 0%, transparent 65%),
+    radial-gradient(40% 35% at 18% 70%, rgba(58, 166, 184, 0.10) 0%, transparent 65%),
     radial-gradient(50% 40% at 90% 80%, rgba(224, 192, 118, 0.16) 0%, transparent 60%);
   filter: blur(30px);
   animation: gold-mesh-drift 26s ease-in-out infinite;
@@ -895,8 +895,8 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(45% 35% at 78% 20%, rgba(77, 208, 225, 0.16) 0%, transparent 65%),
-    radial-gradient(40% 32% at 12% 65%, rgba(0, 145, 234, 0.10) 0%, transparent 65%),
+    radial-gradient(45% 35% at 78% 20%, rgba(111, 201, 214, 0.14) 0%, transparent 65%),
+    radial-gradient(40% 32% at 12% 65%, rgba(42, 132, 148, 0.10) 0%, transparent 65%),
     radial-gradient(35% 28% at 85% 80%, rgba(124, 179, 66, 0.06) 0%, transparent 65%),
     radial-gradient(50% 40% at 30% 18%, rgba(128, 229, 240, 0.08) 0%, transparent 65%);
   filter: blur(60px);

@@ -6,7 +6,6 @@ import Link from "next/link";
 import { getPowerListByYear, getAllPowerListYears } from "@/content/power-list";
 import type { PowerListCategory } from "@/content/power-list";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import DrawLine from "@/components/v21/DrawLine";
 import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
@@ -38,7 +37,7 @@ export async function generateMetadata({
 
 const CATEGORY_COLOR: Record<PowerListCategory, string> = {
   developer: "var(--gold-deep)",
-  broker: "var(--gold-rich)",
+  broker: "var(--gold-deep)",
   investor: "var(--ink)",
   regulator: "var(--ink-soft)",
   sovereign: "var(--ink)",
@@ -71,34 +70,38 @@ export default async function PowerListPage({
             data-magnetic
           >
             <span aria-hidden>←</span>
-            <span>Back to the desk</span>
+            <span>Back to the terminal</span>
           </Link>
 
           <span
             className="font-mono text-[10px] uppercase tracking-[0.22em]"
-            style={{ color: "var(--gold-bright, #D8C089)" }}
+            style={{ color: "var(--gold-deep, #C9A961)" }}
           >
             Annual editorial · {year}
           </span>
 
-          <KineticHeadline
+          {/* v22 grammar — display in Space Grotesk (KineticHeadline hard-codes
+              Fraunces, which loses the sans/serif accent contrast); only the
+              year keeps the Fraunces italic gold. */}
+          <h1
             className="mt-3 leading-[1.02] tracking-[-0.025em]"
             style={{
               color: "var(--ink)",
+              fontFamily: "var(--font-space-grotesk), system-ui, sans-serif",
               fontSize: "clamp(2.75rem, 7vw, 5.5rem)",
               fontWeight: 500,
             }}
           >
             The Power List{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-bright, #D8C089)" }}>
+            <span className="editorial-italic" style={{ color: "var(--gold-deep, #C9A961)" }}>
               {year}.
             </span>
-          </KineticHeadline>
+          </h1>
 
           {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
           <DrawLine
             className="mt-6 max-w-[520px]"
-            color="var(--gold-bright, #D8C089)"
+            color="var(--gold-deep, #C9A961)"
             style={{ opacity: 0.9 }}
           />
 

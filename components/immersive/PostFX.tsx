@@ -23,7 +23,7 @@ export default function PostFX() {
           pointerEvents: "none",
           mixBlendMode: "screen",
           background:
-            "radial-gradient(60% 45% at 50% 30%, rgba(37,99,235,0.20) 0%, rgba(37,99,235,0.06) 38%, transparent 70%)",
+            "radial-gradient(60% 45% at 50% 30%, rgba(178,146,79,0.16) 0%, rgba(178,146,79,0.05) 38%, transparent 70%)",
         }}
       />
       {/* Vignette — seats the frame into the void */}

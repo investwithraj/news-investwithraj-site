@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AREAS, sortAreas, filterByEmirate } from "@/content/areas";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import PageMotion from "@/components/v21/PageMotion";
 import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
 
@@ -24,9 +23,9 @@ export default function AreasIndex() {
 
   return (
     <main className="min-h-screen" style={{ background: "var(--paper)" }}>
-      {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
-          reveal (no data-split → no double-mount); motion here is ONE grid
-          stagger on the Dubai block's cards via data-reveal. */}
+      {/* V21 — PageMotion island. Motion here is ONE grid stagger on the
+          Dubai block's cards via data-reveal; the h1 is static in the v22
+          masthead grammar (Space Grotesk + one Fraunces italic accent). */}
       <PageMotion />
       <section
         className="relative pt-20 md:pt-28 pb-12 md:pb-16"
@@ -40,16 +39,17 @@ export default function AreasIndex() {
             data-magnetic
           >
             <span aria-hidden>←</span>
-            <span>Back to the desk</span>
+            <span>Back to the terminal</span>
           </Link>
 
           <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep)" }}>
             The map · {AREAS.length} areas
           </span>
-          <KineticHeadline
+          <h1
             className="mt-3 leading-[1.02] tracking-[-0.025em]"
             style={{
               color: "var(--ink)",
+              fontFamily: "var(--font-space-grotesk), sans-serif",
               fontSize: "clamp(2.25rem, 5vw, 4rem)",
               fontWeight: 500,
             }}
@@ -58,7 +58,7 @@ export default function AreasIndex() {
             <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
               covered.
             </span>
-          </KineticHeadline>
+          </h1>
           <p
             className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
             style={{ color: "var(--ink-soft)" }}

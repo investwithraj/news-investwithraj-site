@@ -135,6 +135,20 @@ export default async function NewsArticlePage({
           }}
         />
         <div className="relative">
+          {/* v22 Pangea masthead chrome — small mono back-link to the
+              terminal home. Muted by default, gold on hover; negative
+              bottom margin absorbs most of the article's own top padding
+              so the masthead rhythm stays close to original. */}
+          <div className="max-w-[760px] mx-auto px-6 md:px-8 pt-10 md:pt-14 -mb-10 md:-mb-16">
+            <Link
+              href="/"
+              className="inline-block text-[10px] font-mono uppercase tracking-[0.22em] transition-colors hover:text-[var(--gold-deep)]"
+              style={{ color: "var(--ink-faint)" }}
+            >
+              ← Back to the terminal
+            </Link>
+          </div>
+
           {/* V21 kinetic head — arms the data-split line-cascade on the h1
               inside SemaformLayout. Only the headline moves; the article
               BODY gets zero motion (restraint cut-line). */}

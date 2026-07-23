@@ -10,7 +10,6 @@ import { AREAS } from "@/content/areas";
 import { getMockSentimentSnapshot } from "@/lib/sentiment/mock";
 import { scoreToColor } from "@/lib/sentiment/types";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 
 export const dynamic = "force-static";
 
@@ -74,33 +73,36 @@ export default function MapPage() {
             data-magnetic
           >
             <span aria-hidden>←</span>
-            <span>Back to the desk</span>
+            <span>Back to the terminal</span>
           </Link>
 
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="flex-1 min-w-0">
               <span
                 className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-bright, #E0C076)" }}
+                style={{ color: "#C9A961" }}
               >
-                Live UAE velocity map
+                The map desk · live
               </span>
-              <KineticHeadline
+              {/* v22 grammar — display in Space Grotesk; the accent phrase
+                  alone carries the Fraunces italic gold. */}
+              <h1
                 className="mt-3 leading-[1.02] tracking-[-0.025em]"
                 style={{
                   color: "var(--ink)",
+                  fontFamily: "var(--font-space-grotesk), system-ui, sans-serif",
                   fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
                   fontWeight: 500,
                 }}
               >
                 Where the deals{" "}
-                <span className="editorial-italic" style={{ color: "var(--gold-bright, #E0C076)" }}>
+                <span className="editorial-italic" style={{ color: "#C9A961" }}>
                   are landing.
                 </span>
-              </KineticHeadline>
+              </h1>
               <p
                 className="mt-4 text-base md:text-lg leading-[1.55] max-w-[60ch]"
-                style={{ color: "rgba(248, 250, 252, 0.78)" }}
+                style={{ color: "rgba(242, 238, 231, 0.7)" }}
               >
                 Every covered area as a node. Size = chatter volume.
                 Colour = sentiment polarity. Click any node to open the area
@@ -265,7 +267,7 @@ export default function MapPage() {
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-2" style={{ color: "rgba(248,250,252,0.7)" }}>
+    <span className="inline-flex items-center gap-2" style={{ color: "rgba(242,238,231,0.7)" }}>
       <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
       {label}
     </span>

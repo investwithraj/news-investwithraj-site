@@ -5,9 +5,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getMockSentimentSnapshot } from "@/lib/sentiment/mock";
-import { scoreToColor, scoreToInk } from "@/lib/sentiment/types";
+import { scoreToColor } from "@/lib/sentiment/types";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 import DrawLine from "@/components/v21/DrawLine";
 import CountUp from "@/components/v21/CountUp";
 import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
@@ -63,7 +62,7 @@ export default function PulsePage() {
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(180deg, rgba(6, 9, 20, 0.66) 0%, rgba(6, 9, 20, 0.74) 60%, rgba(6, 9, 20, 0.9) 100%)",
+                "linear-gradient(180deg, rgba(14, 14, 14, 0.66) 0%, rgba(14, 14, 14, 0.74) 60%, rgba(14, 14, 14, 0.9) 100%)",
             }}
           />
         </div>
@@ -77,33 +76,34 @@ export default function PulsePage() {
             data-magnetic
           >
             <span aria-hidden>←</span>
-            <span>Back to the desk</span>
+            <span>Back to the terminal</span>
           </Link>
 
           <span
             className="font-mono text-[10px] uppercase tracking-[0.22em]"
-            style={{ color: "var(--gold-bright, #E0C076)" }}
+            style={{ color: "var(--gold-deep, #C9A961)" }}
           >
-            Live · {snap.source} · refreshes every 30m
+            The sentiment desk · {snap.source} · refreshes every 30m
           </span>
-          <KineticHeadline
+          <h1
             className="mt-3 leading-[1.02] tracking-[-0.025em]"
             style={{
               color: "var(--ink)",
+              fontFamily: "var(--font-space-grotesk), system-ui, sans-serif",
               fontSize: "clamp(2.25rem, 5vw, 4rem)",
               fontWeight: 500,
             }}
           >
             Where the market is{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-bright, #E0C076)" }}>
+            <span className="editorial-italic" style={{ color: "var(--gold-deep, #C9A961)" }}>
               whispering.
             </span>
-          </KineticHeadline>
+          </h1>
 
           {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
           <DrawLine
             className="mt-6 max-w-[520px]"
-            color="var(--gold-bright, #E0C076)"
+            color="var(--gold-deep, #C9A961)"
             style={{ opacity: 0.9 }}
           />
 
@@ -199,8 +199,10 @@ function SignalCard({
 }: {
   signal: ReturnType<typeof getMockSentimentSnapshot>["signals"][0];
 }) {
-  const color = scoreToColor(signal.score); // vivid — progress-bar fill (data viz)
-  const ink = scoreToInk(signal.score); // AA-on-light — the score TEXT on the card
+  // One palette for both the bar and the score text: scoreToColor is the vivid
+  // dark-ground family. scoreToInk is the AA-on-light set (deep green/bronze/
+  // red computed against cream) — unreadable on the v22 dark card, so unused.
+  const color = scoreToColor(signal.score);
   const href =
     signal.kind === "area" ? `/areas/${signal.subject}` : `/developer/${signal.subject}`;
 
@@ -232,7 +234,7 @@ function SignalCard({
         </div>
         <div
           className="text-right tabular-nums shrink-0"
-          style={{ color: ink, fontFamily: "var(--font-fraunces), Georgia, serif" }}
+          style={{ color, fontFamily: "var(--font-fraunces), Georgia, serif" }}
         >
           <div className="text-xl md:text-2xl leading-none">
             {signal.score >= 0 ? "+" : ""}

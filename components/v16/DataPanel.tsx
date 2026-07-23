@@ -96,7 +96,7 @@ export default function DataPanel({
     color: variant === "dark" ? "#F2F4F7" : "var(--v16-ink)",
     border: `1px solid ${
       variant === "holo"
-        ? `rgba(91, 165, 245, ${0.3 + pulse * 0.3})`
+        ? `rgba(216, 192, 137, ${0.3 + pulse * 0.3})`
         : variant === "dark"
         ? "var(--v16-ink-card-border)"
         : "var(--v16-chrome)"

@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
 
 export const dynamic = "force-static";
 export const revalidate = 3600;
@@ -35,19 +34,20 @@ export default function NewsIndex() {
             data-magnetic
           >
             <span aria-hidden>←</span>
-            <span>Back to the desk</span>
+            <span>Back to the terminal</span>
           </Link>
 
           <span
             className="font-mono text-[10px] uppercase tracking-[0.22em]"
             style={{ color: "var(--gold-deep)" }}
           >
-            The firehose · {articles.length} article{articles.length === 1 ? "" : "s"}
+            The reporting · {articles.length} article{articles.length === 1 ? "" : "s"}
           </span>
-          <KineticHeadline
-            className="mt-3 leading-[1.02] tracking-[-0.025em]"
+          <h1
+            className="mt-3 leading-[1.02] tracking-[-0.02em]"
             style={{
               color: "var(--ink)",
+              fontFamily: "var(--font-space-grotesk), sans-serif",
               fontSize: "clamp(2.25rem, 5vw, 4rem)",
               fontWeight: 500,
             }}
@@ -56,7 +56,7 @@ export default function NewsIndex() {
             <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
               cited.
             </span>
-          </KineticHeadline>
+          </h1>
           <p
             className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
             style={{ color: "var(--ink-soft)" }}
@@ -95,38 +95,49 @@ export default function NewsIndex() {
                     background: "var(--paper-pure, #202021)",
                   }}
                 >
-                  <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: "var(--ink-faint)" }}>
-                    <span style={{ color: "var(--gold-deep)" }}>{a.category}</span>
-                    <span aria-hidden>·</span>
-                    <span>{a.market.join(" + ")}</span>
-                    <span aria-hidden>·</span>
-                    <time dateTime={a.publishedAt}>{a.displayDate}</time>
+                  <div className="flex flex-col gap-5 sm:flex-row md:gap-7">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={a.heroImage.src}
+                      alt={a.heroImage.alt}
+                      loading="lazy"
+                      className="w-full h-[160px] sm:w-[180px] sm:h-[120px] shrink-0 rounded-lg object-cover"
+                      style={{ filter: "saturate(0.85)" }}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: "var(--ink-faint)" }}>
+                        <span style={{ color: "var(--gold-deep)" }}>{a.category}</span>
+                        <span aria-hidden>·</span>
+                        <span>{a.market.join(" + ")}</span>
+                        <span aria-hidden>·</span>
+                        <time dateTime={a.publishedAt}>{a.displayDate}</time>
+                      </div>
+                      <h3
+                        className="text-xl md:text-2xl leading-[1.15] tracking-[-0.015em] mb-3 transition-colors group-hover:text-[var(--gold-deep)]"
+                        style={{
+                          color: "var(--ink)",
+                          fontFamily: "var(--font-space-grotesk), sans-serif",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {a.title}
+                      </h3>
+                      <p
+                        className="text-sm md:text-base leading-[1.55] max-w-[70ch] mb-3 editorial-italic"
+                        style={{ color: "var(--ink-soft)", fontStyle: "italic" }}
+                      >
+                        {a.subtitle}
+                      </p>
+                      <ul className="space-y-1 text-sm" style={{ color: "var(--ink-soft)" }}>
+                        {a.tldr.map((t, i) => (
+                          <li key={i} className="pl-4 relative">
+                            <span className="absolute left-0 top-[0.6em] w-2 h-px" style={{ background: "var(--gold-deep)" }} aria-hidden />
+                            {t}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                  <h3
-                    className="text-xl md:text-2xl leading-[1.15] tracking-[-0.015em] mb-3 transition-colors group-hover:text-[var(--gold-deep)]"
-                    style={{
-                      color: "var(--ink)",
-                      fontFamily: "var(--font-fraunces), Georgia, serif",
-                      fontWeight: 500,
-                      fontVariationSettings: '"SOFT" 60, "opsz" 144',
-                    }}
-                  >
-                    {a.title}
-                  </h3>
-                  <p
-                    className="text-sm md:text-base leading-[1.55] max-w-[70ch] mb-3 editorial-italic"
-                    style={{ color: "var(--ink-soft)", fontStyle: "italic" }}
-                  >
-                    {a.subtitle}
-                  </p>
-                  <ul className="space-y-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-                    {a.tldr.map((t, i) => (
-                      <li key={i} className="pl-4 relative">
-                        <span className="absolute left-0 top-[0.6em] w-2 h-px" style={{ background: "var(--gold-deep)" }} aria-hidden />
-                        {t}
-                      </li>
-                    ))}
-                  </ul>
                 </Link>
               ))}
             </div>
