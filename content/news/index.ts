@@ -61,8 +61,10 @@ import { article as art_2026_07_14_dubai_property_prices_fall_1_24_in_june_as_yi
 import { article as art_2026_07_19_aed_318_billion_q1_transactions_reveal_diverging_investor_ma } from "./2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma";
 import { article as art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop } from "./2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop";
 import { article as art_2026_07_22_dubai_office_rents_stabilise_at_aed_238_sqft_as_grade_a_scar } from "./2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar";
+import { article as art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island } from "./2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island,
   art_2026_07_22_dubai_office_rents_stabilise_at_aed_238_sqft_as_grade_a_scar,
   art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop,
   art_2026_07_19_aed_318_billion_q1_transactions_reveal_diverging_investor_ma,
