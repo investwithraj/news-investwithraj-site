@@ -76,28 +76,13 @@ export default function AmbientAudio() {
         fadeTo(0.22, 1200);
         localStorage.setItem(STORAGE_KEY, "on");
 
-        // v14.3 — play the audio-on swell, then Raj's voice intro the
-        // FIRST time only (subsequent toggles just play the swell).
+        // v27 — the audio-on swell only. Raj's voice intro is retired
+        // per his call: "just keep the hip hop tune".
         try {
           const swell = new Audio("/audio/ui/audio-on.mp3");
           swell.volume = 0.35;
           swell.play().catch(() => {});
         } catch {}
-
-        const heardIntro = localStorage.getItem("iwr-raj-intro-heard");
-        if (heardIntro !== "1") {
-          try {
-            const intro = new Audio("/audio/raj-intro.mp3");
-            intro.volume = 0.85;
-            setTimeout(() => {
-              intro.play().catch(() => {});
-              localStorage.setItem("iwr-raj-intro-heard", "1");
-              // Duck ambient while Raj speaks so his voice cuts through
-              fadeTo(0.08, 600);
-              intro.addEventListener("ended", () => fadeTo(0.22, 1400));
-            }, 1400);
-          } catch {}
-        }
       } catch {
         // play() rejected (autoplay policy) — user gesture required
       }
