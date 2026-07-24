@@ -49,6 +49,9 @@ export default function PageMotion() {
             ease: EASES.outQuint,
             immediateRender: false,
             scrollTrigger: { trigger: el, start: "top 85%", once: true },
+            // Playfair's descenders overflow the Fraunces-era line boxes; the
+            // masks must not outlive the cascade or they shave every line.
+            onComplete: () => split.revert(),
           });
         });
       };

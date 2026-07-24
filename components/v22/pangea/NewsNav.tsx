@@ -26,7 +26,7 @@ export default function NewsNav() {
       <Link href="/" className="pnav__mark" aria-label="The Terminal — home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/brand/lockup.png"
+          src="/brand/lockup-cropped.png"
           alt="Invest with Raj"
           className="pnav__mark-img"
           style={{ height: 15, width: "auto" }}
