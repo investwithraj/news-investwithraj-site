@@ -50,3 +50,6 @@
 {"t":0,"agent":"a3e7477","agent_type":"unknown","event":"agent_stop","success":true}
 {"t":0,"agent":"a3e7477","agent_type":"unknown","event":"agent_stop","success":true}
 {"t":0,"agent":"a6ab96a","agent_type":"workflow-subagent","event":"agent_stop","success":true,"duration_ms":64608}
+{"t":0,"agent":"af0624a","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"af0624a","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"af0624a","agent_type":"unknown","event":"agent_stop","success":true}

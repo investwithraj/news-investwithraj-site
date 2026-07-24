@@ -28,6 +28,7 @@ import DesksGrid from "@/components/v22/pangea/DesksGrid";
 import CapitalFlowAct from "@/components/immersive/acts/CapitalFlowAct";
 import DailyAnchorAct from "@/components/immersive/acts/DailyAnchorAct";
 import CrossLinkAct from "@/components/immersive/acts/CrossLinkAct";
+import CallAgendaStrip from "@/components/v22/pangea/CallAgendaStrip";
 import GiantWordmark from "@/components/v21/GiantWordmark";
 import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 
@@ -74,6 +75,7 @@ export default function Home() {
           {/* Retained cinematic acts — same-register seams, no wipes. */}
           <CapitalFlowAct />
           <DailyAnchorAct />
+          <CallAgendaStrip />
           <CrossLinkAct />
 
           {/* The main-site footer's giant "INVEST WITH RAJ" sign-off. */}
