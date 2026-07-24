@@ -165,8 +165,8 @@ export default function CategoryDesks({ articles }: { articles: NewsArticle[] })
         }
         .cdesks__headline {
           margin: 12px 18px 0;
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: 1rem; font-weight: 500;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: 1rem; font-weight: 300;
           line-height: 1.3; letter-spacing: -0.01em;
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
           overflow: hidden;

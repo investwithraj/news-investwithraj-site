@@ -131,13 +131,15 @@ export default function AreasDrift() {
           color: #C9A961; margin: 0 0 18px;
         }
         .adrift__title {
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: clamp(1.9rem, 3.8vw, 3.1rem); font-weight: 500;
-          line-height: 1.05; letter-spacing: -0.02em; margin: 0; max-width: 22ch;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: clamp(1.7rem, 3.4vw, 2.7rem); font-weight: 200;
+          text-transform: uppercase; letter-spacing: 0.13em;
+          line-height: 1.15; margin: 0; max-width: 22ch;
         }
         .adrift__it {
-          font-family: var(--font-fraunces), serif; font-style: italic;
+          font-family: var(--font-playfair), serif; font-style: italic;
           font-weight: 500; color: #C9A961;
+          text-transform: none; letter-spacing: normal;
         }
         .adrift__scroller {
           margin-top: 56px;
@@ -193,9 +195,9 @@ export default function AreasDrift() {
           color: rgba(242, 238, 231, 0.45);
         }
         .adrift__name {
-          font-family: var(--font-space-grotesk), sans-serif;
+          font-family: var(--font-playfair), serif;
           font-size: 1.28rem; font-weight: 500;
-          line-height: 1.15; letter-spacing: -0.015em; color: #F2EEE7;
+          line-height: 1.2; letter-spacing: 0; color: #F2EEE7;
         }
         .adrift__line {
           margin-top: 10px;

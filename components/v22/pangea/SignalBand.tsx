@@ -143,8 +143,8 @@ export default function SignalBand() {
           display: flex; flex-direction: column; gap: 10px;
         }
         .sband__num {
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: clamp(1.7rem, 3.4vw, 2.9rem); font-weight: 500;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: clamp(1.7rem, 3.4vw, 2.9rem); font-weight: 300;
           letter-spacing: -0.02em; line-height: 1; color: #F2EEE7;
           font-variant-numeric: tabular-nums;
         }

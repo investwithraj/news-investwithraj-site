@@ -159,16 +159,16 @@ export default function FrontPageLead({ articles }: { articles: NewsArticle[] })
         .fpl__chip-date { color: rgba(242, 238, 231, 0.62); }
         .fpl__lead-title {
           display: block; margin: 12px 0 0;
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: clamp(1.8rem, 3.6vw, 3rem); font-weight: 500;
-          line-height: 1.08; letter-spacing: -0.02em; color: #F2EEE7;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: clamp(1.8rem, 3.6vw, 3rem); font-weight: 300;
+          line-height: 1.08; letter-spacing: 0.01em; color: #F2EEE7;
           transition: color 180ms ease;
         }
         .fpl__lead:hover .fpl__lead-title { color: #C9A961; }
         .fpl__lead-sub {
           display: block; margin-top: 14px; max-width: 56ch;
-          font-family: var(--font-inter), sans-serif;
-          font-size: 0.98rem; line-height: 1.6;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: 0.98rem; font-weight: 400; line-height: 1.6;
           color: rgba(242, 238, 231, 0.62);
         }
         .fpl__lead-cta {
@@ -201,9 +201,9 @@ export default function FrontPageLead({ articles }: { articles: NewsArticle[] })
         .fpl__rail-body { display: block; min-width: 0; }
         .fpl__rail-title {
           display: block; margin-top: 8px;
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: 1.02rem; font-weight: 500;
-          line-height: 1.3; letter-spacing: -0.01em; color: #F2EEE7;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: 1.02rem; font-weight: 300;
+          line-height: 1.3; letter-spacing: 0.01em; color: #F2EEE7;
           transition: color 180ms ease;
         }
         .fpl__rail-card:hover .fpl__rail-title { color: #C9A961; }
@@ -224,8 +224,8 @@ export default function FrontPageLead({ articles }: { articles: NewsArticle[] })
           font-variant-numeric: tabular-nums;
         }
         .fpl__index-title {
-          font-family: var(--font-inter), sans-serif;
-          font-size: 0.9rem; line-height: 1.45;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: 0.9rem; font-weight: 400; line-height: 1.45;
           color: rgba(242, 238, 231, 0.85);
           transition: color 180ms ease;
         }

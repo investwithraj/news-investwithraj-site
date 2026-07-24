@@ -52,11 +52,12 @@ export default function CallAgendaStrip() {
           color: #C9A961; margin: 0 0 14px;
         }
         .castrip__title {
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: clamp(1.7rem, 3.6vw, 2.9rem); font-weight: 500;
-          letter-spacing: -0.02em; line-height: 1.05; margin: 0 0 40px;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: clamp(1.5rem, 3.2vw, 2.5rem); font-weight: 200;
+          text-transform: uppercase;
+          letter-spacing: 0.14em; line-height: 1.2; margin: 0 0 40px;
         }
-        .castrip__it { font-family: var(--font-fraunces), serif; font-style: italic; font-weight: 400; color: #C9A961; }
+        .castrip__it { font-family: var(--font-playfair), serif; font-style: italic; font-weight: 400; text-transform: none; letter-spacing: 0.02em; color: #C9A961; }
         .castrip__grid {
           display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
           background: rgba(242, 238, 231, 0.1); border: 1px solid rgba(242, 238, 231, 0.1);
@@ -69,8 +70,8 @@ export default function CallAgendaStrip() {
         }
         .castrip__cell-title {
           margin-top: 12px;
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: 1.05rem; font-weight: 500; color: #F2EEE7;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: 1.05rem; font-weight: 300; color: #F2EEE7;
         }
         .castrip__cell-body { margin-top: 8px; font-size: 0.82rem; line-height: 1.55; color: rgba(242, 238, 231, 0.58); }
         .castrip__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; margin-top: 34px; }

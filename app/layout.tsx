@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter, JetBrains_Mono, Fraunces } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono, Fraunces, Raleway, Playfair_Display } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/next";
@@ -42,6 +42,23 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
   display: "swap",
   axes: ["SOFT", "opsz"],
+});
+
+/* v25 Barnes-register pairing (parity with investwithraj.com): Raleway
+   ultra-light tracked display + Playfair Didot-class serif. */
+const raleway = Raleway({
+  variable: "--font-raleway",
+  subsets: ["latin"],
+  weight: ["200", "300", "400", "600"],
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -168,7 +185,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} ${fraunces.variable} ${GeistSans.variable} ${GeistMono.variable} h-full`}
+      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} ${fraunces.variable} ${raleway.variable} ${playfair.variable} ${GeistSans.variable} ${GeistMono.variable} h-full`}
       suppressHydrationWarning
     >
       <head>

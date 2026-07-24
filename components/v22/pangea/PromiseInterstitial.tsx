@@ -1,6 +1,6 @@
 // v22 PANGEA revamp — the promise interstitial. Server component, Atlas-Card
-// pattern: one full-bleed photograph under a dark scrim, one centred Space
-// Grotesk line whose last word turns Fraunces italic gold, and a single mono
+// pattern: one full-bleed photograph under a dark scrim, one centred Raleway
+// line whose last word turns Playfair italic gold, and a single mono
 // location tag beneath it. No CTA — a pure register moment between sections.
 // CSS-keyframe entrances only — static under reduced motion.
 import type { ReactNode } from "react";
@@ -12,7 +12,7 @@ type PromiseInterstitialProps = {
   tag: string;
 };
 
-/** Split the line so the last word can carry the Fraunces italic gold accent. */
+/** Split the line so the last word can carry the Playfair italic gold accent. */
 function renderLine(line: string): ReactNode {
   const words = line.trim().split(/\s+/);
   const last = words.pop() ?? "";
@@ -65,14 +65,16 @@ export default function PromiseInterstitial({ image, alt, line, tag }: PromiseIn
           margin: 0 auto; padding: 96px clamp(20px, 4vw, 48px);
         }
         .pmi__line {
-          font-family: var(--font-space-grotesk), sans-serif;
-          font-size: clamp(1.6rem, 3.4vw, 2.8rem); font-weight: 500;
-          line-height: 1.18; letter-spacing: -0.02em;
+          font-family: var(--font-raleway), sans-serif;
+          font-size: clamp(1.6rem, 3.4vw, 2.5rem); font-weight: 200;
+          line-height: 1.18; letter-spacing: 0.12em;
+          text-transform: uppercase;
           color: #F2EEE7; margin: 0;
         }
         .pmi__accent {
-          font-family: var(--font-fraunces), serif; font-style: italic;
+          font-family: var(--font-playfair), serif; font-style: italic;
           font-weight: 400; color: #C9A961;
+          text-transform: none; letter-spacing: normal;
         }
         .pmi__tag {
           font-family: var(--font-jetbrains-mono), monospace;

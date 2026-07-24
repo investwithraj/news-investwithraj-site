@@ -2,9 +2,9 @@
 
 // v22 PANGEA revamp — the terminal's top chrome. Mirrors the main site's
 // PangeaNav grammar (wordmark · slim mono links · gold door) adapted to the
-// news property: "IWR / NEWS" wordmark, the six desks, and the one outbound
-// door to the practice (UTM-tagged). Self-contained, literal-coloured so it
-// holds in any register context.
+// news property: the real brand lockup + a mono NEWS chip, the six desks, and
+// the one outbound door to the practice (UTM-tagged). Self-contained,
+// literal-coloured so it holds in any register context.
 import Link from "next/link";
 
 const MAIN_URL = process.env.NEXT_PUBLIC_MAIN_URL ?? "https://investwithraj.com";
@@ -24,9 +24,14 @@ export default function NewsNav() {
   return (
     <header className="pnav" role="banner">
       <Link href="/" className="pnav__mark" aria-label="The Terminal — home">
-        <span className="pnav__mark-iwr">IWR</span>
-        <span className="pnav__mark-sep">/</span>
-        <span className="pnav__mark-news">NEWS</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/lockup.png"
+          alt="Invest with Raj"
+          className="pnav__mark-img"
+          style={{ height: 15, width: "auto" }}
+        />
+        <span className="pnav__mark-chip">NEWS</span>
       </Link>
 
       <nav className="pnav__links" aria-label="The desks">
@@ -57,14 +62,18 @@ export default function NewsNav() {
           border-bottom: 1px solid rgba(242, 238, 231, 0.1);
         }
         .pnav__mark {
-          display: inline-flex; align-items: baseline; gap: 7px;
+          display: inline-flex; align-items: center; gap: 9px;
           font-family: var(--font-jetbrains-mono), monospace;
           font-size: 12px; font-weight: 700; letter-spacing: 0.22em;
           text-decoration: none; white-space: nowrap;
         }
-        .pnav__mark-iwr { color: #C9A961; }
-        .pnav__mark-sep { color: rgba(242, 238, 231, 0.35); }
-        .pnav__mark-news { color: #F2EEE7; }
+        .pnav__mark-img { display: block; width: auto; }
+        .pnav__mark-chip {
+          font-size: 9px; letter-spacing: 0.22em; line-height: 1;
+          text-transform: uppercase; color: #C9A961;
+          border: 1px solid rgba(201, 169, 97, 0.5);
+          border-radius: 3px; padding: 3px 6px;
+        }
         .pnav__links {
           display: flex; align-items: center; gap: clamp(10px, 1.6vw, 22px);
           margin-left: auto; overflow-x: auto; scrollbar-width: none;

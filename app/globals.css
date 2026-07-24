@@ -150,11 +150,13 @@
   --ease-curtain: cubic-bezier(0.86, 0, 0.07, 1);       /* For page-transition wipes */
 
   /* Font aliases */
-  --font-display: var(--font-space-grotesk);
-  --font-body: var(--font-inter);
+  /* v25 BARNES RE-POINT (parity with investwithraj.com) — older pages
+     that consume these aliases follow the new register automatically. */
+  --font-display: var(--font-raleway);
+  --font-body: var(--font-raleway);
   --font-mono: var(--font-jetbrains-mono);
   /* v11 — editorial serif for property names, heritage moments, accent words */
-  --font-editorial: var(--font-fraunces);
+  --font-editorial: var(--font-playfair);
 
   /* ─────────────────────────────────────────────────────────────────────
      Backwards-compat token aliases — let v9 components pick up v10
