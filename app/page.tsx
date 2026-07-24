@@ -1,32 +1,30 @@
-// news.investwithraj.com home — v22 PANGEA COMPLETE REVAMP (20 Jul 2026).
+// news.investwithraj.com home — v22 PANGEA FRONT PAGE (24 Jul 2026).
 //
-// The Terminal rebuilt in the same grammar as the main site's Pangea home:
-// real DATA first (live articles, live DLD print), the Pangea LOOK (dark
-// #141414 ground · warm-white ink · real gold), and terminal FUNCTIONALITY
-// (the six desks, the live print, the reporting rail). Structure:
+// The immersive terminal home recomposed as a proper newspaper front page —
+// FT/Semafor editorial hierarchy in the locked Pangea register (dark #141414
+// ground · warm-white ink · real gold, sparing). Real data only: live
+// articles and the live DLD print. The immersive acts stay in the repo for
+// /terminal — they are simply no longer mounted here. Structure:
 //
-//   1 · HERO           — the day's lead story under the desk thesis + doors.
-//   2 · THE PRINT      — live DLD signal band (real /api/dld-pulse).
-//   3 · THE REPORTING  — spotlight + rail of the latest live stories.
-//   4 · THE DESKS      — six product doors (Pulse · Bell · Power List · Map ·
-//                        Areas · Developers).
-//   5 · CAPITAL FLOW   — the gold globe act (retained cinematic).
-//   6 · THE DAILY BRIEF— the voice-anchor act (retained cinematic).
-//   7 · THE BRIDGE     — cross-link to the practice, UTM-tagged (retained).
-//   8 · SIGN-OFF       — the giant INVEST WITH RAJ wordmark row.
+//   1 · FRONT PAGE   — masthead + broadsheet lead package (FrontPageLead).
+//   2 · THE PRINT    — live DLD signal band (real /api/dld-pulse).
+//   3 · THE DESKS    — reporting by beat, hairline-ruled rails (CategoryDesks).
+//   4 · THE PROMISE  — one photographic interstitial line (PromiseInterstitial).
+//   5 · THE GROUND   — the drift gallery of area coverage (AreasDrift).
+//   6 · THE CALL     — agenda strip (retained).
+//   7 · THE BRIDGE   — cross-link to the practice, UTM-tagged (retained).
+//   8 · SIGN-OFF     — the giant INVEST WITH RAJ wordmark row.
 //
-// Chrome: NewsNav (Pangea top bar) replaces the corner V17EdgeNav; the root
-// DldTicker/curtain stay suppressed on the home via V17BodyFlag. The retained
-// acts still read the scoped .v17-dark tokens (Pangea-valued in globals.css).
+// Chrome: NewsNav (Pangea top bar); the root DldTicker/curtain stay
+// suppressed on the home via V17BodyFlag.
 import type { Metadata } from "next";
 import V17BodyFlag from "@/components/v17/chrome/V17BodyFlag";
 import NewsNav from "@/components/v22/pangea/NewsNav";
-import NewsHero from "@/components/v22/pangea/NewsHero";
+import FrontPageLead from "@/components/v22/pangea/FrontPageLead";
 import SignalBand from "@/components/v22/pangea/SignalBand";
-import LeadStories from "@/components/v22/pangea/LeadStories";
-import DesksGrid from "@/components/v22/pangea/DesksGrid";
-import CapitalFlowAct from "@/components/immersive/acts/CapitalFlowAct";
-import DailyAnchorAct from "@/components/immersive/acts/DailyAnchorAct";
+import CategoryDesks from "@/components/v22/pangea/CategoryDesks";
+import PromiseInterstitial from "@/components/v22/pangea/PromiseInterstitial";
+import AreasDrift from "@/components/v22/pangea/AreasDrift";
 import CrossLinkAct from "@/components/immersive/acts/CrossLinkAct";
 import CallAgendaStrip from "@/components/v22/pangea/CallAgendaStrip";
 import GiantWordmark from "@/components/v21/GiantWordmark";
@@ -35,16 +33,16 @@ import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 export const metadata: Metadata = {
   title: "The Terminal — Dubai Real Estate in Real Time | Invest With Raj",
   description:
-    "The UAE property intel terminal — the day's lead story, the live DLD print, the reporting rail, and the six desks: Pulse, Closing Bell, Power List, the Map, Areas and Developers.",
+    "The UAE property front page — the day's lead reporting, the live DLD print, the desks by beat, and coverage by community across Dubai, Abu Dhabi and Ras Al Khaimah. Analysed before it's sold.",
   robots: { index: true, follow: true },
 };
 
 export default function Home() {
   const live = sortNewsArticles(NEWS_ARTICLES).filter((a) => a.status !== "research");
+  // The newest live article's cover doubles as the promise interstitial's
+  // photograph — fallback-safe: the interstitial simply doesn't mount if no
+  // live article carries a cover yet.
   const lead = live[0] ?? null;
-  // The hero features live[0]; the reporting rail spotlights the next story
-  // and rails five more — no duplication between sections.
-  const rest = live.slice(1, 8);
 
   return (
     <>
@@ -66,15 +64,32 @@ export default function Home() {
           background: "linear-gradient(180deg, #141414, #1A1A1B)",
         }}
       >
-        <main style={{ position: "relative", zIndex: 1, minHeight: "100svh" }}>
-          <NewsHero lead={lead} />
+        <main
+          style={{
+            position: "relative",
+            zIndex: 1,
+            minHeight: "100svh",
+            // Clear the fixed NewsNav so the masthead rule reads as the
+            // paper's first line, not a strip hidden under the chrome.
+            paddingTop: "52px",
+          }}
+        >
+          <FrontPageLead articles={live} />
           <SignalBand />
-          <LeadStories articles={rest} />
-          <DesksGrid />
+          <CategoryDesks articles={live} />
 
-          {/* Retained cinematic acts — same-register seams, no wipes. */}
-          <CapitalFlowAct />
-          <DailyAnchorAct />
+          {lead?.heroImage?.src ? (
+            <PromiseInterstitial
+              image={lead.heroImage.src}
+              alt={lead.heroImage.alt}
+              line={"Analysed before it’s sold."}
+              tag={"25.2048° N, 55.2708° E · DUBAI"}
+            />
+          ) : null}
+
+          <AreasDrift />
+
+          {/* Retained closing acts — same-register seams, no wipes. */}
           <CallAgendaStrip />
           <CrossLinkAct />
 

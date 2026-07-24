@@ -1,8 +1,13 @@
-// /news — index of all news articles, most-recent first.
+// /news — the full index of the reporting. v22 PANGEA: every live article,
+// grouped by desk (category), rendered as dense hairline rows — date · title
+// · one-line subtitle — in the locked register (dark #141414 ground ·
+// warm-white ink · real gold, sparing). Research stubs never list. Server
+// component, self-contained scoped styles, real data only.
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
+import { NEWS_ARTICLES, sortNewsArticles, groupByCategory } from "@/content/news";
+import type { NewsCategory } from "@/content/news";
 import { SITE } from "@/lib/constants";
 
 export const dynamic = "force-static";
@@ -18,132 +23,221 @@ export const metadata: Metadata = {
   },
 };
 
+const CATEGORY_LABEL: Record<NewsCategory, string> = {
+  "market-pulse": "Market Pulse",
+  launch: "Launches",
+  regulatory: "Regulatory",
+  macro: "Macro",
+  "developer-corporate": "Developer Desk",
+  infrastructure: "Infrastructure",
+  policy: "Policy",
+};
+
 export default function NewsIndex() {
-  const articles = sortNewsArticles(NEWS_ARTICLES);
+  // Live reporting only — research stubs never reach the index.
+  const live = sortNewsArticles(NEWS_ARTICLES).filter((a) => a.status !== "research");
+  const grouped = groupByCategory(live);
+
+  // Desks with at least one live article, deepest coverage first — the same
+  // ordering the front page's CategoryDesks uses.
+  const desks = (Object.keys(grouped) as NewsCategory[])
+    .filter((c) => (grouped[c]?.length ?? 0) > 0)
+    .sort((a, b) => grouped[b].length - grouped[a].length);
+
   return (
-    <main className="min-h-screen" style={{ background: "var(--paper)" }}>
-      <section
-        className="relative pt-20 md:pt-28 pb-12 md:pb-16"
-        style={{ background: "var(--paper-warm)" }}
-      >
-        <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8"
-            style={{ color: "var(--ink-soft)" }}
-            data-magnetic
-          >
-            <span aria-hidden>←</span>
-            <span>Back to the terminal</span>
+    <main id="news-index" data-register="dark" className="nidx">
+      <div className="nidx__inner">
+        {/* Header */}
+        <header className="nidx__head">
+          <Link href="/" className="nidx__back">
+            <span aria-hidden>←</span> Front page
           </Link>
 
-          <span
-            className="font-mono text-[10px] uppercase tracking-[0.22em]"
-            style={{ color: "var(--gold-deep)" }}
-          >
-            The reporting · {articles.length} article{articles.length === 1 ? "" : "s"}
-          </span>
-          <h1
-            className="mt-3 leading-[1.02] tracking-[-0.02em]"
-            style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-space-grotesk), sans-serif",
-              fontSize: "clamp(2.25rem, 5vw, 4rem)",
-              fontWeight: 500,
-            }}
-          >
-            Every piece,{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
-              cited.
-            </span>
-          </h1>
-          <p
-            className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            5–15 verified-source articles a day on UAE real estate. Every piece
-            cites DLD / RERA / Knight Frank / JLL / Khaleej Times / Arabian
-            Business. Written for serious investors.
+          <p className="nidx__eyebrow">
+            The reporting · {live.length} {live.length === 1 ? "report" : "reports"} ·{" "}
+            {desks.length} {desks.length === 1 ? "desk" : "desks"}
           </p>
-        </div>
-      </section>
+          <h1 className="nidx__title">
+            Every piece, <em className="nidx__it">cited.</em>
+          </h1>
+          <p className="nidx__dek">
+            Verified-source reporting on UAE real estate — Dubai, Abu Dhabi and Ras Al
+            Khaimah. Every piece cites DLD / RERA / Knight Frank / JLL / Khaleej Times /
+            Arabian Business. Written for serious investors.
+          </p>
+        </header>
 
-      <section className="py-12 md:py-16">
-        <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-          {articles.length === 0 ? (
-            <div
-              className="rounded-2xl border p-10 md:p-14 text-center"
-              style={{ borderColor: "var(--gold-soft)", background: "var(--paper-warm)" }}
-            >
-              <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep)" }}>
-                Status
-              </span>
-              <p className="mt-4 text-lg max-w-[40ch] mx-auto" style={{ color: "var(--ink-soft)" }}>
-                First articles drop with the 07:00 GST morning cron.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-5 md:gap-6">
-              {articles.map((a) => (
-                <Link
-                  key={a.slug}
-                  href={`/news/${a.slug}`}
-                  data-magnetic
-                  className="group block rounded-2xl border p-6 md:p-8 transition-all hover:-translate-y-0.5 hover:shadow-lg"
-                  style={{
-                    borderColor: "var(--gold-soft)",
-                    background: "var(--paper-pure, #202021)",
-                  }}
-                >
-                  <div className="flex flex-col gap-5 sm:flex-row md:gap-7">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={a.heroImage.src}
-                      alt={a.heroImage.alt}
-                      loading="lazy"
-                      className="w-full h-[160px] sm:w-[180px] sm:h-[120px] shrink-0 rounded-lg object-cover"
-                      style={{ filter: "saturate(0.85)" }}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: "var(--ink-faint)" }}>
-                        <span style={{ color: "var(--gold-deep)" }}>{a.category}</span>
-                        <span aria-hidden>·</span>
-                        <span>{a.market.join(" + ")}</span>
-                        <span aria-hidden>·</span>
-                        <time dateTime={a.publishedAt}>{a.displayDate}</time>
-                      </div>
-                      <h3
-                        className="text-xl md:text-2xl leading-[1.15] tracking-[-0.015em] mb-3 transition-colors group-hover:text-[var(--gold-deep)]"
-                        style={{
-                          color: "var(--ink)",
-                          fontFamily: "var(--font-space-grotesk), sans-serif",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {a.title}
-                      </h3>
-                      <p
-                        className="text-sm md:text-base leading-[1.55] max-w-[70ch] mb-3 editorial-italic"
-                        style={{ color: "var(--ink-soft)", fontStyle: "italic" }}
-                      >
-                        {a.subtitle}
-                      </p>
-                      <ul className="space-y-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-                        {a.tldr.map((t, i) => (
-                          <li key={i} className="pl-4 relative">
-                            <span className="absolute left-0 top-[0.6em] w-2 h-px" style={{ background: "var(--gold-deep)" }} aria-hidden />
-                            {t}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+        {live.length === 0 ? (
+          <div className="nidx__empty">
+            <span className="nidx__empty-tag">Status</span>
+            <p className="nidx__empty-line">
+              First articles drop with the 07:00 GST morning cron.
+            </p>
+          </div>
+        ) : (
+          desks.map((category) => {
+            const stories = sortNewsArticles(grouped[category]);
+            return (
+              <section
+                key={category}
+                id={`desk-${category}`}
+                className="nidx__desk"
+                aria-label={CATEGORY_LABEL[category] ?? category}
+              >
+                <div className="nidx__desk-head">
+                  <h2 className="nidx__desk-label">{CATEGORY_LABEL[category] ?? category}</h2>
+                  <span className="nidx__desk-count">
+                    · {stories.length} {stories.length === 1 ? "report" : "reports"}
+                  </span>
+                </div>
+
+                <ol className="nidx__rows">
+                  {stories.map((a) => (
+                    <li key={a.slug} className="nidx__row">
+                      <Link href={`/news/${a.slug}`} className="nidx__row-link">
+                        <time className="nidx__row-date" dateTime={a.publishedAt}>
+                          {a.displayDate}
+                        </time>
+                        <span className="nidx__row-body">
+                          <span className="nidx__row-title">{a.title}</span>
+                          <span className="nidx__row-sub">{a.subtitle}</span>
+                        </span>
+                        <span className="nidx__row-arrow" aria-hidden>
+                          →
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            );
+          })
+        )}
+      </div>
+
+      <style>{`
+        .nidx { min-height: 100svh; background: #141414; color: #F2EEE7; }
+        .nidx__inner {
+          max-width: 1080px; margin: 0 auto;
+          padding: 128px clamp(20px, 4vw, 48px) 112px;
+        }
+
+        /* Header */
+        .nidx__head { margin-bottom: 64px; }
+        .nidx__back {
+          display: inline-flex; align-items: baseline; gap: 8px;
+          font-family: var(--font-jetbrains-mono), monospace;
+          font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+          color: rgba(242, 238, 231, 0.62); text-decoration: none;
+          margin-bottom: 34px;
+          border-bottom: 1px solid rgba(242, 238, 231, 0.14); padding-bottom: 2px;
+          transition: color 180ms ease, border-color 180ms ease;
+        }
+        .nidx__back:hover { color: #F2EEE7; border-color: #B2924F; }
+        .nidx__eyebrow {
+          font-family: var(--font-jetbrains-mono), monospace;
+          font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase;
+          color: #C9A961; margin: 0 0 14px;
+        }
+        .nidx__title {
+          font-family: var(--font-space-grotesk), sans-serif;
+          font-size: clamp(2.25rem, 5vw, 4rem); font-weight: 500;
+          line-height: 1.02; letter-spacing: -0.02em; margin: 0; color: #F2EEE7;
+        }
+        .nidx__it {
+          font-family: var(--font-fraunces), serif; font-style: italic;
+          font-weight: 400; color: #C9A961;
+        }
+        .nidx__dek {
+          margin: 22px 0 0; max-width: 60ch;
+          font-family: var(--font-inter), sans-serif;
+          font-size: 1rem; line-height: 1.65;
+          color: rgba(242, 238, 231, 0.62);
+        }
+
+        /* Empty state */
+        .nidx__empty {
+          border: 1px solid rgba(242, 238, 231, 0.14); border-radius: 10px;
+          padding: 56px clamp(24px, 4vw, 56px); text-align: center;
+          background: #181818;
+        }
+        .nidx__empty-tag {
+          font-family: var(--font-jetbrains-mono), monospace;
+          font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+          color: #C9A961;
+        }
+        .nidx__empty-line {
+          margin: 16px auto 0; max-width: 40ch;
+          color: rgba(242, 238, 231, 0.62); font-size: 1.05rem; line-height: 1.6;
+        }
+
+        /* Desk groups */
+        .nidx__desk { margin-top: 56px; }
+        .nidx__desk:first-of-type { margin-top: 0; }
+        .nidx__desk-head {
+          display: flex; align-items: baseline; gap: 10px;
+          border-top: 1px solid rgba(242, 238, 231, 0.14);
+          padding-top: 16px; margin-bottom: 6px;
+        }
+        .nidx__desk-label {
+          font-family: var(--font-jetbrains-mono), monospace;
+          font-size: 11px; font-weight: 700;
+          letter-spacing: 0.2em; text-transform: uppercase;
+          color: #C9A961; margin: 0;
+        }
+        .nidx__desk-count {
+          font-family: var(--font-jetbrains-mono), monospace;
+          font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+          color: rgba(242, 238, 231, 0.42);
+        }
+
+        /* Hairline rows */
+        .nidx__rows { list-style: none; margin: 0; padding: 0; }
+        .nidx__row { border-bottom: 1px solid rgba(242, 238, 231, 0.1); }
+        .nidx__row:last-child { border-bottom: none; }
+        .nidx__row-link {
+          display: grid; grid-template-columns: 118px 1fr 20px;
+          gap: 18px; align-items: baseline;
+          padding: 15px 0; text-decoration: none;
+        }
+        .nidx__row-date {
+          font-family: var(--font-jetbrains-mono), monospace;
+          font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: rgba(242, 238, 231, 0.42);
+          font-variant-numeric: tabular-nums; white-space: nowrap;
+        }
+        .nidx__row-body { min-width: 0; }
+        .nidx__row-title {
+          display: block;
+          font-family: var(--font-space-grotesk), sans-serif;
+          font-size: 1.05rem; font-weight: 500;
+          line-height: 1.3; letter-spacing: -0.01em; color: #F2EEE7;
+          transition: color 180ms ease;
+        }
+        .nidx__row-link:hover .nidx__row-title { color: #C9A961; }
+        .nidx__row-sub {
+          display: block; margin-top: 4px;
+          font-family: var(--font-inter), sans-serif;
+          font-size: 0.85rem; line-height: 1.5;
+          color: rgba(242, 238, 231, 0.62);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .nidx__row-arrow {
+          color: rgba(242, 238, 231, 0.42);
+          transition: color 180ms ease, transform 180ms ease;
+        }
+        .nidx__row-link:hover .nidx__row-arrow { color: #C9A961; transform: translateX(3px); }
+
+        @media (max-width: 700px) {
+          .nidx__inner { padding-top: 108px; }
+          .nidx__row-link { grid-template-columns: 1fr 16px; gap: 12px; }
+          .nidx__row-date { grid-column: 1 / -1; margin-bottom: 2px; }
+          .nidx__row-sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nidx__back, .nidx__row-title, .nidx__row-arrow { transition: none; }
+        }
+      `}</style>
     </main>
   );
 }
