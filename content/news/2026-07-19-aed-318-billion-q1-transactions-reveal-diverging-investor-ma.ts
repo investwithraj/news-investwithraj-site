@@ -63,7 +63,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma/cover.webp",
     "alt": "AED 318 billion Q1 transactions reveal diverging investor mandates",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Invest With Raj editorial archive — Dubai Creek Harbour",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

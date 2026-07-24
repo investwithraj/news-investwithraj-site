@@ -57,7 +57,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-absorbs/cover.webp",
     "alt": "DIR completes 189-villa delivery at Danah Bay as RAK absorbs premium stock",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Invest With Raj editorial archive — Al Marjan Island",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

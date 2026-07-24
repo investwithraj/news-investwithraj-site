@@ -23,10 +23,14 @@ const EXTS = ["jpg", "jpeg", "png", "webp", "avif"] as const;
 
 // Known-good rights-clean Wikimedia fallbacks per market — only if live sourcing
 // returns nothing, so every article still ends up with a real, licensed photo.
+// One DISTINCT image per market — a single shared fallback is how twenty
+// articles ended up wearing the same Dubai aerial.
 const MARKET_FALLBACK: Record<string, string> = {
   Dubai: "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
-  "Abu Dhabi": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
-  "Ras Al Khaimah": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
+  "Abu Dhabi":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Abu_Dhabi_Corniche_skyline.jpg/1920px-Abu_Dhabi_Corniche_skyline.jpg",
+  "Ras Al Khaimah":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Magnificent_Skyline_on_route_to_Ras_Al_Khaimah.jpg/1920px-Magnificent_Skyline_on_route_to_Ras_Al_Khaimah.jpg",
 };
 
 async function coverExists(slug: string): Promise<boolean> {

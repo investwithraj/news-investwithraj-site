@@ -62,7 +62,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu/cover.webp",
     "alt": "Shangri-La Dubai sells for Dh1.1bn as Sheikh Zayed Road values compress",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "2008-03-21 Sheikh Zayed Street, Dubai.jpg — Simisa (CC BY-SA 3.0), via Wikimedia Commons",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

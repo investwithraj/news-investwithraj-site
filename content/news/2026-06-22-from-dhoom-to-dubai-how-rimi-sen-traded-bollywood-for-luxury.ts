@@ -61,7 +61,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury/cover.jpg",
     "alt": "From Dhoom to Dubai: How Rimi Sen Traded Bollywood for Luxury Real Estate",
-    "credit": "Mikhail Nilov"
+    "credit": "Burj Khalifa Night View 01.jpg — Sergei Gussev (CC BY 2.0), via Wikimedia Commons"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

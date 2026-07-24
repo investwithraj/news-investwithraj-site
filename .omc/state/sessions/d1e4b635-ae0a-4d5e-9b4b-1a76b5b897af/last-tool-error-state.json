@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"/c/Users/RAJTO/news-investwithraj\\\"\\npython - <<'PY'\\nimport glob, re\\nfixed = 0\\nfor ts in glob.glob('content/news/*.ts'):\\n    s = open(ts, encoding='utf-8').read()\\n    out, change...",
+  "error": "Exit code 1\n  File \"<stdin>\", line 12\r\n    if rest[i] == '\\' and i + 1 < len(rest):\r\n                  ^\r\nSyntaxError: unterminated string literal (detected at line 12)",
+  "timestamp": "2026-07-24T05:56:54.393Z",
+  "retry_count": 2
+}

@@ -65,9 +65,9 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "src": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
+    "src": "/news/2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du/cover.jpg",
     "alt": "Emaar unveils Dh200bn masterplan for 150,000 residents in Dubai",
-    "credit": "Nino Verde"
+    "credit": "View from Burj Khalifa (8667329327).jpg — Rob Young from United Kingdom (CC BY 2.0), via Wikimedia Commons"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

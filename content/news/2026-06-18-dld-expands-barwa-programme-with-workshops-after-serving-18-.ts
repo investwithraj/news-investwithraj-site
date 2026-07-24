@@ -57,7 +57,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-18-dld-expands-barwa-programme-with-workshops-after-serving-18-/cover.webp",
     "alt": "DLD expands Barwa Programme with workshops after serving 18,599 beneficiaries",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Abra @ From Bur Dubai to Deira @ Dubai Creek (15261960814).jpg — Guilhem Vellut from Annecy, France (CC BY 2.0), via Wikimedia Commons",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

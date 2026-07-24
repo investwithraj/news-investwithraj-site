@@ -52,7 +52,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026/cover.webp",
     "alt": "Abu Dhabi residential sales hit Dh38.1bn in record Q1 2026",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Invest With Raj editorial archive — Saadiyat Island",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

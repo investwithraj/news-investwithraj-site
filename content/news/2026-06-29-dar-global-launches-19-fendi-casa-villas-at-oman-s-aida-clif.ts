@@ -52,7 +52,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif/cover.webp",
     "alt": "Dar Global launches 19 Fendi Casa villas at Oman's AIDA clifftop precinct",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Aerial view of the coastline of Muttrah.jpg — Izeberg007 (CC0), via Wikimedia Commons",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

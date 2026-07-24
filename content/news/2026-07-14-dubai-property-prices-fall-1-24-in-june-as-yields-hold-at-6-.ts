@@ -52,7 +52,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-/cover.webp",
     "alt": "Dubai property prices fall 1.24% in June as yields hold at 6.93%",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Invest With Raj editorial archive — Dubai Hills Estate",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

@@ -52,7 +52,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop/cover.jpg",
     "alt": "Ethiopia sets $10m investment bar for Golden Visa — 18× UAE property threshold",
-    "credit": "Nino Verde"
+    "credit": "Invest With Raj editorial archive — Sobha Hartland"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

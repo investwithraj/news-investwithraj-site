@@ -49,7 +49,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252/cover.webp",
     "alt": "Dubai real estate sets historic high-water mark with AED 252bn Q1 transactions",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Dubai, United Arab Emirates (Unsplash suv4vuJsH6g).jpg — Caleb Whiting dogbear869 (CC0), via Wikimedia Commons",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

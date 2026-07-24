@@ -58,7 +58,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g/cover.webp",
     "alt": "UK buyers lead Dubai property demand — but banks tighten the gate",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Invest With Raj editorial archive — Dubai Marina",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

@@ -57,7 +57,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh/cover.jpg",
     "alt": "AHS Properties acquires Shangri-La Dubai for Dh1.1bn, eyes Dh25bn launch",
-    "credit": "Nino Verde"
+    "credit": "Dubai - Al Kifaf – Za abeel Park - panoramio.jpg — giggel (CC BY 3.0), via Wikimedia Commons"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

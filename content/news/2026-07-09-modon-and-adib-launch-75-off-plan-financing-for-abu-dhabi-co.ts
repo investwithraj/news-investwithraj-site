@@ -52,7 +52,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co/cover.jpg",
     "alt": "Modon and ADIB launch 75% off-plan financing for Abu Dhabi construction phase",
-    "credit": "Halamoudi"
+    "credit": "Invest With Raj editorial archive — Hudayriyat Island"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

@@ -67,7 +67,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm/cover.jpg",
     "alt": "Dubai launches Flexi Rent — 12 landlords offer monthly instalments to 1.2m tenants",
-    "credit": "Nino Verde"
+    "credit": "Emirates Towers in Dubai at dawn.jpg — Jackardsiffant (CC BY 3.0), via Wikimedia Commons"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

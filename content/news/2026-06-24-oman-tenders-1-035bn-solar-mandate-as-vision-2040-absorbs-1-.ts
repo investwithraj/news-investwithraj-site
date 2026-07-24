@@ -57,7 +57,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-/cover.webp",
     "alt": "Oman tenders $1.035bn solar mandate as Vision 2040 absorbs 1,500MW capacity",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Invest With Raj editorial archive — The Valley",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

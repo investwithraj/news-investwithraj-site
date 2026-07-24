@@ -62,7 +62,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl/cover.webp",
     "alt": "Dubai mandates monthly rent option across 12 landlords in Flexi Rent pilot",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Invest With Raj editorial archive — Arabian Ranches",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

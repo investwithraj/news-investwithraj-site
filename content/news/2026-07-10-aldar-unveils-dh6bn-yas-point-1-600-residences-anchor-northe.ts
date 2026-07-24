@@ -67,7 +67,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe/cover.jpg",
     "alt": "Aldar unveils Dh6bn Yas Point — 1,600 residences anchor northern waterfront",
-    "credit": "Halamoudi"
+    "credit": "Invest With Raj editorial archive — Yas Island"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

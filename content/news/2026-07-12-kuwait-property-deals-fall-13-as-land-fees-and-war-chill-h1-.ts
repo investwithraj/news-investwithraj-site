@@ -52,7 +52,7 @@ export const article: NewsArticle = {
   "heroImage": {
     "src": "/news/2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-/cover.webp",
     "alt": "Kuwait property deals fall 13% as land fees and war chill H1 2026 volumes",
-    "credit": "\"Views observation desk Burj Dubai\" is marked with CC0 1.0. To view the terms, visit https://creativecommons.org/publicdomain/zero/1.0/."
+    "credit": "Kuwait City Kuwait Towers Panoramic View 1.jpg — Zairon (CC BY 4.0), via Wikimedia Commons",
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",
