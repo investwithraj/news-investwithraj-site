@@ -51,8 +51,30 @@ import { article as art_2026_06_28_dubai_mandates_monthly_rent_option_across_12_
 import { article as art_2026_06_29_dar_global_launches_19_fendi_casa_villas_at_oman_s_aida_clif } from "./2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif";
 import { article as art_2026_07_01_uk_buyers_lead_dubai_property_demand_but_banks_tighten_the_g } from "./2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g";
 import { article as art_2026_07_02_dubai_real_estate_sets_historic_high_water_mark_with_aed_252 } from "./2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252";
+import { article as art_2026_07_06_bugatti_residences_closes_aed_270mn_in_june_penthouse_sales } from "./2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales";
+import { article as art_2026_07_08_dubai_ultra_prime_sales_hit_5_1bn_as_296_homes_above_10m_tra } from "./2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra";
+import { article as art_2026_07_09_modon_and_adib_launch_75_off_plan_financing_for_abu_dhabi_co } from "./2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co";
+import { article as art_2026_07_10_dubai_retail_sales_surge_171_to_aed_2_1bn_as_off_plan_mandat } from "./2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat";
+import { article as art_2026_07_10_aldar_unveils_dh6bn_yas_point_1_600_residences_anchor_northe } from "./2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe";
+import { article as art_2026_07_12_kuwait_property_deals_fall_13_as_land_fees_and_war_chill_h1_ } from "./2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-";
+import { article as art_2026_07_14_dubai_property_prices_fall_1_24_in_june_as_yields_hold_at_6_ } from "./2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-";
+import { article as art_2026_07_19_aed_318_billion_q1_transactions_reveal_diverging_investor_ma } from "./2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma";
+import { article as art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop } from "./2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop";
+import { article as art_2026_07_22_dubai_office_rents_stabilise_at_aed_238_sqft_as_grade_a_scar } from "./2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar";
+import { article as art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island } from "./2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island,
+  art_2026_07_22_dubai_office_rents_stabilise_at_aed_238_sqft_as_grade_a_scar,
+  art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop,
+  art_2026_07_19_aed_318_billion_q1_transactions_reveal_diverging_investor_ma,
+  art_2026_07_14_dubai_property_prices_fall_1_24_in_june_as_yields_hold_at_6_,
+  art_2026_07_12_kuwait_property_deals_fall_13_as_land_fees_and_war_chill_h1_,
+  art_2026_07_10_aldar_unveils_dh6bn_yas_point_1_600_residences_anchor_northe,
+  art_2026_07_10_dubai_retail_sales_surge_171_to_aed_2_1bn_as_off_plan_mandat,
+  art_2026_07_09_modon_and_adib_launch_75_off_plan_financing_for_abu_dhabi_co,
+  art_2026_07_08_dubai_ultra_prime_sales_hit_5_1bn_as_296_homes_above_10m_tra,
+  art_2026_07_06_bugatti_residences_closes_aed_270mn_in_june_penthouse_sales,
   art_2026_07_02_dubai_real_estate_sets_historic_high_water_mark_with_aed_252,
   art_2026_07_01_uk_buyers_lead_dubai_property_demand_but_banks_tighten_the_g,
   art_2026_06_29_dar_global_launches_19_fendi_casa_villas_at_oman_s_aida_clif,
