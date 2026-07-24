@@ -1,7 +1,0 @@
-{
-  "tool_name": "mcp__claude-in-chrome__navigate",
-  "tool_input_preview": "{\"url\":\"https://news-investwithraj-site-myqy1or2l-office-2271s-projects.vercel.app/\",\"tabId\":234561196}",
-  "error": "Tab 234561196 no longer exists. Call tabs_context_mcp to get current tabs.",
-  "timestamp": "2026-07-23T19:02:53.883Z",
-  "retry_count": 1
-}

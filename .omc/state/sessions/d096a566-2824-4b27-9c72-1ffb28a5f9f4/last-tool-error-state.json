@@ -1,7 +1,0 @@
-{
-  "tool_name": "StructuredOutput",
-  "tool_input_preview": "{\"file\":\"C:/Users/RAJTO/news-investwithraj/app/power-list/[year]/page.tsx\",\"editsMade\":7,\"summary\":\"Re-registered the Power List page to Pangea dark: flipped the inverted white hero band to a dark var...",
-  "error": "Output does not match required schema: root: must have required property 'residual'",
-  "timestamp": "2026-07-20T04:46:41.659Z",
-  "retry_count": 3
-}
