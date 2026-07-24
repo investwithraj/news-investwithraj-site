@@ -29,7 +29,6 @@ export default function NewsNav() {
           src="/brand/lockup-cropped.png"
           alt="Invest with Raj"
           className="pnav__mark-img"
-          style={{ height: 15, width: "auto" }}
         />
         <span className="pnav__mark-chip">NEWS</span>
       </Link>
@@ -67,7 +66,7 @@ export default function NewsNav() {
           font-size: 12px; font-weight: 700; letter-spacing: 0.22em;
           text-decoration: none; white-space: nowrap;
         }
-        .pnav__mark-img { display: block; width: auto; }
+        .pnav__mark-img { display: block; width: auto; height: 15px; }
         .pnav__mark-chip {
           font-size: 9px; letter-spacing: 0.22em; line-height: 1;
           text-transform: uppercase; color: #C9A961;
@@ -105,6 +104,10 @@ export default function NewsNav() {
         @media (max-width: 760px) {
           .pnav { gap: 12px; }
           .pnav__door { display: none; }
+          /* the ink-crop lockup is ~8x wider than the old square mark — keep
+             the anchor rigid and the crop small so the desk links get the row */
+          .pnav__mark { flex: 0 0 auto; }
+          .pnav__mark-img { height: 11px; }
         }
       `}</style>
     </header>
