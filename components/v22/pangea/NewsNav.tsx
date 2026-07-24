@@ -25,11 +25,9 @@ export default function NewsNav() {
     <header className="pnav" role="banner">
       <Link href="/" className="pnav__mark" aria-label="The Terminal — home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/brand/lockup-cropped.png"
-          alt="Invest with Raj"
-          className="pnav__mark-img"
-        />
+        {/* v26 — the boxed IWR tile, matching the main site's nav mark. */}
+        <span className="pnav__markbox" aria-hidden="true">IWR</span>
+        <span className="pnav__marktext" aria-hidden="true">Invest With Raj</span>
         <span className="pnav__mark-chip">NEWS</span>
       </Link>
 
@@ -66,7 +64,24 @@ export default function NewsNav() {
           font-size: 12px; font-weight: 700; letter-spacing: 0.22em;
           text-decoration: none; white-space: nowrap;
         }
-        .pnav__mark-img { display: block; width: auto; height: 15px; }
+        .pnav__markbox {
+          border: 1px solid rgba(242, 238, 231, 0.7);
+          padding: 6px 8px;
+          font-family: var(--font-raleway), system-ui, sans-serif;
+          font-size: 11px;
+          font-weight: 300;
+          letter-spacing: 0.3em;
+          text-indent: 0.3em;
+          line-height: 1;
+          color: #f2eee7;
+        }
+        .pnav__marktext {
+          font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+          font-size: 8px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
+          color: rgba(242, 238, 231, 0.72);
+        }
         .pnav__mark-chip {
           font-size: 9px; letter-spacing: 0.22em; line-height: 1;
           text-transform: uppercase; color: #C9A961;
@@ -104,10 +119,10 @@ export default function NewsNav() {
         @media (max-width: 760px) {
           .pnav { gap: 12px; }
           .pnav__door { display: none; }
-          /* the ink-crop lockup is ~8x wider than the old square mark — keep
-             the anchor rigid and the crop small so the desk links get the row */
+          /* keep the mark rigid and drop the long marktext so the desk
+             links get the row on phones */
           .pnav__mark { flex: 0 0 auto; }
-          .pnav__mark-img { height: 11px; }
+          .pnav__marktext { display: none; }
         }
       `}</style>
     </header>
