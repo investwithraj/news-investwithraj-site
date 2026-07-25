@@ -62,8 +62,12 @@ import { article as art_2026_07_19_aed_318_billion_q1_transactions_reveal_diverg
 import { article as art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop } from "./2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop";
 import { article as art_2026_07_22_dubai_office_rents_stabilise_at_aed_238_sqft_as_grade_a_scar } from "./2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar";
 import { article as art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island } from "./2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island";
+import { article as art_2026_07_24_aldar_unveils_aed_100bn_marsa_al_saadiyat_abu_dhabi_s_final_ } from "./2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-";
+import { article as art_2026_07_25_dubai_logs_aed_419_94bn_in_h1_transactions_as_weekly_volumes } from "./2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_25_dubai_logs_aed_419_94bn_in_h1_transactions_as_weekly_volumes,
+  art_2026_07_24_aldar_unveils_aed_100bn_marsa_al_saadiyat_abu_dhabi_s_final_,
   art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island,
   art_2026_07_22_dubai_office_rents_stabilise_at_aed_238_sqft_as_grade_a_scar,
   art_2026_07_21_ethiopia_sets_10m_investment_bar_for_golden_visa_18_uae_prop,
