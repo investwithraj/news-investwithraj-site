@@ -37,11 +37,16 @@ export function placeSchema(area: AreaPage): Record<string, unknown> {
 export function realEstateAgentSchema(area: AreaPage): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
-    "@type": "RealEstateAgent",
-    "@id": `${SITE.url}/areas/${area.slug}#agent`,
+    // v29 — was "RealEstateAgent", which labels Raj an agent in structured
+    // data and contradicts the brand invariant (advisor, never broker/agent)
+    // that this repo's own llms.txt states outright. ProfessionalService
+    // keeps the local-SEO semantics without the agent label.
+    "@type": "ProfessionalService",
+    "@id": `${SITE.url}/areas/${area.slug}#advisory`,
     name: "Raj Tomar",
     url: SITE.rootUrl,
-    image: `${SITE.rootUrl}/raj-avatar.jpg`,
+    // was /raj-avatar.jpg — that file does not exist (404 from 29 pages).
+    image: `${SITE.rootUrl}/raj-hero.jpg`,
     employee: rajPersonRef,
     parentOrganization: newsOrgRef,
     areaServed: {

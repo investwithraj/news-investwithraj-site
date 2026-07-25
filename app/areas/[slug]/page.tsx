@@ -46,7 +46,13 @@ export async function generateMetadata({
       title: `${a.name} — Invest With Raj`,
       description: a.excerpt,
       url: `${SITE.url}/areas/${slug}`,
-      images: a.heroImage.src ? [{ url: a.heroImage.src, alt: a.heroImage.alt }] : undefined,
+      // v29 — "<slug>-placeholder.jpg" is this repo's convention for "no
+      // image yet"; public/areas/ is empty, so emitting it shipped a broken
+      // OpenGraph image (and a 404) on every area page. Omit it instead.
+      images:
+        a.heroImage.src && !a.heroImage.src.includes("-placeholder.")
+          ? [{ url: a.heroImage.src, alt: a.heroImage.alt }]
+          : undefined,
     },
   };
 }
