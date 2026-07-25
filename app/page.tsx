@@ -19,7 +19,6 @@
 // suppressed on the home via V17BodyFlag.
 import type { Metadata } from "next";
 import V17BodyFlag from "@/components/v17/chrome/V17BodyFlag";
-import NewsNav from "@/components/v22/pangea/NewsNav";
 import FrontPageLead from "@/components/v22/pangea/FrontPageLead";
 import SignalBand from "@/components/v22/pangea/SignalBand";
 import CategoryDesks from "@/components/v22/pangea/CategoryDesks";
@@ -55,7 +54,6 @@ export default function Home() {
         Skip to content
       </a>
 
-      <NewsNav />
 
       <div
         id="main"
@@ -121,9 +119,11 @@ export default function Home() {
 
       {/* Scoped chrome override — only active while this home is mounted. */}
       <style>{`
+        /* v29 — the ambience toggle is NO LONGER suppressed here. This rule
+           was why the hip-hop toggle was invisible on the news home while
+           working on every article page. Ticker + curtain stay hidden. */
         body[data-v17-route="true"] .dld-ticker,
-        body[data-v17-route="true"] [data-iwr-page-load-curtain],
-        body[data-v17-route="true"] [data-iwr-ambient-audio] {
+        body[data-v17-route="true"] [data-iwr-page-load-curtain] {
           display: none !important;
         }
         body[data-v17-route="true"] { background: #141414 !important; }

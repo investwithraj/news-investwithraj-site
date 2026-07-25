@@ -12,6 +12,7 @@ import { DldTicker } from "@/components/ticker/DldTicker";
 import PageLoadCurtain from "@/components/PageLoadCurtain";
 import NavCurtain from "@/components/v21/NavCurtain";
 import AmbientAudio from "@/components/AmbientAudio";
+import NewsNav from "@/components/v22/pangea/NewsNav";
 import KonamiEasterEgg from "@/components/KonamiEasterEgg";
 import UISounds from "@/components/UISounds";
 import EditorialFooter from "@/components/EditorialFooter";
@@ -232,6 +233,14 @@ export default function RootLayout({
             paints (its transform is identical in both phases) — only its
             subtle 320ms content fade runs, underneath this cover. */}
         <NavCurtain />
+
+        {/* v29 — THE NAV IS GLOBAL. It used to be mounted by three pages
+            only (/, /about, /about/editorial-standards), which left every
+            article, desk and index page — 80 of 83 — with no navigation at
+            all: /closing-bell and /power-list/2026 were pure dead ends whose
+            only internal link was the logo. Mounting it here is the fix for
+            "lack of connectivity inside the news section". */}
+        <NewsNav />
 
         <FxProvider>
           {/* DLD daily-pulse ticker — Bloomberg-style strip pinned to top */}
