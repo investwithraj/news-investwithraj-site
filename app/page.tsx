@@ -34,6 +34,7 @@ export const metadata: Metadata = {
   title: "The Terminal — Dubai Real Estate in Real Time | Invest With Raj",
   description:
     "The UAE property front page — the day's lead reporting, the live DLD print, the desks by beat, and coverage by community across Dubai, Abu Dhabi and Ras Al Khaimah. Analysed before it's sold.",
+  alternates: { canonical: "https://news.investwithraj.com/" },
   robots: { index: true, follow: true },
 };
 

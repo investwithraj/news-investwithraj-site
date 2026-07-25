@@ -8,9 +8,9 @@ export const SITE = {
   rootUrl: "https://investwithraj.com",
   name: "Invest With Raj — Daily Market Read",
   tagline:
-    "Daily UAE real-estate intelligence. Curated. Cited. Read like an analyst.",
+    "UAE real-estate intelligence. Curated. Cited. Read like an analyst.",
   description:
-    "Independent UAE real-estate market intelligence. Weekly DLD transaction round-ups, monthly area deep-dives, plot-owner watchlists, and quarterly cycle reads. Every piece cites primary sources: DLD, RERA, Property Finder, Bayut, Knight Frank, JLL. Written for serious investors.",
+    "Independent UAE real-estate market intelligence covering market movements, launches, regulation, developers and communities across Dubai, Abu Dhabi and Ras Al Khaimah. Written for serious property decisions.",
 };
 
 export const CONTACT = {

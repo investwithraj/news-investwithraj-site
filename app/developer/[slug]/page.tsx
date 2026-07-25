@@ -34,7 +34,7 @@ export async function generateMetadata({
   const d = getDeveloperBySlug(slug);
   if (!d) return { title: "Not found" };
   return {
-    title: `${d.name} — ${d.tagline}`,
+    title: `${d.name} developer news and market coverage`,
     description: d.excerpt,
     alternates: { canonical: `${SITE.url}/developer/${slug}` },
     openGraph: {
@@ -277,7 +277,7 @@ export default async function DeveloperPage({
                   fontWeight: 500,
                 }}
               >
-                What they're known for
+                What they&apos;re known for
               </h2>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {d.flagshipProjects.map((p, i) => (

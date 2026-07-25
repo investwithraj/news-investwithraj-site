@@ -39,7 +39,7 @@ export async function generateMetadata({
   const a = getAreaBySlug(slug);
   if (!a) return { title: "Not found" };
   return {
-    title: `${a.name} — ${a.oneLiner}`,
+    title: `${a.name} property news and market updates`,
     description: a.excerpt,
     alternates: { canonical: `${SITE.url}/areas/${slug}` },
     openGraph: {
@@ -217,7 +217,7 @@ export default async function AreaPage({
                   fontWeight: 500,
                 }}
               >
-                Who's building here
+                Who&apos;s building here
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeDevs.map((d) => (

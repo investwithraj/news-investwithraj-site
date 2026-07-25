@@ -17,7 +17,7 @@ export const rajPersonSchema = {
     "Real estate advisor based in Dubai. 10+ years across the full property cycle in India and the UAE. Serial entrepreneur with deep international sales expertise, US market in particular.",
   url: `${SITE.rootUrl}/about`,
   mainEntityOfPage: `${SITE.rootUrl}/about`,
-  image: `${SITE.rootUrl}/raj-avatar.jpg`,
+  image: `${SITE.rootUrl}/raj-hero.jpg`,
   email: `mailto:${CONTACT.email}`,
   telephone: `+${CONTACT.whatsappE164}`,
   alumniOf: [
@@ -49,22 +49,6 @@ export const rajPersonSchema = {
     "Feasibility Analysis",
     "Urban Planning",
     "Construction Management",
-  ],
-  hasCredential: [
-    {
-      "@type": "EducationalOccupationalCredential",
-      name: "Licensed Real Estate Broker",
-      credentialCategory: "license",
-      recognizedBy: {
-        "@type": "GovernmentOrganization",
-        name: "Dubai Land Department",
-        alternateName: "DLD",
-        url: "https://dubailand.gov.ae",
-        sameAs: "https://en.wikipedia.org/wiki/Dubai_Land_Department",
-      },
-      educationalLevel: "Professional License",
-      validIn: { "@type": "Country", name: "United Arab Emirates" },
-    },
   ],
   sameAs: [
     CONTACT.linkedin,

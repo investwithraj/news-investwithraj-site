@@ -14,6 +14,7 @@ import NavCurtain from "@/components/v21/NavCurtain";
 import AmbientAudio from "@/components/AmbientAudio";
 import KonamiEasterEgg from "@/components/KonamiEasterEgg";
 import UISounds from "@/components/UISounds";
+import EditorialFooter from "@/components/EditorialFooter";
 import "./globals.css";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
@@ -110,14 +111,13 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: SITE.url,
     types: {
       "application/rss+xml": `${SITE.url}/rss.xml`,
     },
   },
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "en_AE",
     url: SITE.url,
     siteName: SITE.name,
     title: SITE.name,
@@ -156,13 +156,8 @@ const websiteSchema = {
   url: SITE.url,
   name: SITE.name,
   description: SITE.description,
-  inLanguage: "en-US",
-  publisher: { "@id": `${SITE.rootUrl}#organization` },
-  potentialAction: {
-    "@type": "SearchAction",
-    target: { "@type": "EntryPoint", urlTemplate: `${SITE.url}/?q={search_term_string}` },
-    "query-input": "required name=search_term_string",
-  },
+  inLanguage: "en-AE",
+  publisher: { "@id": `${SITE.url}#newsmediaorg` },
 };
 
 const newsOrgSchema = {
@@ -171,12 +166,20 @@ const newsOrgSchema = {
   "@id": `${SITE.url}#newsmediaorg`,
   name: SITE.name,
   url: SITE.url,
+  logo: {
+    "@type": "ImageObject",
+    url: `${SITE.rootUrl}/publisher-logo.png`,
+    width: 1000,
+    height: 1000,
+  },
   parentOrganization: { "@id": `${SITE.rootUrl}#organization` },
   founder: { "@id": `${SITE.rootUrl}#raj` },
   diversityPolicy: `${SITE.url}/about/editorial-standards`,
   ethicsPolicy: `${SITE.url}/about/editorial-standards`,
   masthead: `${SITE.url}/about`,
   missionCoveragePrioritiesPolicy: `${SITE.url}/about/editorial-standards`,
+  verificationFactCheckingPolicy: `${SITE.url}/about/editorial-standards`,
+  correctionsPolicy: `${SITE.url}/about/editorial-standards#corrections`,
 };
 
 export default function RootLayout({
@@ -184,7 +187,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
-      lang="en"
+      lang="en-AE"
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} ${fraunces.variable} ${raleway.variable} ${playfair.variable} ${GeistSans.variable} ${GeistMono.variable} h-full`}
       suppressHydrationWarning
     >
@@ -205,11 +208,15 @@ export default function RootLayout({
         {/* JSON-LD */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteSchema).replace(/</g, "\\u003c"),
+          }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(newsOrgSchema) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(newsOrgSchema).replace(/</g, "\\u003c"),
+          }}
         />
       </head>
 
@@ -232,6 +239,8 @@ export default function RootLayout({
 
           {children}
         </FxProvider>
+
+        <EditorialFooter />
 
         {/* v13 SOTY — cursor system with [data-cursor-label] + magnetic */}
         <CustomCursor />

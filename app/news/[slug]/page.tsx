@@ -6,7 +6,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getNewsBySlug, getAllNewsSlugs, NEWS_ARTICLES } from "@/content/news";
+import { getNewsBySlug, NEWS_ARTICLES } from "@/content/news";
 import { SemaformLayout } from "@/components/article/SemaformLayout";
 import PageMotion from "@/components/v21/PageMotion";
 import {
@@ -23,7 +23,9 @@ export const dynamicParams = false;
 export const dynamic = "force-static";
 
 export function generateStaticParams() {
-  return getAllNewsSlugs().map((slug) => ({ slug }));
+  return NEWS_ARTICLES
+    .filter((article) => article.status !== "research")
+    .map((article) => ({ slug: article.slug }));
 }
 
 export async function generateMetadata({
@@ -33,7 +35,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const article = getNewsBySlug(slug);
-  if (!article) return { title: "Article not found" };
+  if (!article || article.status === "research") {
+    return {
+      title: "Article not found",
+      robots: { index: false, follow: false },
+    };
+  }
 
   const url = `${SITE.url}/news/${slug}`;
   // Always route OG/Twitter cards through /api/og — it generates a branded
@@ -72,7 +79,7 @@ export default async function NewsArticlePage({
 }) {
   const { slug } = await params;
   const article = getNewsBySlug(slug);
-  if (!article) notFound();
+  if (!article || article.status === "research") notFound();
 
   const articleUrl = `${SITE.url}/news/${slug}`;
 
@@ -106,7 +113,9 @@ export default async function NewsArticlePage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+        }}
       />
       {/* V21 brand-motion unification — ONE static atmosphere touch: the
           main site's cinema plate (plate-1.webp) as a low-opacity masthead

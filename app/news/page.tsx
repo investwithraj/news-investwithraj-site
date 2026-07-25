@@ -16,7 +16,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: "News — Daily UAE real-estate intelligence",
   description:
-    "Every news.investwithraj.com article — 5–15 verified-source pieces a day on Dubai, Abu Dhabi, and Ras Al Khaimah real estate. Curated by Raj Tomar, real-estate consultant.",
+    "The latest source-cited reporting on Dubai, Abu Dhabi and Ras Al Khaimah property markets, launches, regulation and capital flows.",
   alternates: {
     canonical: `${SITE.url}/news`,
     types: { "application/rss+xml": `${SITE.url}/rss.xml` },
