@@ -64,8 +64,10 @@ import { article as art_2026_07_22_dubai_office_rents_stabilise_at_aed_238_sqft_
 import { article as art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island } from "./2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island";
 import { article as art_2026_07_24_aldar_unveils_aed_100bn_marsa_al_saadiyat_abu_dhabi_s_final_ } from "./2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-";
 import { article as art_2026_07_25_dubai_logs_aed_419_94bn_in_h1_transactions_as_weekly_volumes } from "./2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes";
+import { article as art_2026_07_26_off_plan_sales_capture_71_of_dubai_transactions_as_h1_2026_h } from "./2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_26_off_plan_sales_capture_71_of_dubai_transactions_as_h1_2026_h,
   art_2026_07_25_dubai_logs_aed_419_94bn_in_h1_transactions_as_weekly_volumes,
   art_2026_07_24_aldar_unveils_aed_100bn_marsa_al_saadiyat_abu_dhabi_s_final_,
   art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_saadiyat_island,
