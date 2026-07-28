@@ -65,8 +65,10 @@ import { article as art_2026_07_23_aldar_activates_aed_100_bn_marsa_al_saadiyat_
 import { article as art_2026_07_24_aldar_unveils_aed_100bn_marsa_al_saadiyat_abu_dhabi_s_final_ } from "./2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-";
 import { article as art_2026_07_25_dubai_logs_aed_419_94bn_in_h1_transactions_as_weekly_volumes } from "./2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes";
 import { article as art_2026_07_26_off_plan_sales_capture_71_of_dubai_transactions_as_h1_2026_h } from "./2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h";
+import { article as art_2026_07_28_burtville_launches_405_unit_bab_al_qasr_garden_residences_65 } from "./2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_07_28_burtville_launches_405_unit_bab_al_qasr_garden_residences_65,
   art_2026_07_26_off_plan_sales_capture_71_of_dubai_transactions_as_h1_2026_h,
   art_2026_07_25_dubai_logs_aed_419_94bn_in_h1_transactions_as_weekly_volumes,
   art_2026_07_24_aldar_unveils_aed_100bn_marsa_al_saadiyat_abu_dhabi_s_final_,
