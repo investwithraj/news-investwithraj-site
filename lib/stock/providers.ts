@@ -509,6 +509,23 @@ const JUNK_TITLE =
 const NON_UAE =
   /(niagara|canada|\bunited states\b|\busa\b|\blondon\b|\bparis\b|new york|singapore|mumbai|\bindia\b|\beurope\b|\bspain\b|\bitaly\b|toronto|sydney|\bchina\b|\bjapan\b|chicago|willis tower|sears|manhattan|brooklyn|los angeles|san francisco|las vegas|hong kong|shanghai|kuala lumpur|petronas|frankfurt|moscow|bangkok|cape town)/i;
 
+// The one over-generic file the ranker historically over-picked for almost
+// every Dubai query — deprioritise it so any genuinely specific match wins
+// (still allowed as a last resort when nothing better exists).
+const OVER_GENERIC = /Dubai_aerial\.jpg/i;
+
+// Per-emirate signature tells in a file TITLE, for emirate enforcement: an
+// image is penalised when the target emirate is X but the title affirms a
+// DIFFERENT emirate (e.g. an Abu Dhabi story matching a "Dubai/Burj Khalifa"
+// photo). Keyed by lowercase emirate; "uae"/"gcc" intentionally absent (no gate).
+const EMIRATE_TELLS: Record<string, RegExp> = {
+  "abu dhabi":
+    /(abu dhabi|saadiyat|yas island|corniche|louvre|al reem|reem island|al maryah|hudayriyat|jubail|nareel|al raha|masdar)/i,
+  dubai:
+    /(dubai|burj khalifa|burj al arab|palm jumeirah|marina|downtown|jumeirah|business bay|deira|jebel ali|\bcreek\b|bluewaters|jbr|difc)/i,
+  "ras al khaimah": /(ras al khaimah|\brak\b|al marjan|al hamra|mina al arab)/i,
+};
+
 /**
  * Best estimate of the ACTUAL served pixel width of img.url — NOT the native
  * metadata. Some aggregators (Openverse, esp. rawpixel-sourced files) report a
@@ -532,7 +549,7 @@ function servedWidth(img: StockImage): number {
 
 /** Relevance to the query + provider trust + hero-friendly aspect + TRUE resolution
  *  − wrong-subject/geo + soft-image penalties. */
-function rankStock(img: StockImage, tokens: string[]): number {
+function rankStock(img: StockImage, tokens: string[], emirate?: string): number {
   const providerBonus =
     img.source === "wikimedia" ? 300
     : img.source === "openverse" ? 250
@@ -551,7 +568,23 @@ function rankStock(img: StockImage, tokens: string[]): number {
   const relevance = tokens.filter((t) => t.length > 2 && title.includes(t)).length * 180;
   const junk = JUNK_TITLE.test(title) ? 800 : 0;
   const offGeo = NON_UAE.test(title) ? 1200 : 0;
-  return providerBonus + aspectBonus + resBonus + relevance - junk - offGeo - lowResPenalty;
+  // deprioritise the one over-generic file so a genuinely specific match wins
+  const generic = OVER_GENERIC.test(img.url) ? 600 : 0;
+  // emirate enforcement — penalise an image whose TITLE affirms a DIFFERENT emirate
+  let emirateMiss = 0;
+  if (emirate) {
+    const e = emirate.toLowerCase();
+    const own = EMIRATE_TELLS[e];
+    if (own && !own.test(title)) {
+      for (const [name, re] of Object.entries(EMIRATE_TELLS)) {
+        if (name !== e && re.test(title)) {
+          emirateMiss = 900;
+          break;
+        }
+      }
+    }
+  }
+  return providerBonus + aspectBonus + resBonus + relevance - junk - offGeo - lowResPenalty - generic - emirateMiss;
 }
 
 /** Convenience — return the single best match (relevance-ranked, dedup-aware). */
@@ -565,7 +598,9 @@ export async function findBestStockImage(
   }
   if (results.length === 0) return null;
   const tokens = opts.query.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-  return [...results].sort((a, b) => rankStock(b, tokens) - rankStock(a, tokens))[0];
+  return [...results].sort(
+    (a, b) => rankStock(b, tokens, opts.emirate) - rankStock(a, tokens, opts.emirate),
+  )[0];
 }
 
 export function isAnyStockConfigured(): boolean {

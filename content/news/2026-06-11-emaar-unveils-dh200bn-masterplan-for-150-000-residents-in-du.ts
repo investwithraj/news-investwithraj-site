@@ -65,9 +65,9 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "src": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
+    "src": "/news/2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du/cover.jpg",
     "alt": "Emaar unveils Dh200bn masterplan for 150,000 residents in Dubai",
-    "credit": "Nino Verde"
+    "credit": "Jimmy Baikovicius from Montevideo, Uruguay"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

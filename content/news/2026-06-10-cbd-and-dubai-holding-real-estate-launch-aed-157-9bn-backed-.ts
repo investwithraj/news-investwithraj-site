@@ -65,7 +65,7 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "src": "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg",
+    "src": "/news/2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-/cover.jpg",
     "alt": "CBD and Dubai Holding Real Estate Launch AED 157.9bn-Backed Mortgage Programme",
     "credit": "Nino Verde"
   },
