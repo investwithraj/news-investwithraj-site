@@ -49,7 +49,7 @@ function buildRedditDraft(article: NewsArticle, sub: { name: string; angle: stri
     ``,
     `Full breakdown with the source links: ${link}`,
     ``,
-    `Happy to answer market questions in comments — I'm DLD-licensed in Dubai.`,
+    `Happy to answer market questions in comments — I advise buyers and investors in Dubai.`,
   ].join("\n");
 
   return {
@@ -361,7 +361,12 @@ export function selectTopDrafts(
  */
 export function toQueuePartials(
   drafts: DraftSeed[]
-): Array<Omit<QueueItem, "id" | "createdAt" | "expiresAt" | "status">> {
+): Array<
+  Omit<
+    QueueItem,
+    "id" | "recordVersion" | "createdAt" | "expiresAt" | "status"
+  >
+> {
   return drafts.map((d) => ({
     channel: d.channel,
     target: d.target,

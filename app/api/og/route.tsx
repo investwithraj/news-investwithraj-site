@@ -1,88 +1,56 @@
-// Dynamic OG/branded image generator.
-// Wraps any background image with the news.investwithraj.com brand overlay:
-//   - Navy gradient at bottom
-//   - Article title in serif
-//   - Gold accent bar
-//   - "news.investwithraj.com" mark
-//   - Photo credit (small, bottom-right)
-//
-// Used as:
-//   • Article meta openGraph.images URL → social previews look custom
-//   • Optionally as the visible <img> on news listing cards
-//
-// GET /api/og?slug=2026-05-26-dld-21b-week
-// GET /api/og?title=Some+Headline&bg=https%3A%2F%2F…&credit=Photographer
+// Pure, deterministic OG renderer. It accepts a canonical article slug only
+// and may render only an already-approved, owned article-local image.
 
 import { ImageResponse } from "next/og";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getNewsBySlug } from "@/content/news";
-import { findBestStockImage, triggerUnsplashDownload } from "@/lib/stock/providers";
-import { buildQueryForArticle } from "@/lib/stock/query-builder";
+import { SITE } from "@/lib/constants";
+import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
 
-// Node runtime (not edge) because the stock provider chain transitively
-// imports google-auth-library (Vertex AI Imagen fallback) which uses
-// Node-only modules. Node cold-start ~150-300ms vs edge ~30-80ms —
-// acceptable since OG images cache aggressively at the CDN.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CACHE_CONTROL =
+  "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const slug = searchParams.get("slug") || "";
-  let title = searchParams.get("title") || "";
-  let bg = searchParams.get("bg") || "";
-  let credit = searchParams.get("credit") || "";
-  let category = "";
-
-  // Track Unsplash usage so we can fire the download trigger ToS-compliantly
-  let unsplashSource: {
-    photographerUrl?: string;
-    downloadTriggerUrl?: string;
-  } | null = null;
-
-  if (slug && !title) {
-    const article = getNewsBySlug(slug);
-    if (article) {
-      title = article.title;
-      category = article.category;
-      // If no bg passed, fetch one from stock
-      if (!bg) {
-        const stock = await findBestStockImage({
-          query: buildQueryForArticle(article),
-          orientation: "landscape",
-          minWidth: 1600,
-        });
-        if (stock) {
-          bg = stock.url;
-          credit = stock.credit;
-          // If Unsplash supplied the photo: capture trigger URL + photographer link
-          if (stock.source === "unsplash") {
-            unsplashSource = {
-              photographerUrl: stock.photographerUrl,
-              downloadTriggerUrl: stock.downloadTriggerUrl,
-            };
-          }
-        }
-      }
-    }
+  if ([...searchParams.keys()].some((key) => key !== "slug")) {
+    return NextResponse.json(
+      { error: "Only the canonical article slug is accepted." },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
-  // Fire the Unsplash download trigger (required by API guidelines — fire-and-forget).
-  // ImageResponse renders the photo, which counts as a "use" per their license.
-  if (unsplashSource?.downloadTriggerUrl) {
-    // Don't await — keep OG render fast
-    triggerUnsplashDownload(unsplashSource.downloadTriggerUrl);
+  const slug = searchParams.get("slug") ?? "";
+  if (slug && !/^[a-z0-9-]{1,180}$/.test(slug)) {
+    return NextResponse.json(
+      { error: "Invalid article slug." },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
-  if (!title) title = "news.investwithraj.com";
+  const article = slug ? getNewsBySlug(slug) : null;
+  if (slug && !article) {
+    return NextResponse.json(
+      { error: "Article not found." },
+      { status: 404, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
-  // Pangea dark register brand colors
-  const NAVY = "#141414";          // page ground
-  const INK = "#24241E";           // warm elevated dark surface
-  const GOLD = "#B2924F";          // real gold — single accent
-  const GOLD_BRIGHT = "#C9A961";   // brighter gold — highlights only
-  const PAPER = "#F2EEE7";         // primary ink (warm white)
-  void INK; // available for future variants
+  const title = article?.title ?? SITE.name;
+  const category = article?.category ?? "";
+  const hasImage = article ? hasVerifiedEditorialImage(article) : false;
+  const background =
+    article && hasImage
+      ? new URL(article.heroImage.src, SITE.url).toString()
+      : "";
+  const credit = article && hasImage ? article.heroImage.credit : "";
+
+  const NAVY = "#090B10";
+  const COBALT = "#596BFF";
+  const COBALT_LIGHT = "#B8C0FF";
+  const PAPER = "#F2EEE7";
 
   return new ImageResponse(
     (
@@ -96,10 +64,10 @@ export async function GET(request: NextRequest) {
           position: "relative",
         }}
       >
-        {/* Background image (if provided) */}
-        {bg && (
+        {background ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={bg}
+            src={background}
             width="1200"
             height="630"
             style={{
@@ -112,20 +80,18 @@ export async function GET(request: NextRequest) {
             }}
             alt=""
           />
-        )}
+        ) : null}
 
-        {/* Dark gradient overlay for legibility */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(180deg, rgba(20,20,20,0.10) 0%, rgba(20,20,20,0.45) 55%, rgba(20,20,20,0.95) 100%)",
+              "linear-gradient(180deg,rgba(9,11,16,.18) 0%,rgba(9,11,16,.55) 54%,rgba(9,11,16,.97) 100%)",
             display: "flex",
           }}
         />
 
-        {/* Top brand mark */}
         <div
           style={{
             position: "absolute",
@@ -136,7 +102,6 @@ export async function GET(request: NextRequest) {
             gap: 12,
             color: PAPER,
             fontSize: 18,
-            fontFamily: "Inter",
             letterSpacing: "0.18em",
             textTransform: "uppercase",
           }}
@@ -146,32 +111,30 @@ export async function GET(request: NextRequest) {
               width: 8,
               height: 8,
               borderRadius: 999,
-              background: GOLD_BRIGHT,
+              background: COBALT_LIGHT,
               display: "block",
             }}
           />
           <span>news.investwithraj.com</span>
         </div>
 
-        {/* Category eyebrow */}
-        {category && (
+        {category ? (
           <div
             style={{
               position: "absolute",
               top: 36,
               right: 56,
-              color: GOLD_BRIGHT,
+              color: COBALT_LIGHT,
               fontSize: 16,
-              fontFamily: "Inter",
               letterSpacing: "0.22em",
               textTransform: "uppercase",
+              display: "flex",
             }}
           >
             {category.replace(/-/g, " ")}
           </div>
-        )}
+        ) : null}
 
-        {/* Gold accent bar */}
         <div
           style={{
             position: "absolute",
@@ -179,12 +142,11 @@ export async function GET(request: NextRequest) {
             left: 56,
             width: 60,
             height: 3,
-            background: GOLD,
+            background: COBALT,
             display: "block",
           }}
         />
 
-        {/* Title */}
         <div
           style={{
             position: "absolute",
@@ -194,7 +156,6 @@ export async function GET(request: NextRequest) {
             color: PAPER,
             fontSize: title.length > 80 ? 48 : title.length > 50 ? 56 : 64,
             lineHeight: 1.05,
-            fontFamily: "FrauncesSerif",
             fontWeight: 500,
             letterSpacing: "-0.02em",
             display: "flex",
@@ -203,15 +164,13 @@ export async function GET(request: NextRequest) {
           {title}
         </div>
 
-        {/* Author line */}
         <div
           style={{
             position: "absolute",
             bottom: 48,
             left: 56,
-            color: GOLD_BRIGHT,
+            color: COBALT_LIGHT,
             fontSize: 18,
-            fontFamily: "Inter",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
             display: "flex",
@@ -222,13 +181,11 @@ export async function GET(request: NextRequest) {
           <span>By Raj Tomar</span>
           <span style={{ opacity: 0.5 }}>·</span>
           <span style={{ color: PAPER, opacity: 0.7 }}>
-            real-estate consultant
+            property advisor
           </span>
         </div>
 
-        {/* Photo credit (small, bottom-right). For Unsplash photos, includes
-            "on Unsplash" per their License attribution requirement. */}
-        {credit && (
+        {credit ? (
           <div
             style={{
               position: "absolute",
@@ -237,26 +194,22 @@ export async function GET(request: NextRequest) {
               color: PAPER,
               opacity: 0.55,
               fontSize: 12,
-              fontFamily: "Inter",
               letterSpacing: "0.1em",
               display: "flex",
             }}
           >
             Photo · {credit}
-            {unsplashSource && (
-              <span style={{ marginLeft: 6, display: "flex" }}>
-                {" on Unsplash"}
-              </span>
-            )}
           </div>
-        )}
+        ) : null}
       </div>
     ),
     {
       width: 1200,
       height: 630,
-      // Note: in production we can fetch + embed Fraunces / Inter font bytes
-      // for higher fidelity. Default system serif/sans-serif is acceptable Day-1.
-    }
+      headers: {
+        "Cache-Control": CACHE_CONTROL,
+        "X-Content-Type-Options": "nosniff",
+      },
+    },
   );
 }

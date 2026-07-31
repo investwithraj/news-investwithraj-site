@@ -242,7 +242,7 @@ export function DailyAnchorPane() {
                     className="w-1 rounded-t-sm"
                     style={{
                       background: "var(--gold-bright, #E0C076)",
-                      height: `${20 + Math.abs(Math.sin(i * 0.7 + Date.now() / 200)) * 80}%`,
+                      height: `${20 + Math.abs(Math.sin(i * 0.7)) * 80}%`,
                       animation: `anchor-eq 0.${(i % 9) + 2}s ease-in-out infinite alternate`,
                       animationDelay: `${i * 30}ms`,
                       opacity: 0.85,

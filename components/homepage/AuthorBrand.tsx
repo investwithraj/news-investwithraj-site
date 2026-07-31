@@ -83,7 +83,7 @@ export function AuthorBrand() {
               style={{ color: "var(--ink-soft)" }}
             >
               DLD-registered spatial planner and analyst, Dubai-based. I publish
-              what I'd otherwise email to one client — the daily prints, the
+              what I&apos;d otherwise email to one client — the daily prints, the
               off-plan reads, the UHNW trades, and the slow essays nobody else
               writes about UAE real estate.
             </p>

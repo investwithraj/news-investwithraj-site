@@ -40,9 +40,10 @@ export const article: NewsArticle = {
     },
   ],
   heroImage: {
-    src: "/news/2026-05-26-golden-visa-mortgage-flex/cover.jpg",
-    alt: "UAE Golden Visa + mortgage policy read — research in progress",
-    credit: "Placeholder cover until first policy read publishes",
+    src: "/verified-image-hold.svg",
+    alt: "",
+    credit: "Verified image withheld until the first sourced policy read publishes",
+    approval: "withheld",
   },
   cta: {
     href: rootCtaUrl({ campaign: "news_policy_stub", content: "newsletter-cta" }),

@@ -1,4 +1,4 @@
-// Closing Bell registry. Empty Day-1 — daily 16:30 GST cron writes here.
+// Closing Bell registry. Entries are added only after editorial review.
 
 import type { ClosingBellArticle } from "./types";
 export type { ClosingBellArticle } from "./types";
@@ -13,9 +13,9 @@ export function getLatestBells(limit = 10): ClosingBellArticle[] {
 }
 
 export function getBellBySlug(slug: string): ClosingBellArticle | null {
-  return CLOSING_BELLS.find((b) => b.slug === slug) ?? null;
+  return CLOSING_BELLS.find((bell) => bell.slug === slug) ?? null;
 }
 
 export function getAllBellSlugs(): string[] {
-  return CLOSING_BELLS.map((b) => b.slug);
+  return CLOSING_BELLS.map((bell) => bell.slug);
 }

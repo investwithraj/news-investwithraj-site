@@ -1,4 +1,4 @@
-// Press inbox poller — fetches unread emails from raj@news.investwithraj.com,
+// Press inbox poller — fetches unread emails from office@investwithraj.com,
 // converts each to a PressDraft, persists to content/press-inbound/<slug>.json.
 //
 // Called by:
@@ -6,11 +6,11 @@
 //   - Manually via curl for ad-hoc polls
 //
 // Usage:
-//   POST /api/press-inbox?secret=<POST_PUBLISH_SECRET>
+//   POST /api/press-inbox with the server credential header
 //     Optional body: { "markSeen": true | false (default true), "minScore": 0.3 }
 //   GET  /api/press-inbox  — health check + listing of current drafts
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import {
   fetchUnreadPressEmails,
   markSeen,
@@ -18,59 +18,68 @@ import {
 } from "@/lib/press-inbox/imap-client";
 import { buildDraft } from "@/lib/press-inbox/draft-builder";
 import { saveDrafts, listDrafts } from "@/lib/press-inbox/storage";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+  readJsonBody,
+} from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
 
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
-
 export async function GET() {
   const drafts = await listDrafts();
-  return NextResponse.json({
+  return publicStatusJson({
     name: "news.investwithraj.com press inbox poller",
-    method: "POST",
-    auth: "?secret=<POST_PUBLISH_SECRET>",
+    mutationMethod: "POST",
     body: {
-      markSeen: "boolean (optional, default true) — mark emails as seen after drafting",
+      markSeen:
+        "boolean (optional, default false) — mark only after durable draft save",
       minScore: "number (optional, default 0) — drop drafts below this relevance",
     },
     imapConfigured: isImapConfigured(),
     currentDraftsInInbox: drafts.length,
-    draftFiles: drafts.slice(0, 20),
+    productionStorage:
+      "disabled until a durable, idempotent press-draft store is connected",
   });
 }
 
 export async function POST(request: NextRequest) {
-  if (!SECRET) {
-    return NextResponse.json(
-      { error: "POST_PUBLISH_SECRET env var not set — endpoint disabled" },
-      { status: 503 }
+  const auth = authorizeServerMutation(request);
+  if (!auth.ok) return auth.response;
+  if (process.env.NODE_ENV === "production") {
+    return privateJson(
+      {
+        error:
+          "Press inbox polling is disabled until durable idempotent storage replaces server filesystem drafts.",
+      },
+      503,
     );
-  }
-  const provided = request.nextUrl.searchParams.get("secret");
-  if (provided !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!isImapConfigured()) {
-    return NextResponse.json(
+    return privateJson(
       {
         ok: false,
         message:
           "IMAP not configured (IMAP_HOST + IMAP_USERNAME + IMAP_PASSWORD env vars missing). Skipped.",
       },
-      { status: 503 }
+      503,
     );
   }
 
-  let body: { markSeen?: unknown; minScore?: unknown } = {};
-  try {
-    body = await request.json();
-  } catch {
-    // Empty body OK
-  }
+  const parsed = await readJsonBody<{
+    markSeen?: unknown;
+    minScore?: unknown;
+  }>(request, { maxBytes: 8_192, allowEmpty: true });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
 
-  const shouldMarkSeen = body.markSeen !== false; // default true
-  const minScore = typeof body.minScore === "number" ? body.minScore : 0;
+  const shouldMarkSeen = body.markSeen === true;
+  const minScore =
+    typeof body.minScore === "number"
+      ? Math.min(1, Math.max(0, body.minScore))
+      : 0;
 
   const t0 = performance.now();
 
@@ -79,7 +88,7 @@ export async function POST(request: NextRequest) {
   const kept = drafts.filter((d) => d.relevanceScore >= minScore);
   const filePaths = await saveDrafts(kept);
 
-  if (shouldMarkSeen) {
+  if (shouldMarkSeen && filePaths.length === kept.length) {
     // Mark only the kept ones as seen — let unrelated press releases re-process next run
     const keptUids = kept.map((d) => d.source.uid);
     await markSeen(keptUids);
@@ -87,7 +96,7 @@ export async function POST(request: NextRequest) {
 
   const elapsedMs = Math.round(performance.now() - t0);
 
-  return NextResponse.json({
+  return privateJson({
     ok: true,
     fetched: emails.length,
     drafted: kept.length,
@@ -101,7 +110,7 @@ export async function POST(request: NextRequest) {
       score: d.relevanceScore,
       tags: d.source.tags,
     })),
-    filePaths,
+    savedDraftCount: filePaths.length,
     elapsedMs,
     timestamp: new Date().toISOString(),
   });

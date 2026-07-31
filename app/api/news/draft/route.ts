@@ -1,61 +1,128 @@
 // News review drafts — create (POST) + list (GET).
 //
-// POST is called by the pipeline / cron (?secret=) or the cockpit (Basic-Auth)
-// to stage a drafted article into KV for review. It NEVER publishes — the
+// POST is called by the pipeline (server-secret header) or the cockpit
+// (HttpOnly review session) to stage a drafted article into KV. It NEVER publishes — the
 // article only goes live via the /publish route after Raj approves.
 
-import { NextRequest, NextResponse } from "next/server";
-import { authorize } from "@/lib/news-review/auth";
-import { addDraft, getAllDrafts, getStorageBackend } from "@/lib/news-review/storage";
+import { NextRequest } from "next/server";
+import { getNewsBySlug } from "@/content/news";
+import { authorize, authorizeMutation } from "@/lib/news-review/auth";
+import {
+  addDraft,
+  addReservedDraft,
+  DraftCollisionError,
+  DraftConflictError,
+  getAllDrafts,
+  getStorageBackend,
+} from "@/lib/news-review/storage";
+import {
+  validateDraftArticleShape,
+  validateProvenanceShape,
+} from "@/lib/news-review/integrity";
 import type { NewsDraftInput } from "@/lib/news-review/types";
+import { privateJson, readJsonBody } from "@/lib/security/mutation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const auth = authorize(req);
+  const auth = await authorize(req);
   if (!auth.ok) {
-    return NextResponse.json({ error: auth.message }, { status: auth.status });
+    return privateJson({ error: auth.message }, auth.status);
   }
-  const drafts = await getAllDrafts();
-  return NextResponse.json({ ok: true, drafts, backend: getStorageBackend() });
+  try {
+    const drafts = await getAllDrafts();
+    return privateJson({ ok: true, drafts, backend: getStorageBackend() });
+  } catch {
+    return privateJson({ error: "Draft storage is unavailable." }, 503);
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authorize(req);
+  const auth = await authorizeMutation(req);
   if (!auth.ok) {
-    return NextResponse.json({ error: auth.message }, { status: auth.status });
+    return privateJson({ error: auth.message }, auth.status);
   }
 
-  let body: Partial<NewsDraftInput>;
-  try {
-    body = (await req.json()) as Partial<NewsDraftInput>;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  const parsed = await readJsonBody<Partial<NewsDraftInput>>(req, {
+    maxBytes: 196_608,
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
+  const articleResult = validateDraftArticleShape(body.article);
+  if (!articleResult.ok) {
+    return privateJson({ error: articleResult.error }, 400);
   }
-
-  const article = body.article;
+  if (getNewsBySlug(articleResult.article.slug)) {
+    return privateJson(
+      { error: "A published article already occupies this slug." },
+      409,
+    );
+  }
+  const fallbackProvenance = {
+    clusterId: `manual-${articleResult.article.slug}`,
+    topic: articleResult.article.title,
+    score: 0,
+    scoreBreakdown: {
+      uhnwRelevance: 0,
+      sourceTier: 0,
+      freshness: 0,
+      rajAngle: 0,
+    },
+    sources: [],
+  };
+  const provenanceResult = validateProvenanceShape(
+    body.provenance ??
+      (auth.credential === "review-session"
+        ? fallbackProvenance
+        : undefined),
+    articleResult.article.citations.map((citation) => citation.url),
+  );
+  if (!provenanceResult.ok) {
+    return privateJson({ error: provenanceResult.error }, 400);
+  }
   if (
-    !article ||
-    typeof article.slug !== "string" ||
-    typeof article.title !== "string" ||
-    typeof article.body !== "string" ||
-    !Array.isArray(article.citations)
+    body.reviewNote !== undefined &&
+    (typeof body.reviewNote !== "string" || body.reviewNote.length > 4_000)
   ) {
-    return NextResponse.json(
-      { error: "article must include slug, title, body, citations[]" },
-      { status: 400 },
+    return privateJson({ error: "reviewNote is invalid." }, 400);
+  }
+  const reservationToken =
+    typeof body.reservationToken === "string" &&
+    /^[0-9a-f-]{36}$/i.test(body.reservationToken)
+      ? body.reservationToken
+      : "";
+  if (auth.credential === "server-secret" && !reservationToken) {
+    return privateJson(
+      {
+        error:
+          "Automation must acquire an atomic cluster reservation before staging.",
+      },
+      409,
     );
   }
 
-  const provenance = body.provenance ?? {
-    clusterId: "manual",
-    topic: article.title,
-    score: 0,
-    scoreBreakdown: { uhnwRelevance: 0, sourceTier: 0, freshness: 0, rajAngle: 0 },
-    sources: [],
-  };
-
-  const draft = await addDraft({ article, provenance, reviewNote: body.reviewNote });
-  return NextResponse.json({ ok: true, draft });
+  try {
+    const input = {
+      article: articleResult.article,
+      provenance: provenanceResult.provenance,
+      reviewNote: body.reviewNote,
+    };
+    const draft =
+      auth.credential === "server-secret"
+        ? await addReservedDraft({
+            ...input,
+            reservationToken,
+          })
+        : await addDraft(input);
+    return privateJson({ ok: true, draft }, 201);
+  } catch (error) {
+    if (error instanceof DraftCollisionError) {
+      return privateJson({ error: error.message }, 409);
+    }
+    if (error instanceof DraftConflictError) {
+      return privateJson({ error: error.message }, 409);
+    }
+    return privateJson({ error: "Draft storage is unavailable." }, 503);
+  }
 }

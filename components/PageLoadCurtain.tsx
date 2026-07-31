@@ -30,7 +30,7 @@ export default function PageLoadCurtain() {
     const alreadyBooted = sessionStorage.getItem("iwr-booted") === "1";
 
     if (reducedMotion || alreadyBooted) {
-      setShouldRun(false);
+      queueMicrotask(() => setShouldRun(false));
       return;
     }
 

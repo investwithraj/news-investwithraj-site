@@ -1,125 +1,166 @@
 import type { Metadata } from "next";
-import NewsNav from "@/components/v22/pangea/NewsNav";
-import V17BodyFlag from "@/components/v17/chrome/V17BodyFlag";
-import { SITE, CONTACT } from "@/lib/constants";
+import Link from "next/link";
+
+import { CONTACT, SITE } from "@/lib/constants";
+import {
+  asGraph,
+  breadcrumbSchema,
+  newsOrgRef,
+} from "@/lib/schema";
+
+import styles from "../AboutPages.module.css";
 
 const PAGE_URL = `${SITE.url}/about/editorial-standards`;
+const REVIEWED_DATE = "2026-07-31";
+const ADVISORY_URL =
+  `${SITE.rootUrl}/engage?utm_source=news.investwithraj.com` +
+  "&utm_medium=editorial_standards&utm_campaign=editorial_to_advisory";
+const DESCRIPTION =
+  "The source, verification, interpretation, correction, AI and conflicts standards used by Invest With Raj Intelligence.";
 
 export const metadata: Metadata = {
   title: "Editorial standards, sourcing and corrections",
-  description:
-    "How Invest With Raj sources, verifies, labels and corrects its UAE property reporting, including its policy on AI-assisted editorial work.",
+  description: DESCRIPTION,
   alternates: { canonical: PAGE_URL },
   openGraph: {
     type: "article",
     url: PAGE_URL,
-    title: "Editorial standards | Invest With Raj",
-    description:
-      "Sourcing, verification, AI assistance, corrections and commercial-independence standards.",
+    title: "Editorial standards | Invest With Raj Intelligence",
+    description: DESCRIPTION,
   },
 };
 
+const graph = asGraph(
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${PAGE_URL}#page`,
+    url: PAGE_URL,
+    name: "Editorial standards, sourcing and corrections",
+    description: DESCRIPTION,
+    inLanguage: "en-AE",
+    dateModified: REVIEWED_DATE,
+    isPartOf: { "@id": `${SITE.url}#website` },
+    publisher: newsOrgRef,
+  },
+  breadcrumbSchema([
+    { name: "About", url: `${SITE.url}/about` },
+    { name: "Editorial standards", url: PAGE_URL },
+  ]),
+);
+
 const standards = [
   {
+    id: "evidence",
+    number: "01",
+    title: "Evidence first",
+    body:
+      "A report begins with an identifiable record. Material names, dates, prices, percentages, policy thresholds and attributed statements must be supportable from the sources linked to the page. If the record is too weak, the claim is withheld or described as unverified.",
+  },
+  {
     id: "sources",
+    number: "02",
     title: "Source hierarchy",
     body:
-      "Official regulators, public records and statutory releases come first. Listed-company filings, investor-relations releases and named research houses come next. Reputable press may provide context or discovery, but material figures should be traced to the strongest available source. Anonymous claims are not presented as established fact.",
+      "Regulators, public records, statutory notices and first-party corporate filings are preferred. Named research and reputable reporting can add context. Discovery feeds and social posts are leads, not proof. A link must support the specific nearby claim, not merely discuss the same subject.",
   },
   {
-    id: "verification",
-    title: "Verification",
+    id: "interpretation",
+    number: "03",
+    title: "Interpretation is labelled",
     body:
-      "Names, dates, transaction values, percentages and policy thresholds should be checked against the cited material before publication. A source link must support the claim beside it, not merely discuss the same topic. When reliable sources disagree, the disagreement is stated rather than averaged away.",
+      "Reported fact and Raj's interpretation do different jobs. Fact describes what the available record establishes. Interpretation explains a possible consequence for a buyer or investor. Forecasts are framed as scenarios, risks or watchpoints—never as guaranteed returns, prices or outcomes.",
   },
   {
-    id: "analysis",
-    title: "Fact versus analysis",
+    id: "corrections",
+    number: "04",
+    title: "Corrections remain visible",
     body:
-      "Reported facts and Raj's interpretation serve different purposes. Facts explain what happened. Analysis explains why it may matter to investors, buyers, developers or landowners. Forward-looking language is framed as a thesis, risk or watchpoint—not as a guaranteed return, price or outcome.",
+      "A material factual error should be corrected promptly once stronger evidence is verified. The page's modification date is updated and a material correction should be disclosed on the page. Changes in interpretation are not silently presented as changes in fact.",
   },
   {
     id: "ai",
-    title: "AI assistance",
+    number: "05",
+    title: "AI can assist, never source",
     body:
-      "AI may assist discovery, research organisation, summarisation, structure and drafting. It is never treated as a source. The same sourcing and verification rules apply regardless of how a draft was produced. Automation does not justify publishing a page that adds no original decision value.",
+      "AI may help organise research, search a bounded editorial packet, summarise, translate, structure or draft. It is not evidence and it cannot approve publication in Raj's name. Generated public briefs are labelled, source-bounded and withheld when their citations fail validation.",
   },
   {
-    id: "commercial",
-    title: "Commercial independence",
+    id: "conflicts",
+    number: "06",
+    title: "Conflicts and commercial material",
     body:
-      "Coverage is selected for market relevance. A commercial relationship does not change the source standard or remove a material watchpoint. Sponsored or paid material, if introduced, will be labelled clearly and kept distinct from independent reporting.",
+      "Editorial coverage and Raj's advisory work sit under the same name, so the boundary must be explicit. A commercial relationship must not lower the evidence standard or remove a material watchpoint. Paid or sponsored material, if introduced, must be labelled and separated from independent reporting.",
   },
 ];
 
 export default function EditorialStandardsPage() {
   return (
     <>
-      <V17BodyFlag />
-      <NewsNav />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+        }}
+      />
 
-      <main
-        id="main"
-        className="v17-dark v17-cobalt"
-        style={{ background: "#141414", color: "#F2EEE7", minHeight: "100svh" }}
-      >
-        <article className="mx-auto w-full max-w-[980px] px-6 pb-24 pt-32 md:px-10 md:pt-40">
-          <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-[#C9A961]">
-            Publication policy · Last reviewed 25 July 2026
-          </p>
-          <h1 className="mt-6 max-w-[16ch] font-serif text-[clamp(3rem,7vw,6.5rem)] font-normal leading-[0.96] tracking-[-0.045em]">
-            Evidence first. Interpretation labelled.
-          </h1>
-          <p className="mt-8 max-w-[68ch] text-[clamp(1.05rem,1.8vw,1.3rem)] leading-8 text-[rgba(242,238,231,.72)]">
-            These standards govern the market reporting published on
-            news.investwithraj.com. They exist to make every page useful as a
-            decision record: the reader should be able to identify the source,
-            separate fact from analysis and request a correction when the
-            public record changes.
-          </p>
-
-          <div className="mt-16 divide-y divide-[rgba(242,238,231,.14)] border-y border-[rgba(242,238,231,.14)]">
-            {standards.map((standard, index) => (
-              <section
-                id={standard.id}
-                key={standard.id}
-                className="grid gap-5 py-10 md:grid-cols-[120px_240px_1fr]"
-              >
-                <p className="font-mono text-[10px] tracking-[0.2em] text-[#C9A961]">
-                  {String(index + 1).padStart(2, "0")}
-                </p>
-                <h2 className="text-xl leading-7 text-[#F2EEE7]">
-                  {standard.title}
-                </h2>
-                <p className="text-base leading-8 text-[rgba(242,238,231,.7)]">
-                  {standard.body}
-                </p>
-              </section>
-            ))}
+      <main id="main" className={`${styles.page} ${styles.policyPage}`}>
+        <header className={styles.policyHero}>
+          <div className={styles.heroRegister}>
+            <Link href="/about">← About the publication</Link>
+            <span>Reviewed 31 July 2026</span>
           </div>
+          <p>Editorial standards</p>
+          <h1>
+            Evidence first.
+            <br />
+            Interpretation labelled.
+          </h1>
+          <p>
+            These are the working rules for reporting published on
+            news.investwithraj.com. They describe what readers can expect and
+            how to challenge the record.
+          </p>
+        </header>
 
-          <section
-            id="corrections"
-            className="mt-16 border border-[rgba(201,169,97,.4)] p-7 md:p-10"
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#C9A961]">
-              Corrections
-            </p>
-            <h2 className="mt-4 text-3xl tracking-[-0.025em]">
-              Challenge the record.
-            </h2>
-            <p className="mt-4 max-w-[64ch] text-base leading-8 text-[rgba(242,238,231,.7)]">
-              Send the article URL, the specific statement and the strongest
-              supporting source to{" "}
-              <a className="text-[#D8C089] underline" href={`mailto:${CONTACT.email}?subject=Correction`}>
-                {CONTACT.email}
-              </a>
-              . Material corrections should be made promptly and the
-              modification date updated. A change in interpretation is not
-              silently presented as a change in fact.
-            </p>
-          </section>
-        </article>
+        <div className={styles.policyRegister}>
+          <span>Applies to</span>
+          <strong>News · analysis · area and developer records · AI briefs</strong>
+          <span>Accountable editor</span>
+          <strong>Raj Tomar</strong>
+        </div>
+
+        <div className={styles.policyList}>
+          {standards.map((standard) => (
+            <section id={standard.id} key={standard.id}>
+              <span>{standard.number}</span>
+              <h2>{standard.title}</h2>
+              <p>{standard.body}</p>
+            </section>
+          ))}
+        </div>
+
+        <section
+          id="challenge"
+          className={styles.challenge}
+          aria-labelledby="challenge-title"
+        >
+          <p>07 · Challenge the record</p>
+          <h2 id="challenge-title">Bring the stronger source.</h2>
+          <p>
+            Send the article URL, the exact statement being challenged and the
+            strongest supporting source to{" "}
+            <a href={`mailto:${CONTACT.email}?subject=Correction%20request`}>
+              {CONTACT.email}
+            </a>
+            . A challenge is reviewed against the source record; it is not
+            accepted or rejected on the basis of commercial preference.
+          </p>
+          <div>
+            <Link href="/news">Read the reporting archive →</Link>
+            <a href={ADVISORY_URL}>Take a decision to Raj ↗</a>
+          </div>
+        </section>
       </main>
     </>
   );

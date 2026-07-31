@@ -7,17 +7,30 @@
 // manual same-process trigger + as a Pro-tier path (raise maxDuration).
 //
 // Shares the drafting engine with the script (lib/news-review/draft-engine).
-// Auth: Bearer ${CRON_SECRET} or ?secret=${POST_PUBLISH_SECRET}.
+// Auth: Vercel Cron bearer or x-post-publish-secret. URL credentials rejected.
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { isClaudeConfigured } from "@/lib/ai/claude";
 import { fetchAllSources, flattenEntries } from "@/lib/sources/fetchers";
 import { dedupeEntries, similarity } from "@/lib/pipeline/dedupe";
 import { clusterAndScore } from "@/lib/pipeline/cluster";
 import { getWhitelistDomains } from "@/lib/sources/registry";
-import { addDraft, getAllDrafts } from "@/lib/news-review/storage";
+import {
+  addReservedDraft,
+  failDraftCluster,
+  getAllDrafts,
+  getStorageBackend,
+  reserveDraftCluster,
+} from "@/lib/news-review/storage";
 import { draftFromCluster } from "@/lib/news-review/draft-engine";
 import { NEWS_ARTICLES } from "@/content/news";
+import { dubaiCalendarDate } from "@/lib/dubai-time";
+import { productionFeatureAvailable } from "@/lib/operations/features";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+} from "@/lib/security/mutation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,23 +40,28 @@ const MIN_SCORE = parseInt(process.env.PIPELINE_MIN_SCORE ?? "45", 10);
 const MAX_DRAFTS_PER_RUN = parseInt(process.env.PIPELINE_CAP ?? "1", 10);
 const MAX_ATTEMPTS = parseInt(process.env.PIPELINE_MAX_ATTEMPTS ?? "1", 10);
 
-function authorized(req: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET || "";
-  const postSecret = process.env.POST_PUBLISH_SECRET || "";
-  const authHeader = req.headers.get("authorization") || "";
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true;
-  if (postSecret && authHeader === `Bearer ${postSecret}`) return true;
-  const provided = req.nextUrl.searchParams.get("secret") || "";
-  return Boolean(postSecret && provided === postSecret);
-}
-
 function isToday(iso: string): boolean {
-  return iso.slice(0, 10) === new Date().toISOString().slice(0, 10);
+  return dubaiCalendarDate(iso) === dubaiCalendarDate(new Date());
 }
 
 async function run(req: NextRequest) {
-  if (!authorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isClaudeConfigured()) return NextResponse.json({ error: "ANTHROPIC_API_KEY not set" }, { status: 503 });
+  const auth = authorizeServerMutation(req, { allowCronBearer: true });
+  if (!auth.ok) return auth.response;
+  if (!productionFeatureAvailable("ENABLE_NEWS_DRAFT_CRON")) {
+    return privateJson({ error: "News drafting cron is disabled." }, 503);
+  }
+  if (
+    process.env.NODE_ENV === "production" &&
+    getStorageBackend() !== "vercel-kv"
+  ) {
+    return privateJson(
+      { error: "Durable draft storage is required in production." },
+      503,
+    );
+  }
+  if (!isClaudeConfigured()) {
+    return privateJson({ error: "Drafting provider is not configured." }, 503);
+  }
 
   const fetchRun = await fetchAllSources();
   const entries = flattenEntries(fetchRun);
@@ -67,19 +85,60 @@ async function run(req: NextRequest) {
   for (const cluster of candidates) {
     if (staged >= MAX_DRAFTS_PER_RUN || attempts >= MAX_ATTEMPTS) break;
     attempts++;
-    const r = await draftFromCluster(cluster, whitelist, {
-      model: process.env.DRAFT_MODEL ?? "claude-haiku-4-5-20251001",
-      maxSearches: 2,
-      maxTokens: 3000,
-    });
-    results.push({ topic: cluster.topic.slice(0, 80), ok: r.ok, reason: r.reason });
-    if (r.ok && r.article && r.provenance) {
-      await addDraft({ article: r.article, provenance: r.provenance });
-      staged++;
+    const reservation = await reserveDraftCluster(
+      cluster.id,
+      cluster.topic,
+    );
+    if (!reservation.acquired) {
+      results.push({
+        topic: cluster.topic.slice(0, 80),
+        ok: false,
+        reason: "cluster already reserved or staged",
+      });
+      continue;
+    }
+    try {
+      const r = await draftFromCluster(cluster, whitelist, {
+        model: process.env.DRAFT_MODEL ?? "claude-haiku-4-5-20251001",
+        maxSearches: 2,
+        maxTokens: 3000,
+      });
+      results.push({
+        topic: cluster.topic.slice(0, 80),
+        ok: r.ok,
+        reason: r.reason,
+      });
+      if (r.ok && r.article && r.provenance) {
+        await addReservedDraft({
+          article: r.article,
+          provenance: r.provenance,
+          reservationToken: reservation.reservation.token,
+        });
+        staged++;
+      } else {
+        await failDraftCluster(
+          cluster.id,
+          reservation.reservation.token,
+          r.reason ?? "draft did not pass staging",
+        );
+      }
+    } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : "draft provider failed";
+      await failDraftCluster(
+        cluster.id,
+        reservation.reservation.token,
+        reason,
+      ).catch(() => undefined);
+      results.push({
+        topic: cluster.topic.slice(0, 80),
+        ok: false,
+        reason,
+      });
     }
   }
 
-  return NextResponse.json({
+  return privateJson({
     ok: true,
     fetched: entries.length,
     deduped: deduped.length,
@@ -92,8 +151,14 @@ async function run(req: NextRequest) {
   });
 }
 
-export async function GET(req: NextRequest) {
-  return run(req);
+export function GET() {
+  return publicStatusJson({
+    name: "News drafting cron",
+    mutationMethod: "POST",
+    enabled: productionFeatureAvailable("ENABLE_NEWS_DRAFT_CRON"),
+    storageBackend: getStorageBackend(),
+    publishing: "never; successful output is staged for review",
+  });
 }
 export async function POST(req: NextRequest) {
   return run(req);

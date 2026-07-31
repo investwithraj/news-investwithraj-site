@@ -1,62 +1,146 @@
-// Auth guard for the /api/news/draft* routes.
+// Auth guard for /api/news/draft*.
 //
-// Two accepted credentials — whichever fits the caller:
-//   • Basic-Auth header matching INTERNAL_BASIC_AUTH — the review cockpit. The
-//     browser already holds these creds (the user authed on /internal via
-//     proxy.ts) and sends them automatically on same-origin fetches, so the
-//     cockpit needs NO secret prompt.
-//   • ?secret=POST_PUBLISH_SECRET — the cron / pipeline (server-to-server),
-//     which can't do interactive Basic-Auth.
-//
-// Returns { ok } or { ok:false, status, message } so the route can early-return.
+// Browser review actions use a signed HttpOnly session minted by proxy.ts
+// after /internal Basic Auth succeeds. CI/pipeline callers use
+// POST_PUBLISH_SECRET in x-post-publish-secret. Query-string credentials are
+// deliberately rejected so secrets do not enter URLs, logs, or referrers.
 
 import type { NextRequest } from "next/server";
-
-const INTERNAL_BASIC_AUTH = process.env.INTERNAL_BASIC_AUTH || "";
-const POST_PUBLISH_SECRET = process.env.POST_PUBLISH_SECRET || "";
+import {
+  REVIEW_SESSION_COOKIE,
+  verifyReviewSession,
+} from "@/lib/news-review/session";
 
 export interface AuthResult {
   ok: boolean;
   status?: number;
   message?: string;
+  credential?: "server-secret" | "review-session";
+}
+
+const QUERY_CREDENTIAL_KEYS = [
+  "secret",
+  "token",
+  "api_key",
+  "key",
+  "post_publish_secret",
+] as const;
+
+function strongSecret(value: string | undefined): boolean {
+  return new TextEncoder().encode(value ?? "").byteLength >= 32;
 }
 
 function timingSafeEq(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let mismatch = 0;
-  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
   return mismatch === 0;
 }
 
-function basicAuthOk(req: NextRequest): boolean {
-  if (!INTERNAL_BASIC_AUTH) return false;
-  const header = req.headers.get("authorization") ?? "";
-  if (!header.startsWith("Basic ")) return false;
-  let decoded = "";
-  try {
-    decoded = atob(header.slice(6).trim());
-  } catch {
-    return false;
+function queryCredentialPresent(req: NextRequest): boolean {
+  const forbidden = new Set<string>(QUERY_CREDENTIAL_KEYS);
+  return [...req.nextUrl.searchParams.keys()].some((key) =>
+    forbidden.has(key.toLowerCase()),
+  );
+}
+
+function serverSecretState(req: NextRequest): "absent" | "valid" | "invalid" {
+  const expected = process.env.POST_PUBLISH_SECRET || "";
+  const provided = req.headers.get("x-post-publish-secret");
+  if (provided === null) return "absent";
+  if (!strongSecret(expected)) return "invalid";
+  return timingSafeEq(provided, expected) ? "valid" : "invalid";
+}
+
+async function sessionOk(req: NextRequest): Promise<boolean> {
+  const token = req.cookies.get(REVIEW_SESSION_COOKIE)?.value ?? "";
+  return verifyReviewSession(token);
+}
+
+export async function authorize(req: NextRequest): Promise<AuthResult> {
+  if (queryCredentialPresent(req)) {
+    return {
+      ok: false,
+      status: 400,
+      message:
+        "Credentials in URLs are rejected. Use the signed internal session or x-post-publish-secret header.",
+    };
   }
-  return timingSafeEq(decoded, INTERNAL_BASIC_AUTH);
-}
 
-function secretOk(req: NextRequest): boolean {
-  if (!POST_PUBLISH_SECRET) return false;
-  const provided =
-    req.nextUrl.searchParams.get("secret") ?? req.headers.get("x-post-publish-secret") ?? "";
-  return timingSafeEq(provided, POST_PUBLISH_SECRET);
-}
-
-/** Allow if either credential validates. */
-export function authorize(req: NextRequest): AuthResult {
-  if (!INTERNAL_BASIC_AUTH && !POST_PUBLISH_SECRET) {
+  if (
+    !strongSecret(process.env.INTERNAL_SESSION_SECRET) &&
+    !strongSecret(process.env.POST_PUBLISH_SECRET)
+  ) {
     return {
       ok: false,
       status: 503,
-      message: "Review API disabled — set INTERNAL_BASIC_AUTH or POST_PUBLISH_SECRET.",
+      message:
+        "Review API disabled — set INTERNAL_SESSION_SECRET or POST_PUBLISH_SECRET.",
     };
   }
-  if (basicAuthOk(req) || secretOk(req)) return { ok: true };
+
+  const serverSecret = serverSecretState(req);
+  if (serverSecret === "valid") {
+    return { ok: true, credential: "server-secret" };
+  }
+  if (serverSecret === "invalid") {
+    return { ok: false, status: 401, message: "Unauthorized" };
+  }
+  if (await sessionOk(req)) {
+    return { ok: true, credential: "review-session" };
+  }
   return { ok: false, status: 401, message: "Unauthorized" };
+}
+
+function sameOriginMutation(req: NextRequest): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin || origin !== req.nextUrl.origin) return false;
+  const fetchSite = req.headers.get("sec-fetch-site");
+  return !fetchSite || fetchSite === "same-origin";
+}
+
+/**
+ * Mutation guard with CSRF enforcement for browser sessions.
+ *
+ * Authenticated CI/pipeline calls are exempt because possession of the
+ * server-only header is the request credential and those callers have no
+ * browser cookie to protect.
+ */
+export async function authorizeMutation(req: NextRequest): Promise<AuthResult> {
+  if (queryCredentialPresent(req)) {
+    return {
+      ok: false,
+      status: 400,
+      message:
+        "Credentials in URLs are rejected. Use the signed internal session or x-post-publish-secret header.",
+    };
+  }
+
+  if (
+    !strongSecret(process.env.INTERNAL_SESSION_SECRET) &&
+    !strongSecret(process.env.POST_PUBLISH_SECRET)
+  ) {
+    return {
+      ok: false,
+      status: 503,
+      message:
+        "Review API disabled — set INTERNAL_SESSION_SECRET or POST_PUBLISH_SECRET.",
+    };
+  }
+  const serverSecret = serverSecretState(req);
+  if (serverSecret === "valid") {
+    return { ok: true, credential: "server-secret" };
+  }
+  if (serverSecret === "invalid") {
+    return { ok: false, status: 401, message: "Unauthorized" };
+  }
+  if (!(await sessionOk(req))) {
+    return { ok: false, status: 401, message: "Unauthorized" };
+  }
+  if (!sameOriginMutation(req)) {
+    return { ok: false, status: 403, message: "Forbidden" };
+  }
+  return { ok: true, credential: "review-session" };
 }

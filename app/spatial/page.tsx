@@ -1,168 +1,244 @@
-// F17 — Vision Pro / spatial-browser optimised landing.
-//
-// When a Vision Pro / spatial-browser visitor hits the site, this route is
-// the destination they get from Apple's spatial metadata. Renders a glass-
-// panel layout designed for floating + depth, plus deep-links into the 5
-// verticals and the area map.
-//
-// Detection on the regular homepage is done client-side via UA sniffing +
-// `window.matchMedia("(any-pointer: spatial)")` (when available) and an
-// automatic redirect can be added later — for now this is a dedicated URL.
-
 import type { Metadata } from "next";
 import Link from "next/link";
-import { VERTICALS } from "@/lib/verticals";
-import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import { NEWS_ARTICLES } from "@/content/news";
+import {
+  getVerticalArticles,
+  VERTICALS,
+} from "@/lib/verticals";
+import { rootCtaUrl, SITE } from "@/lib/constants";
+import styles from "./spatial.module.css";
 
 export const dynamic = "force-static";
 
+const canonical = `${SITE.url}/spatial`;
+
 export const metadata: Metadata = {
-  title: "Invest With Raj — Spatial edition",
+  title: "Spatial edition — UAE property intelligence",
   description:
-    "Vision Pro / spatial-browser optimised entry point to news.investwithraj.com. Designed for floating window-modes, hand-gesture navigation, and depth-tagged hero composition.",
-  alternates: { canonical: `${SITE.url}/spatial` },
+    "A progressive spatial-browser edition of Invest With Raj Intelligence with the complete five-desk directory and flat-web fallback.",
+  alternates: { canonical },
+  robots: { index: false, follow: true },
+  openGraph: {
+    title: "Spatial edition — Invest With Raj Intelligence",
+    description:
+      "A complete, accessible publication directory that does not require 3D or a spatial device.",
+    type: "website",
+    url: canonical,
+  },
   other: {
-    // Apple Vision Pro spatial-web hints — picked up by Safari on visionOS
     "apple-spatial-content": "true",
-    "apple-spatial-default-content-mode": "spatial",
-    "apple-spatial-floating-windows": "yes",
-    "apple-spatial-window-min-width": "640",
-    "apple-spatial-window-min-height": "920",
   },
 };
 
 export default function SpatialPage() {
+  const desks = VERTICALS.map((vertical) => ({
+    ...vertical,
+    articleCount: getVerticalArticles(vertical, NEWS_ARTICLES).length,
+  }));
+
   return (
-    <main
-      className="min-h-screen relative overflow-hidden"
-      style={{
-        background:
-          "radial-gradient(ellipse at top, var(--paper-warm), var(--paper) 60%)",
-      }}
-    >
-      {/* Depth-tagged ambient layer (only renders meaningfully on spatial browsers) */}
-      <div
-        aria-hidden
-        style={
-          {
-            position: "absolute",
-            inset: 0,
-            background:
-              "radial-gradient(circle at 20% 30%, rgba(201, 169, 97, 0.18), transparent 50%), radial-gradient(circle at 80% 70%, rgba(10, 16, 36, 0.08), transparent 60%)",
-            // Custom CSS property for spatial depth — ignored on flat browsers
-            "--apple-spatial-depth": "0.6rem",
-          } as React.CSSProperties
-        }
-      />
+    <main className={styles.page}>
+      <JsonLd />
 
-      <section className="relative max-w-[1080px] mx-auto px-6 md:px-12 pt-24 md:pt-32 pb-16">
-        <span
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.22em]"
-          style={{
-            background: "rgba(242, 238, 231, 0.06)",
-            color: "var(--gold-deep)",
-            border: "1px solid var(--gold-soft)",
-            backdropFilter: "blur(12px) saturate(180%)",
-          }}
-        >
-          <span className="w-1 h-1 rounded-full" style={{ background: "var(--gold-deep)" }} />
-          Spatial edition · visionOS / WebXR
-        </span>
-
-        <KineticHeadline
-          className="mt-7 leading-[1.02] tracking-[-0.025em]"
-          style={{
-            color: "var(--ink)",
-            fontSize: "clamp(2.75rem, 7vw, 5.5rem)",
-            fontWeight: 500,
-            maxWidth: "16ch",
-          }}
-        >
-          The UAE real-estate desk,{" "}
-          <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
-            in your room.
-          </span>
-        </KineticHeadline>
-
-        <p
-          className="mt-8 text-lg md:text-xl leading-[1.55] max-w-[58ch]"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          Pinch to drag windows. Look at any vertical to expand. Each panel
-          floats at its own depth — DLD Pulse closest, Beyond the Deal furthest.
-          Hand-gesture navigation, spatial audio coming with the next release.
-        </p>
-
-        {/* Floating-panel grid — 5 verticals as glass cards designed to render
-            with depth on visionOS Safari */}
-        <div className="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-          {VERTICALS.map((v, i) => (
-            <Link
-              key={v.slug}
-              href={`/v/${v.slug}`}
-              data-magnetic
-              className="group relative rounded-3xl p-7 transition-all hover:-translate-y-1"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(242,238,231,0.06), rgba(242,238,231,0.03))",
-                backdropFilter: "blur(24px) saturate(180%)",
-                WebkitBackdropFilter: "blur(24px) saturate(180%)",
-                border: "1px solid rgba(242,238,231,0.12)",
-                boxShadow: `0 ${12 + i * 4}px ${36 + i * 6}px -${18 - i * 2}px rgba(10, 16, 36, ${0.14 + i * 0.02}), inset 0 1px 0 rgba(255,255,255,0.08)`,
-                // Spatial depth-tier — closer panels feel nearer in visionOS
-                ["--apple-spatial-depth" as string]: `${0.4 + i * 0.2}rem`,
-              } as React.CSSProperties}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span
-                  aria-hidden
-                  className="leading-none"
-                  style={{
-                    color: v.accent,
-                    fontFamily: "var(--font-fraunces), Georgia, serif",
-                    fontSize: "2.5rem",
-                    opacity: 0.8,
-                  }}
-                >
-                  {v.glyph}
-                </span>
-                <span
-                  className="text-[9px] font-mono uppercase tracking-[0.22em]"
-                  style={{ color: "var(--ink-faint)" }}
-                >
-                  z · {(0.4 + i * 0.2).toFixed(1)}rem
-                </span>
-              </div>
-              <h3
-                className="text-xl md:text-2xl leading-tight tracking-[-0.02em] mb-2"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontWeight: 500,
-                  fontVariationSettings: '"SOFT" 70, "opsz" 144',
-                }}
-              >
-                {v.name}
-              </h3>
-              <p className="text-sm leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                {v.tagline}
+      <section className={styles.hero}>
+        <div className={styles.frame}>
+          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
+            <Link href="/">Daily Market Read</Link>
+            <span aria-hidden>/</span>
+            <span aria-current="page">Spatial edition</span>
+          </nav>
+          <div className={styles.heroGrid}>
+            <div>
+              <p className={styles.kicker}>Progressive spatial edition</p>
+              <h1>A roomier way to navigate the intelligence desk.</h1>
+            </div>
+            <div className={styles.heroCopy}>
+              <p>
+                Built to sit comfortably in wide or spatial browser windows,
+                while remaining complete HTML on every ordinary phone,
+                tablet and desktop.
               </p>
-            </Link>
-          ))}
+              <span>
+                No WebXR, 3D scene, headset or gesture support is required.
+              </span>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <div className="mt-16 text-center">
-          <Link
-            href="/"
-            className="btn-ghost group inline-flex"
-            data-magnetic
-          >
-            <span>Open the flat-web desk</span>
-            <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
-          </Link>
+      <section className={styles.desks} aria-labelledby="spatial-desks">
+        <div className={styles.frame}>
+          <header className={styles.sectionHead}>
+            <div>
+              <p className={styles.kicker}>02 · Five editorial desks</p>
+              <h2 id="spatial-desks">Choose the reporting lens.</h2>
+            </div>
+            <p>
+              Each door opens the same published vertical available on the
+              standard site.
+            </p>
+          </header>
+          <div className={styles.deskGrid}>
+            {desks.map((desk, index) => (
+              <Link
+                key={desk.slug}
+                href={`/v/${desk.slug}`}
+                className={styles.deskCard}
+              >
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <p>{desk.cadence}</p>
+                  <h3>{desk.name}</h3>
+                  <strong>{desk.tagline}</strong>
+                </div>
+                <footer>
+                  <small>
+                    {desk.articleCount} published{" "}
+                    {desk.articleCount === 1 ? "report" : "reports"}
+                  </small>
+                  <i aria-hidden>↗</i>
+                </footer>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.mapEntry} aria-labelledby="spatial-map">
+        <div className={`${styles.frame} ${styles.mapGrid}`}>
+          <div>
+            <p className={styles.kicker}>03 · Area-map entry</p>
+            <h2 id="spatial-map">Move from theme to place.</h2>
+          </div>
+          <div>
+            <p>
+              The area atlas plots editorial centroids for the published area
+              guides. It is a geographic index—not a boundary map, price layer
+              or simulated market heatmap.
+            </p>
+            <Link href="/map">
+              Open the area atlas
+              <span aria-hidden>→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.fallback} aria-labelledby="flat-web">
+        <div className={`${styles.frame} ${styles.fallbackGrid}`}>
+          <div>
+            <p className={styles.kicker}>04 · Flat-web fallback</p>
+            <h2 id="flat-web">Nothing important lives behind an effect.</h2>
+          </div>
+          <div className={styles.fallbackList}>
+            <article>
+              <span>Content</span>
+              <p>
+                Headlines, descriptions, counts and links remain readable
+                without JavaScript animation, depth or device detection.
+              </p>
+            </article>
+            <article>
+              <span>Navigation</span>
+              <p>
+                Every card is an ordinary link with keyboard focus and a
+                complete destination on the main publication.
+              </p>
+            </article>
+            <article>
+              <span>Motion</span>
+              <p>
+                No information depends on movement, and the page respects the
+                browser’s reduced-motion preference.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.return} aria-labelledby="return-to-desk">
+        <div className={`${styles.frame} ${styles.returnGrid}`}>
+          <div>
+            <p className={styles.kicker}>05 · Continue</p>
+            <h2 id="return-to-desk">Return to the main publication.</h2>
+            <p>
+              Open the latest reporting, or take a property decision to Raj
+              for a human working call.
+            </p>
+          </div>
+          <div className={styles.returnLinks}>
+            <Link href="/">
+              Open Daily Market Read
+              <span aria-hidden>→</span>
+            </Link>
+            <a
+              href={rootCtaUrl({
+                campaign: "spatial-edition",
+                content: "book-raj",
+              })}
+            >
+              Book a call with Raj
+              <span aria-hidden>↗</span>
+            </a>
+          </div>
         </div>
       </section>
     </main>
+  );
+}
+
+function JsonLd() {
+  const data = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${canonical}#collection`,
+        url: canonical,
+        name: "Invest With Raj Intelligence spatial edition",
+        description:
+          "A progressive spatial-browser directory for five UAE property reporting verticals.",
+        isPartOf: { "@id": `${SITE.url}#website` },
+        publisher: { "@id": `${SITE.url}#newsmediaorg` },
+      },
+      {
+        "@type": "ItemList",
+        "@id": `${canonical}#desks`,
+        numberOfItems: VERTICALS.length,
+        itemListElement: VERTICALS.map((vertical, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: vertical.name,
+          url: `${SITE.url}/v/${vertical.slug}`,
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${canonical}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Daily Market Read",
+            item: SITE.url,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Spatial edition",
+            item: canonical,
+          },
+        ],
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(data).replace(/</g, "\\u003c"),
+      }}
+    />
   );
 }

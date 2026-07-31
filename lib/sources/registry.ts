@@ -31,8 +31,9 @@ export interface VerifiedSource {
 }
 
 /**
- * The 20-source verified-source whitelist for the news firehose pipeline.
- * Mirrors master plan Part 3f. Ordered by tier weight (gov first).
+ * Verified-source whitelist for the news firehose pipeline.
+ * Ordered by tier weight (government first). Use the exported array lengths in
+ * operational copy rather than hard-coding a count.
  */
 export const SOURCE_WHITELIST: VerifiedSource[] = [
   /* ─── Tier 1 · Government / regulator (7) ──────────────────────── */

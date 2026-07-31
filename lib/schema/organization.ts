@@ -1,61 +1,42 @@
-// NewsMediaOrganization — the publication entity behind news.investwithraj.com.
-// References the parent Organization at investwithraj.com via @id chain.
+// Public entity for the editorial publication. Unsupported founding history,
+// audience claims and missing remote artwork are deliberately excluded.
 
-import { SITE, CONTACT } from "@/lib/constants";
+import { CONTACT, SITE } from "@/lib/constants";
+import { RAJ_PERSON_ID } from "./person";
 
-/** Canonical NewsMediaOrganization schema for the news subdomain.
- *  Required by Google News for Publisher Center eligibility. */
+export const NEWS_ORG_ID = `${SITE.url}#newsmediaorg`;
+
 export const newsOrgSchema = {
   "@context": "https://schema.org",
   "@type": "NewsMediaOrganization",
-  "@id": `${SITE.url}#newsmediaorg`,
+  "@id": NEWS_ORG_ID,
   name: SITE.name,
   url: SITE.url,
+  description: SITE.description,
   logo: {
     "@type": "ImageObject",
-    url: `${SITE.rootUrl}/publisher-logo.png`,
-    width: 1000,
-    height: 1000,
+    url: `${SITE.url}/icon.svg`,
+    width: 512,
+    height: 512,
   },
   email: CONTACT.email,
-  telephone: `+${CONTACT.whatsappE164}`,
-  parentOrganization: { "@id": `${SITE.rootUrl}#organization` },
-  founder: { "@id": `${SITE.rootUrl}#raj` },
-  foundingDate: "2026-05-26",
-  // Google News E-E-A-T requirements — point at editorial-standards page
-  diversityPolicy: `${SITE.url}/about/editorial-standards`,
-  ethicsPolicy: `${SITE.url}/about/editorial-standards`,
+  founder: { "@id": RAJ_PERSON_ID },
   masthead: `${SITE.url}/about`,
-  missionCoveragePrioritiesPolicy: `${SITE.url}/about/editorial-standards`,
-  verificationFactCheckingPolicy: `${SITE.url}/about/editorial-standards`,
-  correctionsPolicy: `${SITE.url}/about/editorial-standards`,
-  // Editorial focus
-  knowsAbout: [
-    "UAE Real Estate News",
-    "Dubai Property Market",
-    "Abu Dhabi Real Estate",
-    "Ras Al Khaimah Real Estate",
-    "DLD Transaction Data",
-    "Off-Plan Property Launches",
-    "Real Estate Investment Analysis",
-  ],
-  areaServed: [
-    { "@type": "Place", name: "Dubai" },
-    { "@type": "Place", name: "Abu Dhabi" },
-    { "@type": "Place", name: "Ras Al Khaimah" },
-    { "@type": "Country", name: "United Arab Emirates" },
-  ],
+  ethicsPolicy: `${SITE.url}/about/editorial-standards`,
+  diversityPolicy: `${SITE.url}/about/editorial-standards`,
+  correctionsPolicy: `${SITE.url}/about/editorial-standards#corrections`,
+  verificationFactCheckingPolicy: `${SITE.url}/about/editorial-standards#evidence`,
+  missionCoveragePrioritiesPolicy: `${SITE.url}/about`,
+  publishingPrinciples: `${SITE.url}/about/editorial-standards`,
   sameAs: [
     CONTACT.linkedin,
     CONTACT.linkedinNewsletter,
     CONTACT.instagram,
     CONTACT.youtube,
-    SITE.rootUrl,
   ],
 };
 
-/** Reference object — for child schemas to point at the publisher */
-export const newsOrgRef = { "@id": `${SITE.url}#newsmediaorg` };
+export const newsOrgRef = { "@id": NEWS_ORG_ID };
 
-/** Parent Organization reference — points at the IWR root canonical Org */
+/** Parent brand reference retained for existing linked-data consumers. */
 export const parentOrgRef = { "@id": `${SITE.rootUrl}#organization` };

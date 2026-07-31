@@ -1,13 +1,21 @@
 // F18 — Multi-language translation endpoint.
 // Claude-powered. UHNW buyer-language matrix: AR, HI, ZH, RU, FR.
 // POST /api/translate { text, targetLang } → translated text.
-// ISR-cached on Vercel when called from server components.
 
 import { NextRequest, NextResponse } from "next/server";
 import { callClaude, isClaudeConfigured } from "@/lib/ai/claude";
-import { checkRateLimit, getClientIp } from "@/lib/ai/rate-limit";
+import {
+  checkRateLimit,
+  getClientIp,
+  isFirstPartyMutation,
+} from "@/lib/ai/rate-limit";
+import { readJsonBody } from "@/lib/security/mutation";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 const SUPPORTED_LANGS = ["ar", "hi", "zh", "ru", "fr", "de", "es", "ja", "ko"] as const;
 type LangCode = (typeof SUPPORTED_LANGS)[number];
@@ -24,41 +32,83 @@ const LANG_NAME: Record<LangCode, string> = {
   ko: "Korean",
 };
 
+function unavailable() {
+  return NextResponse.json(
+    { ok: false, message: "Translation is temporarily unavailable." },
+    { status: 503, headers: { "Cache-Control": "no-store" } },
+  );
+}
+
 export async function POST(request: NextRequest) {
-  if (!isClaudeConfigured()) {
+  if (!isFirstPartyMutation(request)) {
     return NextResponse.json(
-      { ok: false, message: "Translation offline — ANTHROPIC_API_KEY not set." },
-      { status: 503 }
+      { ok: false, message: "Forbidden" },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   const ip = getClientIp(request.headers);
-  const limit = checkRateLimit(ip, { max: 20, windowMs: 60 * 60 * 1000 });
-  if (!limit.allowed) {
+  const hourly = await checkRateLimit(ip, {
+    namespace: "translate:hour",
+    max: 5,
+    windowMs: HOUR_MS,
+  });
+  if (hourly.reason === "unavailable") return unavailable();
+  if (!hourly.allowed) {
     return NextResponse.json(
-      { ok: false, message: "Rate limit hit. Try in 1 hour." },
-      { status: 429 }
+      { ok: false, message: "Translation limit reached. Try again later." },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(
+            Math.max(1, Math.ceil((hourly.resetAt - Date.now()) / 1_000)),
+          ),
+        },
+      },
     );
   }
 
-  let body: { text?: unknown; targetLang?: unknown } = {};
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  const daily = await checkRateLimit(ip, {
+    namespace: "translate:day",
+    max: 20,
+    windowMs: DAY_MS,
+  });
+  if (daily.reason === "unavailable") return unavailable();
+  if (!daily.allowed) {
+    return NextResponse.json(
+      { ok: false, message: "Daily translation limit reached." },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(
+            Math.max(1, Math.ceil((daily.resetAt - Date.now()) / 1_000)),
+          ),
+        },
+      },
+    );
   }
+
+  const parsed = await readJsonBody<{
+    text?: unknown;
+    targetLang?: unknown;
+  }>(request, { maxBytes: 12_288 });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
 
   const text = typeof body.text === "string" ? body.text : "";
   const targetLang = (typeof body.targetLang === "string" ? body.targetLang : "") as LangCode;
-  if (!text || text.length < 1 || text.length > 8000) {
+  if (!text || text.length > 8_000) {
     return NextResponse.json({ error: "text must be 1-8000 chars" }, { status: 400 });
   }
   if (!SUPPORTED_LANGS.includes(targetLang)) {
     return NextResponse.json(
       { error: `targetLang must be one of: ${SUPPORTED_LANGS.join(", ")}` },
-      { status: 400 }
+      { status: 400 },
     );
   }
+  if (!isClaudeConfigured()) return unavailable();
 
   const result = await callClaude({
     system: `You are a professional translator specializing in UAE real-estate copy. Translate the user's text to ${LANG_NAME[targetLang]}. Preserve:
@@ -74,28 +124,43 @@ Output ONLY the translation. No commentary, no "here's the translation", just th
   });
 
   if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, error: "Translation failed." },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
-  return NextResponse.json({
-    ok: true,
-    targetLang,
-    languageName: LANG_NAME[targetLang],
-    translation: result.text,
-    remaining: limit.remaining,
-    timestamp: new Date().toISOString(),
-  });
+  const remaining = Math.min(hourly.remaining, daily.remaining);
+  return NextResponse.json(
+    {
+      ok: true,
+      targetLang,
+      languageName: LANG_NAME[targetLang],
+      translation: result.text,
+      remaining,
+      timestamp: new Date().toISOString(),
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "X-RateLimit-Remaining": String(remaining),
+        "X-RateLimit-Reset": String(hourly.resetAt),
+      },
+    },
+  );
 }
 
 export function GET() {
-  return NextResponse.json({
-    name: "news.investwithraj.com — translation endpoint",
-    method: "POST",
-    body: {
-      text: "string (1-8000 chars)",
-      targetLang: `one of: ${SUPPORTED_LANGS.join(", ")}`,
+  return NextResponse.json(
+    {
+      name: "news.investwithraj.com — translation endpoint",
+      method: "POST",
+      body: {
+        text: "string (1-8000 chars)",
+        targetLang: `one of: ${SUPPORTED_LANGS.join(", ")}`,
+      },
+      rateLimit: "5 / hour and 20 / day",
     },
-    rateLimit: "20 / hour / IP",
-    configured: isClaudeConfigured(),
-  });
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

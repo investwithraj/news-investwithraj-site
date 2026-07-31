@@ -1,7 +1,7 @@
 // /api/anchor — Daily Anchor pipeline + status.
 //
 // GET  /api/anchor                       → current anchor state JSON
-// POST /api/anchor?secret=…              → run/refresh pipeline (cron-fired)
+// POST /api/anchor                       → authenticated review pipeline
 //   body: { headline?, sourceSlug?, mode?: "script" | "voice" | "video" | "full" }
 //
 // State machine (mode = "full"):
@@ -24,6 +24,13 @@ import {
 import { getLatestNews } from "@/content/news";
 import { readCurrentAnchor, writeCurrentAnchor } from "@/lib/anchor/store";
 import type { DailyAnchor } from "@/content/daily-anchor/types";
+import { dailyAnchorGenerationAllowed } from "@/lib/operations/features";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+  readJsonBody,
+} from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,8 +59,6 @@ function buildAnchorVideoQuery(headline: string): string {
   // Fallback — generic Dubai cinematic
   return "Dubai skyline aerial golden hour cinematic drone";
 }
-
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
 
 const SCRIPT_SYSTEM = `You are writing a 90-second daily-anchor script for Raj Tomar — a Dubai real-estate consultant who runs Beyond the Deal. He's reading this on camera, alone, to UHNW investors.
 
@@ -90,26 +95,31 @@ async function generateScript(headline: string): Promise<{
 }
 
 export async function POST(request: NextRequest) {
-  if (!SECRET) {
-    return NextResponse.json({ error: "Secret not set" }, { status: 503 });
-  }
-  if (request.nextUrl.searchParams.get("secret") !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = authorizeServerMutation(request);
+  if (!auth.ok) return auth.response;
+  if (!dailyAnchorGenerationAllowed()) {
+    return privateJson(
+      {
+        error:
+          "Daily Anchor generation is disabled pending Raj's reviewed recording workflow.",
+      },
+      503,
+    );
   }
 
-  let body: {
+  const parsed = await readJsonBody<{
     headline?: unknown;
     sourceSlug?: unknown;
     mode?: unknown;
-  } = {};
-  try {
-    body = await request.json();
-  } catch {
-    // empty ok
-  }
+  }>(request, { maxBytes: 16_384, allowEmpty: true });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
 
   const today = new Date().toISOString().slice(0, 10);
   const mode = (body.mode as string) || "full";
+  if (!["script", "voice", "video", "full"].includes(mode)) {
+    return privateJson({ error: "Unsupported generation mode." }, 400);
+  }
 
   // Pick headline
   const latest = getLatestNews(1)[0];
@@ -117,6 +127,9 @@ export async function POST(request: NextRequest) {
     (typeof body.headline === "string" && body.headline.trim()) ||
     (latest && latest.title) ||
     "Dubai real estate · daily desk update";
+  if (headline.length > 240) {
+    return privateJson({ error: "Headline is too long." }, 400);
+  }
   const sourceSlug =
     (typeof body.sourceSlug === "string" && body.sourceSlug) ||
     latest?.slug ||
@@ -134,14 +147,14 @@ export async function POST(request: NextRequest) {
   // STAGE 1 — script
   if (mode === "script" || mode === "full") {
     if (!isClaudeConfigured()) {
-      return NextResponse.json(
+      return privateJson(
         { ok: false, message: "Claude not configured — set ANTHROPIC_API_KEY." },
-        { status: 503 }
+        503,
       );
     }
     const s = await generateScript(headline);
     if (!s.ok || !s.script) {
-      return NextResponse.json({ ok: false, error: s.error }, { status: 502 });
+      return privateJson({ ok: false, error: s.error }, 502);
     }
     anchor.script = s.script;
     anchor.scriptedAt = new Date().toISOString();
@@ -153,28 +166,28 @@ export async function POST(request: NextRequest) {
   // STAGE 2 — voice
   if (mode === "voice" || mode === "full") {
     if (!isElevenConfigured()) {
-      return NextResponse.json(
+      return privateJson(
         {
           ok: false,
           message:
             "ElevenLabs not configured — set ELEVENLABS_API_KEY. Script saved without audio.",
           anchor,
         },
-        { status: 503 }
+        503,
       );
     }
     const existing = await readCurrentAnchor();
     const scriptForVoice =
       anchor.script || existing?.script || "";
     if (!scriptForVoice) {
-      return NextResponse.json(
+      return privateJson(
         { ok: false, error: "No script available to synthesise" },
-        { status: 400 }
+        400,
       );
     }
     const v = await synthesise({ text: scriptForVoice, outputFormat: "mp3_44100_128" });
     if (!v.ok || !v.audio) {
-      return NextResponse.json({ ok: false, error: v.error }, { status: 502 });
+      return privateJson({ ok: false, error: v.error }, 502);
     }
     // For now: embed as base64 data URL so it persists in the JSON (small enough for ~90s mp3)
     const audioB64 = Buffer.from(v.audio).toString("base64");
@@ -232,18 +245,29 @@ export async function POST(request: NextRequest) {
   anchor.updatedAt = new Date().toISOString();
   await writeCurrentAnchor(anchor);
 
-  return NextResponse.json({ ok: true, anchor });
+  return privateJson({ ok: true, anchor });
 }
 
 export async function GET() {
+  if (!dailyAnchorGenerationAllowed()) {
+    return publicStatusJson(
+      {
+        available: false,
+        state: "disabled",
+        message:
+          "Daily Anchor is withheld until Raj's reviewed recording workflow is ready.",
+      },
+      503,
+    );
+  }
   const anchor = await readCurrentAnchor();
   if (!anchor) {
-    return NextResponse.json(
+    return publicStatusJson(
       {
         ok: false,
         message: "No anchor generated yet — first run fires on the morning cron.",
       },
-      { status: 404 }
+      404,
     );
   }
   return NextResponse.json(

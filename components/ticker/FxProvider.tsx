@@ -45,7 +45,7 @@ export function FxProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY) as Currency | null;
       if (stored && stored in CURRENCY_META) {
-        setCurrencyState(stored);
+        queueMicrotask(() => setCurrencyState(stored));
       }
     } catch {
       // localStorage unavailable, default to AED

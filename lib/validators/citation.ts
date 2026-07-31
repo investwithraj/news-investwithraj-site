@@ -1,6 +1,6 @@
 // Citation gate — Block 15 validator #1.
-// Every auto-drafted article must cite ≥1 source from the 20-source
-// whitelist (lib/sources/registry.ts). Articles failing this gate are
+// Every auto-drafted article must cite one government/national/institutional
+// source OR at least two lower-tier verified sources. Articles failing this gate are
 // rejected; Claude is re-prompted with the failure reason.
 //
 // This validator is also reusable for human-edited articles in the
@@ -34,13 +34,14 @@ export interface CitationResult {
 }
 
 /**
- * Validate a citation array against the whitelist. Returns pass=true only
- * when ≥1 entry resolves to a whitelisted source.
+ * Validate a citation array against the whitelist. A single primary or
+ * institutional source may satisfy the gate; regional press and industry
+ * portals require corroboration from a second verified source.
  *
  * Edge cases handled:
  *  - Empty citations array → fail
  *  - All non-whitelist citations → fail with helpful reason
- *  - Mixed whitelist + non-whitelist → pass (non-whitelist allowed alongside)
+ *  - Mixed whitelist + non-whitelist → evaluated on whitelist strength
  *  - Malformed URLs → caught + reported
  */
 export function validateCitations(citations: CitationInput[]): CitationResult {
@@ -90,6 +91,17 @@ export function validateCitations(citations: CitationInput[]): CitationResult {
         .map((s) => `${s.name} (${new URL(s.url).hostname})`)
         .join(", ") +
       ", plus 15 more — see lib/sources/registry.ts.";
+    return result;
+  }
+
+  const hasPrimaryOrInstitutionalSource = result.topTierWeight >= 0.8;
+  const hasCorroboration = result.whitelistHits.length >= 2;
+
+  if (!hasPrimaryOrInstitutionalSource && !hasCorroboration) {
+    result.reason =
+      "A single regional/industry citation is not sufficient for publication. " +
+      "Add a government, national-press or institutional-research source, " +
+      "or corroborate the claim with a second verified source.";
     return result;
   }
 

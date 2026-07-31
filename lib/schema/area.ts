@@ -3,7 +3,6 @@
 import { SITE } from "@/lib/constants";
 import type { AreaPage } from "@/content/areas/types";
 import { rajPersonRef } from "./person";
-import { newsOrgRef } from "./organization";
 
 /** Place schema — the geographic anchor for an area page. */
 export function placeSchema(area: AreaPage): Record<string, unknown> {
@@ -31,24 +30,22 @@ export function placeSchema(area: AreaPage): Record<string, unknown> {
   };
 }
 
-/** RealEstateAgent — schema that lets Google understand "this area page
- *  is hosted by a licensed broker who covers this geography." Drives
- *  local-results inclusion + broker-credential surfacing in search. */
+/**
+ * Advisory context for the area page.
+ *
+ * The exported function name is retained for existing callers, but the schema
+ * deliberately describes a professional advisory service—not a brokerage,
+ * agent licence or credential that the public record does not support.
+ */
 export function realEstateAgentSchema(area: AreaPage): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
-    // v29 — was "RealEstateAgent", which labels Raj an agent in structured
-    // data and contradicts the brand invariant (advisor, never broker/agent)
-    // that this repo's own llms.txt states outright. ProfessionalService
-    // keeps the local-SEO semantics without the agent label.
     "@type": "ProfessionalService",
     "@id": `${SITE.url}/areas/${area.slug}#advisory`,
-    name: "Raj Tomar",
+    name: "Invest With Raj advisory",
     url: SITE.rootUrl,
-    // was /raj-avatar.jpg — that file does not exist (404 from 29 pages).
-    image: `${SITE.rootUrl}/raj-hero.jpg`,
-    employee: rajPersonRef,
-    parentOrganization: newsOrgRef,
+    image: `${SITE.rootUrl}/media/real-uhd/raj-tomar-portrait.webp`,
+    provider: rajPersonRef,
     areaServed: {
       "@id": `${SITE.url}/areas/${area.slug}#place`,
     },
@@ -59,19 +56,6 @@ export function realEstateAgentSchema(area: AreaPage): Record<string, unknown> {
       ...(area.developers.length > 0
         ? area.developers.map((d) => `${d} developments`)
         : []),
-    ],
-    hasCredential: [
-      {
-        "@type": "EducationalOccupationalCredential",
-        name: "Licensed Real Estate Broker",
-        credentialCategory: "license",
-        recognizedBy: {
-          "@type": "GovernmentOrganization",
-          name: "Dubai Land Department",
-          alternateName: "DLD",
-        },
-        validIn: { "@type": "Country", name: "United Arab Emirates" },
-      },
     ],
   };
 }

@@ -2,30 +2,45 @@
 // Verifies the full chain: Vercel OIDC → STS exchange → impersonation
 // → Vertex Imagen 4 → image bytes.
 //
-// GET /api/vertex-test?secret=<POST_PUBLISH_SECRET>
+// GET is read-only status. Authenticated POST is non-production only.
 //
 // Returns {ok, configured, generationOk, error, imageSize, model, elapsedMs}
 // Remove this route after the WIF flow is validated in production.
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { isVertexConfigured, generateImage } from "@/lib/ai/vertex";
+import { diagnosticsAllowed } from "@/lib/operations/features";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+} from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
+export function GET() {
+  return publicStatusJson({
+    name: "Vertex image diagnostic",
+    mutationMethod: "POST",
+    available: diagnosticsAllowed() && isVertexConfigured(),
+    productionPolicy: "disabled",
+  });
+}
 
-export async function GET(request: NextRequest) {
-  if (!SECRET) {
-    return NextResponse.json({ error: "POST_PUBLISH_SECRET not set" }, { status: 503 });
-  }
-  if (request.nextUrl.searchParams.get("secret") !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(request: NextRequest) {
+  const auth = authorizeServerMutation(request);
+  if (!auth.ok) return auth.response;
+  if (!diagnosticsAllowed()) {
+    return privateJson(
+      { error: "Diagnostic media generation is disabled." },
+      404,
+    );
   }
 
   const configured = isVertexConfigured();
   if (!configured) {
-    return NextResponse.json({
+    return privateJson({
       ok: false,
       configured: false,
       message: "Vertex AI WIF env vars not set",
@@ -38,7 +53,7 @@ export async function GET(request: NextRequest) {
           process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID
         ),
       },
-    });
+    }, 503);
   }
 
   const t0 = performance.now();
@@ -50,17 +65,17 @@ export async function GET(request: NextRequest) {
   const elapsedMs = Math.round(performance.now() - t0);
 
   if (!result.ok) {
-    return NextResponse.json({
+    return privateJson({
       ok: false,
       configured: true,
       generationOk: false,
       error: result.error,
       elapsedMs,
-    });
+    }, 502);
   }
 
   const img = result.images?.[0];
-  return NextResponse.json({
+  return privateJson({
     ok: true,
     configured: true,
     generationOk: true,

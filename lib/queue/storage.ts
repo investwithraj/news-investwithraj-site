@@ -1,12 +1,8 @@
-// Approval Queue storage layer.
+// Approval Queue storage.
 //
-// Two adapters, swapped automatically by runtime:
-//   - File-system (dev / local CLI): pipeline-runs/queue.json
-//   - Vercel KV (production):       set KV_REST_API_URL + KV_REST_API_TOKEN
-//
-// In production on Vercel, file-system writes are ephemeral (lost on next
-// cold start), so KV is required when running there. Locally KV is optional
-// — file-system fallback is fine for solo dev.
+// Production keeps the compatible array representation, but every mutation is
+// one Redis Lua transaction. Local development serializes mutations and uses
+// an atomic file replacement.
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -15,201 +11,450 @@ import type { QueueItem, QueueStatus, QueueChannel } from "./types";
 import { calculateExpiresAt } from "./types";
 
 const QUEUE_FILE = path.join(process.cwd(), "pipeline-runs", "queue.json");
-
-const KV_URL = process.env.KV_REST_API_URL || "";
-const KV_TOKEN = process.env.KV_REST_API_TOKEN || "";
+const QUEUE_IDEMPOTENCY_DIR = path.join(
+  process.cwd(),
+  "pipeline-runs",
+  "queue-idempotency",
+);
+const KV_URL = process.env.KV_REST_API_URL?.trim() ?? "";
+const KV_TOKEN = process.env.KV_REST_API_TOKEN?.trim() ?? "";
 const KV_KEY = "iwr:queue:items";
+const MAX_QUEUE_ITEMS = 10_000;
+const ADD_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
+const TERMINAL_RETENTION_MS = 30 * 24 * 60 * 60 * 1_000;
 
-function useKv(): boolean {
+type QueuePartial = Omit<
+  QueueItem,
+  "id" | "recordVersion" | "createdAt" | "expiresAt" | "status"
+>;
+
+export class QueueMutationConflictError extends Error {
+  constructor() {
+    super("This queue item changed in another session. Refresh and retry.");
+    this.name = "QueueMutationConflictError";
+  }
+}
+
+function hasKv(): boolean {
   return Boolean(KV_URL && KV_TOKEN);
 }
 
-// ------------------------------------------------------------------
-// KV adapter — Upstash-compatible REST API (Vercel KV / Redis Cloud)
-// ------------------------------------------------------------------
+function requireDurableProductionStorage(): void {
+  if (process.env.NODE_ENV === "production" && !hasKv()) {
+    throw new Error("Durable queue storage is required in production.");
+  }
+}
+
+function normalizeItems(value: unknown): QueueItem[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Queue storage returned an invalid payload.");
+  }
+  return value.map((candidate) => {
+    const item = candidate as QueueItem;
+    return {
+      ...item,
+      recordVersion:
+        Number.isSafeInteger(item.recordVersion) && item.recordVersion > 0
+          ? item.recordVersion
+          : 1,
+    };
+  });
+}
+
+async function kvCommand<T>(command: unknown[]): Promise<T> {
+  requireDurableProductionStorage();
+  if (!hasKv()) throw new Error("Queue KV is not configured.");
+  const response = await fetch(KV_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${KV_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(command),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Queue storage command failed (${response.status}).`);
+  }
+  const payload = (await response.json()) as {
+    result?: T;
+    error?: string;
+  };
+  if (
+    payload.error ||
+    !Object.prototype.hasOwnProperty.call(payload, "result")
+  ) {
+    throw new Error("Queue storage rejected the command.");
+  }
+  return payload.result as T;
+}
 
 async function kvGet(): Promise<QueueItem[]> {
-  try {
-    const res = await fetch(`${KV_URL}/get/${KV_KEY}`, {
-      headers: { Authorization: `Bearer ${KV_TOKEN}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { result?: unknown };
-    // Upstash returns the stored value as `result`. We stored a JSON-stringified
-    // array, so result should be a string. Be defensive — also accept arrays
-    // returned directly (some Upstash plan tiers auto-decode JSON content).
-    if (data.result == null) return [];
-    if (Array.isArray(data.result)) return data.result as QueueItem[];
-    if (typeof data.result === "string") {
-      try {
-        const parsed = JSON.parse(data.result);
-        return Array.isArray(parsed) ? (parsed as QueueItem[]) : [];
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  } catch {
-    return [];
-  }
+  const raw = await kvCommand<unknown>(["GET", KV_KEY]);
+  if (raw === null || raw === undefined) return [];
+  return normalizeItems(typeof raw === "string" ? JSON.parse(raw) : raw);
 }
 
-async function kvSet(items: QueueItem[]): Promise<boolean> {
-  try {
-    // Upstash REST: POST /set/<key> with body = raw value.
-    // We send a single-stringified JSON array as text/plain so it round-trips
-    // correctly through the `result` field on GET.
-    const res = await fetch(`${KV_URL}/set/${KV_KEY}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${KV_TOKEN}`,
-        "Content-Type": "text/plain",
-      },
-      body: JSON.stringify(items),
-      cache: "no-store",
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+const ADD_ITEMS_SCRIPT = `
+local existing = redis.call("GET", KEYS[2])
+if existing then
+  local record = cjson.decode(existing)
+  if record.payloadDigest ~= ARGV[3] then return {-2, ""} end
+  return {0, cjson.encode(record.created)}
+end
+local raw = redis.call("GET", KEYS[1])
+local items = raw and cjson.decode(raw) or {}
+for index = #items, 1, -1 do
+  local item = items[index]
+  local terminal = item.status == "posted" or item.status == "skipped" or item.status == "expired"
+  if terminal and item.actedAt and tostring(item.actedAt) < ARGV[6] then
+    table.remove(items, index)
+  end
+end
+local created = cjson.decode(ARGV[1])
+if (#items + #created) > tonumber(ARGV[2]) then return {-1, ""} end
+for _, item in ipairs(created) do table.insert(items, item) end
+redis.call("SET", KEYS[1], cjson.encode(items))
+redis.call("SET", KEYS[2], ARGV[4], "EX", tonumber(ARGV[5]))
+return {1, cjson.encode(created)}
+`;
 
-// ------------------------------------------------------------------
-// File-system adapter
-// ------------------------------------------------------------------
+const UPDATE_ITEM_SCRIPT = `
+local raw = redis.call("GET", KEYS[1])
+if not raw then return {-2, ""} end
+local items = cjson.decode(raw)
+for index, item in ipairs(items) do
+  if item.id == ARGV[1] then
+    local version = tonumber(item.recordVersion or 1)
+    if version ~= tonumber(ARGV[2]) then return {-1, cjson.encode(item)} end
+    local patch = cjson.decode(ARGV[3])
+    for key, value in pairs(patch) do
+      if key ~= "id" and key ~= "createdAt" and key ~= "recordVersion" then
+        item[key] = value
+      end
+    end
+    item.recordVersion = version + 1
+    items[index] = item
+    redis.call("SET", KEYS[1], cjson.encode(items))
+    return {1, cjson.encode(item)}
+  end
+end
+return {-2, ""}
+`;
+
+const DELETE_ITEM_SCRIPT = `
+local raw = redis.call("GET", KEYS[1])
+if not raw then return {-2, ""} end
+local items = cjson.decode(raw)
+for index, item in ipairs(items) do
+  if item.id == ARGV[1] then
+    if tonumber(item.recordVersion or 1) ~= tonumber(ARGV[2]) then
+      return {-1, cjson.encode(item)}
+    end
+    table.remove(items, index)
+    redis.call("SET", KEYS[1], cjson.encode(items))
+    return {1, cjson.encode(item)}
+  end
+end
+return {-2, ""}
+`;
+
+const EXPIRE_ITEMS_SCRIPT = `
+local raw = redis.call("GET", KEYS[1])
+if not raw then return 0 end
+local items = cjson.decode(raw)
+local count = 0
+for index, item in ipairs(items) do
+  if (item.status == "pending" or item.status == "edited")
+    and tostring(item.expiresAt or "") < ARGV[1] then
+    item.status = "expired"
+    item.actedAt = ARGV[1]
+    item.recordVersion = tonumber(item.recordVersion or 1) + 1
+    items[index] = item
+    count = count + 1
+  end
+end
+if count > 0 then redis.call("SET", KEYS[1], cjson.encode(items)) end
+return count
+`;
 
 async function fsGet(): Promise<QueueItem[]> {
   try {
     const raw = await fs.readFile(QUEUE_FILE, "utf-8");
-    return JSON.parse(raw) as QueueItem[];
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
+    return normalizeItems(JSON.parse(raw));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
   }
 }
 
-async function fsSet(items: QueueItem[]): Promise<boolean> {
-  try {
-    await fs.mkdir(path.dirname(QUEUE_FILE), { recursive: true });
-    await fs.writeFile(QUEUE_FILE, JSON.stringify(items, null, 2), "utf-8");
-    return true;
-  } catch {
-    return false;
-  }
+async function fsSet(items: QueueItem[]): Promise<void> {
+  await fs.mkdir(path.dirname(QUEUE_FILE), { recursive: true });
+  const temporary = `${QUEUE_FILE}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  await fs.writeFile(temporary, JSON.stringify(items, null, 2), "utf-8");
+  await fs.rename(temporary, QUEUE_FILE);
 }
 
-// ------------------------------------------------------------------
-// Public API
-// ------------------------------------------------------------------
+let fsMutationChain: Promise<unknown> = Promise.resolve();
+function withFsMutation<T>(mutation: () => Promise<T>): Promise<T> {
+  const result = fsMutationChain.then(mutation, mutation);
+  fsMutationChain = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
 
-/** Load all queue items. */
 export async function getAllItems(): Promise<QueueItem[]> {
-  return useKv() ? kvGet() : fsGet();
+  requireDurableProductionStorage();
+  return hasKv() ? kvGet() : fsGet();
 }
 
-/** Persist all queue items (overwrites). */
-async function writeAll(items: QueueItem[]): Promise<boolean> {
-  return useKv() ? kvSet(items) : fsSet(items);
-}
-
-/** Get items filtered by status. */
 export async function getItemsByStatus(status: QueueStatus): Promise<QueueItem[]> {
-  const all = await getAllItems();
-  return all.filter((i) => i.status === status);
+  return (await getAllItems()).filter((item) => item.status === status);
 }
 
-/** Get pending items (most common dashboard query) — sorted soonest-expiry first. */
 export async function getPendingItems(): Promise<QueueItem[]> {
-  const all = await getAllItems();
-  return all
-    .filter((i) => i.status === "pending" || i.status === "edited")
+  return (await getAllItems())
+    .filter((item) => item.status === "pending" || item.status === "edited")
     .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
 }
 
-/** Get one item by ID. */
 export async function getItem(id: string): Promise<QueueItem | null> {
-  const all = await getAllItems();
-  return all.find((i) => i.id === id) || null;
+  return (await getAllItems()).find((item) => item.id === id) ?? null;
 }
 
-/** Add a new item. Returns the created item with assigned ID. */
-export async function addItem(
-  partial: Omit<QueueItem, "id" | "createdAt" | "expiresAt" | "status">
-): Promise<QueueItem> {
-  const all = await getAllItems();
+function createItems(partials: QueuePartial[]): QueueItem[] {
   const now = new Date();
-  const item: QueueItem = {
+  return partials.map((partial) => ({
     ...partial,
     id: crypto.randomUUID(),
+    recordVersion: 1,
     createdAt: now.toISOString(),
     expiresAt: calculateExpiresAt(partial.channel, now),
-    status: "pending",
-  };
-  all.push(item);
-  await writeAll(all);
-  return item;
-}
-
-/** Add many items at once (for pipeline bulk enqueue). */
-export async function addItems(
-  partials: Array<Omit<QueueItem, "id" | "createdAt" | "expiresAt" | "status">>
-): Promise<QueueItem[]> {
-  const all = await getAllItems();
-  const now = new Date();
-  const created = partials.map((p) => ({
-    ...p,
-    id: crypto.randomUUID(),
-    createdAt: now.toISOString(),
-    expiresAt: calculateExpiresAt(p.channel, now),
-    status: "pending" as QueueStatus,
+    status: "pending" as const,
   }));
-  all.push(...created);
-  await writeAll(all);
-  return created;
 }
 
-/** Update an item by ID. Returns updated item or null if not found. */
+export async function addItem(partial: QueuePartial): Promise<QueueItem> {
+  return (await addItems([partial], crypto.randomUUID()))[0];
+}
+
+export async function addItems(
+  partials: QueuePartial[],
+  idempotencyKey: string,
+): Promise<QueueItem[]> {
+  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
+    throw new Error("A valid queue idempotency key is required.");
+  }
+  const payloadDigest = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(partials))
+    .digest("hex");
+  const created = createItems(partials);
+  const reservation = { payloadDigest, created };
+  const reservationKey = `iwr:queue:add:${crypto
+    .createHash("sha256")
+    .update(idempotencyKey)
+    .digest("hex")}`;
+  const retentionCutoff = new Date(
+    Date.now() - TERMINAL_RETENTION_MS,
+  ).toISOString();
+  if (hasKv()) {
+    const result = await kvCommand<[number | string, string]>([
+      "EVAL",
+      ADD_ITEMS_SCRIPT,
+      2,
+      KV_KEY,
+      reservationKey,
+      JSON.stringify(created),
+      String(MAX_QUEUE_ITEMS),
+      payloadDigest,
+      JSON.stringify(reservation),
+      String(ADD_IDEMPOTENCY_TTL_SECONDS),
+      retentionCutoff,
+    ]);
+    const code = Number(result?.[0]);
+    if (code === -2) {
+      throw new QueueMutationConflictError();
+    }
+    if (code !== 0 && code !== 1) {
+      throw new Error("The outreach queue has reached its safety limit.");
+    }
+    return normalizeItems(JSON.parse(String(result[1])));
+  }
+  requireDurableProductionStorage();
+  return withFsMutation(async () => {
+    const idempotencyFile = path.join(
+      QUEUE_IDEMPOTENCY_DIR,
+      `${crypto.createHash("sha256").update(idempotencyKey).digest("hex")}.json`,
+    );
+    try {
+      const existing = JSON.parse(
+        await fs.readFile(idempotencyFile, "utf8"),
+      ) as {
+        payloadDigest?: string;
+        created?: unknown;
+        expiresAt?: string;
+      };
+      if (
+        existing.expiresAt &&
+        existing.expiresAt > new Date().toISOString()
+      ) {
+        if (existing.payloadDigest !== payloadDigest) {
+          throw new QueueMutationConflictError();
+        }
+        return normalizeItems(existing.created);
+      }
+    } catch (error) {
+      if (
+        error instanceof QueueMutationConflictError ||
+        (error as NodeJS.ErrnoException).code !== "ENOENT"
+      ) {
+        throw error;
+      }
+    }
+    const all = (await fsGet()).filter(
+      (item) =>
+        !(
+          (item.status === "posted" ||
+            item.status === "skipped" ||
+            item.status === "expired") &&
+          item.actedAt &&
+          item.actedAt < retentionCutoff
+        ),
+    );
+    if (all.length + created.length > MAX_QUEUE_ITEMS) {
+      throw new Error("The outreach queue has reached its safety limit.");
+    }
+    await fsSet([...all, ...created]);
+    await fs.mkdir(QUEUE_IDEMPOTENCY_DIR, { recursive: true });
+    await fs.writeFile(
+      idempotencyFile,
+      JSON.stringify(
+        {
+          payloadDigest,
+          created,
+          expiresAt: new Date(
+            Date.now() + ADD_IDEMPOTENCY_TTL_SECONDS * 1_000,
+          ).toISOString(),
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    return created;
+  });
+}
+
 export async function updateItem(
   id: string,
-  patch: Partial<QueueItem>
+  expectedRecordVersion: number,
+  patch: Partial<QueueItem>,
 ): Promise<QueueItem | null> {
-  const all = await getAllItems();
-  const idx = all.findIndex((i) => i.id === id);
-  if (idx === -1) return null;
-  all[idx] = { ...all[idx], ...patch };
-  await writeAll(all);
-  return all[idx];
-}
-
-/** Delete an item by ID. */
-export async function deleteItem(id: string): Promise<boolean> {
-  const all = await getAllItems();
-  const filtered = all.filter((i) => i.id !== id);
-  if (filtered.length === all.length) return false;
-  await writeAll(filtered);
-  return true;
-}
-
-/** Bulk update — mark items as expired if past expiresAt. Returns count expired. */
-export async function expireStaleItems(now = new Date()): Promise<number> {
-  const all = await getAllItems();
-  let count = 0;
-  for (const item of all) {
-    if (
-      (item.status === "pending" || item.status === "edited") &&
-      new Date(item.expiresAt).getTime() < now.getTime()
-    ) {
-      item.status = "expired";
-      item.actedAt = now.toISOString();
-      count++;
-    }
+  if (hasKv()) {
+    const result = await kvCommand<[number | string, unknown]>([
+      "EVAL",
+      UPDATE_ITEM_SCRIPT,
+      1,
+      KV_KEY,
+      id,
+      String(expectedRecordVersion),
+      JSON.stringify(patch),
+    ]);
+    const code = Number(result?.[0]);
+    if (code === -1) throw new QueueMutationConflictError();
+    return code === 1
+      ? normalizeItems([JSON.parse(String(result[1]))])[0]
+      : null;
   }
-  if (count > 0) await writeAll(all);
-  return count;
+  requireDurableProductionStorage();
+  return withFsMutation(async () => {
+    const all = await fsGet();
+    const index = all.findIndex((item) => item.id === id);
+    if (index < 0) return null;
+    if (all[index].recordVersion !== expectedRecordVersion) {
+      throw new QueueMutationConflictError();
+    }
+    const current = all[index];
+    const updated: QueueItem = {
+      ...current,
+      ...patch,
+      id: current.id,
+      createdAt: current.createdAt,
+      recordVersion: current.recordVersion + 1,
+    };
+    all[index] = updated;
+    await fsSet(all);
+    return updated;
+  });
 }
 
-/** Stats for the dashboard. */
+export async function deleteItem(
+  id: string,
+  expectedRecordVersion: number,
+): Promise<boolean> {
+  if (hasKv()) {
+    const result = await kvCommand<[number | string, unknown]>([
+      "EVAL",
+      DELETE_ITEM_SCRIPT,
+      1,
+      KV_KEY,
+      id,
+      String(expectedRecordVersion),
+    ]);
+    const code = Number(result?.[0]);
+    if (code === -1) throw new QueueMutationConflictError();
+    return code === 1;
+  }
+  requireDurableProductionStorage();
+  return withFsMutation(async () => {
+    const all = await fsGet();
+    const index = all.findIndex((item) => item.id === id);
+    if (index < 0) return false;
+    if (all[index].recordVersion !== expectedRecordVersion) {
+      throw new QueueMutationConflictError();
+    }
+    all.splice(index, 1);
+    await fsSet(all);
+    return true;
+  });
+}
+
+export async function expireStaleItems(now = new Date()): Promise<number> {
+  const timestamp = now.toISOString();
+  if (hasKv()) {
+    return Number(
+      await kvCommand<number>([
+        "EVAL",
+        EXPIRE_ITEMS_SCRIPT,
+        1,
+        KV_KEY,
+        timestamp,
+      ]),
+    );
+  }
+  requireDurableProductionStorage();
+  return withFsMutation(async () => {
+    const all = await fsGet();
+    let count = 0;
+    for (const item of all) {
+      if (
+        (item.status === "pending" || item.status === "edited") &&
+        item.expiresAt < timestamp
+      ) {
+        item.status = "expired";
+        item.actedAt = timestamp;
+        item.recordVersion += 1;
+        count += 1;
+      }
+    }
+    if (count > 0) await fsSet(all);
+    return count;
+  });
+}
+
 export async function getQueueStats(): Promise<{
   total: number;
   pending: number;
@@ -223,21 +468,22 @@ export async function getQueueStats(): Promise<{
   const all = await getAllItems();
   const byChannel: Partial<Record<QueueChannel, number>> = {};
   for (const item of all) {
-    byChannel[item.channel] = (byChannel[item.channel] || 0) + 1;
+    byChannel[item.channel] = (byChannel[item.channel] ?? 0) + 1;
   }
+  const count = (status: QueueStatus) =>
+    all.filter((item) => item.status === status).length;
   return {
     total: all.length,
-    pending: all.filter((i) => i.status === "pending").length,
-    approved: all.filter((i) => i.status === "approved").length,
-    posted: all.filter((i) => i.status === "posted").length,
-    skipped: all.filter((i) => i.status === "skipped").length,
-    expired: all.filter((i) => i.status === "expired").length,
-    edited: all.filter((i) => i.status === "edited").length,
+    pending: count("pending"),
+    approved: count("approved"),
+    posted: count("posted"),
+    skipped: count("skipped"),
+    expired: count("expired"),
+    edited: count("edited"),
     byChannel: byChannel as Record<QueueChannel, number>,
   };
 }
 
-/** Storage backend label — for diagnostics on the dashboard. */
 export function getStorageBackend(): "vercel-kv" | "file-system" {
-  return useKv() ? "vercel-kv" : "file-system";
+  return hasKv() ? "vercel-kv" : "file-system";
 }

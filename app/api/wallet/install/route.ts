@@ -1,101 +1,62 @@
-// /api/wallet/install — Apple PassKit + Google Wallet pass for the daily digest.
-//
-// Apple PassKit requires:
-//   - APPLE_PASS_TYPE_ID  (eg. pass.com.investwithraj.news.digest)
-//   - APPLE_TEAM_ID
-//   - APPLE_PASS_CERT_PEM   (private key PEM)
-//   - APPLE_PASS_CERT_PASS  (passphrase)
-//   - APPLE_WWDR_PEM        (Apple WWDR intermediate certificate)
-//
-// Google Wallet requires:
-//   - GOOGLE_WALLET_ISSUER_ID
-//   - GOOGLE_WALLET_SERVICE_ACCOUNT_JSON  (base64 of service account JSON)
-//
-// Without these, the endpoint returns a structured "preview" — describes the
-// pass that would be created — so the UI can render an "Install" CTA that
-// gracefully degrades to a coming-soon state.
-
 import { NextRequest, NextResponse } from "next/server";
-import { getLatestNews } from "@/content/news";
 
 export const dynamic = "force-dynamic";
 
-const APPLE_CONFIGURED =
-  !!process.env.APPLE_PASS_TYPE_ID &&
-  !!process.env.APPLE_TEAM_ID &&
-  !!process.env.APPLE_PASS_CERT_PEM &&
-  !!process.env.APPLE_WWDR_PEM;
-const GOOGLE_CONFIGURED =
-  !!process.env.GOOGLE_WALLET_ISSUER_ID &&
-  !!process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_JSON;
+const PLATFORMS = new Set(["apple", "google"]);
 
-export async function GET(request: NextRequest) {
-  const platform = request.nextUrl.searchParams.get("platform") || "auto";
-  const latest = getLatestNews(1)[0];
-
-  const passPreview = {
-    organizationName: "Invest With Raj",
-    description: "Beyond the Deal · Daily Digest",
-    headline: latest?.title || "Today's UAE real-estate read",
-    subtitle: "Curated by Raj · real-estate consultant",
-    barcodeMessage: `https://news.investwithraj.com/${latest?.slug ? `news/${latest.slug}` : ""}`,
-    foregroundColor: "rgb(242, 238, 231)",
-    backgroundColor: "rgb(20, 20, 20)",
-    labelColor: "rgb(201, 169, 97)",
+function statusPayload(platform?: string) {
+  return {
+    ok: false,
+    state: "coming-soon",
+    platform: platform ?? "all",
+    deliveryLive: false,
+    signedPassAvailable: false,
+    installationAvailable: false,
+    message:
+      "Signed wallet-pass delivery is not implemented. No pass has been created and no device has been registered.",
+    liveAlternative: {
+      label: "Open Daily Market Read",
+      href: "/",
+    },
   };
+}
 
-  if (platform === "apple") {
-    if (!APPLE_CONFIGURED) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Apple PassKit not configured. Set APPLE_PASS_TYPE_ID, APPLE_TEAM_ID, APPLE_PASS_CERT_PEM, APPLE_WWDR_PEM on Vercel.",
-          preview: passPreview,
-        },
-        { status: 503 }
-      );
-    }
-    // Real implementation: build .pkpass zip + sign with cert. Requires
-    // additional dependencies (passkit-generator or hand-rolled signer).
-    // For now return preview + 501.
+export function GET(request: NextRequest) {
+  const requested = request.nextUrl.searchParams.get("platform");
+
+  if (requested && !PLATFORMS.has(requested)) {
     return NextResponse.json(
       {
-        ok: false,
-        message: "Apple pass-signing implementation pending. Certs detected — generator wiring is the next step.",
-        preview: passPreview,
+        ...statusPayload(),
+        message: "Platform must be apple or google.",
       },
-      { status: 501 }
+      {
+        status: 400,
+        headers: { "Cache-Control": "no-store" },
+      },
     );
   }
 
-  if (platform === "google") {
-    if (!GOOGLE_CONFIGURED) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Google Wallet not configured. Set GOOGLE_WALLET_ISSUER_ID + GOOGLE_WALLET_SERVICE_ACCOUNT_JSON.",
-          preview: passPreview,
-        },
-        { status: 503 }
-      );
-    }
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Google Wallet JWT signer pending. Issuer + service account detected.",
-        preview: passPreview,
+  if (requested) {
+    return NextResponse.json(statusPayload(requested), {
+      status: 501,
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": "86400",
       },
-      { status: 501 }
-    );
+    });
   }
 
-  // Auto / status query
-  return NextResponse.json({
-    name: "Beyond the Deal · Daily Digest Wallet Pass",
-    apple: { configured: APPLE_CONFIGURED, installUrl: "/api/wallet/install?platform=apple" },
-    google: { configured: GOOGLE_CONFIGURED, installUrl: "/api/wallet/install?platform=google" },
-    preview: passPreview,
-  });
+  return NextResponse.json(
+    {
+      ...statusPayload(),
+      platforms: {
+        apple: { state: "coming-soon", installUrl: null },
+        google: { state: "coming-soon", installUrl: null },
+      },
+      privacy:
+        "This status request does not register a device or create a wallet identifier.",
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

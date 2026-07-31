@@ -2,45 +2,69 @@
 // Veo is async — kicks off a long-running operation, returns operation name.
 // Caller polls via ?op=<operationName> until done=true with videoUri.
 //
-// GET /api/veo-test?secret=<POST_PUBLISH_SECRET>  — start fresh generation
-// GET /api/veo-test?secret=...&op=<operation>      — poll status
+// GET is read-only status. Authenticated POST may run only in an explicitly
+// enabled non-production diagnostic environment.
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import {
   isVertexConfigured,
   startVideoGeneration,
   pollVideoGeneration,
 } from "@/lib/ai/vertex";
+import { diagnosticsAllowed } from "@/lib/operations/features";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+  readJsonBody,
+} from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
+export function GET() {
+  return publicStatusJson({
+    name: "Vertex Veo diagnostic",
+    mutationMethod: "POST",
+    available: diagnosticsAllowed() && isVertexConfigured(),
+    productionPolicy: "disabled",
+  });
+}
 
-export async function GET(request: NextRequest) {
-  if (!SECRET) {
-    return NextResponse.json({ error: "POST_PUBLISH_SECRET not set" }, { status: 503 });
-  }
-  if (request.nextUrl.searchParams.get("secret") !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(request: NextRequest) {
+  const auth = authorizeServerMutation(request);
+  if (!auth.ok) return auth.response;
+  if (!diagnosticsAllowed()) {
+    return privateJson(
+      { error: "Diagnostic media generation is disabled." },
+      404,
+    );
   }
 
   if (!isVertexConfigured()) {
-    return NextResponse.json({
+    return privateJson({
       ok: false,
       configured: false,
       message: "Vertex AI WIF env vars not set",
-    });
+    }, 503);
   }
 
-  const op = request.nextUrl.searchParams.get("op");
+  const parsed = await readJsonBody<{ operation?: unknown }>(request, {
+    maxBytes: 8_192,
+    allowEmpty: true,
+  });
+  if (!parsed.ok) return parsed.response;
+  const op =
+    typeof parsed.value.operation === "string"
+      ? parsed.value.operation.trim()
+      : "";
 
   // Poll existing operation
   if (op) {
     const t0 = performance.now();
     const result = await pollVideoGeneration(op);
     const elapsedMs = Math.round(performance.now() - t0);
-    return NextResponse.json({
+    return privateJson({
       mode: "poll",
       operation: op,
       result,
@@ -58,12 +82,10 @@ export async function GET(request: NextRequest) {
   });
   const elapsedMs = Math.round(performance.now() - t0);
 
-  return NextResponse.json({
+  return privateJson({
     mode: "start",
     result,
     elapsedMs,
-    pollInstructions: result.operationName
-      ? `curl "https://news.investwithraj.com/api/veo-test?secret=$SECRET&op=${encodeURIComponent(result.operationName)}"`
-      : null,
+    operationName: result.operationName ?? null,
   });
 }

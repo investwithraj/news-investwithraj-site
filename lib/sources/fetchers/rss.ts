@@ -4,6 +4,10 @@
 
 import type { RawEntry, FetchResult } from "./types";
 import type { VerifiedSource } from "@/lib/sources/registry";
+import {
+  safeFetchBytes,
+  urlOnApprovedHost,
+} from "@/lib/sources/safe-fetch";
 
 const FETCH_TIMEOUT_MS = 15_000;
 const USER_AGENT =
@@ -83,33 +87,23 @@ export async function fetchRssFeed(
     };
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
   try {
-    const res = await fetch(feedUrl, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept:
-          "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
-      },
-      signal: controller.signal,
+    const sourceHost = new URL(source.url).hostname;
+    const feedHost = new URL(feedUrl).hostname;
+    const res = await safeFetchBytes(feedUrl, {
+      allowedDomains: [sourceHost, feedHost],
+      userAgent: USER_AGENT,
+      accept:
+        "application/rss+xml, application/atom+xml, application/xml, text/xml",
+      allowedContentTypes:
+        /(?:application\/(?:rss\+xml|atom\+xml|xml)|text\/xml)/i,
+      maxBytes: 2 * 1024 * 1024,
+      timeoutMs: FETCH_TIMEOUT_MS,
+      maxRedirects: 3,
       // Don't cache during pipeline runs — we want fresh data each invocation
-      cache: "no-store",
     });
 
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      return {
-        source,
-        entries: [],
-        error: `HTTP ${res.status} from ${feedUrl}`,
-        durationMs: performance.now() - t0,
-      };
-    }
-
-    const xml = await res.text();
+    const xml = res.bytes.toString("utf8");
     const domain = new URL(source.url).hostname.replace("www.", "");
     const isAtom = /<feed[\s>]/i.test(xml);
     const isGoogleNews = domain === "news.google.com";
@@ -121,6 +115,9 @@ export async function fetchRssFeed(
     } else {
       entries = parseRssItems(xml, source.name, source.tier, domain, limit, isGoogleNews);
     }
+    entries = entries.filter((entry) =>
+      urlOnApprovedHost(entry.url, [domain]),
+    );
 
     return {
       source,
@@ -129,7 +126,6 @@ export async function fetchRssFeed(
       durationMs: performance.now() - t0,
     };
   } catch (e) {
-    clearTimeout(timeout);
     return {
       source,
       entries: [],

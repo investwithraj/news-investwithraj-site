@@ -35,10 +35,11 @@ export default function OperatorPreview() {
         {/* Left — portrait */}
         <div>
           <PortraitFrame
-            src="/cinema/library/portrait-operator.mp4"
-            poster="/raj-hero.jpg"
+            src="/media/real-uhd/raj-tomar-portrait.webp"
+            type="image"
             aspect="3:4"
             caption="The Operator · @rajtomar.dxb"
+            alt="Portrait of Raj Tomar"
           />
         </div>
 

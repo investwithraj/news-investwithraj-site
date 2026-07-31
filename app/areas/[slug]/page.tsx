@@ -1,30 +1,36 @@
-// Per-area landing page — /areas/[slug]
-//
-// Programmatic SEO honeypot. Every priority UAE community/island/free-zone/
-// master-plan gets a page: stats, developers, related news, FAQ, citations.
-// Each page links into IWR root if a Note covers the area, and into
-// /developer/[slug] for each active developer.
-
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import { AREAS, getAreaBySlug, getAllAreaSlugs } from "@/content/areas";
-import { NEWS_ARTICLES } from "@/content/news";
-import { getDevelopersForArea } from "@/lib/developers";
-import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
-import PageMotion from "@/components/v21/PageMotion";
-import { Price } from "@/components/ticker/FxProvider";
+import { notFound } from "next/navigation";
+
+import { getAllAreaSlugs, getAreaBySlug } from "@/content/areas";
+import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 import {
-  placeSchema,
-  realEstateAgentSchema,
-  breadcrumbSchema,
-  BREADCRUMB_PRESETS,
+  advisoryLinksForArea,
+  generalAdvisoryUrl,
+} from "@/lib/advisory-relations";
+import { SITE } from "@/lib/constants";
+import { DEVELOPERS } from "@/lib/developers";
+import {
+  articleMentionsArea,
+  categoryLabel,
+  displayMarkets,
+  formatEditorialDate,
+  relatedDevelopersForArea,
+} from "@/lib/news-editorial";
+import {
   asGraph,
+  BREADCRUMB_PRESETS,
+  breadcrumbSchema,
+  collectionPageSchemas,
 } from "@/lib/schema";
+import { getVerifiedAreaMedia } from "@/lib/verified-media";
+
+import styles from "../AreaPages.module.css";
 
 export const dynamicParams = false;
 export const dynamic = "force-static";
+export const revalidate = 86400;
 
 export function generateStaticParams() {
   return getAllAreaSlugs().map((slug) => ({ slug }));
@@ -36,23 +42,39 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const a = getAreaBySlug(slug);
-  if (!a) return { title: "Not found" };
+  const area = getAreaBySlug(slug);
+  if (!area) return { title: "Area not found" };
+  const media = getVerifiedAreaMedia(slug);
+
+  const evidenceReady =
+    Boolean(area.body.trim()) && area.citations.length > 0;
   return {
-    title: `${a.name} property news and market updates`,
-    description: a.excerpt,
+    title: `${area.name} — property research index`,
+    description: `${area.name}, ${area.emirate}: a coordinate-led research index with linked reporting. Market evidence review is ${
+      evidenceReady ? "complete" : "pending"
+    }.`,
     alternates: { canonical: `${SITE.url}/areas/${slug}` },
+    robots: {
+      index: evidenceReady,
+      follow: true,
+    },
     openGraph: {
-      title: `${a.name} — Invest With Raj`,
-      description: a.excerpt,
+      type: "website",
+      title: `${area.name} research index`,
+      description: `Location identity and source-linked reporting for ${area.name}, ${area.emirate}.`,
       url: `${SITE.url}/areas/${slug}`,
-      // v29 — "<slug>-placeholder.jpg" is this repo's convention for "no
-      // image yet"; public/areas/ is empty, so emitting it shipped a broken
-      // OpenGraph image (and a 404) on every area page. Omit it instead.
-      images:
-        a.heroImage.src && !a.heroImage.src.includes("-placeholder.")
-          ? [{ url: a.heroImage.src, alt: a.heroImage.alt }]
-          : undefined,
+      ...(media
+        ? {
+            images: [
+              {
+                url: `${SITE.url}${media.src}`,
+                width: media.width,
+                height: media.height,
+                alt: media.alt,
+              },
+            ],
+          }
+        : {}),
     },
   };
 }
@@ -63,291 +85,238 @@ export default async function AreaPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const a = getAreaBySlug(slug);
-  if (!a) notFound();
+  const area = getAreaBySlug(slug);
+  if (!area) notFound();
+  const media = getVerifiedAreaMedia(area.slug);
 
-  const activeDevs = getDevelopersForArea(slug);
-  const relatedNews = NEWS_ARTICLES.filter(
-    (n) => n.market.includes(a.emirate as "Dubai" | "Abu Dhabi" | "Ras Al Khaimah" | "UAE" | "GCC")
-  ).slice(0, 6);
-
+  const evidenceReady =
+    Boolean(area.body.trim()) && area.citations.length > 0;
+  const relatedNews = sortNewsArticles(NEWS_ARTICLES)
+    .filter((article) => article.status !== "research")
+    .filter((article) => articleMentionsArea(article, area))
+    .slice(0, 8);
+  const developers = relatedDevelopersForArea(area, DEVELOPERS);
+  const advisoryLinks = advisoryLinksForArea(area);
+  const pageUrl = `${SITE.url}/areas/${area.slug}`;
+  const [collection, itemList] = collectionPageSchemas({
+    url: pageUrl,
+    name: `${area.name} reporting index`,
+    description: `Source-linked reports that explicitly mention ${area.name}.`,
+    dateModified: area.modifiedAt,
+    itemListOrder: "descending",
+    items: relatedNews.map((article) => ({
+      name: article.title,
+      url: `${SITE.url}/news/${article.slug}`,
+      description: article.subtitle,
+    })),
+  });
   const graph = asGraph(
-    placeSchema(a),
-    realEstateAgentSchema(a),
-    breadcrumbSchema(BREADCRUMB_PRESETS.area({ slug: a.slug, name: a.name }))
+    {
+      "@context": "https://schema.org",
+      "@type": "Place",
+      "@id": `${pageUrl}#place`,
+      name: area.name,
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: area.coords.lat,
+        longitude: area.coords.lng,
+      },
+      address: {
+        "@type": "PostalAddress",
+        addressRegion: area.emirate,
+        addressCountry: "AE",
+      },
+    },
+    collection,
+    itemList,
+    breadcrumbSchema(
+      BREADCRUMB_PRESETS.area({ slug: area.slug, name: area.name }),
+    ),
   );
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${area.coords.lat},${area.coords.lng}`;
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+        }}
       />
-
-      <main className="min-h-screen">
-        {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
-            reveal (no data-split → no double-mount); motion here is ONE grid
-            stagger on the Active-developers cards via data-reveal. */}
-        <PageMotion />
-        {/* Hero */}
-        <section className="relative pt-20 md:pt-28 pb-12 md:pb-16 overflow-hidden" style={{ background: "var(--paper-warm)" }}>
-          <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8"
-              style={{ color: "var(--ink-soft)" }}
-              data-magnetic
-            >
-              <span aria-hidden>←</span>
-              <span>Back to the desk</span>
-            </Link>
-
-            <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: "var(--ink-faint)" }}>
-              <span style={{ color: "var(--gold-deep)" }}>{a.emirate}</span>
-              <span aria-hidden>·</span>
-              <span>{a.kind.replace(/-/g, " ")}</span>
+      <main id="main" className={styles.page}>
+        <header className={styles.detailHero}>
+          <Link href="/areas" className={styles.back}>
+            ← Area research index
+          </Link>
+          <div className={styles.detailHead}>
+            <div>
+              <p className={styles.eyebrow}>
+                {area.emirate} · {area.kind.replaceAll("-", " ")}
+              </p>
+              <h1>{area.name}</h1>
+              <p className={styles.dek}>
+                This is a research-index entry, not a market appraisal. Numeric
+                pricing, yield, supply and ownership fields remain unpublished
+                while the source pack is empty.
+              </p>
             </div>
+            <div className={styles.coordinatePanel}>
+              <span>Coordinate record</span>
+              <strong>
+                {area.coords.lat.toFixed(4)}° N
+                <br />
+                {area.coords.lng.toFixed(4)}° E
+              </strong>
+              <small>{area.emirate} · United Arab Emirates</small>
+            </div>
+          </div>
+        </header>
 
-            <KineticHeadline
-              className="leading-[1.02] tracking-[-0.025em]"
-              style={{
-                color: "var(--ink)",
-                fontSize: "clamp(2.5rem, 6vw, 4.75rem)",
-                fontWeight: 500,
-              }}
-            >
-              {a.name}
-            </KineticHeadline>
-
-            <p
-              className="mt-6 text-lg md:text-xl leading-[1.55] max-w-[60ch] editorial-italic"
-              style={{ color: "var(--ink-soft)", fontStyle: "italic" }}
-            >
-              {a.oneLiner}
-            </p>
-
-            <p
-              className="mt-6 text-base md:text-lg leading-[1.65] max-w-[65ch]"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              {a.excerpt}
-            </p>
-
-            {/* Stats strip */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-              {a.stats.map((s, i) => (
-                <div
-                  key={i}
-                  className="border-l-2 pl-5"
-                  style={{ borderColor: "var(--gold-deep)" }}
+        {media ? (
+          <figure className={styles.detailFigure}>
+            <Image
+              src={media.src}
+              width={media.width}
+              height={media.height}
+              alt={media.alt}
+              sizes="100vw"
+              quality={95}
+              priority
+            />
+            <figcaption className={styles.detailCredit}>
+              <span>{media.notice}</span>
+              <span>
+                {media.credit ? `${media.credit} · ` : null}
+                <a
+                  href={media.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <div
-                    className="leading-none tracking-[-0.025em]"
-                    style={{
-                      color: "var(--ink)",
-                      fontFamily: "var(--font-fraunces), Georgia, serif",
-                      fontSize: "clamp(1.5rem, 2.5vw, 2.25rem)",
-                      fontWeight: 500,
-                      fontVariationSettings: '"SOFT" 60, "opsz" 144',
-                    }}
+                  {media.sourceLabel}
+                </a>
+                {" · "}
+                {media.licenseUrl ? (
+                  <a
+                    href={media.licenseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    {s.value}
-                  </div>
-                  <div
-                    className="mt-2 text-[10px] font-mono uppercase tracking-[0.2em]"
-                    style={{ color: "var(--gold-deep)" }}
-                  >
-                    {s.unit}
-                  </div>
-                  <div
-                    className="mt-2 text-sm leading-[1.5]"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
+                    {media.licenseLabel}
+                  </a>
+                ) : (
+                  media.licenseLabel
+                )}
+              </span>
+            </figcaption>
+          </figure>
+        ) : null}
 
-            {/* Median price / yield strip — converts via FX */}
-            {(a.medianAedPerSqft || a.netYieldBand) && (
-              <div
-                className="mt-10 rounded-2xl p-5 md:p-7 flex flex-col md:flex-row md:items-center gap-4 md:gap-10"
-                style={{
-                  background: "rgba(242,238,231,0.06)",
-                  border: "1px solid var(--gold-soft)",
-                  backdropFilter: "blur(10px)",
-                }}
-              >
-                {a.medianAedPerSqft && (
-                  <div>
-                    <div className="text-[10px] font-mono uppercase tracking-[0.2em] mb-1" style={{ color: "var(--ink-faint)" }}>
-                      Median price per sqft
-                    </div>
-                    <div className="text-2xl md:text-3xl tracking-[-0.02em]" style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif" }}>
-                      <Price amount={a.medianAedPerSqft} /> <span className="text-base" style={{ color: "var(--ink-faint)" }}>/ sqft</span>
-                    </div>
-                  </div>
-                )}
-                {a.netYieldBand && (
-                  <div>
-                    <div className="text-[10px] font-mono uppercase tracking-[0.2em] mb-1" style={{ color: "var(--ink-faint)" }}>
-                      Net yield band
-                    </div>
-                    <div className="text-2xl md:text-3xl tracking-[-0.02em]" style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif" }}>
-                      {a.netYieldBand.min.toFixed(1)}–{a.netYieldBand.max.toFixed(1)}<span className="text-base" style={{ color: "var(--ink-faint)" }}>%</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+        <section className={styles.reviewStrip} aria-label="Area review status">
+          <div>
+            <span>Source review</span>
+            <strong>{evidenceReady ? "Evidence pack present" : "Pending"}</strong>
+          </div>
+          <div>
+            <span>Registry last touched</span>
+            <strong>{formatEditorialDate(area.modifiedAt)}</strong>
+          </div>
+          <div>
+            <span>Search status</span>
+            <p>
+              {evidenceReady
+                ? "Eligible for indexing"
+                : "Noindex until citations and reviewed body copy exist"}
+            </p>
           </div>
         </section>
 
-        {/* Active developers */}
-        {activeDevs.length > 0 && (
-          <section className="py-16 md:py-20" style={{ background: "var(--paper)" }}>
-            <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-deep)" }}
-              >
-                Active developers
-              </span>
-              <h2
-                className="mt-3 mb-8 leading-[1.05] tracking-[-0.025em]"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
-                  fontWeight: 500,
-                }}
-              >
-                Who&apos;s building here
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeDevs.map((d) => (
-                  <Link
-                    key={d.slug}
-                    href={`/developer/${d.slug}`}
-                    data-magnetic
-                    data-reveal=""
-                    className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
-                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <span
-                        className="leading-none"
-                        style={{ color: d.accent, fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "1.75rem" }}
-                      >
-                        {d.glyph}
-                      </span>
-                      <div>
-                        <div
-                          className="text-base md:text-lg leading-tight"
-                          style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif", fontWeight: 500 }}
-                        >
-                          {d.name}
-                        </div>
-                        {d.ticker && (
-                          <div className="text-[10px] font-mono uppercase tracking-[0.18em]" style={{ color: "var(--ink-faint)" }}>
-                            {d.ticker}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                      {d.tagline}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        <nav className={styles.mapActions} aria-label="Map this area">
+          <Link href={`/map?area=${area.slug}`}>Open on the intelligence map ↗</Link>
+          <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+            Open exact coordinates ↗
+          </a>
+        </nav>
 
-        {/* Related news */}
-        {relatedNews.length > 0 && (
-          <section className="py-16 md:py-20" style={{ background: "var(--paper-warm)" }}>
-            <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-deep)" }}
-              >
-                Recent coverage
-              </span>
-              <h2
-                className="mt-3 mb-8 leading-[1.05] tracking-[-0.025em]"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
-                  fontWeight: 500,
-                }}
-              >
-                The {a.name} desk
-              </h2>
-              <div className="grid gap-5">
-                {relatedNews.map((n) => (
-                  <Link
-                    key={n.slug}
-                    href={`/news/${n.slug}`}
-                    data-magnetic
-                    className="group block rounded-2xl border p-5 md:p-6 transition-transform hover:-translate-y-0.5"
-                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
-                  >
-                    <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--ink-faint)" }}>
-                      {n.category} · {n.displayDate}
-                    </div>
-                    <h3
-                      className="text-lg md:text-xl leading-[1.15] mb-1 transition-colors group-hover:text-[var(--gold-deep)]"
-                      style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif", fontWeight: 500 }}
-                    >
-                      {n.title}
-                    </h3>
-                    <p className="text-sm leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                      {n.subtitle}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+        <section className={styles.coverage}>
+          <header className={styles.sectionHeader}>
+            <h2>Explicit area mentions.</h2>
+            <p>{relatedNews.length} source-linked reports</p>
+          </header>
+          {relatedNews.length ? (
+            <div className={styles.reportList}>
+              {relatedNews.map((article) => (
+                <Link href={`/news/${article.slug}`} key={article.slug}>
+                  <span>
+                    {displayMarkets(article).join(" / ")} ·{" "}
+                    {categoryLabel(article.category)} · {article.displayDate}
+                  </span>
+                  <strong>{article.title}</strong>
+                  <i aria-hidden="true">↗</i>
+                </Link>
+              ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className={styles.emptyState}>
+              No live report explicitly names this area yet. Emirate-wide
+              stories are not used as substitutes.
+            </p>
+          )}
+        </section>
 
-        {/* IWR Note cross-link */}
-        {a.iwrNoteSlug && (
-          <section className="py-16 md:py-20" style={{ background: "var(--paper)" }}>
-            <div className="max-w-[760px] mx-auto px-6 md:px-12 text-center">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-deep)" }}
-              >
-                Institutional Note
-              </span>
-              <p
-                className="mt-6 text-xl md:text-2xl leading-[1.4]"
-                style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif" }}
-              >
-                {a.name} is covered by the curated{" "}
-                <a
-                  href={`${SITE.rootUrl}/?utm_source=news&utm_medium=area-page&utm_campaign=note-cross-link&utm_content=${a.iwrNoteSlug}`}
-                  className="editorial-italic text-gold-grad"
-                  data-magnetic
+        <section className={styles.relations}>
+          <header className={styles.sectionHeader}>
+            <h2>Connected developer records.</h2>
+            <p>Registry relationship · not current inventory</p>
+          </header>
+          {developers.length ? (
+            <div className={styles.developerList}>
+              {developers.map((developer) => (
+                <Link
+                  href={`/developer/${developer.slug}`}
+                  key={developer.slug}
                 >
-                  Beyond the Deal Note
-                </a>{" "}
-                on investwithraj.com.
-              </p>
+                  <span>Developer reporting index</span>
+                  <strong>{developer.name}</strong>
+                  <i aria-hidden="true">↗</i>
+                </Link>
+              ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className={styles.emptyState}>
+              No developer profile is connected to this area in the current
+              registry.
+            </p>
+          )}
+        </section>
+
+        <section className={styles.advisory}>
+          <header className={styles.sectionHeader}>
+            <h2>Move from record to decision.</h2>
+            <p>Invest With Raj · advisory site</p>
+          </header>
+          {advisoryLinks.length ? (
+            <div className={styles.advisoryLinks}>
+              {advisoryLinks.map((link) => (
+                <a href={link.href} key={link.href}>
+                  <span>{link.eyebrow}</span>
+                  <strong>{link.label}</strong>
+                  <i aria-hidden="true">↗</i>
+                </a>
+              ))}
+            </div>
+          ) : null}
+          <div className={styles.cta}>
+            <p>
+              If this geography is part of a live brief, bring the objective,
+              holding period and exit constraint. Raj can test the decision
+              without presenting this unfinished index as market evidence.
+            </p>
+            <a href={generalAdvisoryUrl("area", area.slug)}>
+              Discuss this area ↗
+            </a>
+          </div>
+        </section>
       </main>
     </>
   );
 }
-
-// Force-static prerender — every area page gets a static HTML file
-export const revalidate = 86400;
-// Suppress unused-import warnings for partially-applied imports
-void AREAS;

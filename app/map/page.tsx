@@ -1,263 +1,143 @@
-// /map — DLD-velocity heatmap.
-// SVG fallback Day-1 (no Mapbox token required). When MAPBOX_TOKEN is set on
-// Vercel, the client component below upgrades to a true 3D-buildings Mapbox
-// map with timeline scrubber + filters. Both flows show the same area
-// volume + median PSF + sentiment overlay.
-
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AREAS } from "@/content/areas";
-import { getMockSentimentSnapshot } from "@/lib/sentiment/mock";
-import { scoreToColor } from "@/lib/sentiment/types";
-import { SITE } from "@/lib/constants";
+import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
+import OrientationAtlas, { type AtlasArea } from "./OrientationAtlas";
+import styles from "./map.module.css";
 
 export const dynamic = "force-static";
 
+const canonical = `${SITE.url}/map`;
+
 export const metadata: Metadata = {
-  title: "DLD Map — Live UAE sale-velocity heatmap",
+  title: "UAE property area atlas — Dubai, Abu Dhabi and Ras Al Khaimah",
   description:
-    "Interactive heatmap of UAE real-estate transaction velocity by area. DLD daily volume + sentiment overlay. Mapbox 3D-buildings mode when token is configured.",
-  alternates: { canonical: `${SITE.url}/map` },
+    "An accessible geographic index of published Invest With Raj area guides, using the names, emirates, area types and coordinates in the editorial registry.",
+  alternates: { canonical },
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: "UAE property area atlas — Invest With Raj",
+    description:
+      "Explore published area guides by emirate, area type and geographic position.",
+    type: "website",
+    url: canonical,
+  },
 };
-
-// Bounding box of the UAE (approx) — used to project lat/lng → SVG x/y
-const UAE_BOUNDS = {
-  minLat: 22.5,
-  maxLat: 26.1,
-  minLng: 51.5,
-  maxLng: 56.4,
-};
-const SVG_WIDTH = 1200;
-const SVG_HEIGHT = 800;
-
-function projectToSvg(lat: number, lng: number): { x: number; y: number } {
-  const x =
-    ((lng - UAE_BOUNDS.minLng) / (UAE_BOUNDS.maxLng - UAE_BOUNDS.minLng)) *
-    SVG_WIDTH;
-  const y =
-    SVG_HEIGHT -
-    ((lat - UAE_BOUNDS.minLat) / (UAE_BOUNDS.maxLat - UAE_BOUNDS.minLat)) *
-      SVG_HEIGHT;
-  return { x, y };
-}
 
 export default function MapPage() {
-  // Merge area data + sentiment into a single map dataset
-  const sentiment = getMockSentimentSnapshot();
-  const sentimentByArea = new Map(
-    sentiment.signals
-      .filter((s) => s.kind === "area")
-      .map((s) => [s.subject, s])
-  );
+  const areas: AtlasArea[] = AREAS.map((area) => ({
+    slug: area.slug,
+    name: area.name,
+    emirate: area.emirate,
+    kind: area.kind,
+    lat: area.coords.lat,
+    lng: area.coords.lng,
+  })).sort((a, b) => a.name.localeCompare(b.name));
 
-  const dataset = AREAS.map((a) => ({
-    slug: a.slug,
-    name: a.name,
-    emirate: a.emirate,
-    lat: a.coords.lat,
-    lng: a.coords.lng,
-    medianPsf: a.medianAedPerSqft || 0,
-    score: sentimentByArea.get(a.slug)?.score ?? 0,
-    volume: sentimentByArea.get(a.slug)?.volume ?? 0,
-    ...projectToSvg(a.coords.lat, a.coords.lng),
-  }));
+  const newestReview = [...AREAS]
+    .map((area) => area.modifiedAt)
+    .sort((a, b) => b.localeCompare(a))[0];
+  const reviewLabel = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(newestReview));
 
   return (
-    <main className="min-h-screen" style={{ background: "var(--paper)", color: "var(--ink)" }}>
-      <section className="relative pt-16 md:pt-24 pb-8">
-        <div className="max-w-[1240px] mx-auto px-6 md:px-12">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-6 opacity-70 hover:opacity-100"
-            style={{ color: "var(--ink)" }}
-            data-magnetic
-          >
-            <span aria-hidden>←</span>
-            <span>Back to the terminal</span>
-          </Link>
+    <main className={styles.page}>
+      <JsonLd data={buildSchema(areas)} />
 
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div className="flex-1 min-w-0">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "#C9A961" }}
-              >
-                The map desk · live
-              </span>
-              {/* v22 grammar — display in Space Grotesk; the accent phrase
-                  alone carries the Fraunces italic gold. */}
-              <h1
-                className="mt-3 leading-[1.02] tracking-[-0.025em]"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-space-grotesk), system-ui, sans-serif",
-                  fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
-                  fontWeight: 500,
-                }}
-              >
-                Where the deals{" "}
-                <span className="editorial-italic" style={{ color: "#C9A961" }}>
-                  are landing.
-                </span>
-              </h1>
-              <p
-                className="mt-4 text-base md:text-lg leading-[1.55] max-w-[60ch]"
-                style={{ color: "rgba(242, 238, 231, 0.7)" }}
-              >
-                Every covered area as a node. Size = chatter volume.
-                Colour = sentiment polarity. Click any node to open the area
-                desk. Mapbox 3D-buildings mode activates when{" "}
-                <code className="font-mono">NEXT_PUBLIC_MAPBOX_TOKEN</code> is
-                set on Vercel.
-              </p>
+      <section className={styles.hero}>
+        <div className={styles.shell}>
+          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
+            <Link href="/">Daily Market Read</Link>
+            <span aria-hidden>/</span>
+            <span aria-current="page">Area atlas</span>
+          </nav>
+          <div className={styles.heroGrid}>
+            <div>
+              <p className={styles.kicker}>UAE area index</p>
+              <h1>A geographic index, not a heatmap.</h1>
             </div>
-
-            {/* Legend */}
-            <div className="flex items-center gap-4 text-[10px] font-mono uppercase tracking-[0.22em]">
-              <LegendDot color={scoreToColor(0.7)} label="Bullish" />
-              <LegendDot color={scoreToColor(0)} label="Neutral" />
-              <LegendDot color={scoreToColor(-0.7)} label="Bearish" />
-            </div>
+            <p className={styles.standfirst}>
+              Explore the places covered by Invest With Raj using only the
+              area name, emirate, type and coordinates held in the published
+              editorial registry.
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="pb-16">
-        <div className="max-w-[1240px] mx-auto px-6 md:px-12">
-          <div
-            className="rounded-2xl border overflow-hidden relative"
-            style={{ borderColor: "rgba(201, 169, 97, 0.2)", background: "#05081A" }}
-          >
-            <svg
-              viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-              className="w-full h-auto"
-              role="img"
-              aria-label="UAE sale-velocity heatmap"
-            >
-              {/* Background — radial glow over Dubai / AD / RAK */}
-              <defs>
-                <radialGradient id="bg-glow" cx="50%" cy="50%" r="60%">
-                  <stop offset="0%" stopColor="#1a2540" stopOpacity="0.55" />
-                  <stop offset="100%" stopColor="#05081A" stopOpacity="0" />
-                </radialGradient>
-                <radialGradient id="node-glow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="white" stopOpacity="0.95" />
-                  <stop offset="100%" stopColor="white" stopOpacity="0" />
-                </radialGradient>
-              </defs>
-
-              <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill="url(#bg-glow)" />
-
-              {/* Subtle grid */}
-              {Array.from({ length: 12 }).map((_, i) => (
-                <line
-                  key={`gx-${i}`}
-                  x1={(i / 12) * SVG_WIDTH}
-                  x2={(i / 12) * SVG_WIDTH}
-                  y1={0}
-                  y2={SVG_HEIGHT}
-                  stroke="rgba(201,169,97,0.05)"
-                  strokeWidth={1}
-                />
-              ))}
-              {Array.from({ length: 8 }).map((_, i) => (
-                <line
-                  key={`gy-${i}`}
-                  y1={(i / 8) * SVG_HEIGHT}
-                  y2={(i / 8) * SVG_HEIGHT}
-                  x1={0}
-                  x2={SVG_WIDTH}
-                  stroke="rgba(201,169,97,0.05)"
-                  strokeWidth={1}
-                />
-              ))}
-
-              {/* Emirate label markers */}
-              <text
-                x={projectToSvg(25.2048, 55.2708).x}
-                y={projectToSvg(25.2048, 55.2708).y - 80}
-                fill="rgba(248, 250, 252, 0.3)"
-                fontSize={18}
-                fontFamily="monospace"
-                textAnchor="middle"
-                letterSpacing="0.22em"
-              >
-                DUBAI
-              </text>
-              <text
-                x={projectToSvg(24.4539, 54.3773).x}
-                y={projectToSvg(24.4539, 54.3773).y - 80}
-                fill="rgba(248, 250, 252, 0.3)"
-                fontSize={18}
-                fontFamily="monospace"
-                textAnchor="middle"
-                letterSpacing="0.22em"
-              >
-                ABU DHABI
-              </text>
-              <text
-                x={projectToSvg(25.7000, 55.7800).x}
-                y={projectToSvg(25.7000, 55.7800).y - 80}
-                fill="rgba(248, 250, 252, 0.3)"
-                fontSize={18}
-                fontFamily="monospace"
-                textAnchor="middle"
-                letterSpacing="0.22em"
-              >
-                RAK
-              </text>
-
-              {/* Area nodes */}
-              {dataset.map((node) => {
-                const radius = 10 + Math.min(node.volume, 480) * 0.07;
-                const color = scoreToColor(node.score);
-                return (
-                  <g key={node.slug}>
-                    {/* Glow ring */}
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={radius + 18}
-                      fill={color}
-                      opacity={0.15}
-                    />
-                    {/* Core dot */}
-                    <a href={`/areas/${node.slug}`}>
-                      <circle
-                        cx={node.x}
-                        cy={node.y}
-                        r={radius}
-                        fill={color}
-                        opacity={0.85}
-                        className="hover:opacity-100"
-                        style={{ cursor: "pointer", transition: "opacity 200ms" }}
-                      />
-                      {/* Label */}
-                      <text
-                        x={node.x + radius + 6}
-                        y={node.y + 4}
-                        fill="rgba(248, 250, 252, 0.78)"
-                        fontSize={12}
-                        fontFamily="sans-serif"
-                      >
-                        {node.name}
-                      </text>
-                    </a>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {/* Footer hint */}
-            <div
-              className="px-4 py-3 text-[10px] font-mono uppercase tracking-[0.22em] border-t flex flex-wrap items-center justify-between gap-3"
-              style={{ borderColor: "rgba(201, 169, 97, 0.18)", color: "rgba(248, 250, 252, 0.45)" }}
-            >
-              <span>SVG fallback · 30 areas · {sentiment.signals.length} signals</span>
-              <span>
-                Mapbox 3D mode <span style={{ color: "rgba(248,250,252,0.7)" }}>auto-enables</span> with NEXT_PUBLIC_MAPBOX_TOKEN
-              </span>
+      <section className={styles.atlasSection} aria-labelledby="atlas-heading">
+        <div className={styles.shell}>
+          <div className={styles.sectionHead}>
+            <div>
+              <p className={styles.kicker}>Orientation atlas</p>
+              <h2 id="atlas-heading">Choose a place. Open its area guide.</h2>
             </div>
+            <p>{areas.length} registered area guides across three emirates.</p>
+          </div>
+          <OrientationAtlas areas={areas} />
+          <p className={styles.disclaimer}>
+            Orientation only. This graphic is not a cadastral map, boundary
+            survey, navigation tool or statement of distance. Points are
+            editorial centroids and the projection is not to scale.
+          </p>
+        </div>
+      </section>
+
+      <section className={styles.method} aria-labelledby="map-method">
+        <div className={`${styles.shell} ${styles.methodGrid}`}>
+          <div>
+            <p className={styles.kicker}>What the atlas contains</p>
+            <h2 id="map-method">No mood score. No invented market layer.</h2>
+          </div>
+          <div>
+            <p>
+              The public atlas is generated from the existing area registry.
+              It does not display transaction volume, price, sentiment,
+              “chatter” or real-time status.
+            </p>
+            <dl>
+              <div>
+                <dt>Fields shown</dt>
+                <dd>Name, emirate, area type and coordinates</dd>
+              </div>
+              <div>
+                <dt>Newest registry review</dt>
+                <dd>{reviewLabel}</dd>
+              </div>
+              <div>
+                <dt>Full context</dt>
+                <dd>Available on each linked area guide</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.cta}>
+        <div className={`${styles.shell} ${styles.ctaGrid}`}>
+          <div>
+            <p className={styles.kicker}>Comparing areas?</p>
+            <h2>Ask Raj to pressure-test the shortlist.</h2>
+            <p>
+              Bring the areas, property type, budget and intended outcome. Raj
+              will help you compare the decision with its trade-offs visible.
+            </p>
+          </div>
+          <div className={styles.ctaLinks}>
+            <a
+              className={styles.primary}
+              href={rootCtaUrl({
+                campaign: "area-atlas",
+                content: "book-a-call",
+              })}
+            >
+              Book a call with Raj
+            </a>
+            <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
           </div>
         </div>
       </section>
@@ -265,11 +145,60 @@ export default function MapPage() {
   );
 }
 
-function LegendDot({ color, label }: { color: string; label: string }) {
+function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
-    <span className="inline-flex items-center gap-2" style={{ color: "rgba(242,238,231,0.7)" }}>
-      <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-      {label}
-    </span>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(data).replace(/</g, "\\u003c"),
+      }}
+    />
   );
+}
+
+function buildSchema(areas: AtlasArea[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${canonical}#collection`,
+        url: canonical,
+        name: "UAE property area atlas",
+        description:
+          "A geographic index of published Invest With Raj area guides.",
+        mainEntity: { "@id": `${canonical}#areas` },
+        breadcrumb: { "@id": `${canonical}#breadcrumb` },
+      },
+      {
+        "@type": "ItemList",
+        "@id": `${canonical}#areas`,
+        numberOfItems: areas.length,
+        itemListElement: areas.map((area, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: area.name,
+          url: `${SITE.url}/areas/${area.slug}`,
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${canonical}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Daily Market Read",
+            item: SITE.url,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Area atlas",
+            item: canonical,
+          },
+        ],
+      },
+    ],
+  };
 }

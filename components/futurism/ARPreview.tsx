@@ -47,16 +47,37 @@ function ensureModelViewerLoaded() {
 
 export function ARPreview({ glbUrl, usdzUrl, label, alt, height = 360 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const [supportsAR, setSupportsAR] = useState(false);
+  const [supportsAR] = useState(() => {
+    if (typeof navigator === "undefined") return false;
+    return /iphone|ipad|ipod|android/.test(navigator.userAgent.toLowerCase());
+  });
 
   useEffect(() => {
     ensureModelViewerLoaded();
-    // Detect AR support — iOS Quick Look + Android Scene Viewer + WebXR
-    const ua = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(ua);
-    const isAndroid = /android/.test(ua);
-    setSupportsAR(isIOS || isAndroid);
   }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !glbUrl) return;
+    el.innerHTML = "";
+    const mv = document.createElement("model-viewer") as HTMLElement &
+      Record<string, unknown>;
+    mv.setAttribute("src", glbUrl);
+    if (usdzUrl) mv.setAttribute("ios-src", usdzUrl);
+    mv.setAttribute("alt", alt || label);
+    mv.setAttribute("ar", "");
+    mv.setAttribute("ar-modes", "webxr scene-viewer quick-look");
+    mv.setAttribute("camera-controls", "");
+    mv.setAttribute("auto-rotate", "");
+    mv.setAttribute("environment-image", "neutral");
+    mv.setAttribute("shadow-intensity", "0.85");
+    mv.setAttribute("exposure", "0.95");
+    mv.style.width = "100%";
+    mv.style.height = `${height}px`;
+    mv.style.background = "var(--paper-warm)";
+    mv.style.borderRadius = "16px";
+    el.appendChild(mv);
+  }, [glbUrl, usdzUrl, label, alt, height]);
 
   const available = Boolean(glbUrl || usdzUrl);
 
@@ -89,38 +110,12 @@ export function ARPreview({ glbUrl, usdzUrl, label, alt, height = 360 }: Props) 
           className="text-base leading-[1.5] max-w-[40ch]"
           style={{ color: "var(--ink-soft)" }}
         >
-          {label} — 3D + AR preview is being prepared. Drop me an email and I'll
+          {label} — 3D + AR preview is being prepared. Drop me an email and I&apos;ll
           send the GLB or schedule a Polycam walkthrough.
         </div>
       </div>
     );
   }
-
-  // model-viewer attributes set via ref so TypeScript doesn't choke on
-  // the custom element. The web component renders only after the module
-  // script loads — until then this div is empty.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !glbUrl) return;
-    el.innerHTML = "";
-    const mv = document.createElement("model-viewer") as HTMLElement &
-      Record<string, unknown>;
-    mv.setAttribute("src", glbUrl);
-    if (usdzUrl) mv.setAttribute("ios-src", usdzUrl);
-    mv.setAttribute("alt", alt || label);
-    mv.setAttribute("ar", "");
-    mv.setAttribute("ar-modes", "webxr scene-viewer quick-look");
-    mv.setAttribute("camera-controls", "");
-    mv.setAttribute("auto-rotate", "");
-    mv.setAttribute("environment-image", "neutral");
-    mv.setAttribute("shadow-intensity", "0.85");
-    mv.setAttribute("exposure", "0.95");
-    mv.style.width = "100%";
-    mv.style.height = `${height}px`;
-    mv.style.background = "var(--paper-warm)";
-    mv.style.borderRadius = "16px";
-    el.appendChild(mv);
-  }, [glbUrl, usdzUrl, label, alt, height]);
 
   return (
     <div className="relative">

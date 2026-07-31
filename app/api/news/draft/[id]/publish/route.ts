@@ -1,86 +1,331 @@
-// News review draft — approve + publish (POST).
+// Human-reviewed publication endpoint.
 //
-// The one git write in the whole pipeline. Generates content/news/<slug>.ts
-// from the reviewed draft + registers it in index.ts, in ONE GitHub commit
-// (Vercel auto-deploys). Then fires the existing /api/post-publish fan-out
-// (IndexNow + sitemap pings) and clears the draft from KV.
-//
-// Server-side guard: the 8-gate validator must pass (block-severity gates)
-// before anything is committed — the cockpit additionally soft-locks Approve
-// until every number is verified, but the server enforces the gates too.
+// This route creates the one atomic Git commit for an approved article. It
+// retains a durable "committed" draft record until a separate deployment
+// verifier proves that exact commit is live.
 
-import { NextRequest, NextResponse } from "next/server";
-import { authorize } from "@/lib/news-review/auth";
-import { getDraft, deleteDraft } from "@/lib/news-review/storage";
-import { publishArticleCommit, githubConfigured } from "@/lib/news-review/github";
+import { NextRequest } from "next/server";
+
+import { assessDraft } from "@/lib/news-review/auto-approve";
+import { authorizeMutation } from "@/lib/news-review/auth";
+import { githubConfigured, publishArticleCommit } from "@/lib/news-review/github";
+import {
+  draftContentHash,
+  evidenceApprovalFor,
+  mediaApprovalHash,
+  validateDraftArticleShape,
+  validateProvenanceShape,
+} from "@/lib/news-review/integrity";
+import {
+  claimDraftPublication,
+  DraftConflictError,
+  getDraft,
+  recordDraftPublicationCommit,
+  validateArticle,
+} from "@/lib/news-review/storage";
+import { privateJson, readJsonBody } from "@/lib/security/mutation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const NEWS_SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://news.investwithraj.com";
+const NEWS_SITE =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://news.investwithraj.com";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(req: NextRequest, { params }: RouteParams) {
-  const auth = authorize(req);
-  if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
+interface PublishRequest {
+  expectedRevision?: unknown;
+  expectedRecordVersion?: unknown;
+  expectedContentHash?: unknown;
+  mediaApprovalHash?: unknown;
+  evidenceApprovalHash?: unknown;
+}
 
+function validHash(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+}
+
+export async function POST(req: NextRequest, { params }: RouteParams) {
+  const auth = await authorizeMutation(req);
+  if (!auth.ok) {
+    return privateJson({ error: auth.message }, auth.status ?? 401);
+  }
+  if (auth.credential !== "review-session") {
+    return privateJson(
+      {
+        error:
+          "Publishing requires Raj's signed review session. Automation may stage drafts but cannot publish them.",
+      },
+      403,
+    );
+  }
   if (!githubConfigured()) {
-    return NextResponse.json(
-      { error: "Publishing disabled — set GITHUB_TOKEN env var." },
-      { status: 503 },
+    return privateJson(
+      { error: "Publishing is disabled because GitHub is not configured." },
+      503,
     );
   }
 
   const { id } = await params;
-  const draft = await getDraft(id);
-  if (!draft) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
-
-  // Hard gate — block-severity validator failures cannot publish.
-  if (!draft.validator.ok) {
-    return NextResponse.json(
-      {
-        error: "Draft fails the voice/validator gates — fix before publishing.",
-        failures: draft.validator.failures.filter((f) => f.severity === "block"),
-      },
-      { status: 422 },
-    );
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+    return privateJson({ error: "Invalid draft ID." }, 400);
   }
-
-  const { slug } = draft.article;
-
-  let commitSha: string;
-  try {
-    commitSha = await publishArticleCommit(slug, draft.article);
-  } catch (err) {
-    return NextResponse.json(
-      { error: `GitHub commit failed: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 502 },
-    );
-  }
-
-  const url = `${NEWS_SITE}/news/${slug}`;
-
-  // Best-effort search-engine fan-out — never blocks the publish result.
-  fireAndForget(req, url);
-
-  // Clear the draft from KV now that it lives in git.
-  await deleteDraft(id);
-
-  return NextResponse.json({ ok: true, slug, url, commitSha });
-}
-
-function fireAndForget(req: NextRequest, url: string) {
-  const secret = process.env.POST_PUBLISH_SECRET;
-  if (!secret) return;
-  const origin = req.nextUrl.origin;
-  void fetch(`${origin}/api/post-publish?secret=${encodeURIComponent(secret)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ newUrls: [url] }),
-  }).catch(() => {
-    /* non-fatal — the article is already live; pings retry next run */
+  const parsed = await readJsonBody<PublishRequest>(req, {
+    maxBytes: 4_096,
   });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
+  if (
+    typeof body.expectedRevision !== "number" ||
+    !Number.isSafeInteger(body.expectedRevision) ||
+    body.expectedRevision < 1 ||
+    typeof body.expectedRecordVersion !== "number" ||
+    !Number.isSafeInteger(body.expectedRecordVersion) ||
+    body.expectedRecordVersion < 1 ||
+    !validHash(body.expectedContentHash) ||
+    !validHash(body.mediaApprovalHash) ||
+    !validHash(body.evidenceApprovalHash)
+  ) {
+    return privateJson(
+      {
+        error:
+          "The exact revision, record version, content hash and approval hashes are required.",
+      },
+      400,
+    );
+  }
+
+  try {
+    const draft = await getDraft(id);
+    if (!draft) return privateJson({ error: "Draft not found." }, 404);
+    const existingPublication = draft.publication;
+    if (
+      existingPublication?.state === "committed" &&
+      existingPublication.commitSha &&
+      existingPublication.url &&
+      existingPublication.revision === body.expectedRevision &&
+      existingPublication.contentHash === body.expectedContentHash &&
+      existingPublication.mediaApprovalHash === body.mediaApprovalHash &&
+      existingPublication.evidenceApprovalHash === body.evidenceApprovalHash
+    ) {
+      return privateJson(
+        {
+          ok: true,
+          slug: draft.article.slug,
+          url: existingPublication.url,
+          commitSha: existingPublication.commitSha,
+          publicationState: "committed-awaiting-deployment-verification",
+          idempotent: true,
+        },
+        202,
+      );
+    }
+    if (
+      draft.revision !== body.expectedRevision ||
+      draft.recordVersion !== body.expectedRecordVersion ||
+      draft.contentHash !== body.expectedContentHash
+    ) {
+      return privateJson(
+        { error: "Draft changed; reload before publishing." },
+        409,
+      );
+    }
+
+    const articleResult = validateDraftArticleShape(draft.article);
+    if (!articleResult.ok) {
+      return privateJson({ error: articleResult.error }, 422);
+    }
+    const provenanceResult = validateProvenanceShape(
+      draft.provenance,
+      draft.article.citations.map((citation) => citation.url),
+    );
+    if (!provenanceResult.ok) {
+      return privateJson({ error: provenanceResult.error }, 422);
+    }
+    if (
+      draftContentHash(
+        articleResult.article,
+        provenanceResult.provenance,
+      ) !== draft.contentHash
+    ) {
+      return privateJson(
+        { error: "Stored draft content does not match its integrity hash." },
+        409,
+      );
+    }
+
+    const validator = validateArticle(articleResult.article);
+    if (!validator.ok) {
+      return privateJson(
+        {
+          error:
+            "Draft fails the current voice/validator gates; fix it before publishing.",
+          failures: validator.failures.filter(
+            (failure) => failure.severity === "block",
+          ),
+        },
+        422,
+      );
+    }
+
+    const verified = new Set(draft.verifiedSources ?? []);
+    const unverifiedSources = draft.article.citations
+      .map((citation) => citation.url)
+      .filter((url) => !verified.has(url));
+    if (unverifiedSources.length > 0) {
+      return privateJson(
+        {
+          error:
+            "Every cited source must be explicitly checked in The Desk before publication.",
+          unverifiedSources,
+        },
+        422,
+      );
+    }
+    if (!draft.evidenceApproval) {
+      return privateJson(
+        { error: "The evidence approval ledger is missing." },
+        422,
+      );
+    }
+    const recomputedEvidence = evidenceApprovalFor(
+      draft.revision,
+      draft.contentHash,
+      draft.verifiedSources ?? [],
+      draft.provenance,
+      draft.evidenceApproval.approvedAt,
+    );
+    if (
+      !recomputedEvidence ||
+      recomputedEvidence.hash !== draft.evidenceApproval.hash ||
+      draft.evidenceApproval.hash !== body.evidenceApprovalHash
+    ) {
+      return privateJson(
+        { error: "The evidence approval ledger is stale or invalid." },
+        409,
+      );
+    }
+
+    if (!draft.mediaApproval) {
+      return privateJson(
+        { error: "The immutable UHD media approval ledger is missing." },
+        422,
+      );
+    }
+    const { hash: storedMediaHash, ...mediaRecord } = draft.mediaApproval;
+    if (
+      mediaApprovalHash(mediaRecord) !== storedMediaHash ||
+      storedMediaHash !== body.mediaApprovalHash ||
+      draft.mediaApproval.revision !== draft.revision ||
+      draft.mediaApproval.contentHash !== draft.contentHash
+    ) {
+      return privateJson(
+        { error: "The UHD media approval ledger is stale or invalid." },
+        409,
+      );
+    }
+
+    const assessment = assessDraft({ ...draft, validator });
+    if (assessment.verdict !== "auto-approve") {
+      return privateJson(
+        {
+          error:
+            "Publication is held until the independently fetched evidence contract passes.",
+          reasons: assessment.reasons,
+        },
+        422,
+      );
+    }
+
+    const claim = await claimDraftPublication(id, {
+      revision: draft.revision,
+      recordVersion: draft.recordVersion,
+      contentHash: draft.contentHash,
+      mediaApprovalHash: storedMediaHash,
+      evidenceApprovalHash: draft.evidenceApproval.hash,
+    });
+    if (!claim) return privateJson({ error: "Draft not found." }, 404);
+    if (!claim.acquired) {
+      const existing = claim.draft.publication;
+      if (
+        existing?.state === "committed" &&
+        existing.commitSha &&
+        existing.url
+      ) {
+        return privateJson({
+          ok: true,
+          slug: draft.article.slug,
+          url: existing.url,
+          commitSha: existing.commitSha,
+          claimId: existing.claimId,
+          publicationState: "committed-awaiting-deployment-verification",
+          idempotent: true,
+        });
+      }
+      const startedAt = Date.parse(existing?.startedAt ?? "");
+      if (
+        existing?.state !== "publishing" ||
+        !Number.isFinite(startedAt) ||
+        Date.now() - startedAt < 5 * 60 * 1_000
+      ) {
+        return privateJson(
+          { error: "This exact revision already has a publication in progress." },
+          409,
+        );
+      }
+      // A stale publishing claim can be resumed because the Git operation is
+      // content-idempotent and recovers the original content commit.
+    }
+
+    const publication = claim.draft.publication;
+    if (!publication) {
+      throw new DraftConflictError("Publication claim was not persisted.");
+    }
+    const slug = draft.article.slug;
+    const commitSha = await publishArticleCommit(
+      slug,
+      draft.article,
+      draft.mediaApproval,
+      draft.contentHash,
+    );
+    const url = `${NEWS_SITE}/news/${slug}`;
+    await recordDraftPublicationCommit(
+      id,
+      publication.claimId,
+      commitSha,
+      url,
+    );
+
+    return privateJson(
+      {
+        ok: true,
+        slug,
+        url,
+        commitSha,
+        claimId: publication.claimId,
+        publicationState: "committed-awaiting-deployment-verification",
+        searchSubmission: {
+          state: "pending-explicit-operation",
+          message:
+            "No indexing or distribution call was made by the publish request.",
+        },
+      },
+      202,
+    );
+  } catch (error) {
+    if (error instanceof DraftConflictError) {
+      return privateJson({ error: error.message }, 409);
+    }
+    return privateJson(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Publication could not be committed.",
+      },
+      502,
+    );
+  }
 }

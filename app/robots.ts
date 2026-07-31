@@ -41,6 +41,7 @@ export default function robots(): MetadataRoute.Robots {
           "Meta-ExternalAgent",
         ],
         allow: "/",
+        disallow: ["/internal/", "/api/"],
       },
       // Block low-quality scrapers.
       {

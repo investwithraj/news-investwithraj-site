@@ -147,7 +147,7 @@ ${escapeHtml(articles[0]?.subtitle ?? "Daily UAE real-estate intelligence.")}
         <!-- Sub-footer -->
         <tr>
           <td style="padding:18px 32px;background:${COL.paperWarm};text-align:center;font-family:'Inter',Helvetica,Arial,sans-serif;font-size:11px;line-height:1.6;color:${COL.inkMuted};">
-            Raj Tomar · Real-estate consultant · Dubai · DLD-registered<br />
+            Raj Tomar · Property advisor · Dubai<br />
             Reply to this email or WhatsApp <a href="https://wa.me/${CONTACT.whatsappE164}" style="color:${COL.goldDeep};text-decoration:none;">${CONTACT.whatsappNumber}</a> to reach Raj directly.<br />
             <br />
             <a href="{{ UnsubscribeURL }}" style="color:${COL.inkMuted};text-decoration:underline;">Unsubscribe</a> &nbsp;·&nbsp; <a href="${SITE.url}" style="color:${COL.inkMuted};text-decoration:none;">news.investwithraj.com</a>

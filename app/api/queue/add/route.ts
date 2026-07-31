@@ -1,134 +1,255 @@
-// Enqueue new outreach drafts. Called by the daily news pipeline after
-// articles are committed — pipeline picks top-N articles, generates per-
-// channel drafts via lib/queue/draft-generators, then POSTs them here.
+// Authenticated outreach-queue intake.
 //
-// Usage:
-//   POST /api/queue/add?secret=<POST_PUBLISH_SECRET>
-//   body: { items: Array<{ channel, target, draftText, rationale, sourceArticleSlug?, responseToUrl? }> }
-//
-// Or generate from article slugs directly:
-//   POST /api/queue/add?secret=...
-//   body: { slugs: ["..."], channels: ["reddit", "quora", "haro"] }
+// Browser operators authenticate with the signed HttpOnly session minted
+// after /internal Basic Auth. Pipeline callers use x-post-publish-secret.
+// URL/query credentials are rejected by the shared authorization guard.
 
 import { NextRequest, NextResponse } from "next/server";
-import { addItems, getQueueStats, getStorageBackend } from "@/lib/queue/storage";
+
+import { NEWS_ARTICLES } from "@/content/news";
+import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import {
   generateDraftsForArticle,
   selectTopDrafts,
   toQueuePartials,
 } from "@/lib/queue/draft-generators";
-import type { QueueChannel } from "@/lib/queue/types";
-import { NEWS_ARTICLES } from "@/content/news";
+import {
+  addItems,
+  getQueueStats,
+  getStorageBackend,
+  QueueMutationConflictError,
+} from "@/lib/queue/storage";
+import { CHANNEL_POLICIES, type QueueChannel } from "@/lib/queue/types";
+import { readJsonBody } from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
 
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
+const CHANNELS = Object.keys(CHANNEL_POLICIES) as QueueChannel[];
+const CHANNEL_SET = new Set<string>(CHANNELS);
+const MAX_BATCH = 100;
+const MAX_DRAFT_LENGTH = 20_000;
 
-export async function GET() {
-  const stats = await getQueueStats();
-  return NextResponse.json({
-    name: "news.investwithraj.com outreach queue — add endpoint",
-    method: "POST",
-    auth: "?secret=<POST_PUBLISH_SECRET>",
-    body: {
-      mode_a: {
-        items: "QueueItem[] — pre-built drafts (channel/target/draftText/rationale/sourceArticleSlug?)",
-      },
-      mode_b: {
-        slugs: "string[] — article slugs from content/news/*.ts",
-        channels: "QueueChannel[] (optional) — defaults to [reddit, quora, haro, linkedin-comment]",
-      },
+type QueuePartial = {
+  channel: QueueChannel;
+  target: string;
+  draftText: string;
+  rationale: string;
+  sourceArticleSlug?: string;
+  responseToUrl?: string;
+};
+
+function privateJson(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "private, no-store",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
     },
-    storage: getStorageBackend(),
-    currentStats: stats,
   });
 }
 
-export async function POST(request: NextRequest) {
-  if (!SECRET) {
-    return NextResponse.json(
-      { error: "POST_PUBLISH_SECRET env var not set — endpoint disabled" },
-      { status: 503 }
-    );
+function cleanText(value: unknown, max: number): string | null {
+  if (typeof value !== "string") return null;
+  const clean = value.trim();
+  return clean && clean.length <= max ? clean : null;
+}
+
+function cleanOptionalUrl(value: unknown): string | undefined | null {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || value.length > 2_048) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
   }
-  const provided = request.nextUrl.searchParams.get("secret");
-  if (provided !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+function parseQueuePartial(value: unknown): QueuePartial | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+  const channel =
+    typeof item.channel === "string" && CHANNEL_SET.has(item.channel)
+      ? (item.channel as QueueChannel)
+      : null;
+  const target = cleanText(item.target, 1_000);
+  const draftText = cleanText(item.draftText, MAX_DRAFT_LENGTH);
+  const rationale = cleanText(item.rationale, 2_000);
+  const sourceArticleSlug =
+    item.sourceArticleSlug === undefined
+      ? undefined
+      : cleanText(item.sourceArticleSlug, 180);
+  const responseToUrl = cleanOptionalUrl(item.responseToUrl);
+
+  if (
+    !channel ||
+    !target ||
+    !draftText ||
+    !rationale ||
+    sourceArticleSlug === null ||
+    responseToUrl === null
+  ) {
+    return null;
   }
 
-  let body: {
+  return {
+    channel,
+    target,
+    draftText,
+    rationale,
+    ...(sourceArticleSlug ? { sourceArticleSlug } : {}),
+    ...(responseToUrl ? { responseToUrl } : {}),
+  };
+}
+
+export async function GET(request: NextRequest) {
+  const auth = await authorize(request);
+  if (!auth.ok) return privateJson({ error: auth.message }, auth.status);
+
+  try {
+    const stats = await getQueueStats();
+    return privateJson({
+      name: "Invest With Raj outreach queue intake",
+      method: "POST",
+      authentication:
+        "signed internal session or x-post-publish-secret request header",
+      body: {
+        items:
+          "validated queue drafts, or slugs[] with optional supported channels[]",
+      },
+      storage: getStorageBackend(),
+      currentStats: stats,
+    });
+  } catch {
+    return privateJson({ error: "Queue storage is unavailable." }, 503);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await authorizeMutation(request);
+  if (!auth.ok) return privateJson({ error: auth.message }, auth.status);
+  const idempotencyKey = request.headers.get("idempotency-key")?.trim() ?? "";
+  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
+    return privateJson(
+      { error: "A valid Idempotency-Key header is required." },
+      428,
+    );
+  }
+
+  const parsed = await readJsonBody<{
     items?: unknown;
     slugs?: unknown;
     channels?: unknown;
-  } = {};
+  }>(request, { maxBytes: 512_000 });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return privateJson({ error: "The JSON body must be an object." }, 400);
+  }
+
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+    if (Array.isArray(body.items)) {
+      if (body.items.length === 0 || body.items.length > MAX_BATCH) {
+        return privateJson(
+          { error: `items must contain between 1 and ${MAX_BATCH} entries.` },
+          400,
+        );
+      }
+      const partials = body.items.map(parseQueuePartial);
+      if (partials.some((item) => item === null)) {
+        return privateJson(
+          {
+            error:
+              "Every item requires a supported channel and bounded target, draftText and rationale. Optional URLs must be HTTP(S).",
+          },
+          400,
+        );
+      }
 
-  // Mode A — items provided directly
-  if (Array.isArray(body.items)) {
-    const partials = (body.items as unknown[])
-      .filter(
-        (i): i is {
-          channel: QueueChannel;
-          target: string;
-          draftText: string;
-          rationale: string;
-          sourceArticleSlug?: string;
-          responseToUrl?: string;
-        } =>
-          typeof i === "object" &&
-          i !== null &&
-          "channel" in i &&
-          "target" in i &&
-          "draftText" in i &&
-          "rationale" in i
+      const created = await addItems(
+        partials as QueuePartial[],
+        idempotencyKey,
       );
+      return privateJson({
+        ok: true,
+        mode: "items",
+        added: created.length,
+        ids: created.map((item) => item.id),
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-    const created = await addItems(partials);
-    return NextResponse.json({
-      ok: true,
-      mode: "items",
-      added: created.length,
-      ids: created.map((c) => c.id),
-      timestamp: new Date().toISOString(),
-    });
-  }
+    if (Array.isArray(body.slugs)) {
+      if (body.slugs.length === 0 || body.slugs.length > MAX_BATCH) {
+        return privateJson(
+          { error: `slugs must contain between 1 and ${MAX_BATCH} entries.` },
+          400,
+        );
+      }
+      const slugs = [
+        ...new Set(
+          body.slugs
+            .map((slug) => cleanText(slug, 180))
+            .filter((slug): slug is string => Boolean(slug)),
+        ),
+      ];
+      if (slugs.length !== body.slugs.length) {
+        return privateJson(
+          { error: "Every slug must be a non-empty bounded string." },
+          400,
+        );
+      }
 
-  // Mode B — generate from slugs
-  if (Array.isArray(body.slugs)) {
-    const slugs = (body.slugs as unknown[]).filter((s): s is string => typeof s === "string");
-    const channels: QueueChannel[] =
-      Array.isArray(body.channels) && body.channels.length > 0
-        ? (body.channels.filter((c): c is QueueChannel => typeof c === "string") as QueueChannel[])
-        : ["reddit", "quora", "haro", "linkedin-comment"];
+      const requestedChannels =
+        Array.isArray(body.channels) && body.channels.length > 0
+          ? body.channels
+          : ["reddit", "quora", "haro", "linkedin-comment"];
+      const channels = requestedChannels.filter(
+        (channel): channel is QueueChannel =>
+          typeof channel === "string" && CHANNEL_SET.has(channel),
+      );
+      if (channels.length !== requestedChannels.length) {
+        return privateJson({ error: "Unsupported queue channel." }, 400);
+      }
 
-    const articles = slugs
-      .map((slug) => NEWS_ARTICLES.find((a) => a.slug === slug))
-      .filter((a): a is (typeof NEWS_ARTICLES)[number] => a !== undefined);
+      const articles = slugs
+        .map((slug) => NEWS_ARTICLES.find((article) => article.slug === slug))
+        .filter(
+          (article): article is (typeof NEWS_ARTICLES)[number] =>
+            article !== undefined,
+        );
+      const drafts = articles.flatMap((article) =>
+        selectTopDrafts(generateDraftsForArticle(article), channels),
+      );
+      const created = await addItems(toQueuePartials(drafts), idempotencyKey);
 
-    const allDrafts = articles.flatMap((article) =>
-      selectTopDrafts(generateDraftsForArticle(article), channels)
+      return privateJson({
+        ok: true,
+        mode: "slugs",
+        articlesProcessed: articles.length,
+        missingSlugs: slugs.filter(
+          (slug) => !articles.some((article) => article.slug === slug),
+        ),
+        channelsRequested: channels,
+        drafted: created.length,
+        ids: created.map((item) => item.id),
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return privateJson(
+      { error: "Body must contain items[] or slugs[]." },
+      400,
     );
-    const partials = toQueuePartials(allDrafts);
-    const created = await addItems(partials);
-
-    return NextResponse.json({
-      ok: true,
-      mode: "slugs",
-      articlesProcessed: articles.length,
-      missingSlugs: slugs.filter((s) => !articles.find((a) => a.slug === s)),
-      channelsRequested: channels,
-      drafted: created.length,
-      ids: created.map((c) => c.id),
-      timestamp: new Date().toISOString(),
-    });
+  } catch (error) {
+    if (error instanceof QueueMutationConflictError) {
+      return privateJson(
+        { error: "This Idempotency-Key was used for a different queue payload." },
+        409,
+      );
+    }
+    return privateJson({ error: "Queue storage is unavailable." }, 503);
   }
-
-  return NextResponse.json(
-    { error: "Body must be { items: [...] } or { slugs: [...] }" },
-    { status: 400 }
-  );
 }

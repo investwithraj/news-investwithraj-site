@@ -1,14 +1,5 @@
 "use client";
 
-// F3 — Beyond the Deal Terminal.
-// Bloomberg-Terminal-for-Dubai-RE. Multi-pane workspace — drag panes to
-// reorder, toggle visibility, layout persists in localStorage. Day-1
-// panes: DLD Pulse · FX · Markets Tape · Headlines · Closing Bell · The Desk.
-//
-// Live data feeds via /api/dld-pulse + /api/fx — same endpoints powering
-// the public ticker. Heavier panes (Globe, Skyline mini, Heatmap) can plug
-// in as separate panes when Wave 10/9 components are paneable.
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { DldDailyPulse } from "@/lib/dld/types";
@@ -16,6 +7,8 @@ import type { FxSnapshot } from "@/lib/fx/rates";
 import { CURRENCY_META, type Currency } from "@/lib/fx/rates";
 import { useFx } from "@/components/ticker/FxProvider";
 import { formatAed } from "@/lib/dld/types";
+import { CONTACT, rootCtaUrl } from "@/lib/constants";
+import styles from "./TerminalShell.module.css";
 
 type PaneKey =
   | "pulse"
@@ -24,488 +17,696 @@ type PaneKey =
   | "headlines"
   | "closing"
   | "desk"
-  | "areas-tape";
+  | "areas";
 
 const PANE_LABELS: Record<PaneKey, string> = {
-  pulse: "DLD Pulse",
-  fx: "FX Matrix",
-  tape: "Markets Tape",
-  headlines: "Headlines",
+  pulse: "DLD daily pulse",
+  fx: "FX matrix",
+  tape: "Market tape",
+  headlines: "Top headlines",
   closing: "Closing Bell",
-  desk: "The Desk",
-  "areas-tape": "Areas Tape",
+  desk: "Desk shortcuts",
+  areas: "Area guides",
 };
 
 const DEFAULT_LAYOUT: PaneKey[] = [
   "pulse",
   "fx",
-  "headlines",
   "tape",
-  "areas-tape",
+  "headlines",
   "closing",
   "desk",
+  "areas",
 ];
 
-const LAYOUT_KEY = "iwr-terminal-layout";
+const LAYOUT_KEY = "iwr-intelligence-terminal-layout-v2";
+
+type Report = {
+  slug: string;
+  title: string;
+  category: string;
+  displayDate: string;
+  publishedAt: string;
+  modifiedAt: string;
+  markets: string[];
+  sourceCount: number;
+  sourceLabels: string[];
+};
 
 interface Props {
-  headlines: Array<{
+  reports: Report[];
+  areas: Array<{
+    slug: string;
+    name: string;
+    emirate: string;
+    modifiedAt: string;
+  }>;
+  bells: Array<{
     slug: string;
     title: string;
-    category: string;
     displayDate: string;
+    highlights: string[];
   }>;
-  areas: Array<{ slug: string; name: string; emirate: string; medianPsf?: number }>;
-  bells: Array<{ slug: string; title: string; displayDate: string; highlights: string[] }>;
 }
 
-export function TerminalShell({ headlines, areas, bells }: Props) {
+type FeedState<T> =
+  | { status: "loading"; data: null; message: string }
+  | { status: "ready"; data: T; message: string }
+  | { status: "error"; data: null; message: string };
+
+export function TerminalShell({ reports, areas, bells }: Props) {
   const [layout, setLayout] = useState<PaneKey[]>(DEFAULT_LAYOUT);
-  const [pulse, setPulse] = useState<DldDailyPulse | null>(null);
-  const [fxSnap, setFxSnap] = useState<FxSnapshot | null>(null);
+  const [pulse, setPulse] = useState<FeedState<DldDailyPulse>>({
+    status: "loading",
+    data: null,
+    message: "Checking the official DLD feed.",
+  });
+  const [fx, setFx] = useState<FeedState<FxSnapshot>>({
+    status: "loading",
+    data: null,
+    message: "Checking the FX source.",
+  });
   const { currency, setCurrency } = useFx();
 
-  // Persisted layout
   useEffect(() => {
+    let savedLayout: PaneKey[] | null = null;
     try {
       const stored = localStorage.getItem(LAYOUT_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as PaneKey[];
-        if (Array.isArray(parsed) && parsed.every((p) => p in PANE_LABELS)) {
-          setLayout(parsed);
-        }
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as PaneKey[];
+      if (
+        Array.isArray(parsed) &&
+        parsed.length > 0 &&
+        parsed.every((pane) => pane in PANE_LABELS)
+      ) {
+        savedLayout = [...new Set(parsed)];
       }
-    } catch {}
+    } catch {
+      // Preferences are optional. A corrupt or blocked store uses defaults.
+    }
+    if (!savedLayout) return;
+    const frame = window.requestAnimationFrame(() => {
+      setLayout(savedLayout);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  // Live data
   useEffect(() => {
-    let mounted = true;
-    async function fetchAll() {
-      try {
-        const [p, f] = await Promise.all([
-          fetch("/api/dld-pulse").then((r) => r.json() as Promise<DldDailyPulse>),
-          fetch("/api/fx").then((r) => r.json() as Promise<FxSnapshot>),
-        ]);
-        if (mounted) {
-          setPulse(p);
-          setFxSnap(f);
-        }
-      } catch {}
+    const controller = new AbortController();
+
+    async function loadFeeds() {
+      const [pulseResult, fxResult] = await Promise.allSettled([
+        fetch("/api/dld-pulse", {
+          signal: controller.signal,
+          cache: "no-store",
+        }).then(async (response) => {
+          if (!response.ok) throw new Error(`DLD request ${response.status}`);
+          const data = (await response.json()) as unknown;
+          if (!isDldPulse(data)) throw new Error("Invalid DLD payload");
+          return data;
+        }),
+        fetch("/api/fx", {
+          signal: controller.signal,
+          cache: "no-store",
+        }).then(async (response) => {
+          if (!response.ok) throw new Error(`FX request ${response.status}`);
+          const data = (await response.json()) as unknown;
+          if (!isFxSnapshot(data)) throw new Error("Invalid FX payload");
+          return data;
+        }),
+      ]);
+
+      if (!controller.signal.aborted) {
+        setPulse(
+          pulseResult.status === "fulfilled"
+            ? {
+                status: "ready",
+                data: pulseResult.value,
+                message:
+                  pulseResult.value.source === "live"
+                    ? "Official Dubai Pulse open-data aggregate."
+                    : "Cited official reference print; not a current live feed.",
+              }
+            : {
+                status: "error",
+                data: null,
+                message:
+                  "DLD data is unavailable. No replacement figure is being shown.",
+              },
+        );
+        setFx(
+          fxResult.status === "fulfilled"
+            ? {
+                status: "ready",
+                data: fxResult.value,
+                message:
+                  fxResult.value.source === "live"
+                    ? "Current upstream FX snapshot."
+                    : "Current FX is unavailable; bundled fallback values are withheld.",
+              }
+            : {
+                status: "error",
+                data: null,
+                message:
+                  "FX data is unavailable. No replacement rate is being shown.",
+              },
+        );
+      }
     }
-    fetchAll();
-    const t = setInterval(fetchAll, 5 * 60 * 1000);
+
+    void loadFeeds();
+    const interval = window.setInterval(loadFeeds, 5 * 60 * 1000);
     return () => {
-      mounted = false;
-      clearInterval(t);
+      controller.abort();
+      window.clearInterval(interval);
     };
   }, []);
 
-  function movePane(key: PaneKey, dir: -1 | 1) {
-    setLayout((prev) => {
-      const idx = prev.indexOf(key);
-      if (idx === -1) return prev;
-      const target = idx + dir;
-      if (target < 0 || target >= prev.length) return prev;
-      const next = [...prev];
-      [next[idx], next[target]] = [next[target], next[idx]];
-      try {
-        localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+  function persist(next: PaneKey[]) {
+    setLayout(next);
+    try {
+      localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
+    } catch {
+      // The terminal remains usable when browser storage is disabled.
+    }
+  }
+
+  function movePane(key: PaneKey, direction: -1 | 1) {
+    const index = layout.indexOf(key);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= layout.length) return;
+    const next = [...layout];
+    [next[index], next[target]] = [next[target], next[index]];
+    persist(next);
   }
 
   function togglePane(key: PaneKey) {
-    setLayout((prev) => {
-      const next = prev.includes(key)
-        ? prev.filter((p) => p !== key)
-        : [...prev, key];
-      try {
-        localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  }
-
-  function resetLayout() {
-    setLayout(DEFAULT_LAYOUT);
-    try {
-      localStorage.setItem(LAYOUT_KEY, JSON.stringify(DEFAULT_LAYOUT));
-    } catch {}
+    persist(
+      layout.includes(key)
+        ? layout.filter((pane) => pane !== key)
+        : [...layout, key],
+    );
   }
 
   const hiddenPanes = useMemo(
-    () => (Object.keys(PANE_LABELS) as PaneKey[]).filter((k) => !layout.includes(k)),
-    [layout]
+    () =>
+      (Object.keys(PANE_LABELS) as PaneKey[]).filter(
+        (pane) => !layout.includes(pane),
+      ),
+    [layout],
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#141414", color: "var(--ink)" }}>
-      {/* Header bar */}
-      <header
-        className="px-5 md:px-8 py-3 border-b flex flex-wrap items-center gap-4 justify-between text-xs font-mono uppercase tracking-[0.15em]"
-        style={{ borderColor: "rgba(201, 169, 97, 0.18)" }}
-      >
-        <div className="flex items-center gap-4">
-          <Link href="/" data-magnetic style={{ color: "var(--gold-bright, #E0C076)" }}>
-            ← desk
-          </Link>
-          <span style={{ color: "rgba(242, 238, 231, 0.45)" }}>terminal · v1</span>
-          <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: pulse?.source === "live" ? "#22c55e" : "#E0C076", animation: "pulse 1.6s infinite" }} />
-            {pulse?.source === "live" ? "live" : pulse ? "mock" : "loading"}
-          </span>
+    <main className={styles.page}>
+      <section className={styles.hero}>
+        <div className={styles.frame}>
+          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
+            <Link href="/">Daily Market Read</Link>
+            <span aria-hidden>/</span>
+            <span aria-current="page">Terminal</span>
+          </nav>
+          <div className={styles.heroGrid}>
+            <div>
+              <p className={styles.kicker}>Power-user workspace</p>
+              <h1>Market context, with its evidence visible.</h1>
+            </div>
+            <div className={styles.heroCopy}>
+              <p>
+                Arrange the desk around your decision. Data panes identify
+                their source, represented period and fallback state. The
+                market tape contains published reporting—not simulated trades.
+              </p>
+              <span>
+                Preferences remain in this browser and can be reset at any
+                time.
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value as Currency)}
-            className="bg-transparent border-b text-xs uppercase tracking-[0.15em] outline-none cursor-pointer"
-            style={{ color: "var(--ink)", borderColor: "rgba(201,169,97,0.3)" }}
-          >
-            {Object.values(CURRENCY_META).map((c) => (
-              <option key={c.code} value={c.code} className="text-black">
-                {c.code}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={resetLayout}
-            className="px-2 py-1 border hover:bg-white/5"
-            style={{ borderColor: "rgba(201,169,97,0.3)" }}
-          >
-            Reset layout
-          </button>
-        </div>
-      </header>
+      </section>
 
-      {/* Hidden panes drawer */}
-      {hiddenPanes.length > 0 && (
-        <div
-          className="px-5 md:px-8 py-2 border-b flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] flex-wrap"
-          style={{ borderColor: "rgba(201, 169, 97, 0.12)", background: "rgba(242,238,231,0.04)" }}
-        >
-          <span style={{ color: "rgba(242,238,231,0.45)" }}>hidden:</span>
-          {hiddenPanes.map((k) => (
+      <section className={styles.workspace} aria-labelledby="workspace-heading">
+        <div className={styles.frame}>
+          <div className={styles.workspaceHead}>
+            <div>
+              <p className={styles.kicker}>Seven-pane desk</p>
+              <h2 id="workspace-heading">Your working view</h2>
+            </div>
             <button
-              key={k}
-              onClick={() => togglePane(k)}
-              className="px-2 py-1 border hover:bg-white/5"
-              style={{ borderColor: "rgba(201,169,97,0.3)", color: "var(--gold-bright, #E0C076)" }}
+              type="button"
+              className={styles.reset}
+              onClick={() => persist(DEFAULT_LAYOUT)}
             >
-              + {PANE_LABELS[k]}
+              Reset layout
             </button>
-          ))}
+          </div>
+
+          {hiddenPanes.length > 0 && (
+            <div className={styles.hiddenBar}>
+              <span>Hidden panes</span>
+              {hiddenPanes.map((pane) => (
+                <button
+                  type="button"
+                  key={pane}
+                  onClick={() => togglePane(pane)}
+                >
+                  Add {PANE_LABELS[pane]}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {layout.length === 0 ? (
+            <div className={styles.emptyDesk}>
+              <h2>The workspace is clear.</h2>
+              <p>Add a pane above or restore the complete desk.</p>
+              <button type="button" onClick={() => persist(DEFAULT_LAYOUT)}>
+                Restore all panes
+              </button>
+            </div>
+          ) : (
+            <div className={styles.grid}>
+              {layout.map((pane) => (
+                <Pane
+                  key={pane}
+                  pane={pane}
+                  onEarlier={() => movePane(pane, -1)}
+                  onLater={() => movePane(pane, 1)}
+                  onHide={() => togglePane(pane)}
+                >
+                  {pane === "pulse" && <PulsePane state={pulse} />}
+                  {pane === "fx" && (
+                    <FxPane
+                      state={fx}
+                      active={currency}
+                      onPick={setCurrency}
+                    />
+                  )}
+                  {pane === "tape" && <TapePane reports={reports} />}
+                  {pane === "headlines" && (
+                    <HeadlinesPane reports={reports} />
+                  )}
+                  {pane === "closing" && <ClosingPane bells={bells} />}
+                  {pane === "desk" && <DeskPane />}
+                  {pane === "areas" && <AreasPane areas={areas} />}
+                </Pane>
+              ))}
+            </div>
+          )}
+
+          <div className={styles.preferencesNote}>
+            <strong>Saved layout / preferences</strong>
+            <p>
+              Pane order and visibility are stored only in this browser. No
+              account profile is created, and Reset layout restores the
+              publication default.
+            </p>
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Panes grid — auto-flow, responsive */}
-      <main className="flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 auto-rows-min">
-        {layout.map((paneKey) => (
-          <Pane
-            key={paneKey}
-            paneKey={paneKey}
-            onMoveUp={() => movePane(paneKey, -1)}
-            onMoveDown={() => movePane(paneKey, 1)}
-            onClose={() => togglePane(paneKey)}
-          >
-            {paneKey === "pulse" && <PulsePane pulse={pulse} />}
-            {paneKey === "fx" && <FxPane snap={fxSnap} active={currency} onPick={setCurrency} />}
-            {paneKey === "tape" && <TapePane pulse={pulse} />}
-            {paneKey === "headlines" && <HeadlinesPane headlines={headlines} />}
-            {paneKey === "closing" && <ClosingPane bells={bells} />}
-            {paneKey === "desk" && <DeskPane />}
-            {paneKey === "areas-tape" && <AreasTapePane areas={areas} />}
-          </Pane>
-        ))}
-      </main>
-
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.35; }
-        }
-      `}</style>
-    </div>
+      <section className={styles.method} aria-labelledby="terminal-method">
+        <div className={`${styles.frame} ${styles.methodGrid}`}>
+          <div>
+            <p className={styles.kicker}>Reading the terminal</p>
+            <h2 id="terminal-method">Reference first. Interpretation second.</h2>
+          </div>
+          <div className={styles.methodCopy}>
+            <p>
+              “Live” appears only when the official upstream reports a fresh
+              payload. Reference and unavailable states stay visible rather
+              than being filled with generated figures.
+            </p>
+            <p>
+              This workspace is editorial context, not a land-registry extract,
+              valuation, investment recommendation or substitute for current
+              due diligence.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
 
 function Pane({
-  paneKey,
+  pane,
   children,
-  onMoveUp,
-  onMoveDown,
-  onClose,
+  onEarlier,
+  onLater,
+  onHide,
 }: {
-  paneKey: PaneKey;
+  pane: PaneKey;
   children: React.ReactNode;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onClose: () => void;
+  onEarlier: () => void;
+  onLater: () => void;
+  onHide: () => void;
 }) {
   return (
-    <section
-      className="rounded-xl border flex flex-col"
-      style={{
-        borderColor: "rgba(201, 169, 97, 0.22)",
-        background: "rgba(242, 238, 231, 0.05)",
-        backdropFilter: "blur(6px)",
-        minHeight: 240,
-      }}
-    >
-      <header
-        className="px-4 py-2 border-b flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.22em]"
-        style={{ borderColor: "rgba(201, 169, 97, 0.16)", color: "var(--gold-bright, #E0C076)" }}
-      >
-        <span>{PANE_LABELS[paneKey]}</span>
-        <span className="flex items-center gap-1.5">
-          <button onClick={onMoveUp} className="hover:text-[var(--paper)]" aria-label="Move up">↑</button>
-          <button onClick={onMoveDown} className="hover:text-[var(--paper)]" aria-label="Move down">↓</button>
-          <button onClick={onClose} className="hover:text-[#E58E89]" aria-label="Close">×</button>
-        </span>
+    <section className={styles.pane}>
+      <header className={styles.paneHead}>
+        <h3>{PANE_LABELS[pane]}</h3>
+        <div>
+          <button
+            type="button"
+            onClick={onEarlier}
+            aria-label={`Move ${PANE_LABELS[pane]} earlier`}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            onClick={onLater}
+            aria-label={`Move ${PANE_LABELS[pane]} later`}
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            onClick={onHide}
+            aria-label={`Hide ${PANE_LABELS[pane]}`}
+          >
+            ×
+          </button>
+        </div>
       </header>
-      <div className="p-4 md:p-5 flex-1">{children}</div>
+      <div className={styles.paneBody}>{children}</div>
     </section>
   );
 }
 
-function PulsePane({ pulse }: { pulse: DldDailyPulse | null }) {
-  if (!pulse) return <SkeletonRows />;
+function FeedNotice({
+  tone,
+  children,
+}: {
+  tone: "neutral" | "reference" | "live" | "error";
+  children: React.ReactNode;
+}) {
+  return <p className={`${styles.notice} ${styles[tone]}`}>{children}</p>;
+}
+
+function PulsePane({ state }: { state: FeedState<DldDailyPulse> }) {
+  if (state.status === "loading") {
+    return <FeedNotice tone="neutral">{state.message}</FeedNotice>;
+  }
+  if (state.status === "error") {
+    return <FeedNotice tone="error">{state.message}</FeedNotice>;
+  }
+
+  const pulse = state.data;
   return (
-    <div className="space-y-3 font-mono text-xs">
-      <KV label="Date" value={pulse.date} />
-      <KV label="Txn count" value={String(pulse.txnCount)} accent />
-      <KV label="Volume AED" value={formatAed(pulse.volumeAed)} accent />
-      {pulse.dodVolumeChangePct !== undefined && (
-        <KV
-          label="DoD volume"
-          value={`${pulse.dodVolumeChangePct >= 0 ? "▲" : "▼"} ${Math.abs(pulse.dodVolumeChangePct).toFixed(1)}%`}
-          color={pulse.dodVolumeChangePct >= 0 ? "#7ED99F" : "#E58E89"}
+    <div className={styles.dataStack}>
+      <FeedNotice tone={pulse.source === "live" ? "live" : "reference"}>
+        {state.message}
+      </FeedNotice>
+      <dl className={styles.metrics}>
+        <Metric
+          label="Represented period"
+          value={pulse.periodLabel ?? pulse.date}
         />
-      )}
-      <KV label="Avg AED" value={formatAed(pulse.avgPriceAed)} />
-      {pulse.medianPpsfAed !== undefined && (
-        <KV label="Median PSF" value={`${pulse.medianPpsfAed.toFixed(0)} AED`} />
-      )}
-      {(pulse.hottestArea || pulse.topDeveloper) && (
-        <hr style={{ borderColor: "rgba(201, 169, 97, 0.18)", margin: "8px 0" }} />
-      )}
-      {pulse.hottestArea && (
-        <>
-          <KV label="Hottest" value={pulse.hottestArea.name} accent />
-          <KV label="• Volume" value={formatAed(pulse.hottestArea.volumeAed)} />
-        </>
-      )}
-      {pulse.topDeveloper && (
-        <>
-          <KV label="Top dev" value={pulse.topDeveloper.name} accent />
-          <KV label="• Txns" value={String(pulse.topDeveloper.txnCount)} />
-        </>
-      )}
-      {pulse.sourceNote && (
-        <KV label="Source" value={pulse.sourceNote} />
-      )}
+        <Metric label="Transactions" value={pulse.txnCount.toLocaleString()} />
+        <Metric
+          label="Volume"
+          value={`AED ${formatAed(pulse.volumeAed)}`}
+        />
+        <Metric
+          label="Average"
+          value={`AED ${formatAed(pulse.avgPriceAed)}`}
+        />
+        {typeof pulse.medianPpsfAed === "number" && (
+          <Metric
+            label="Median price / sq ft"
+            value={`AED ${pulse.medianPpsfAed.toLocaleString()}`}
+          />
+        )}
+      </dl>
+      <p className={styles.sourceLine}>
+        Source: {pulse.sourceNote ?? "DLD source not labelled"} · checked{" "}
+        <time dateTime={pulse.fetchedAt}>
+          {formatTimestamp(pulse.fetchedAt)}
+        </time>
+      </p>
     </div>
   );
 }
 
 function FxPane({
-  snap,
+  state,
   active,
   onPick,
 }: {
-  snap: FxSnapshot | null;
+  state: FeedState<FxSnapshot>;
   active: Currency;
-  onPick: (c: Currency) => void;
+  onPick: (currency: Currency) => void;
 }) {
-  if (!snap) return <SkeletonRows />;
-  return (
-    <div className="space-y-1.5 font-mono text-xs">
-      {(Object.keys(CURRENCY_META) as Currency[]).map((c) => {
-        const meta = CURRENCY_META[c];
-        const rate = snap.rates[c];
-        const isActive = c === active;
-        return (
-          <button
-            key={c}
-            onClick={() => onPick(c)}
-            className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-white/5"
-            style={{
-              color: isActive ? "var(--gold-bright, #E0C076)" : "var(--paper)",
-              background: isActive ? "rgba(201,169,97,0.08)" : "transparent",
-            }}
-          >
-            <span className="flex items-center gap-2">
-              <span style={{ width: "2.4em" }}>{meta.code}</span>
-              <span style={{ opacity: 0.5 }}>{meta.symbol}</span>
-            </span>
-            <span className="tabular-nums">{rate?.toFixed(4) ?? "—"}</span>
-          </button>
-        );
-      })}
-      <div className="text-[10px] uppercase tracking-[0.18em] mt-3" style={{ color: "rgba(242,238,231,0.45)" }}>
-        {snap.source} · {new Date(snap.fetchedAt).toLocaleTimeString()}
-      </div>
-    </div>
-  );
-}
-
-function TapePane({ pulse }: { pulse: DldDailyPulse | null }) {
-  // Simulated trade tape — recent prints in mock form.
-  const tape = useMemo(() => {
-    if (!pulse) return [];
-    const rows = 12;
-    return Array.from({ length: rows }, (_, i) => ({
-      time: new Date(Date.now() - i * 8 * 60 * 1000).toLocaleTimeString().slice(0, 5),
-      area: ["Marina", "Downtown", "Palm Jumeirah", "JLT", "Business Bay", "Hudayriyat", "Saadiyat"][i % 7],
-      price: Math.round(pulse.avgPriceAed * (0.6 + Math.random() * 0.9) / 1000) * 1000,
-      side: i % 3 === 0 ? "BUY" : "SOLD",
-    }));
-  }, [pulse]);
-
-  if (!pulse) return <SkeletonRows />;
-  return (
-    <div className="font-mono text-[11px] space-y-0.5 max-h-[240px] overflow-y-auto">
-      {tape.map((t, i) => (
-        <div key={i} className="flex items-center justify-between px-2 py-1 rounded hover:bg-white/5">
-          <span style={{ color: "rgba(242,238,231,0.5)" }}>{t.time}</span>
-          <span className="flex-1 mx-3 truncate">{t.area}</span>
-          <span style={{ color: t.side === "BUY" ? "#7ED99F" : "var(--gold-bright, #E0C076)" }}>
-            {t.side}
-          </span>
-          <span className="ml-3 tabular-nums">{formatAed(t.price)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function HeadlinesPane({ headlines }: { headlines: Props["headlines"] }) {
-  if (headlines.length === 0) {
+  if (state.status === "loading") {
+    return <FeedNotice tone="neutral">{state.message}</FeedNotice>;
+  }
+  if (state.status === "error") {
+    return <FeedNotice tone="error">{state.message}</FeedNotice>;
+  }
+  if (state.data.source !== "live") {
     return (
-      <p className="text-xs" style={{ color: "rgba(242,238,231,0.5)" }}>
-        First headlines drop with the morning cron at 07:00 GST.
-      </p>
+      <div className={styles.dataStack}>
+        <FeedNotice tone="reference">{state.message}</FeedNotice>
+        <p className={styles.explainer}>
+          Rates remain blank until the configured upstream supplies a current
+          snapshot. Use your bank or regulated FX provider for an executable
+          rate.
+        </p>
+      </div>
     );
   }
+
   return (
-    <ul className="space-y-3 text-xs">
-      {headlines.slice(0, 8).map((h) => (
-        <li key={h.slug}>
-          <Link href={`/news/${h.slug}`} className="block hover:bg-white/5 rounded p-2 -mx-2" data-magnetic>
-            <div className="text-[9px] font-mono uppercase tracking-[0.2em] mb-1" style={{ color: "rgba(242,238,231,0.4)" }}>
-              {h.category} · {h.displayDate}
-            </div>
-            <div style={{ color: "var(--ink)" }}>{h.title}</div>
-          </Link>
+    <div className={styles.dataStack}>
+      <FeedNotice tone="live">{state.message}</FeedNotice>
+      <div className={styles.fxList}>
+        {(Object.keys(CURRENCY_META) as Currency[]).map((currency) => (
+          <button
+            type="button"
+            key={currency}
+            onClick={() => onPick(currency)}
+            aria-pressed={currency === active}
+          >
+            <span>
+              {currency} · {CURRENCY_META[currency].label}
+            </span>
+            <b>{state.data.rates[currency]?.toFixed(4) ?? "—"}</b>
+          </button>
+        ))}
+      </div>
+      <p className={styles.sourceLine}>
+        AED base · checked{" "}
+        <time dateTime={state.data.fetchedAt}>
+          {formatTimestamp(state.data.fetchedAt)}
+        </time>
+      </p>
+    </div>
+  );
+}
+
+function TapePane({ reports }: { reports: Report[] }) {
+  if (reports.length === 0) {
+    return (
+      <FeedNotice tone="neutral">
+        No reviewed reports are available for the publication tape.
+      </FeedNotice>
+    );
+  }
+
+  return (
+    <div className={styles.dataStack}>
+      <FeedNotice tone="reference">
+        Editorial publication chronology—not a transaction feed.
+      </FeedNotice>
+      <ol className={styles.tape}>
+        {reports.slice(0, 7).map((report) => (
+          <li key={report.slug}>
+            <time dateTime={report.publishedAt}>
+              {formatTapeTime(report.publishedAt)}
+            </time>
+            <Link href={`/news/${report.slug}`}>{report.title}</Link>
+            <span>
+              {report.sourceCount} cited{" "}
+              {report.sourceCount === 1 ? "source" : "sources"}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function HeadlinesPane({ reports }: { reports: Report[] }) {
+  if (reports.length === 0) {
+    return (
+      <FeedNotice tone="neutral">
+        No reviewed headlines are currently published.
+      </FeedNotice>
+    );
+  }
+
+  return (
+    <ol className={styles.headlines}>
+      {reports.slice(0, 6).map((report, index) => (
+        <li key={report.slug}>
+          <span>{String(index + 1).padStart(2, "0")}</span>
+          <div>
+            <p>
+              {report.category.replaceAll("-", " ")} · {report.displayDate}
+            </p>
+            <Link href={`/news/${report.slug}`}>{report.title}</Link>
+            <small>
+              {report.sourceLabels.length > 0
+                ? report.sourceLabels.join(" · ")
+                : "Source list available in report"}
+            </small>
+          </div>
         </li>
       ))}
-    </ul>
+    </ol>
   );
 }
 
 function ClosingPane({ bells }: { bells: Props["bells"] }) {
   if (bells.length === 0) {
     return (
-      <p className="text-xs" style={{ color: "rgba(242,238,231,0.5)" }}>
-        First Closing Bell drops with the next business-day close at 16:30 GST.
-      </p>
+      <div className={styles.dataStack}>
+        <FeedNotice tone="neutral">
+          No Closing Bell edition has passed editorial review.
+        </FeedNotice>
+        <p className={styles.explainer}>
+          The pane stays empty until a dated edition is published. There is no
+          automated or simulated close.
+        </p>
+        <Link className={styles.textLink} href="/closing-bell">
+          Open Closing Bell method
+        </Link>
+      </div>
     );
   }
+
   return (
-    <ul className="space-y-3 text-xs">
-      {bells.slice(0, 3).map((b) => (
-        <li key={b.slug}>
-          <div className="text-[9px] font-mono uppercase tracking-[0.2em] mb-1" style={{ color: "var(--gold-bright, #E0C076)" }}>
-            {b.displayDate} · 16:30 GST
+    <ol className={styles.headlines}>
+      {bells.map((bell, index) => (
+        <li key={bell.slug}>
+          <span>{String(index + 1).padStart(2, "0")}</span>
+          <div>
+            <p>{bell.displayDate}</p>
+            <Link href={`/closing-bell/${bell.slug}`}>{bell.title}</Link>
+            {bell.highlights[0] && <small>{bell.highlights[0]}</small>}
           </div>
-          <div style={{ color: "var(--ink)" }}>{b.title}</div>
-          <ul className="mt-1 space-y-0.5" style={{ color: "rgba(242,238,231,0.6)" }}>
-            {b.highlights.slice(0, 3).map((h, i) => (
-              <li key={i}>· {h}</li>
-            ))}
-          </ul>
         </li>
       ))}
-    </ul>
-  );
-}
-
-function AreasTapePane({ areas }: { areas: Props["areas"] }) {
-  return (
-    <div className="space-y-1.5 font-mono text-[11px]">
-      {areas.slice(0, 12).map((a) => (
-        <Link
-          key={a.slug}
-          href={`/areas/${a.slug}`}
-          data-magnetic
-          className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-white/5"
-        >
-          <span className="flex-1 truncate" style={{ color: "var(--ink)" }}>
-            {a.name}
-          </span>
-          <span style={{ color: "rgba(242,238,231,0.45)" }}>{a.emirate.slice(0, 3).toUpperCase()}</span>
-          {a.medianPsf && (
-            <span className="ml-3 tabular-nums" style={{ color: "var(--gold-bright, #E0C076)" }}>
-              {a.medianPsf.toLocaleString()}
-            </span>
-          )}
-        </Link>
-      ))}
-    </div>
+    </ol>
   );
 }
 
 function DeskPane() {
   return (
-    <div className="space-y-3 text-xs leading-[1.55]" style={{ color: "var(--ink)" }}>
-      <p className="italic" style={{ color: "rgba(242,238,231,0.85)" }}>
-        “Numbers move; theses age. The desk's job is to tell you which one's
-        which before lunch.”
+    <div className={styles.desk}>
+      <p>
+        Move from reporting to a human decision review with Raj. Bring the
+        asset, budget, timing and the assumption you most want tested.
       </p>
-      <p className="text-[10px] font-mono uppercase tracking-[0.18em]" style={{ color: "var(--gold-bright, #E0C076)" }}>
-        — Raj · real-estate consultant · Dubai
-      </p>
-      <div className="pt-3 mt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "rgba(201,169,97,0.18)" }}>
-        <Link href="/ask" data-magnetic className="px-2 py-1 border text-[10px] uppercase tracking-[0.18em]" style={{ borderColor: "rgba(201,169,97,0.3)", color: "var(--gold-bright, #E0C076)" }}>
-          Ask the desk →
-        </Link>
-        <Link href="/v/dld-pulse" data-magnetic className="px-2 py-1 border text-[10px] uppercase tracking-[0.18em]" style={{ borderColor: "rgba(201,169,97,0.3)", color: "var(--gold-bright, #E0C076)" }}>
-          DLD Pulse →
-        </Link>
+      <div className={styles.shortcutList}>
+        <Link href="/ask">Ask the automated desk</Link>
+        <Link href="/map">Open the area atlas</Link>
+        <Link href="/developers">Review developers</Link>
+        <a
+          href={rootCtaUrl({
+            campaign: "intelligence-terminal",
+            content: "book-raj",
+          })}
+        >
+          Book a call with Raj ↗
+        </a>
       </div>
+      <a className={styles.email} href={`mailto:${CONTACT.email}`}>
+        {CONTACT.email}
+      </a>
     </div>
   );
 }
 
-function KV({
-  label,
-  value,
-  accent,
-  color,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  color?: string;
-}) {
+function AreasPane({ areas }: { areas: Props["areas"] }) {
   return (
-    <div className="flex items-center justify-between">
-      <span style={{ color: "rgba(242,238,231,0.55)" }}>{label}</span>
-      <span style={{ color: color || (accent ? "var(--gold-bright, #E0C076)" : "var(--paper)") }} className="tabular-nums">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <div className="space-y-2 animate-pulse">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} className="h-3 rounded" style={{ background: "rgba(242, 238, 231, 0.05)" }} />
+    <div className={styles.areaList}>
+      {areas.slice(0, 12).map((area) => (
+        <Link key={area.slug} href={`/areas/${area.slug}`}>
+          <span>{area.name}</span>
+          <small>{area.emirate}</small>
+        </Link>
       ))}
+      <Link className={styles.textLink} href="/areas">
+        View all area guides
+      </Link>
     </div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
+function isDldPulse(value: unknown): value is DldDailyPulse {
+  if (!value || typeof value !== "object") return false;
+  const pulse = value as Partial<DldDailyPulse>;
+  return (
+    (pulse.source === "live" || pulse.source === "reference") &&
+    typeof pulse.date === "string" &&
+    typeof pulse.fetchedAt === "string" &&
+    typeof pulse.txnCount === "number" &&
+    Number.isFinite(pulse.txnCount) &&
+    pulse.txnCount >= 0 &&
+    typeof pulse.volumeAed === "number" &&
+    Number.isFinite(pulse.volumeAed) &&
+    pulse.volumeAed >= 0 &&
+    typeof pulse.avgPriceAed === "number" &&
+    Number.isFinite(pulse.avgPriceAed) &&
+    pulse.avgPriceAed >= 0
+  );
+}
+
+function isFxSnapshot(value: unknown): value is FxSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const snapshot = value as Partial<FxSnapshot>;
+  return (
+    (snapshot.source === "live" || snapshot.source === "fallback") &&
+    typeof snapshot.fetchedAt === "string" &&
+    Boolean(snapshot.rates) &&
+    typeof snapshot.rates === "object" &&
+    Object.values(snapshot.rates).every(
+      (rate) => typeof rate === "number" && Number.isFinite(rate) && rate > 0,
+    )
+  );
+}
+
+function formatTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "timestamp unavailable";
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Dubai",
+  }).format(date);
+}
+
+function formatTapeTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "—";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Dubai",
+  }).format(date);
 }

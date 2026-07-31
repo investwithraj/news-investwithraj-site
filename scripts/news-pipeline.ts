@@ -20,6 +20,7 @@ import {
   flattenEntries,
   summarizeFetchRun,
 } from "../lib/sources/fetchers/index.js";
+import { FETCH_SOURCES } from "../lib/sources/registry.js";
 import { dedupeEntries } from "../lib/pipeline/dedupe.js";
 import { clusterAndScore } from "../lib/pipeline/cluster.js";
 import type { PipelineRun, DrafterContext } from "../lib/pipeline/types.js";
@@ -45,7 +46,9 @@ async function run(): Promise<void> {
   console.log(`📋 Article cap this run: ${ARTICLE_CAP}\n`);
 
   // Phase 1.1 — fetch
-  console.log("⏬ Fetching all 20 verified sources in parallel…");
+  console.log(
+    `⏬ Fetching all ${FETCH_SOURCES.length} configured discovery sources in parallel…`,
+  );
   const fetchRun = await fetchAllSources();
   const fetchSummary = summarizeFetchRun(fetchRun);
   console.log(fetchSummary);

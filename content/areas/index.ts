@@ -35,11 +35,6 @@ const PRIORITY_AREAS: AreaPage[] = [
     developers: ["Modon Properties"],
     faq: [],
     citations: [],
-    heroImage: {
-      src: "/areas/hudayriyat-placeholder.jpg",
-      alt: "Hudayriyat Island, Abu Dhabi",
-      credit: "Placeholder — to be replaced with sourced image",
-    },
     iwrNoteSlug: "hudayriyat-golf-estates",
   },
   {
@@ -63,11 +58,6 @@ const PRIORITY_AREAS: AreaPage[] = [
     developers: ["Nakheel"],
     faq: [],
     citations: [],
-    heroImage: {
-      src: "/areas/palm-jebel-ali-placeholder.jpg",
-      alt: "Palm Jebel Ali, Dubai",
-      credit: "Placeholder — to be replaced with sourced image",
-    },
     iwrNoteSlug: "palm-jebel-ali-rerating",
     iwrRootAreaSlug: "palm-jebel-ali",
   },
@@ -92,11 +82,6 @@ const PRIORITY_AREAS: AreaPage[] = [
     developers: ["Wynn Resorts", "Marjan"],
     faq: [],
     citations: [],
-    heroImage: {
-      src: "/areas/wynn-al-marjan-placeholder.jpg",
-      alt: "Wynn Al Marjan Island, RAK",
-      credit: "Placeholder — to be replaced with sourced image",
-    },
     iwrNoteSlug: "wynn-al-marjan-yield",
   },
 ];

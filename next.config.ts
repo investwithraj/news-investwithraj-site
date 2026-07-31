@@ -12,15 +12,36 @@ const nextConfig: NextConfig = {
     // Modern formats. Browsers that support AVIF get it; rest get WebP.
     formats: ["image/avif", "image/webp"],
     // Aggressive sizing for the hero portrait at various viewport widths.
-    deviceSizes: [375, 640, 750, 828, 1080, 1200, 1440, 1920, 2560],
+    deviceSizes: [
+      375, 640, 750, 828, 1080, 1200, 1440, 1920, 2560, 3840,
+    ],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 460, 600],
-    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    // Public filenames remain mutable while verified UHD media is promoted.
+    minimumCacheTTL: 60 * 60,
     dangerouslyAllowSVG: false,
     qualities: [50, 70, 75, 80, 88, 95, 100],
   },
 
   // ── Build-time / runtime headers (security + caching) ─────────────────
   async headers() {
+    const enforceCsp =
+      process.env.NODE_ENV === "production" &&
+      process.env.VERCEL_ENV !== "preview";
+    const contentSecurityPolicy = [
+      "default-src 'self'",
+      `script-src 'self' 'unsafe-inline'${enforceCsp ? "" : " 'unsafe-eval'"} va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms",
+      "font-src 'self' data: fonts.gstatic.com",
+      "connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms",
+      "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      "frame-src 'self' www.youtube.com www.youtube-nocookie.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'",
+    ].join("; ");
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -33,6 +54,12 @@ const nextConfig: NextConfig = {
       {
         key: "Strict-Transport-Security",
         value: "max-age=63072000; includeSubDomains; preload",
+      },
+      {
+        key: enforceCsp
+          ? "Content-Security-Policy"
+          : "Content-Security-Policy-Report-Only",
+        value: contentSecurityPolicy,
       },
     ];
 
@@ -47,7 +74,8 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
+            value:
+              "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
           },
         ],
       },

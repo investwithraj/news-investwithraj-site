@@ -17,7 +17,7 @@ export function ga4ExternalSrc(id: string): string {
   return `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
 }
 
-export function plausibleSrc(domain: string): string {
+export function plausibleSrc(): string {
   return `https://plausible.io/js/script.js`;
 }
 

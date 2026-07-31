@@ -30,6 +30,8 @@ interface Props {
   recentActivity: QueueItem[];
   backend: "vercel-kv" | "file-system";
   channelPolicies: Record<QueueChannel, ChannelPolicy>;
+  error?: string;
+  storageWarning?: string;
 }
 
 const CHANNEL_CHIP_COLORS: Record<QueueChannel, string> = {
@@ -72,6 +74,8 @@ export function DashboardClient({
   recentActivity,
   backend,
   channelPolicies,
+  error,
+  storageWarning,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -79,39 +83,43 @@ export function DashboardClient({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editNote, setEditNote] = useState("");
+  const actionsDisabled = Boolean(error || storageWarning);
 
   const visiblePending =
     activeChannel === "all" ? pending : pending.filter((i) => i.channel === activeChannel);
 
   async function callAction(
-    id: string,
+    item: QueueItem,
     action: QueueAction,
     extra: { draftText?: string; editNote?: string; postedUrl?: string } = {}
-  ) {
-    // Get the secret from URL or prompt
-    const url = new URL(window.location.href);
-    let secret = url.searchParams.get("secret") || sessionStorage.getItem("queue-secret") || "";
-    if (!secret) {
-      secret = window.prompt("Enter POST_PUBLISH_SECRET (one-time per session):") || "";
-      if (!secret) return;
-      sessionStorage.setItem("queue-secret", secret);
+  ): Promise<boolean> {
+    if (actionsDisabled) return false;
+    try {
+      const res = await fetch(`/api/queue/action/${encodeURIComponent(item.id)}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          expectedRecordVersion: item.recordVersion,
+          ...extra,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Action failed: ${data.error || res.statusText}`);
+        return false;
+      }
+      startTransition(() => router.refresh());
+      return true;
+    } catch {
+      alert("Action failed: the newsroom could not be reached. Your text is still here.");
+      return false;
     }
-
-    const res = await fetch(`/api/queue/action/${id}?secret=${encodeURIComponent(secret)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, ...extra }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(`Action failed: ${data.error || res.statusText}`);
-      sessionStorage.removeItem("queue-secret");
-      return;
-    }
-    startTransition(() => router.refresh());
   }
 
   function startEdit(item: QueueItem) {
+    if (actionsDisabled) return;
     setEditingId(item.id);
     setEditText(item.draftText);
     setEditNote(item.editNote || "");
@@ -123,9 +131,12 @@ export function DashboardClient({
     setEditNote("");
   }
 
-  async function saveEdit(id: string) {
-    await callAction(id, "edit", { draftText: editText, editNote });
-    cancelEdit();
+  async function saveEdit(item: QueueItem) {
+    const saved = await callAction(item, "edit", {
+      draftText: editText,
+      editNote,
+    });
+    if (saved) cancelEdit();
   }
 
   function copyDraft(text: string) {
@@ -169,6 +180,24 @@ export function DashboardClient({
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-10">
+        {error && (
+          <section
+            role="alert"
+            className="border border-red-700 bg-red-50 p-5 text-sm text-red-950"
+          >
+            <strong className="block mb-2">Queue unavailable</strong>
+            {error}
+          </section>
+        )}
+        {storageWarning && (
+          <section
+            role="status"
+            className="border border-amber-700 bg-amber-50 p-5 text-sm text-amber-950"
+          >
+            <strong className="block mb-2">Configuration required</strong>
+            {storageWarning}
+          </section>
+        )}
         {/* Urgent banner */}
         {urgent.length > 0 && (
           <section className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
@@ -302,7 +331,8 @@ export function DashboardClient({
                       {isEditing ? (
                         <>
                           <button
-                            onClick={() => saveEdit(item.id)}
+                            onClick={() => saveEdit(item)}
+                            disabled={actionsDisabled}
                             className="px-3 py-1.5 text-xs rounded-md bg-[#F2EEE7] text-[#141414] hover:bg-white"
                           >
                             Save edit
@@ -317,7 +347,8 @@ export function DashboardClient({
                       ) : (
                         <>
                           <button
-                            onClick={() => callAction(item.id, "approve")}
+                            onClick={() => callAction(item, "approve")}
+                            disabled={actionsDisabled}
                             className="px-3 py-1.5 text-xs rounded-md bg-emerald-700 text-white hover:bg-emerald-800"
                           >
                             Approve
@@ -331,34 +362,39 @@ export function DashboardClient({
                           <button
                             onClick={() => {
                               const url = window.prompt("Posted URL (optional):");
-                              callAction(item.id, "mark-posted", { postedUrl: url || undefined });
+                              callAction(item, "mark-posted", { postedUrl: url || undefined });
                             }}
+                            disabled={actionsDisabled}
                             className="px-3 py-1.5 text-xs rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
                           >
                             Mark posted
                           </button>
                           <button
                             onClick={() => startEdit(item)}
+                            disabled={actionsDisabled}
                             className="px-3 py-1.5 text-xs rounded-md border border-[rgba(242,238,231,0.14)] hover:bg-[rgba(242,238,231,0.06)]"
                           >
                             Edit
                           </button>
                           <button
-                            onClick={() => callAction(item.id, "postpone")}
+                            onClick={() => callAction(item, "postpone")}
+                            disabled={actionsDisabled}
                             className="px-3 py-1.5 text-xs rounded-md border border-[rgba(242,238,231,0.14)] hover:bg-[rgba(242,238,231,0.06)]"
                           >
                             Postpone +{policy.expiryHours}h
                           </button>
                           <button
-                            onClick={() => callAction(item.id, "skip")}
+                            onClick={() => callAction(item, "skip")}
+                            disabled={actionsDisabled}
                             className="px-3 py-1.5 text-xs rounded-md border border-red-500/30 text-red-300 hover:bg-red-500/10"
                           >
                             Skip
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm("Delete this item?")) callAction(item.id, "delete");
+                              if (confirm("Delete this item?")) callAction(item, "delete");
                             }}
+                            disabled={actionsDisabled}
                             className="px-3 py-1.5 text-xs rounded-md text-red-300 hover:bg-red-500/10 ml-auto"
                           >
                             Delete

@@ -23,7 +23,6 @@ export function MagneticCursor({
   size = 12,
   hoverSize = 32,
   snapRadius = 80,
-  trail = 0,
 }: Props) {
   const orbRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -34,7 +33,7 @@ export function MagneticCursor({
     if (window.matchMedia("(pointer: coarse)").matches) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
 
     const orb = orbRef.current;
     if (!orb) return;

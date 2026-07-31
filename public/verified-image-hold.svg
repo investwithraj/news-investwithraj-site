@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000">
+  <defs>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M100 0H0V100" fill="none" stroke="#f0f0ec" stroke-opacity=".08"/>
+    </pattern>
+    <radialGradient id="glow" cx="78%" cy="24%" r="48%">
+      <stop offset="0" stop-color="#596bff" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#596bff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="#11141c"/>
+  <rect width="1600" height="1000" fill="url(#grid)"/>
+  <rect width="1600" height="1000" fill="url(#glow)"/>
+  <path d="M120 142h160" stroke="#b8c0ff" stroke-width="3"/>
+  <text x="120" y="205" fill="#b8c0ff" font-family="Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="6">INVEST WITH RAJ · EDITORIAL</text>
+  <text x="120" y="680" fill="#f0f0ec" font-family="Arial, sans-serif" font-size="92" font-weight="500" letter-spacing="-4">Verified image held.</text>
+  <text x="120" y="755" fill="#f0f0ec" fill-opacity=".66" font-family="Arial, sans-serif" font-size="31">The report remains available; unsupported context photography does not.</text>
+  <text x="120" y="890" fill="#b8c0ff" font-family="Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="5">SOURCE-LINKED REPORTING · NO FALSE MEDIA</text>
+</svg>

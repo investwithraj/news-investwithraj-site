@@ -78,7 +78,7 @@ function applyConsent(ids: Props["ids"]) {
 
   // Plausible
   if (state.consents.plausible && ids.plausibleDomain) {
-    injectExternal("plausible", plausibleSrc(ids.plausibleDomain), {
+    injectExternal("plausible", plausibleSrc(), {
       ...plausibleAttrs(ids.plausibleDomain),
       defer: "true",
     });

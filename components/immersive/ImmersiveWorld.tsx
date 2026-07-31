@@ -1,4 +1,6 @@
 "use client";
+/* R3F animation callbacks intentionally mutate Three.js scene objects. */
+/* eslint-disable react-hooks/immutability */
 
 import { useEffect, useMemo, useRef } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
@@ -42,9 +44,13 @@ function Atmosphere() {
     const mk = (n: number, spread: number) => {
       const a = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) {
-        a[i * 3] = (Math.random() - 0.5) * spread;
-        a[i * 3 + 1] = (Math.random() - 0.5) * spread * 0.66;
-        a[i * 3 + 2] = (Math.random() - 0.5) * spread * 0.85;
+        const unit = (salt: number) => {
+          const value = Math.sin((i + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+          return value - Math.floor(value);
+        };
+        a[i * 3] = (unit(1) - 0.5) * spread;
+        a[i * 3 + 1] = (unit(2) - 0.5) * spread * 0.66;
+        a[i * 3 + 2] = (unit(3) - 0.5) * spread * 0.85;
       }
       return a;
     };

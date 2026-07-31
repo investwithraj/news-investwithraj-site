@@ -115,7 +115,7 @@ function buildFacebook(article: NewsArticle, link: string): ContentVariant {
   };
 }
 
-function buildInstagramFeed(article: NewsArticle, link: string): ContentVariant {
+function buildInstagramFeed(article: NewsArticle): ContentVariant {
   // IG feed: photo + caption (~200 words ideal, hashtags in first comment)
   const text = `${article.title}\n\n${truncate(article.subtitle, 800)}\n\n${article.tldr[0]}\n\n${article.tldr[1]}\n\nFull read at the link in bio — news.investwithraj.com`;
   return {
@@ -247,7 +247,7 @@ export function buildVariants(
         case "facebook":
           return buildFacebook(article, link);
         case "instagram-feed":
-          return buildInstagramFeed(article, link);
+          return buildInstagramFeed(article);
         case "instagram-stories":
           return buildInstagramStories(article, link);
         case "threads":

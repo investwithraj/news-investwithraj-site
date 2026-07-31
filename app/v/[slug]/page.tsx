@@ -1,22 +1,22 @@
-// Per-vertical landing page — /v/dld-pulse, /v/off-plan-watch, etc.
-//
-// Each vertical is a curated stream of NewsArticles by category. Static-
-// generated for SEO (every long-tail "Dubai off-plan launches 2026" type
-// query lands here).
-
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { VERTICALS, getVerticalBySlug } from "@/lib/verticals";
+import { notFound } from "next/navigation";
+import { AREAS } from "@/content/areas";
 import { NEWS_ARTICLES } from "@/content/news";
-import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
+import { DEVELOPERS } from "@/lib/developers";
+import {
+  getVerticalArticles,
+  getVerticalBySlug,
+  VERTICALS,
+} from "@/lib/verticals";
+import styles from "./vertical.module.css";
 
-export const dynamicParams = false;
 export const dynamic = "force-static";
+export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return VERTICALS.map((v) => ({ slug: v.slug }));
+  return VERTICALS.map((vertical) => ({ slug: vertical.slug }));
 }
 
 export async function generateMetadata({
@@ -25,16 +25,29 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const v = getVerticalBySlug(slug);
-  if (!v) return { title: "Not found" };
+  const vertical = getVerticalBySlug(slug);
+  if (!vertical) return { title: "Desk not found" };
+
+  const articles = getVerticalArticles(vertical, NEWS_ARTICLES);
+  const hasPublishedReports = articles.length > 0;
+  const title = `${vertical.name} — UAE property intelligence`;
+
   return {
-    title: `${v.name} — ${v.tagline}`,
-    description: v.description,
-    alternates: { canonical: `${SITE.url}/v/${slug}` },
+    title,
+    description: vertical.description,
+    alternates: {
+      canonical: `${SITE.url}/v/${vertical.slug}`,
+      types: { "application/rss+xml": `${SITE.url}/rss.xml` },
+    },
+    robots: {
+      index: hasPublishedReports,
+      follow: true,
+    },
     openGraph: {
-      title: `${v.name} — Invest With Raj`,
-      description: v.description,
-      url: `${SITE.url}/v/${slug}`,
+      title,
+      description: vertical.description,
+      type: "website",
+      url: `${SITE.url}/v/${vertical.slug}`,
     },
   };
 }
@@ -45,142 +58,290 @@ export default async function VerticalPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const v = getVerticalBySlug(slug);
-  if (!v) notFound();
+  const vertical = getVerticalBySlug(slug);
+  if (!vertical) notFound();
 
-  // Filter articles into this vertical's stream
-  const stream = NEWS_ARTICLES
-    .filter((a) => v.categories.includes(a.category))
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  const articles = getVerticalArticles(vertical, NEWS_ARTICLES);
+  const areas = vertical.relatedAreaSlugs
+    .map((areaSlug) => AREAS.find((area) => area.slug === areaSlug))
+    .filter((area): area is (typeof AREAS)[number] => Boolean(area));
+  const developers = vertical.relatedDeveloperSlugs
+    .map((developerSlug) =>
+      DEVELOPERS.find((developer) => developer.slug === developerSlug),
+    )
+    .filter(
+      (developer): developer is (typeof DEVELOPERS)[number] =>
+        Boolean(developer),
+    );
+  const canonical = `${SITE.url}/v/${vertical.slug}`;
+  const schema = buildSchema({
+    name: vertical.name,
+    description: vertical.description,
+    canonical,
+    articles,
+  });
 
   return (
-    <main className="min-h-screen">
-      {/* Hero */}
-      <section
-        className="relative pt-24 md:pt-32 pb-16 md:pb-20 overflow-hidden"
-        style={{ background: v.gradient }}
-      >
-        <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8"
-            style={{ color: "var(--ink-soft)" }}
-            data-magnetic
-          >
-            <span aria-hidden>←</span>
-            <span>Back to the desk</span>
-          </Link>
+    <main className={styles.page}>
+      <JsonLd data={schema} />
 
-          <div className="flex items-start gap-6 md:gap-10">
-            <span
-              aria-hidden
-              className="leading-none shrink-0"
-              style={{
-                color: v.accent,
-                fontFamily: "var(--font-fraunces), Georgia, serif",
-                fontSize: "clamp(4rem, 12vw, 8rem)",
-                opacity: 0.7,
-              }}
-            >
-              {v.glyph}
-            </span>
-            <div className="flex-1">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: v.accent }}
-              >
-                {v.cadence}
-              </span>
-              <KineticHeadline
-                className="mt-3 leading-[1.02] tracking-[-0.025em]"
-                style={{
-                  color: "var(--ink)",
-                  fontSize: "clamp(2.25rem, 6vw, 4.25rem)",
-                  fontWeight: 500,
-                }}
-              >
-                {v.name}
-              </KineticHeadline>
-              <p
-                className="mt-5 text-base md:text-xl leading-[1.55] max-w-[60ch]"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                {v.tagline}
-              </p>
+      <section className={styles.hero}>
+        <div className={styles.shell}>
+          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
+            <Link href="/">Daily Market Read</Link>
+            <span aria-hidden>/</span>
+            <span aria-current="page">{vertical.name}</span>
+          </nav>
+
+          <div className={styles.heroGrid}>
+            <div>
+              <p className={styles.kicker}>Editorial desk {vertical.glyph}</p>
+              <h1>{vertical.name}</h1>
+              <p className={styles.standfirst}>{vertical.tagline}</p>
+            </div>
+            <div className={styles.deskNote}>
+              <span>Publication basis</span>
+              <p>{vertical.cadence}</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Description + stream */}
-      <section className="relative py-16 md:py-20" style={{ background: "var(--paper)" }}>
-        <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-          <p
-            className="text-lg md:text-xl leading-[1.65] max-w-[65ch] mb-12 md:mb-16"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            {v.description}
-          </p>
+      <section className={styles.intro}>
+        <div className={`${styles.shell} ${styles.introGrid}`}>
+          <div>
+            <p className={styles.sectionLabel}>The remit</p>
+            <p className={styles.description}>{vertical.description}</p>
+          </div>
+          <aside className={styles.method}>
+            <p className={styles.sectionLabel}>How stories enter this desk</p>
+            <p>{vertical.method}</p>
+            <Link href="/about/editorial-standards">Read our standards</Link>
+          </aside>
+        </div>
+      </section>
 
-          {stream.length === 0 ? (
-            <div
-              className="rounded-2xl border p-10 md:p-14 text-center"
-              style={{
-                borderColor: "var(--gold-soft)",
-                background: "var(--paper-warm)",
-              }}
-            >
-              <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep)" }}>
-                Status
-              </span>
-              <p
-                className="mt-4 text-lg leading-[1.55] max-w-[40ch] mx-auto"
-                style={{ color: "var(--ink-soft)" }}
-              >
-                Publishing imminently. The first stories drop with the morning cron at 07:00 GST.
-              </p>
+      <section className={styles.archive} aria-labelledby="archive-heading">
+        <div className={styles.shell}>
+          <div className={styles.sectionHead}>
+            <div>
+              <p className={styles.sectionLabel}>Published reports</p>
+              <h2 id="archive-heading">The desk archive</h2>
             </div>
-          ) : (
-            <div className="grid gap-5 md:gap-6">
-              {stream.map((a) => (
-                <Link
-                  key={a.slug}
-                  href={`/news/${a.slug}`}
-                  data-magnetic
-                  className="group block rounded-2xl border p-6 md:p-8 transition-all hover:-translate-y-0.5 hover:shadow-lg"
-                  style={{
-                    borderColor: "var(--gold-soft)",
-                    background: "var(--paper-pure, #1A1A1B)",
-                  }}
-                >
-                  <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: "var(--ink-faint)" }}>
-                    <span style={{ color: v.accent }}>{a.category}</span>
-                    <span aria-hidden>·</span>
-                    <time dateTime={a.publishedAt}>{a.displayDate}</time>
-                  </div>
-                  <h3
-                    className="text-xl md:text-2xl leading-[1.15] tracking-[-0.015em] mb-2 transition-colors group-hover:text-[var(--gold-deep)]"
-                    style={{
-                      color: "var(--ink)",
-                      fontFamily: "var(--font-fraunces), Georgia, serif",
-                      fontWeight: 500,
-                      fontVariationSettings: '"SOFT" 60, "opsz" 144',
-                    }}
+            <p>
+              {articles.length} {articles.length === 1 ? "report" : "reports"}{" "}
+              currently meet the published scope.
+            </p>
+          </div>
+
+          {articles.length > 0 ? (
+            <ol className={styles.storyList}>
+              {articles.map((article, index) => (
+                <li key={article.slug}>
+                  <Link
+                    href={`/news/${article.slug}`}
+                    className={styles.story}
                   >
-                    {a.title}
-                  </h3>
-                  <p
-                    className="text-sm md:text-base leading-[1.55] max-w-[70ch]"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    {a.subtitle}
-                  </p>
-                </Link>
+                    <span className={styles.storyNumber}>
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className={styles.storyCopy}>
+                      <span className={styles.storyMeta}>
+                        {article.category.replaceAll("-", " ")}
+                        <span aria-hidden> · </span>
+                        <time dateTime={article.publishedAt}>
+                          {article.displayDate}
+                        </time>
+                      </span>
+                      <strong>{article.title}</strong>
+                      <span className={styles.storyDek}>
+                        {article.subtitle}
+                      </span>
+                    </span>
+                    <span className={styles.storyArrow} aria-hidden>
+                      ↗
+                    </span>
+                  </Link>
+                </li>
               ))}
+            </ol>
+          ) : (
+            <div className={styles.emptyState}>
+              <p className={styles.sectionLabel}>No published reports yet</p>
+              <h3>This desk stays empty until the evidence clears review.</h3>
+              <p>
+                We do not fill an archive with placeholders, recycled listings
+                or unpublished research. Use the full news feed while this desk
+                is being assembled.
+              </p>
+              <Link href="/news">Open all verified news</Link>
             </div>
           )}
         </div>
       </section>
+
+      {(areas.length > 0 || developers.length > 0) && (
+        <section className={styles.context} aria-labelledby="context-heading">
+          <div className={styles.shell}>
+            <p className={styles.sectionLabel}>Continue the research</p>
+            <h2 id="context-heading">Related market context</h2>
+            <div className={styles.contextGrid}>
+              {areas.map((area) => (
+                <Link key={area.slug} href={`/areas/${area.slug}`}>
+                  <span>{area.emirate} · {area.kind.replaceAll("-", " ")}</span>
+                  <strong>{area.name}</strong>
+                  <span>Open area guide ↗</span>
+                </Link>
+              ))}
+              {developers.map((developer) => (
+                <Link
+                  key={developer.slug}
+                  href={`/developer/${developer.slug}`}
+                >
+                  <span>{developer.hq} · developer profile</span>
+                  <strong>{developer.name}</strong>
+                  <span>Open company guide ↗</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className={styles.actions}>
+        <div className={`${styles.shell} ${styles.actionsGrid}`}>
+          <div>
+            <p className={styles.sectionLabel}>Keep this desk close</p>
+            <h2>Read, share or take the decision to Raj.</h2>
+          </div>
+          <div className={styles.actionLinks}>
+            <Link href="/rss.xml">RSS feed</Link>
+            <a
+              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(canonical)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Share on LinkedIn
+            </a>
+            <a
+              href={`mailto:?subject=${encodeURIComponent(vertical.name)}&body=${encodeURIComponent(canonical)}`}
+            >
+              Share by email
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.cta}>
+        <div className={`${styles.shell} ${styles.ctaGrid}`}>
+          <div>
+            <p className={styles.sectionLabel}>A property decision in view?</p>
+            <h2>Bring Raj the facts, the alternatives and the downside.</h2>
+            <p>
+              The call is for buyers and investors who want to pressure-test a
+              UAE property decision with a human advisor.
+            </p>
+          </div>
+          <div className={styles.ctaLinks}>
+            <a
+              className={styles.primaryCta}
+              href={rootCtaUrl({
+                campaign: `vertical-${vertical.slug}`,
+                content: "book-a-call",
+              })}
+            >
+              Book a call with Raj
+            </a>
+            <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+          </div>
+        </div>
+      </section>
     </main>
   );
+}
+
+function JsonLd({ data }: { data: Record<string, unknown> }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(data).replace(/</g, "\\u003c"),
+      }}
+    />
+  );
+}
+
+function buildSchema({
+  name,
+  description,
+  canonical,
+  articles,
+}: {
+  name: string;
+  description: string;
+  canonical: string;
+  articles: ReturnType<typeof getVerticalArticles>;
+}): Record<string, unknown> {
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    "@id": `${canonical}#breadcrumb`,
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Daily Market Read",
+        item: SITE.url,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name,
+        item: canonical,
+      },
+    ],
+  };
+
+  if (articles.length === 0) {
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${canonical}#webpage`,
+          url: canonical,
+          name,
+          description,
+          breadcrumb: { "@id": `${canonical}#breadcrumb` },
+        },
+        breadcrumb,
+      ],
+    };
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${canonical}#collection`,
+        url: canonical,
+        name,
+        description,
+        breadcrumb: { "@id": `${canonical}#breadcrumb` },
+        mainEntity: { "@id": `${canonical}#reports` },
+      },
+      {
+        "@type": "ItemList",
+        "@id": `${canonical}#reports`,
+        numberOfItems: articles.length,
+        itemListElement: articles.map((article, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: article.title,
+          url: `${SITE.url}/news/${article.slug}`,
+        })),
+      },
+      breadcrumb,
+    ],
+  };
 }

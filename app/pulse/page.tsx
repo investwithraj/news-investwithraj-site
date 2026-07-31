@@ -1,262 +1,227 @@
-// /pulse — F8 Sentiment Heatmap.
-// Real-time scrape of Reddit + X + Telegram + news + LinkedIn chatter
-// about UAE real estate, plotted as a heatmap by area + developer.
-
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getMockSentimentSnapshot } from "@/lib/sentiment/mock";
-import { scoreToColor } from "@/lib/sentiment/types";
-import { SITE } from "@/lib/constants";
-import DrawLine from "@/components/v21/DrawLine";
-import CountUp from "@/components/v21/CountUp";
-import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
+import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
+import styles from "./pulse.module.css";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
+
+const canonical = `${SITE.url}/pulse`;
 
 export const metadata: Metadata = {
-  title: "Pulse — Live UAE real-estate sentiment heatmap",
+  title: "Pulse methodology — evidence before signal",
   description:
-    "Real-time scrape of Reddit, X, Telegram, news, and LinkedIn chatter about UAE real estate. Heatmap by area + developer. Where the market is whispering bullish, bearish, or neutral.",
-  alternates: { canonical: `${SITE.url}/pulse` },
+    "The production method and publication safeguards for a future UAE property evidence register. No public sentiment scores are currently published.",
+  alternates: { canonical },
+  robots: { index: false, follow: true },
+  openGraph: {
+    title: "Pulse methodology — Invest With Raj",
+    description:
+      "How a future UAE property evidence register will be sourced, reviewed and corrected.",
+    type: "website",
+    url: canonical,
+  },
 };
 
+const pipeline = [
+  {
+    number: "01",
+    title: "Register the source",
+    body: "Every eligible input needs a named publisher or accountable primary source, a durable URL and a capture time. Anonymous chatter is not a publishable fact.",
+  },
+  {
+    number: "02",
+    title: "Preserve the evidence",
+    body: "The underlying statement, date and geographic subject must remain traceable. A score without the supporting evidence does not leave production.",
+  },
+  {
+    number: "03",
+    title: "Classify with review",
+    body: "Machine-assisted classification may support triage, but a human editor must review ambiguous claims, sarcasm, duplicates and entity matches.",
+  },
+  {
+    number: "04",
+    title: "Show the method",
+    body: "Any future public signal must state its source coverage, observation window, sample size, known blind spots and the time it was last reviewed.",
+  },
+  {
+    number: "05",
+    title: "Correct in public",
+    body: "Material corrections need a visible change note. Historical outputs should not silently shift after a method or source set changes.",
+  },
+] as const;
+
 export default function PulsePage() {
-  const snap = getMockSentimentSnapshot();
-  const areas = snap.signals
-    .filter((s) => s.kind === "area")
-    .sort((a, b) => b.volume - a.volume);
-  const devs = snap.signals
-    .filter((s) => s.kind === "developer")
-    .sort((a, b) => b.volume - a.volume);
-
-  const channels = Object.entries(snap.byChannel)
-    .map(([k, v]) => ({ name: k, ...v }))
-    .sort((a, b) => b.volume - a.volume);
+  const schema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `${canonical}#webpage`,
+        url: canonical,
+        name: "Pulse methodology",
+        description:
+          "Production methodology and publication safeguards for a future UAE property evidence register.",
+        breadcrumb: { "@id": `${canonical}#breadcrumb` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${canonical}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Daily Market Read",
+            item: SITE.url,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Pulse methodology",
+            item: canonical,
+          },
+        ],
+      },
+    ],
+  };
 
   return (
-    <main className="min-h-screen" style={{ background: "var(--paper)" }}>
-      {/* Hero */}
-      <section
-        className="relative pt-20 md:pt-28 pb-12 md:pb-16 overflow-hidden"
-        style={{ background: "var(--paper)", color: "var(--ink)" }}
-      >
-        {/* V21 data-cinematics — pulse-loop.mp4 masthead backdrop (the main
-            site's cinema loop) behind a dark scrim. Reduced-motion hides the
-            video (CSS below) and the static gradient underneath shows; if
-            autoplay is blocked the gradient shows too. Decorative only. */}
-        <div aria-hidden="true" className="absolute inset-0 pointer-events-none select-none">
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(160deg, #141414 0%, #202021 55%, #141414 100%)" }}
-          />
-          <video
-            className="v21-pulse-loop absolute inset-0 h-full w-full object-cover"
-            src="/cinema/v21/pulse-loop.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(14, 14, 14, 0.66) 0%, rgba(14, 14, 14, 0.74) 60%, rgba(14, 14, 14, 0.9) 100%)",
-            }}
-          />
+    <main className={styles.page}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(schema).replace(/</g, "\\u003c"),
+        }}
+      />
+
+      <section className={styles.hero}>
+        <div className={styles.shell}>
+          <nav aria-label="Breadcrumb" className={styles.breadcrumbs}>
+            <Link href="/">Daily Market Read</Link>
+            <span aria-hidden>/</span>
+            <span aria-current="page">Pulse</span>
+          </nav>
+          <div className={styles.heroGrid}>
+            <div>
+              <p className={styles.kicker}>Pulse · production note</p>
+              <h1>Evidence before signal.</h1>
+            </div>
+            <div className={styles.status}>
+              <span>Current public state</span>
+              <strong>No signal scores published</strong>
+              <p>
+                This page documents the intended safeguards while the method is
+                being tested.
+              </p>
+            </div>
+          </div>
         </div>
-        <style>{`@media (prefers-reduced-motion: reduce) { .v21-pulse-loop { display: none !important; } }`}</style>
+      </section>
 
-        <div className="relative max-w-[1240px] mx-auto px-6 md:px-12">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8 opacity-70 hover:opacity-100"
-            style={{ color: "var(--ink)" }}
-            data-magnetic
-          >
-            <span aria-hidden>←</span>
-            <span>Back to the terminal</span>
-          </Link>
-
-          <span
-            className="font-mono text-[10px] uppercase tracking-[0.22em]"
-            style={{ color: "var(--gold-deep, #C9A961)" }}
-          >
-            The sentiment desk · {snap.source} · refreshes every 30m
-          </span>
-          <h1
-            className="mt-3 leading-[1.02] tracking-[-0.025em]"
-            style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-space-grotesk), system-ui, sans-serif",
-              fontSize: "clamp(2.25rem, 5vw, 4rem)",
-              fontWeight: 500,
-            }}
-          >
-            Where the market is{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-deep, #C9A961)" }}>
-              whispering.
-            </span>
-          </h1>
-
-          {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
-          <DrawLine
-            className="mt-6 max-w-[520px]"
-            color="var(--gold-deep, #C9A961)"
-            style={{ opacity: 0.9 }}
-          />
-
-          <p
-            className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-            style={{ color: "rgba(242, 238, 231, 0.78)" }}
-          >
-            Reddit threads, X replies, Telegram channels, trade press, and
-            LinkedIn — scraped, scored, and plotted. Green = bullish chatter,
-            gold = neutral, red = bearish. Volume = how many mentions feed each
-            score.
+      <section className={styles.position}>
+        <div className={`${styles.shell} ${styles.positionGrid}`}>
+          <p className={styles.lead}>
+            Pulse is being built as an evidence register, not a mood gauge.
           </p>
-
-          {/* Channel-level aggregate strip */}
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-5 gap-4">
-            {channels.map((c) => (
-              <div key={c.name} className="border-l-2 pl-4" style={{ borderColor: scoreToColor(c.score) }}>
-                <div className="text-[10px] font-mono uppercase tracking-[0.22em]" style={{ color: "rgba(242,238,231,0.5)" }}>
-                  {c.name}
-                </div>
-                <div
-                  className="mt-1 text-xl tabular-nums"
-                  style={{ color: scoreToColor(c.score), fontFamily: "var(--font-fraunces), Georgia, serif" }}
-                >
-                  {/* V21 data-cinematics — once-on-enter count-up on the
-                      EXISTING SSR numeral (no invented numbers) */}
-                  <CountUp value={c.score} decimals={2} plus>
-                    {c.score >= 0 ? "+" : ""}
-                    {c.score.toFixed(2)}
-                  </CountUp>
-                </div>
-                <div className="text-[10px] font-mono uppercase tracking-[0.18em] mt-1" style={{ color: "rgba(242,238,231,0.45)" }}>
-                  vol {c.volume}
-                </div>
-              </div>
-            ))}
+          <div>
+            <p>
+              The previous concept implied live social scraping and precise
+              sentiment scores without a publishable evidence trail. Those
+              claims have been removed.
+            </p>
+            <p>
+              A public release should happen only when readers can understand
+              where a signal came from, what it covers and where it can fail.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Heatmap — Areas */}
-      <section className="py-16 md:py-20" style={{ background: "var(--paper)" }}>
-        <div className="max-w-[1240px] mx-auto px-6 md:px-12">
-          <h2
-            className="leading-[1.05] tracking-[-0.025em] mb-8"
-            style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-fraunces), Georgia, serif",
-              fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)",
-              fontWeight: 500,
-            }}
-          >
-            By area
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {areas.map((s) => (
-              <SignalCard key={s.subject} signal={s} />
+      <section className={styles.pipeline} aria-labelledby="pipeline-heading">
+        <div className={styles.shell}>
+          <p className={styles.kicker}>Publication pipeline</p>
+          <h2 id="pipeline-heading">Five gates before a public output.</h2>
+          <ol>
+            {pipeline.map((step) => (
+              <li key={step.number}>
+                <span>{step.number}</span>
+                <strong>{step.title}</strong>
+                <p>{step.body}</p>
+              </li>
             ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className={styles.guardrails}>
+        <div className={`${styles.shell} ${styles.guardrailGrid}`}>
+          <div>
+            <p className={styles.kicker}>Non-negotiable safeguards</p>
+            <h2>What Pulse must not become.</h2>
+          </div>
+          <ul>
+            <li>No invented volumes, confidence scores or source counts.</li>
+            <li>No anonymous post presented as a market fact.</li>
+            <li>No “live” label without a real freshness contract.</li>
+            <li>No automated investment recommendation.</li>
+            <li>No silent replacement of a published method.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className={styles.available} aria-labelledby="available-heading">
+        <div className={styles.shell}>
+          <p className={styles.kicker}>Available now</p>
+          <h2 id="available-heading">Use the published evidence while Pulse is tested.</h2>
+          <div className={styles.linkGrid}>
+            <Link href="/news">
+              <span>01</span>
+              <strong>Verified news</strong>
+              <p>Cited reporting and visible sources.</p>
+            </Link>
+            <Link href="/areas">
+              <span>02</span>
+              <strong>Area guides</strong>
+              <p>Geographic context from the published registry.</p>
+            </Link>
+            <Link href="/developers">
+              <span>03</span>
+              <strong>Developer index</strong>
+              <p>Company profiles connected to covered markets.</p>
+            </Link>
+            <Link href="/rss.xml">
+              <span>04</span>
+              <strong>RSS feed</strong>
+              <p>Follow new published reports without an algorithmic score.</p>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Heatmap — Developers */}
-      <section className="py-16 md:py-20" style={{ background: "var(--paper-warm)" }}>
-        <div className="max-w-[1240px] mx-auto px-6 md:px-12">
-          <h2
-            className="leading-[1.05] tracking-[-0.025em] mb-8"
-            style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-fraunces), Georgia, serif",
-              fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)",
-              fontWeight: 500,
-            }}
-          >
-            By developer
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {devs.map((s) => (
-              <SignalCard key={s.subject} signal={s} />
-            ))}
+      <section className={styles.cta}>
+        <div className={`${styles.shell} ${styles.ctaGrid}`}>
+          <div>
+            <p className={styles.kicker}>A decision cannot wait?</p>
+            <h2>Take the evidence to Raj.</h2>
+            <p>
+              Raj can help buyers and investors pressure-test a specific UAE
+              property decision while the public signal product remains in
+              production.
+            </p>
+          </div>
+          <div className={styles.ctaLinks}>
+            <a
+              className={styles.primary}
+              href={rootCtaUrl({
+                campaign: "pulse-methodology",
+                content: "book-a-call",
+              })}
+            >
+              Book a call with Raj
+            </a>
+            <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
           </div>
         </div>
       </section>
-
-      {/* V21 — giant INVEST WITH RAJ sign-off (same band as the Terminal home) */}
-      <WordmarkSignoff />
     </main>
-  );
-}
-
-function SignalCard({
-  signal,
-}: {
-  signal: ReturnType<typeof getMockSentimentSnapshot>["signals"][0];
-}) {
-  // One palette for both the bar and the score text: scoreToColor is the vivid
-  // dark-ground family. scoreToInk is the AA-on-light set (deep green/bronze/
-  // red computed against cream) — unreadable on the v22 dark card, so unused.
-  const color = scoreToColor(signal.score);
-  const href =
-    signal.kind === "area" ? `/areas/${signal.subject}` : `/developer/${signal.subject}`;
-
-  return (
-    <Link
-      href={href}
-      data-magnetic
-      className="group rounded-2xl border p-5 transition-transform hover:-translate-y-0.5"
-      style={{
-        borderColor: "var(--gold-soft)",
-        background: "var(--paper-pure, #202021)",
-      }}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-1.5" style={{ color: "var(--ink-faint)" }}>
-            {signal.channel} · vol {signal.volume}
-          </div>
-          <h3
-            className="text-base md:text-lg leading-tight transition-colors group-hover:text-[var(--gold-deep)]"
-            style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-fraunces), Georgia, serif",
-              fontWeight: 500,
-            }}
-          >
-            {signal.name}
-          </h3>
-        </div>
-        <div
-          className="text-right tabular-nums shrink-0"
-          style={{ color, fontFamily: "var(--font-fraunces), Georgia, serif" }}
-        >
-          <div className="text-xl md:text-2xl leading-none">
-            {signal.score >= 0 ? "+" : ""}
-            {signal.score.toFixed(2)}
-          </div>
-        </div>
-      </div>
-      <p className="text-sm leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-        {signal.summary}
-      </p>
-      <div
-        className="mt-4 h-1.5 rounded-full overflow-hidden"
-        style={{ background: "rgba(242, 238, 231, 0.10)" }}
-      >
-        <div
-          className="h-full"
-          style={{
-            width: `${Math.abs(signal.score) * 100}%`,
-            background: color,
-          }}
-        />
-      </div>
-    </Link>
   );
 }

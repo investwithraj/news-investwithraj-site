@@ -17,7 +17,7 @@
  *   • KineticHeadline — Fraunces variable-font masthead with ONE gold-italic
  *     accent word.
  *
- * Brand: gold accent tokens (--gold = #B2924F et al — Pangea dark register,
+ * Brand: legacy gold accent tokens (--gold = #B2924F et al — dark register,
  * used directly). Raj is a real-estate consultant / urban & regional
  * planner / feasibility analyst — never a "broker". No employer names.
  */
@@ -28,6 +28,7 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -88,7 +89,7 @@ export default function TerminalAct() {
     const el = sceneMountRef.current;
     if (!el) return;
     if (typeof IntersectionObserver === "undefined") {
-      setSceneReady(true);
+      queueMicrotask(() => setSceneReady(true));
       return;
     }
     const io = new IntersectionObserver(
@@ -344,7 +345,7 @@ export default function TerminalAct() {
                 marginTop: "28px",
               }}
             >
-              <a
+              <Link
                 href="/news"
                 style={{
                   display: "inline-flex",
@@ -363,7 +364,7 @@ export default function TerminalAct() {
                 }}
               >
                 Today&apos;s reporting
-              </a>
+              </Link>
               <a
                 href={WHATSAPP_HREF}
                 style={{

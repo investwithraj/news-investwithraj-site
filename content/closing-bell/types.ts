@@ -1,25 +1,25 @@
-// Closing Bell — 16:30 GST end-of-business-day flash.
-// Punchbowl PM / Real Deal Closing Bell pattern. ~150 words, no FAQ, no
-// long-form body. Channel-first: drops on Telegram + Discord at 16:30 GST.
+// Closing Bell is a compact, evidence-led market close format. The model does
+// not encode a publication time, weekday schedule or distribution promise.
 
 export interface ClosingBellArticle {
-  /** YYYY-MM-DD-closing-bell slug */
+  /** Stable date-led slug for registry use. */
   slug: string;
-  /** Headline ≤ 70 chars */
+  /** Concise edition headline. */
   title: string;
-  /** ISO publish time (should be 12:30Z = 16:30 GST) */
+  /** ISO publication timestamp. */
   publishedAt: string;
-  /** Display date "26 May 2026" */
+  /** Human-readable publication date. */
   displayDate: string;
-  /** 3-bullet end-of-day highlights, each ≤ 100 chars */
+  /** Three concise, attributable end-of-day highlights. */
   highlights: [string, string, string];
-  /** 1-2 sentence Raj close — the "what tomorrow looks like" line */
+  /** Raj's clearly labelled interpretation of what deserves attention next. */
   rajClose: string;
-  /** Optional one-line link to a related news article */
+  /** Optional related, published news article. */
   relatedNewsSlug?: string;
 }
 
-/** Latest closing bell by date, most recent first. */
-export function sortBells(bells: ClosingBellArticle[]): ClosingBellArticle[] {
+export function sortBells(
+  bells: readonly ClosingBellArticle[],
+): ClosingBellArticle[] {
   return [...bells].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 }

@@ -18,21 +18,25 @@
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
+  --font-body: var(--font-geist-sans);
+  --font-display: var(--font-geist-sans);
+  --font-editorial: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
   /* v13 SOTY/LUXURY RESET — Cucinelli register. May 26 2026 intensive.
      Studied: Cartier W&W · Bulgari Eclettica · Brunello Cucinelli · Aman ·
      Camper & Nicholsons · Montfort. Their cream is warmer than v12's. Their
      ink is charcoal not navy-black. Their hairlines are taupe not slate.
      Pure white is BANNED. Pure black is BANNED. */
   /* ───────────────────────────────────────────────────────────────────────
-     v22 PANGEA DARK RESET — 20 Jul 2026. The news terminal is re-registered
-     to match investwithraj.com's Pangea×Metropolitan home: dark cinematic
+     v22 DARK RESET — 20 Jul 2026. The news terminal is registered
+     to match investwithraj.com's cinematic dark home: mineral surfaces,
      editorial luxury. Token NAMES are preserved (zero per-component edits);
      only VALUES flip — the same strategy this file used for gold→cobalt, now
      pushed all the way to the dark ground. Pure black + pure white BANNED.
      Ground #141414 · warm-white ink #F2EEE7 · REAL gold #B2924F (sparing).
      ─────────────────────────────────────────────────────────────────────── */
   color-scheme: dark;
-  --paper:        #141414; /* Pangea ground — PRIMARY canvas (was cream) */
+  --paper:        #141414; /* dark ground — PRIMARY canvas (was cream) */
   --paper-pure:   #1A1A1B; /* Base surface — never pure black */
   --paper-warm:   #202021; /* Secondary surface — cards, hover lift */
   --paper-cream:  #2A2A2B; /* Deepest raise — section dividers, footer band */
@@ -47,7 +51,7 @@
   --ink:       #F2EEE7;  /* Warm white — primary type on dark ground */
   --ink-soft:  #D8D3CA;  /* Body type at scale */
   --ink-muted: #9C968C;  /* Secondary copy, labels (~.62 of ink) */
-  --ink-faint: #8B857B;  /* Captions, eyebrows, faded mono labels — light enough to clear WCAG AA (~4.6:1) on #141414 while keeping the warm cast */
+  --ink-faint: #9A948A;  /* Captions/eyebrows: 4.62:1 on the darkest composited raised surface (#2D2C2D), preserving the warm faint-ink register */
 
   /* v13 — Cucinelli brass. Slightly deeper than v12 gold so it reads
      against the warmer cream. The ONLY visible accent — must touch
@@ -60,12 +64,12 @@
      is unchanged (brand mark, primary CTA, editorial italic accents, 1px
      hairlines — never a fill, never a background). Values = the main-site v16
      blue family (#2563EB / #5BA5F5 / #1E3A8A). */
-  --gold:        #B2924F; /* Primary accent — REAL Pangea gold (fixes the cobalt trap) */
-  --gold-deep:   #C9A961; /* Brighter — italic headline words + CTAs pop on dark */
-  --gold-bright: #D8C089; /* Highlights only */
-  --gold-rich:   #7E6636; /* Deepest — for hairlines */
-  --gold-soft:   rgba(178, 146, 79, 0.12);
-  --gold-glow:   rgba(178, 146, 79, 0.24);
+  --gold:        #596BFF;
+  --gold-deep:   #B8C0FF;
+  --gold-bright: #DCE0FF;
+  --gold-rich:   #3949C9;
+  --gold-soft:   rgba(89, 107, 255, 0.12);
+  --gold-glow:   rgba(89, 107, 255, 0.24);
 
   /* v12 — paper-warm / paper-cream moved up into the primary surface block
      above. The duplicates here are retained as semantic aliases so legacy
@@ -104,8 +108,8 @@
      v11 — gold-grad is the new primary editorial accent (replaces
      v10 cyan-grad). Used for headline accent words, hero ring, brand mark.
      Cyan grad kept for live-signal moments only (scroll progress, etc). */
-  --grad-gold: linear-gradient(135deg, #7E6636, #D8C089, #B2924F);
-  --grad-gold-rich: linear-gradient(135deg, #7E6636, #B2924F, #C9A961);
+  --grad-gold: linear-gradient(135deg, #3949C9, #DCE0FF, #596BFF);
+  --grad-gold-rich: linear-gradient(135deg, #3949C9, #596BFF, #B8C0FF);
   --grad-holo: linear-gradient(135deg, #2A8494, #3AA6B8, #206F80);
   --grad-holo-soft: linear-gradient(135deg, #6FC9D6, #2A8494, #6FC9D6);
   --grad-chrome: linear-gradient(180deg, #202021, #141414);
@@ -152,11 +156,11 @@
   /* Font aliases */
   /* v25 BARNES RE-POINT (parity with investwithraj.com) — older pages
      that consume these aliases follow the new register automatically. */
-  --font-display: var(--font-raleway);
-  --font-body: var(--font-raleway);
-  --font-mono: var(--font-jetbrains-mono);
+  --font-display: var(--font-geist-sans);
+  --font-body: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
   /* v11 — editorial serif for property names, heritage moments, accent words */
-  --font-editorial: var(--font-playfair);
+  --font-editorial: var(--font-geist-sans);
 
   /* ─────────────────────────────────────────────────────────────────────
      Backwards-compat token aliases — let v9 components pick up v10
@@ -219,8 +223,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
-  --font-display: var(--font-display);
-  --font-mono: var(--font-mono);
+  --font-display: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 html {
@@ -1424,7 +1428,7 @@ body {
    shows through translucent dark-glass acts. NEWS --gold* tokens are already
    cobalt, so .v17-cobalt below is a defensive re-assertion that matches MAIN. */
 .v17-cobalt {
-  /* v22 PANGEA — re-asserts the REAL gold accent on the immersive home subtree
+  /* v22 legacy palette — re-asserts the historical accent on the immersive home subtree
      (was a cobalt re-assertion; class name kept so app/page.tsx needs no edit). */
   --gold: #B2924F;
   --gold-deep: #C9A961;
@@ -1439,7 +1443,7 @@ body {
    --chrome / --navy correctly on the dark base WITHOUT per-component edits. */
 .v17-dark {
   /* Canonical dark tokens (per spec) */
-  --v17-bg:        #0D0D0E;                          /* warm near-black void (Pangea) */
+  --v17-bg:        #0D0D0E;                          /* warm near-black void */
   --v17-surface:   rgba(28, 28, 30, 0.55);          /* translucent warm dark glass */
   --v17-surface-2: rgba(34, 34, 32, 0.72);          /* denser glass (cards/elevated) */
   --v17-hairline:  rgba(242, 238, 231, 0.14);       /* warm-white 1px lines */

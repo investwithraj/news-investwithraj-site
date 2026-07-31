@@ -35,11 +35,61 @@ export interface NewsDraftProvenance {
     rajAngle: number;
   };
   sources: ProvenanceSource[];
-  /** Concatenated text the web-research drafter wrapped in <cite> tags — i.e.
-   *  figures Claude attributed to a real source. The cockpit treats a figure
-   *  found here as source-backed (gold), so only genuinely-uncited figures get
-   *  flagged for manual checking. */
+  /** Model-emitted citation markup retained for reviewer context only. It is
+   *  not independent evidence and cannot satisfy an automated source gate. */
   citedText?: string;
+  /**
+   * Text fetched from the cited URL itself. Model-emitted citation markup is
+   * not evidence and must never populate this field.
+   */
+  fetchedEvidence?: {
+    url: string;
+    finalUrl?: string;
+    text: string;
+    fetchedAt: string;
+    contentHash?: string;
+  }[];
+}
+
+export interface EvidenceApproval {
+  hash: string;
+  revision: number;
+  contentHash: string;
+  sourceUrls: string[];
+  evidenceHashes: { url: string; contentHash: string }[];
+  reviewer: "raj-review-session";
+  approvedAt: string;
+}
+
+/** Immutable approval record derived from the publication branch's bytes. */
+export interface MediaApprovalLedger {
+  hash: string;
+  revision: number;
+  contentHash: string;
+  slug: string;
+  repoPath: string;
+  contentSha256: string;
+  mime: "image/jpeg" | "image/png" | "image/webp";
+  width: number;
+  height: number;
+  sourceUrl: string;
+  rightsStatus: string;
+  credit: string;
+  reviewer: "raj-review-session";
+  approvedAt: string;
+}
+
+export interface PublicationRecord {
+  state: "publishing" | "committed" | "completed";
+  claimId: string;
+  revision: number;
+  contentHash: string;
+  mediaApprovalHash: string;
+  evidenceApprovalHash: string;
+  startedAt: string;
+  updatedAt: string;
+  commitSha?: string;
+  url?: string;
 }
 
 /** A staged article draft (status always "review" while in KV). */
@@ -56,6 +106,13 @@ export interface NewsDraft {
   reviewNote?: string;
   /** Source URLs Raj has ticked "verified" — drives the Approve soft-lock. */
   verifiedSources?: string[];
+  revision: number;
+  /** Monotonic CAS version incremented on every stored-record mutation. */
+  recordVersion: number;
+  contentHash: string;
+  evidenceApproval?: EvidenceApproval;
+  mediaApproval?: MediaApprovalLedger;
+  publication?: PublicationRecord;
 }
 
 /** Payload the pipeline / cron posts to create a draft. */
@@ -63,4 +120,30 @@ export interface NewsDraftInput {
   article: DraftArticle;
   provenance: NewsDraftProvenance;
   reviewNote?: string;
+  reservationToken?: string;
+}
+
+export interface PublicationReceipt {
+  draftId: string;
+  slug: string;
+  revision: number;
+  contentHash: string;
+  mediaApprovalHash: string;
+  evidenceApprovalHash: string;
+  commitSha: string;
+  url: string;
+  completedAt: string;
+  expiresAt: string;
+}
+
+export interface ClusterReservation {
+  clusterId: string;
+  token: string;
+  state: "processing" | "staged" | "failed";
+  topic: string;
+  startedAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  draftId?: string;
+  result?: string;
 }

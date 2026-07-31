@@ -1,29 +1,22 @@
-// Deterministic auto-approver — encodes the manual "figures checked" gate so a
-// draft whose EVERY figure traces to a cited, whitelisted source can publish
-// without a human, while anything with an unsourced number stays in The Desk.
+// Deterministic evidence assessor. It reports which staged drafts satisfy the
+// conservative source and figure gates, but publication remains human-only.
 //
 // A draft is AUTO-APPROVABLE iff ALL of:
 //   1. the 8-gate voice validator passes              (draft.validator.ok)
 //   2. it carries >= MIN_WHITELIST_CITATIONS citations, ALL from the
 //      verified-source whitelist                       (validator.metrics)
-//   3. provenance.citedText is non-empty (there IS cited-source text)
-//   4. EVERY figure in the body appears verbatim in citedText — zero "amber" /
-//      unsourced numbers (the gold/amber split the cockpit shows; citedText is
-//      the verbatim text of the <cite> spans the drafter attributed to a source,
-//      and the published body is that same prose with the tags stripped, so an
-//      exact substring match is sound).
+//   3. at least two cited URLs have independently fetched source text
+//   4. EVERY figure in the body appears in that fetched source text
 //   5. SAFETY GUARD: if the body clearly contains statistics the figure parser
 //      did NOT capture, the draft is held (a parser blind spot must never become
 //      a silent approval).
 // Anything that fails any check → "manual". Deliberately conservative: a figure
-// we cannot match is a reason to NOT auto-publish, never a reason to publish.
+// we cannot match is a reason to hold the draft.
 
 import type { NewsDraft } from "./types";
 
-/** Need at least this many whitelisted citations to auto-publish. Raj's call
- *  (Jun 14): 1 verified source qualifies — single-source drafts can auto-publish
- *  as long as that source is whitelisted AND every figure traces to it. */
-export const MIN_WHITELIST_CITATIONS = 1;
+/** Single-source stories always remain in human review. */
+export const MIN_WHITELIST_CITATIONS = 2;
 
 export interface AutoApproveAssessment {
   id: string;
@@ -34,6 +27,7 @@ export interface AutoApproveAssessment {
   citationCount: number;
   whitelistCount: number;
   allCitationsWhitelisted: boolean;
+  fetchedEvidenceCount: number;
   figureCount: number;
   /** Figures present in the body but NOT found in cited-source text. */
   amberFigures: string[];
@@ -122,15 +116,34 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     );
   }
 
-  // 3 + 4 · every figure must trace to cited-source text
-  const citedText = norm(provenance.citedText ?? "");
+  // 3 + 4 · every figure must trace to text fetched from the cited URL.
+  // provenance.citedText is deliberately ignored because it is model output.
+  const citationUrls = new Set(article.citations.map((citation) => citation.url));
+  const fetchedEvidence = (provenance.fetchedEvidence ?? []).filter(
+    (evidence) =>
+      citationUrls.has(evidence.url) && norm(evidence.text).length >= 80,
+  );
+  const distinctEvidenceUrls = new Set(
+    fetchedEvidence.map((evidence) => evidence.url),
+  );
+  const fetchedEvidenceCount = distinctEvidenceUrls.size;
+  if (fetchedEvidenceCount < MIN_WHITELIST_CITATIONS) {
+    reasons.push(
+      `only ${fetchedEvidenceCount} cited source(s) have independently fetched evidence text (need >= ${MIN_WHITELIST_CITATIONS})`,
+    );
+  }
+  const sourceText = norm(
+    fetchedEvidence.map((evidence) => evidence.text).join(" "),
+  );
   const figures = extractFigures(article.body);
   let amberFigures: string[];
-  if (!citedText) {
+  if (!sourceText) {
     amberFigures = figures;
-    reasons.push("no cited-source text on the draft — cannot verify figures");
+    reasons.push(
+      "no independently fetched source text on the draft — model citation markup cannot verify figures",
+    );
   } else {
-    amberFigures = figures.filter((f) => !citedText.includes(f));
+    amberFigures = figures.filter((f) => !sourceText.includes(f));
     if (amberFigures.length > 0) {
       reasons.push(
         `${amberFigures.length} unsourced figure(s): ${amberFigures
@@ -157,6 +170,7 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     citationCount,
     whitelistCount,
     allCitationsWhitelisted,
+    fetchedEvidenceCount,
     figureCount: figures.length,
     amberFigures,
     reasons,
@@ -171,9 +185,7 @@ export interface AutoApproveSummary {
   held: number;
 }
 
-/** Orchestrator: list The Desk's drafts, assess each, and (when publish=true)
- *  publish the auto-approvable ones via the live /publish route — which itself
- *  re-checks the gates server-side. Used by both the CLI and the cron. */
+/** Orchestrator: assess The Desk's drafts. Publishing remains human-only. */
 export async function runAutoApprove(opts: {
   site: string;
   secret: string;
@@ -182,9 +194,12 @@ export async function runAutoApprove(opts: {
 }): Promise<AutoApproveSummary> {
   const log = opts.log ?? ((m: string) => console.log(m));
   const base = opts.site.replace(/\/$/, "");
-  const q = `secret=${encodeURIComponent(opts.secret)}`;
+  const authHeaders = { "x-post-publish-secret": opts.secret };
 
-  const res = await fetch(`${base}/api/news/draft?${q}`, { cache: "no-store" });
+  const res = await fetch(`${base}/api/news/draft`, {
+    headers: authHeaders,
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`draft list failed (${res.status})`);
   const { drafts } = (await res.json()) as { drafts: NewsDraft[] };
 
@@ -194,30 +209,23 @@ export async function runAutoApprove(opts: {
 
   log(
     `auto-approve: ${drafts.length} draft(s) · ${approve.length} pass · ${held.length} held · ` +
-      `mode ${opts.publish ? "PUBLISH" : "DRY RUN"} (>= ${MIN_WHITELIST_CITATIONS} whitelisted cites)`,
+      `mode REVIEW ONLY (>= ${MIN_WHITELIST_CITATIONS} whitelisted cites + fetched evidence)`,
   );
   for (const a of approve) {
     log(`  ok  ${a.slug}  (${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);
   }
   for (const a of held) log(`  hold ${a.slug} -> ${a.reasons.join("; ")}`);
 
-  if (!opts.publish) {
-    return { total: drafts.length, approved: approve.length, published: 0, failed: 0, held: held.length };
+  if (opts.publish) {
+    log(
+      "auto-publish request ignored: a signed human review session is required",
+    );
   }
-
-  let published = 0;
-  let failed = 0;
-  for (const a of approve) {
-    const r = await fetch(`${base}/api/news/draft/${a.id}/publish?${q}`, { method: "POST" });
-    if (r.ok) {
-      published++;
-      const b = (await r.json().catch(() => ({}))) as { url?: string };
-      log(`  published ${a.slug}${b.url ? `  -> ${b.url}` : ""}`);
-    } else {
-      failed++;
-      const t = await r.text().catch(() => "");
-      log(`  FAILED ${a.slug}: ${r.status} ${t.slice(0, 120)}`);
-    }
-  }
-  return { total: drafts.length, approved: approve.length, published, failed, held: held.length };
+  return {
+    total: drafts.length,
+    approved: approve.length,
+    published: 0,
+    failed: 0,
+    held: held.length,
+  };
 }

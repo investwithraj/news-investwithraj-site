@@ -6,6 +6,8 @@
 // contents over a length threshold, decode the common entities. Good enough to
 // match figures ("19.59 million", "AED 550 million") against the cited reporting.
 
+import { safeFetchBytes } from "@/lib/sources/safe-fetch";
+
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
@@ -47,23 +49,31 @@ export function extractMainText(html: string, maxChars = 9000): string {
   return text.slice(0, maxChars);
 }
 
-/** Fetch a URL and return its main body text (empty string on any failure). */
-export async function fetchArticleText(url: string, timeoutMs = 9000): Promise<string> {
+export interface FetchedArticleText {
+  text: string;
+  finalUrl: string | null;
+}
+
+/** Fetch a URL inside its verified-publisher boundary. */
+export async function fetchArticleText(
+  url: string,
+  options: { allowedDomains: string[]; timeoutMs?: number },
+): Promise<FetchedArticleText> {
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const res = await fetch(url, {
-      headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml" },
-      redirect: "follow",
-      signal: controller.signal,
-      cache: "no-store",
+    const result = await safeFetchBytes(url, {
+      allowedDomains: options.allowedDomains,
+      userAgent: UA,
+      accept: "text/html,application/xhtml+xml",
+      allowedContentTypes: /(?:text\/html|application\/xhtml\+xml)/i,
+      maxBytes: 512 * 1024,
+      timeoutMs: options.timeoutMs ?? 9_000,
+      maxRedirects: 3,
     });
-    clearTimeout(timer);
-    if (!res.ok) return "";
-    const ct = res.headers.get("content-type") || "";
-    if (!ct.includes("html")) return "";
-    return extractMainText(await res.text());
+    return {
+      text: extractMainText(result.bytes.toString("utf8")),
+      finalUrl: result.finalUrl,
+    };
   } catch {
-    return "";
+    return { text: "", finalUrl: null };
   }
 }

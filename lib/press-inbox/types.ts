@@ -1,4 +1,4 @@
-// Press inbox — incoming press releases from PR firms to raj@news.investwithraj.com.
+// Press inbox — incoming press releases sent to office@investwithraj.com.
 //
 // Pattern: subscribe to PR mailing lists at the news mailbox, IMAP poller
 // pulls unread emails on a daily cron, parses subject/sender/body/links,

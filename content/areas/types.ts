@@ -8,7 +8,7 @@
 // Each area page also cross-links to investwithraj.com root if IWR root
 // has curated mandates on that area (PJA distress positions etc).
 
-import type { Citation, HeroImage, FaqItem } from "@/content/news/types";
+import type { Citation, FaqItem } from "@/content/news/types";
 
 export type AreaKind =
   | "island"           // Palm Jebel Ali, Hudayriyat, Saadiyat, Yas, Al Marjan
@@ -62,8 +62,6 @@ export interface AreaPage {
   faq: FaqItem[];
   /** Citations — ≥1 from the lib/sources/registry whitelist */
   citations: Citation[];
-  /** Hero image */
-  heroImage: HeroImage;
   /** When IWR root has curated mandates for this area, cross-link */
   iwrRootAreaSlug?: string;
   /** When a published IWR Note covers this area, link to it */

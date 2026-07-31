@@ -1,5 +1,5 @@
-// Source-fetch orchestrator. Runs all 20 verified sources in parallel,
-// returns FetchRun summary + aggregated entries.
+// Source-fetch orchestrator. Runs every configured discovery source in
+// parallel and returns the FetchRun summary + aggregated entries.
 
 import type { FetchRun, FetchResult } from "./types";
 export type { RawEntry, FetchResult, FetchRun } from "./types";
@@ -12,8 +12,6 @@ import { fetchReddit } from "./reddit";
  *  + graceful failure — a single source erroring never blocks the rest. */
 export async function fetchAllSources(): Promise<FetchRun> {
   const startedAt = new Date().toISOString();
-  const startMs = performance.now();
-
   const promises = FETCH_SOURCES.map((source) => {
     if (source.fetchType === "rss") return fetchRssFeed(source);
     if (source.fetchType === "reddit") return fetchReddit(source);

@@ -73,13 +73,17 @@ function latLonToVec3(lat: number, lon: number, radius = 1): THREE.Vector3 {
 /** ─── Procedural Earth (placeholder when no texture provided) ─────────── */
 function ProceduralEarth() {
   const mat = useMemo(() => {
+    const deterministicUnit = (index: number) => {
+      const value = Math.sin((index + 1) * 12.9898) * 43758.5453;
+      return value - Math.floor(value);
+    };
     // Build a vibrant canvas texture: high-contrast continents on saturated ocean
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 512;
     const ctx = canvas.getContext("2d");
     if (ctx) {
-      // Ocean — deep Pangea ground tones (dark register); gold is reserved for
+      // Ocean — deep mineral ground tones (dark register); gold is reserved for
       // continents, atmosphere glow and pins, never the ocean fill
       const og = ctx.createLinearGradient(0, 0, 0, 512);
       og.addColorStop(0,   "#2A2A2B"); // deepest raise, top
@@ -92,23 +96,26 @@ function ProceduralEarth() {
       // Bright continent patches — warm gold/sand on dark ocean
       ctx.fillStyle = "rgba(168, 133, 75, 0.95)"; // brass-deep gold tone
       for (let i = 0; i < 80; i++) {
-        const x = Math.random() * 1024;
-        const y = 80 + Math.random() * 360;
-        const w = 40 + Math.random() * 200;
-        const h = 25 + Math.random() * 100;
+        const x = deterministicUnit(i * 5) * 1024;
+        const y = 80 + deterministicUnit(i * 5 + 1) * 360;
+        const w = 40 + deterministicUnit(i * 5 + 2) * 200;
+        const h = 25 + deterministicUnit(i * 5 + 3) * 100;
         ctx.beginPath();
-        ctx.ellipse(x, y, w, h, Math.random() * Math.PI, 0, Math.PI * 2);
+        ctx.ellipse(x, y, w, h, deterministicUnit(i * 5 + 4) * Math.PI, 0, Math.PI * 2);
         ctx.fill();
       }
 
       // A few brighter highlight patches (snow / ice caps look)
       ctx.fillStyle = "rgba(242, 238, 231, 0.7)";
       for (let i = 0; i < 8; i++) {
-        const x = Math.random() * 1024;
+        const base = 500 + i * 6;
+        const x = deterministicUnit(base) * 1024;
         // Bias toward poles
-        const polar = Math.random() < 0.5 ? Math.random() * 60 : 450 + Math.random() * 60;
-        const w = 80 + Math.random() * 200;
-        const h = 30 + Math.random() * 60;
+        const polar = deterministicUnit(base + 1) < 0.5
+          ? deterministicUnit(base + 2) * 60
+          : 450 + deterministicUnit(base + 3) * 60;
+        const w = 80 + deterministicUnit(base + 4) * 200;
+        const h = 30 + deterministicUnit(base + 5) * 60;
         ctx.beginPath();
         ctx.ellipse(x, polar, w, h, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -145,9 +152,11 @@ function TexturedEarth({
     cloudsUrl ?? textureUrl
   );
 
-  // Configure texture
-  useMemo(() => {
-    texture.colorSpace = THREE.SRGBColorSpace;
+  const displayTexture = useMemo(() => {
+    const configured = texture.clone();
+    configured.colorSpace = THREE.SRGBColorSpace;
+    configured.needsUpdate = true;
+    return configured;
   }, [texture]);
 
   const cloudsRef = useRef<THREE.Mesh>(null);
@@ -165,7 +174,7 @@ function TexturedEarth({
           + add lights + a nightmap. */}
       <mesh>
         <sphereGeometry args={[1, 96, 96]} />
-        <meshBasicMaterial map={texture} />
+        <meshBasicMaterial map={displayTexture} />
       </mesh>
 
       {/* Clouds (optional) */}

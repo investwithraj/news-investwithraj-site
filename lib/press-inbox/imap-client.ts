@@ -1,4 +1,4 @@
-// IMAP client — pulls unread emails from raj@news.investwithraj.com and
+// IMAP client — pulls unread emails from office@investwithraj.com and
 // converts them to PressEmail records.
 //
 // Implementation note: instead of pulling in a heavyweight IMAP library
@@ -10,7 +10,7 @@
 //   IMAP_HOST          — e.g. imap.gmail.com (if forwarded to Google) or
 //                         your custom mail provider
 //   IMAP_PORT          — usually 993
-//   IMAP_USERNAME      — raj@news.investwithraj.com
+//   IMAP_USERNAME      — office@investwithraj.com
 //   IMAP_PASSWORD      — app password (NOT regular login)
 //   IMAP_MAILBOX       — INBOX (default)
 //

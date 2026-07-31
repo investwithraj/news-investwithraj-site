@@ -41,9 +41,10 @@ export const article: NewsArticle = {
     },
   ],
   heroImage: {
-    src: "/news/2026-05-26-dld-21b-week/cover.jpg",
-    alt: "Dubai Land Department transaction round-up — recurring weekly read",
-    credit: "Placeholder cover until first round-up publishes",
+    src: "/verified-image-hold.svg",
+    alt: "",
+    credit: "Verified image withheld until the first sourced round-up publishes",
+    approval: "withheld",
   },
   cta: {
     href: rootCtaUrl({ campaign: "news_dld_round_up_stub", content: "newsletter-cta" }),

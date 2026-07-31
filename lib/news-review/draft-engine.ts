@@ -10,25 +10,26 @@
 // how: addDraft() server-side, or POST to the endpoint from CI).
 
 import { callClaudeResearch } from "@/lib/ai/claude";
+import { createHash } from "node:crypto";
+import { dubaiCalendarDate, DUBAI_TIME_ZONE } from "@/lib/dubai-time";
 import { validateDraft, type DraftArticle as ValidatorInput } from "@/lib/voice/validator";
 import { fetchArticleText } from "@/lib/sources/extract";
 import { rootCtaUrl } from "@/lib/constants";
-import { findBestStockImage } from "@/lib/stock/providers";
-import { buildQueryForArticle } from "@/lib/stock/query-builder";
 import type { Cluster } from "@/lib/pipeline/types";
 import type { DraftArticle, NewsDraftProvenance } from "./types";
-import type { NewsCategory, NewsArticle } from "@/content/news/types";
+import type { NewsCategory } from "@/content/news/types";
 
 const VALID_CATEGORIES: NewsCategory[] = [
   "market-pulse", "launch", "regulatory", "macro",
   "developer-corporate", "infrastructure", "policy",
 ];
 
-export const DRAFT_SYSTEM_PROMPT = `You are the newsroom drafter for news.investwithraj.com — the editorial voice of Raj Tomar, a DLD-licensed Dubai real-estate broker writing for UHNW investors.
+export const DRAFT_SYSTEM_PROMPT = `You are the newsroom drafter for news.investwithraj.com — the editorial voice of Raj Tomar, a Dubai property advisor writing for investors and home buyers.
 
 You are given a story lead (a cluster of headlines + snippets). RESEARCH it with web search: find the primary reporting, read the real articles, and gather verifiable facts (figures, names, dates, locations, quotes). Then draft the article.
 
 ABSOLUTE RULES (a draft that breaks these is rejected):
+- Synthetic imagery is forbidden. The drafting system does not select, generate, or approve media; a human reviewer must attach a rights-cleared real UHD cover.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
 - If, after searching, you cannot verify enough for a defensible 650+ word article, return {"skip": true, "reason": "..."} and nothing else.
 - UK English. Em-dashes — like this — are signature; use several.
@@ -185,7 +186,7 @@ export async function draftFromCluster(
   const category: NewsCategory = VALID_CATEGORIES.includes(cluster.suggestedCategory as NewsCategory)
     ? (cluster.suggestedCategory as NewsCategory)
     : "market-pulse";
-  const today = now.slice(0, 10);
+  const today = dubaiCalendarDate(now);
   const tldr3 = [parsed.tldr[0] ?? "", parsed.tldr[1] ?? "", parsed.tldr[2] ?? ""] as [string, string, string];
   const slug = `${today}-${slugify(parsed.title)}`;
 
@@ -195,7 +196,12 @@ export async function draftFromCluster(
     subtitle: parsed.subtitle ?? "",
     publishedAt: now,
     modifiedAt: now,
-    displayDate: new Date(now).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+    displayDate: new Date(now).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: DUBAI_TIME_ZONE,
+    }),
     author: "raj-tomar",
     tier: "news",
     category,
@@ -218,29 +224,6 @@ export async function draftFromCluster(
   //    publish. The CI runner has no stock API keys, so sourcing can come up
   //    empty — in that case fall back to a market skyline so the article NEVER
   //    ships with the dead placeholder cover (the 404-cover bug class).
-  const MARKET_HERO_FALLBACK =
-    "https://upload.wikimedia.org/wikipedia/commons/d/d3/Dubai_aerial.jpg";
-  try {
-    const hero = await findBestStockImage({
-      query: buildQueryForArticle(article as unknown as NewsArticle),
-      orientation: "landscape",
-      minWidth: 1200,
-      allowSynthetic: false,
-    });
-    if (hero) {
-      article.heroImage = { src: hero.url, alt: parsed.title.slice(0, 120), credit: hero.credit };
-    }
-  } catch {
-    // fall through to the market fallback below
-  }
-  if (!/^https?:\/\//i.test(article.heroImage.src)) {
-    article.heroImage = {
-      src: MARKET_HERO_FALLBACK,
-      alt: parsed.title.slice(0, 120),
-      credit: "Wikimedia Commons",
-    };
-  }
-
   const validation = validateDraft(article as unknown as ValidatorInput);
   if (!validation.ok) {
     return {
@@ -258,9 +241,15 @@ export async function draftFromCluster(
   // Fetch the REAL text of each cited article so the cockpit verifies figures
   // against the actual reporting, not a snippet (the autochecker's teeth).
   const citedTexts = await Promise.all(
-    citations.map(async (c) => ({ c, text: await fetchArticleText(c.url) })),
+    citations.map(async (c) => ({
+      c,
+      fetched: await fetchArticleText(c.url, {
+        allowedDomains: whitelist,
+      }),
+    })),
   );
-  for (const { c, text } of citedTexts) {
+  for (const { c, fetched } of citedTexts) {
+    const text = fetched.text;
     if (seenUrls.has(c.url)) continue;
     seenUrls.add(c.url);
     extra.push({
@@ -283,6 +272,17 @@ export async function draftFromCluster(
   }
   provenance.sources = [...provenance.sources, ...extra].slice(0, 24);
   provenance.citedText = citedText;
+  provenance.fetchedEvidence = citedTexts
+    .filter(({ fetched }) => fetched.text.trim().length >= 80)
+    .map(({ c, fetched }) => ({
+      url: c.url,
+      finalUrl: fetched.finalUrl ?? undefined,
+      text: fetched.text.slice(0, 9_000),
+      fetchedAt: now,
+      contentHash: createHash("sha256")
+        .update(fetched.text.slice(0, 9_000))
+        .digest("hex"),
+    }));
 
   return { ok: true, article, provenance };
 }

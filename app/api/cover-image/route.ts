@@ -1,49 +1,59 @@
-// F14 — AI cover-image generation endpoint.
-// Auth-gated (POST_PUBLISH_SECRET). Called by the daily-cron pipeline after
-// new articles are committed and a hero image is missing.
+// Non-production synthetic-cover diagnostic.
+// Auth-gated and disabled by default. It is never an editorial media source.
 //
-// POST /api/cover-image?secret=...
+// POST /api/cover-image with the server credential header
 // body: { slug, prompt? }  (prompt auto-built from article if not provided)
 // → returns Higgsfield URL.
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import {
   generateImage,
   buildArticleCoverPrompt,
   isHiggsfieldConfigured,
 } from "@/lib/ai/higgsfield";
 import { getNewsBySlug } from "@/content/news";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+  readJsonBody,
+} from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
 
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
+const SYNTHETIC_COVERS_ENABLED =
+  process.env.NODE_ENV !== "production" &&
+  process.env.ALLOW_SYNTHETIC_COVERS === "true";
 
 export async function POST(request: NextRequest) {
-  if (!SECRET) {
-    return NextResponse.json({ error: "POST_PUBLISH_SECRET not set" }, { status: 503 });
-  }
-  const provided = request.nextUrl.searchParams.get("secret");
-  if (provided !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!isHiggsfieldConfigured()) {
-    return NextResponse.json(
+  const auth = authorizeServerMutation(request);
+  if (!auth.ok) return auth.response;
+  if (!SYNTHETIC_COVERS_ENABLED) {
+    return privateJson(
       {
-        ok: false,
-        message:
-          "Higgsfield not configured — set HIGGSFIELD_API_KEY on Vercel to enable.",
+        error:
+          "Synthetic editorial covers are disabled. Use the verified real-media review workflow.",
       },
-      { status: 503 }
+      410,
     );
   }
 
-  let body: { slug?: unknown; prompt?: unknown } = {};
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  if (!isHiggsfieldConfigured()) {
+    return privateJson(
+      {
+        ok: false,
+        message: "Higgsfield is not configured.",
+      },
+      503,
+    );
   }
+
+  const parsed = await readJsonBody<{ slug?: unknown; prompt?: unknown }>(
+    request,
+    { maxBytes: 16_384 },
+  );
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
 
   const slug = typeof body.slug === "string" ? body.slug : "";
   let prompt = typeof body.prompt === "string" ? body.prompt : "";
@@ -51,7 +61,7 @@ export async function POST(request: NextRequest) {
   if (!prompt && slug) {
     const article = getNewsBySlug(slug);
     if (!article) {
-      return NextResponse.json({ error: `Article ${slug} not found` }, { status: 404 });
+      return privateJson({ error: `Article ${slug} not found` }, 404);
     }
     prompt = buildArticleCoverPrompt({
       category: article.category,
@@ -60,36 +70,39 @@ export async function POST(request: NextRequest) {
     });
   }
   if (!prompt) {
-    return NextResponse.json(
+    return privateJson(
       { error: "Provide either slug (to auto-build prompt) or explicit prompt" },
-      { status: 400 }
+      400,
     );
+  }
+  if (prompt.length > 2_000) {
+    return privateJson({ error: "Prompt is too long." }, 400);
   }
 
   const result = await generateImage({ prompt, aspectRatio: "16:9" });
   if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    return privateJson({ ok: false, error: result.error }, 502);
   }
 
-  return NextResponse.json({
+  return privateJson({
     ok: true,
     slug: slug || null,
     prompt,
     url: result.url,
     credits: result.credits,
+    approvedForEditorialUse: false,
+    warning:
+      "Diagnostic output cannot be used as news media or represent a real property, project or event.",
     timestamp: new Date().toISOString(),
   });
 }
 
 export function GET() {
-  return NextResponse.json({
-    name: "AI cover-image generator (Higgsfield Soul)",
-    method: "POST",
-    auth: "?secret=<POST_PUBLISH_SECRET>",
-    body: {
-      slug: "string — article slug (auto-builds prompt from article)",
-      prompt: "string — override prompt manually (optional)",
-    },
-    configured: isHiggsfieldConfigured(),
+  return publicStatusJson({
+    name: "Synthetic cover diagnostic",
+    mutationMethod: "POST",
+    available: SYNTHETIC_COVERS_ENABLED && isHiggsfieldConfigured(),
+    productionPolicy:
+      "disabled; news covers require real, rights-recorded editorial media",
   });
 }

@@ -12,8 +12,8 @@
 //     and which Yandex/Yep/Seznam/Naver all subscribe to. We already
 //     submit individual URLs via IndexNow in lib/search/indexnow.ts.
 //
-// Net effect: the post-publish webhook now reports a clean ok=true once
-// IndexNow returns 200, instead of erroring on the dead /ping endpoints.
+// The post-publish review route does not call these helpers. They remain only
+// as truthful compatibility shims for old internal imports.
 //
 // If you want to push sitemaps to Google Search Console programmatically
 // in future, the supported path is:
@@ -28,15 +28,14 @@ export interface SitemapPingResult {
   engine: "google" | "bing" | "indexnow-relay";
   sitemap: string;
   ok: boolean;
+  status: "skipped";
+  submitted: false;
   statusCode: number;
   message: string;
 }
 
 /**
- * No-op shim retained for backward compatibility with any callers still
- * importing pingGoogleSitemap. Always returns a "skipped" successful result
- * since the underlying Google endpoint is dead — the actual signal goes
- * through IndexNow + Search Console's own crawl pickup.
+ * Compatibility shim. It reports a truthful skip and never performs I/O.
  */
 export async function pingGoogleSitemap(
   sitemapUrl: string = `${SITE.url}/sitemap.xml`
@@ -44,8 +43,10 @@ export async function pingGoogleSitemap(
   return {
     engine: "google",
     sitemap: sitemapUrl,
-    ok: true,
-    statusCode: 200,
+    ok: false,
+    status: "skipped",
+    submitted: false,
+    statusCode: 410,
     message:
       "Google /ping deprecated since mid-2023 — relying on Search Console crawl + robots.txt sitemap discovery instead. No-op.",
   };
@@ -61,8 +62,10 @@ export async function pingBingSitemap(
   return {
     engine: "bing",
     sitemap: sitemapUrl,
-    ok: true,
-    statusCode: 200,
+    ok: false,
+    status: "skipped",
+    submitted: false,
+    statusCode: 410,
     message:
       "Bing /ping retired in 2024 — submissions handled by IndexNow (Bing-operated). No-op.",
   };
@@ -78,8 +81,10 @@ export async function pingAllSitemaps(): Promise<SitemapPingResult[]> {
   return sitemaps.map((s) => ({
     engine: "indexnow-relay" as const,
     sitemap: s,
-    ok: true,
-    statusCode: 200,
+    ok: false,
+    status: "skipped" as const,
+    submitted: false as const,
+    statusCode: 410,
     message:
       "Sitemap discovery delegated to IndexNow + robots.txt. Legacy Google/Bing /ping endpoints retired.",
   }));

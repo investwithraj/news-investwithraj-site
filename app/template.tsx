@@ -20,12 +20,12 @@ export default function Template({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setPhase("settled");
+      queueMicrotask(() => setPhase("settled"));
       return;
     }
     // On every pathname change: start at "in" (curtain at top, mid-wipe up),
     // then settle once the new page has had a beat to mount.
-    setPhase("in");
+    queueMicrotask(() => setPhase("in"));
     const t = setTimeout(() => setPhase("settled"), 740);
     return () => clearTimeout(t);
   }, [pathname]);

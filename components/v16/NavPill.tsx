@@ -1,6 +1,7 @@
 "use client";
 
 import { CSSProperties, useEffect, useState } from "react";
+import Link from "next/link";
 import CTAPill from "./CTAPill";
 
 /**
@@ -65,7 +66,7 @@ export default function NavPill({
     if (typeof window === "undefined") return;
     const stored = localStorage.getItem("iwr-v16-theme") as "light" | "dark" | null;
     if (stored) {
-      setTheme(stored);
+      queueMicrotask(() => setTheme(stored));
       document.documentElement.setAttribute("data-theme", stored);
     }
   }, []);
@@ -120,7 +121,7 @@ export default function NavPill({
   return (
     <nav style={containerStyle} aria-label="Primary navigation">
       {/* Brand mark */}
-      <a
+      <Link
         href="/"
         style={{
           display: "flex",
@@ -164,7 +165,7 @@ export default function NavPill({
         >
           {brandText}
         </span>
-      </a>
+      </Link>
 
       {/* Center nav */}
       <ul

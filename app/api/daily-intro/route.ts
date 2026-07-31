@@ -6,7 +6,7 @@
 // the operation until videoUrl is set, then writes the URL to a small
 // JSON file (content/daily-intro/current.json) that the homepage reads.
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import {
   generateVideo,
   getVideoOperation,
@@ -16,10 +16,15 @@ import {
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { getLatestNews } from "@/content/news";
+import { syntheticEditorialMediaAllowed } from "@/lib/operations/features";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+  readJsonBody,
+} from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
-
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
 
 const STATE_PATH = path.join(process.cwd(), "pipeline-runs", "daily-intro.json");
 
@@ -38,23 +43,31 @@ async function readState(): Promise<Record<string, unknown> | null> {
 }
 
 export async function POST(request: NextRequest) {
-  if (!SECRET) return NextResponse.json({ error: "Secret not set" }, { status: 503 });
-  if (request.nextUrl.searchParams.get("secret") !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = authorizeServerMutation(request);
+  if (!auth.ok) return auth.response;
+  if (!syntheticEditorialMediaAllowed()) {
+    return privateJson(
+      {
+        error:
+          "Synthetic daily-intro video is disabled. No AI background video is approved for public production.",
+      },
+      410,
+    );
   }
   if (!isGeminiConfigured()) {
-    return NextResponse.json(
-      { ok: false, message: "Gemini Omni not configured — set GEMINI_API_KEY on Vercel." },
-      { status: 503 }
+    return privateJson(
+      { ok: false, message: "Gemini video generation is not configured." },
+      503,
     );
   }
 
-  let body: { operationId?: unknown; headline?: unknown; scene?: unknown } = {};
-  try {
-    body = await request.json();
-  } catch {
-    // empty OK
-  }
+  const parsed = await readJsonBody<{
+    operationId?: unknown;
+    headline?: unknown;
+    scene?: unknown;
+  }>(request, { maxBytes: 16_384, allowEmpty: true });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
 
   // Mode A — poll existing operation
   if (typeof body.operationId === "string") {
@@ -66,7 +79,7 @@ export async function POST(request: NextRequest) {
         completedAt: new Date().toISOString(),
       });
     }
-    return NextResponse.json(result);
+    return privateJson(result, result.ok ? 200 : 502);
   }
 
   // Mode B — kick off new generation
@@ -93,21 +106,26 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({ ...start, prompt, headline });
+  return privateJson(
+    {
+      ...start,
+      prompt,
+      headline,
+      approvedForPublicUse: false,
+    },
+    start.ok ? 200 : 502,
+  );
 }
 
 export async function GET() {
   const state = await readState();
-  return NextResponse.json({
-    name: "Daily intro (Gemini Omni / Veo 3)",
-    method: "POST",
-    auth: "?secret=<POST_PUBLISH_SECRET>",
-    body: {
-      operationId: "string (optional) — poll this existing operation",
-      headline: "string (optional) — override headline",
-      scene: "string (optional) — additional scene cue",
-    },
-    configured: isGeminiConfigured(),
-    currentState: state,
+  return publicStatusJson({
+    name: "Synthetic daily intro",
+    mutationMethod: "POST",
+    available: syntheticEditorialMediaAllowed() && isGeminiConfigured(),
+    productionPolicy:
+      "disabled; the public site waits for Raj's properly filmed video",
+    currentState:
+      process.env.NODE_ENV === "production" ? null : state,
   });
 }

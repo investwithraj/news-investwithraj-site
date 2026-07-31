@@ -94,7 +94,6 @@ export function BentoCell({
         >
           {backdrop.type === "video" ||
           /\.(mp4|webm|mov)$/i.test(backdrop.src) ? (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
             <video
               src={backdrop.src}
               poster={backdrop.poster}

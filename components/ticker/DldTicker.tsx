@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import type { DldDailyPulse } from "@/lib/dld/types";
 import { formatAed } from "@/lib/dld/types";
-import { useFx, Price } from "./FxProvider";
+import { Price } from "./FxProvider";
 
 export function DldTicker() {
   const [pulse, setPulse] = useState<DldDailyPulse | null>(null);

@@ -1,9 +1,7 @@
-// Auto-approve queued news drafts whose EVERY figure traces to a verified
-// (whitelisted) source — the deterministic version of Raj's manual "figures
-// checked" gate. Rule + runner live in lib/news-review/auto-approve.ts.
+// Assess queued drafts whose material figures trace to independently fetched,
+// allowlisted evidence. This command never publishes.
 //
-//   npx tsx scripts/auto-approve.ts            # DRY RUN — report only, publishes nothing
-//   npx tsx scripts/auto-approve.ts --publish  # publish the auto-approvable drafts
+//   AUTO_APPROVE=1 npx tsx scripts/auto-approve.ts
 //
 // Env: SITE_URL (default prod), POST_PUBLISH_SECRET.
 
@@ -11,20 +9,22 @@ import { runAutoApprove } from "../lib/news-review/auto-approve.js";
 
 const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
-const PUBLISH = process.argv.includes("--publish");
+const AUTO_APPROVE_ENABLED = process.env.AUTO_APPROVE === "1";
 
 async function main() {
   if (!SECRET) {
     console.error("ERROR: POST_PUBLISH_SECRET not set.");
     process.exit(1);
   }
-  const s = await runAutoApprove({ site: SITE, secret: SECRET, publish: PUBLISH });
+  if (!AUTO_APPROVE_ENABLED) {
+    console.log(
+      "AUTO_APPROVE is not exactly 1; every staged draft remains held in The Desk.",
+    );
+    return;
+  }
+  const s = await runAutoApprove({ site: SITE, secret: SECRET, publish: false });
   console.log(
-    "\n" +
-      (PUBLISH
-        ? `published ${s.published}/${s.approved}, ${s.failed} failed`
-        : `DRY RUN — ${s.approved} would publish`) +
-      `, ${s.held} held for manual review.`,
+    `\nASSESSMENT ONLY — ${s.approved} evidence-ready, ${s.held} held; 0 published.`,
   );
 }
 

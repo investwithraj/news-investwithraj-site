@@ -1,140 +1,232 @@
-// /areas index — all UAE areas covered, grouped by emirate.
-
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { AREAS, sortAreas, filterByEmirate } from "@/content/areas";
+
+import { AREAS, filterByEmirate, sortAreas } from "@/content/areas";
 import { SITE } from "@/lib/constants";
-import PageMotion from "@/components/v21/PageMotion";
-import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
+import { formatEditorialDate } from "@/lib/news-editorial";
+import {
+  asGraph,
+  breadcrumbSchema,
+  collectionPageSchemas,
+} from "@/lib/schema";
+import { getVerifiedAreaMedia } from "@/lib/verified-media";
+
+import styles from "./AreaPages.module.css";
 
 export const dynamic = "force-static";
 
+const PAGE_URL = `${SITE.url}/areas`;
+const DESCRIPTION =
+  "A transparent research index of UAE property areas, showing registry coordinates and linked reporting while source packs are reviewed.";
+
 export const metadata: Metadata = {
-  title: "Areas — Every UAE community Raj covers",
-  description:
-    "Every Dubai, Abu Dhabi, and Ras Al Khaimah community Raj covers on news.investwithraj.com — Hudayriyat, Palm Jebel Ali, Wynn Al Marjan, Downtown Dubai, Dubai Marina, Saadiyat, Yas, and 22 more.",
-  alternates: { canonical: `${SITE.url}/areas` },
+  title: "Areas — UAE property research index",
+  description: DESCRIPTION,
+  alternates: { canonical: PAGE_URL },
 };
 
 export default function AreasIndex() {
-  const dubai = sortAreas(filterByEmirate(AREAS, "Dubai"));
-  const abuDhabi = sortAreas(filterByEmirate(AREAS, "Abu Dhabi"));
-  const rak = sortAreas(filterByEmirate(AREAS, "Ras Al Khaimah"));
-
-  return (
-    <main className="min-h-screen" style={{ background: "var(--paper)" }}>
-      {/* V21 — PageMotion island. Motion here is ONE grid stagger on the
-          Dubai block's cards via data-reveal; the h1 is static in the v22
-          masthead grammar (Space Grotesk + one Fraunces italic accent). */}
-      <PageMotion />
-      <section
-        className="relative pt-20 md:pt-28 pb-12 md:pb-16"
-        style={{ background: "var(--paper-warm)" }}
-      >
-        <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8"
-            style={{ color: "var(--ink-soft)" }}
-            data-magnetic
-          >
-            <span aria-hidden>←</span>
-            <span>Back to the terminal</span>
-          </Link>
-
-          <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep)" }}>
-            The map · {AREAS.length} areas
-          </span>
-          <h1
-            className="mt-3 leading-[1.02] tracking-[-0.025em]"
-            style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-space-grotesk), sans-serif",
-              fontSize: "clamp(2.25rem, 5vw, 4rem)",
-              fontWeight: 500,
-            }}
-          >
-            Every UAE community,{" "}
-            <span className="editorial-italic" style={{ color: "var(--gold-deep)" }}>
-              covered.
-            </span>
-          </h1>
-          <p
-            className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-            style={{ color: "var(--ink-soft)" }}
-          >
-            Each area page = stats, active developers, recent news coverage,
-            median price + yield, and Raj's take on what's working.
-          </p>
-        </div>
-      </section>
-
-      <EmirateBlock title="Dubai" items={dubai} stagger />
-      <EmirateBlock title="Abu Dhabi" items={abuDhabi} accent="dark" />
-      <EmirateBlock title="Ras Al Khaimah" items={rak} />
-
-      {/* V21 — giant INVEST WITH RAJ sign-off (same band as the Terminal home) */}
-      <WordmarkSignoff />
-    </main>
+  const groups = [
+    ["Dubai", sortAreas(filterByEmirate(AREAS, "Dubai"))],
+    ["Abu Dhabi", sortAreas(filterByEmirate(AREAS, "Abu Dhabi"))],
+    [
+      "Ras Al Khaimah",
+      sortAreas(filterByEmirate(AREAS, "Ras Al Khaimah")),
+    ],
+  ] as const;
+  const latestRegistryDate = [...AREAS]
+    .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))[0]?.modifiedAt;
+  const evidenceReady = AREAS.filter(
+    (area) => area.body.trim() && area.citations.length > 0,
+  ).length;
+  const [collection, itemList] = collectionPageSchemas({
+    url: PAGE_URL,
+    name: "UAE property area research index",
+    description: DESCRIPTION,
+    dateModified: latestRegistryDate,
+    items: AREAS.map((area) => ({
+      name: area.name,
+      url: `${SITE.url}/areas/${area.slug}`,
+      description: `${area.kind.replaceAll("-", " ")} research index entry in ${area.emirate}.`,
+    })),
+  });
+  const graph = asGraph(
+    collection,
+    itemList,
+    breadcrumbSchema([{ name: "Areas", url: PAGE_URL }]),
   );
-}
 
-function EmirateBlock({
-  title,
-  items,
-  accent,
-  stagger,
-}: {
-  title: string;
-  items: typeof AREAS;
-  accent?: "dark";
-  /** V21 — one grid stagger MAX per page: only the first block sets it. */
-  stagger?: boolean;
-}) {
-  if (items.length === 0) return null;
   return (
-    <section
-      className="py-16 md:py-20"
-      style={{ background: accent === "dark" ? "var(--paper-warm)" : "var(--paper)" }}
-    >
-      <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-        <h2
-          className="mb-8 leading-[1.05] tracking-[-0.025em]"
-          style={{
-            color: "var(--ink)",
-            fontFamily: "var(--font-fraunces), Georgia, serif",
-            fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
-            fontWeight: 500,
-          }}
-        >
-          {title} <span style={{ color: "var(--ink-faint)" }}>· {items.length}</span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((a) => (
-            <Link
-              key={a.slug}
-              href={`/areas/${a.slug}`}
-              data-magnetic
-              data-reveal={stagger ? "" : undefined}
-              className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
-              style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #202021)" }}
-            >
-              <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--gold-deep)" }}>
-                {a.kind.replace(/-/g, " ")}
-              </div>
-              <h3
-                className="text-base md:text-lg leading-tight mb-1.5 transition-colors group-hover:text-[var(--gold-deep)]"
-                style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif", fontWeight: 500 }}
-              >
-                {a.name}
-              </h3>
-              <p className="text-sm leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                {a.oneLiner}
-              </p>
-            </Link>
-          ))}
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+        }}
+      />
+      <main id="main" className={styles.page}>
+        <header className={styles.hero}>
+          <Link href="/" className={styles.back}>
+            ← Intelligence desk
+          </Link>
+          <p className={styles.eyebrow}>
+            Research atlas · {AREAS.length} coordinate records
+          </p>
+          <h1>Places, before the pitch.</h1>
+          <p className={styles.dek}>
+            This directory publishes location identity and coordinates first.
+            Price, yield, ownership and supply claims remain hidden until each
+            area has a cited evidence pack.
+          </p>
+          <div className={styles.statusGrid}>
+            <div>
+              <span>Evidence-ready profiles</span>
+              <strong>
+                {evidenceReady} of {AREAS.length}
+              </strong>
+            </div>
+            <div>
+              <span>Registry last touched</span>
+              <strong>
+                {latestRegistryDate
+                  ? formatEditorialDate(latestRegistryDate)
+                  : "Not recorded"}
+              </strong>
+            </div>
+            <div>
+              <span>Publication rule</span>
+              <strong>No uncited market statistics</strong>
+            </div>
+          </div>
+        </header>
+
+        <nav className={styles.doors} aria-label="Area research paths">
+          <Link href="/map">
+            <span>01</span>
+            <strong>Map</strong>
+            <p>Read the coordinate layer before opening an area record.</p>
+            <i>Open map ↗</i>
+          </Link>
+          <Link href="/developers">
+            <span>02</span>
+            <strong>Developers</strong>
+            <p>Move from geography to developer-linked reporting.</p>
+            <i>Open directory ↗</i>
+          </Link>
+          <Link href="/news">
+            <span>03</span>
+            <strong>News</strong>
+            <p>Read the full chronological, source-linked reporting archive.</p>
+            <i>Open archive ↗</i>
+          </Link>
+        </nav>
+
+        <div className={styles.directory}>
+          {groups.map(([emirate, items]) => {
+            const headingId = `areas-${emirate
+              .toLowerCase()
+              .replaceAll(" ", "-")}`;
+            return (
+              <section key={emirate} aria-labelledby={headingId}>
+                <header className={styles.groupHeader}>
+                  <h2 id={headingId}>{emirate}</h2>
+                  <span>{items.length} records</span>
+                </header>
+                <div className={styles.areaGrid}>
+                  {items.map((area) => {
+                    const media = getVerifiedAreaMedia(area.slug);
+                    const areaHref = `/areas/${area.slug}`;
+
+                    return (
+                      <article key={area.slug} className={styles.areaCard}>
+                        {media ? (
+                          <figure className={styles.cardFigure}>
+                            <Link
+                              href={areaHref}
+                              className={styles.cardImageLink}
+                              aria-label={`Open ${area.name} research record`}
+                            >
+                              <Image
+                                src={media.src}
+                                width={media.width}
+                                height={media.height}
+                                alt={media.alt}
+                                sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 33vw"
+                                quality={90}
+                              />
+                            </Link>
+                            <figcaption className={styles.mediaCredit}>
+                              <span>{media.notice}</span>
+                              <span>
+                                {media.credit ? `${media.credit} · ` : null}
+                                <a
+                                  href={media.sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {media.sourceLabel}
+                                </a>
+                                {" · "}
+                                {media.licenseUrl ? (
+                                  <a
+                                    href={media.licenseUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {media.licenseLabel}
+                                  </a>
+                                ) : (
+                                  media.licenseLabel
+                                )}
+                              </span>
+                            </figcaption>
+                          </figure>
+                        ) : (
+                          <Link
+                            href={areaHref}
+                            className={styles.coordinateTile}
+                          >
+                            <span>Coordinate record</span>
+                            <strong>
+                              {area.coords.lat.toFixed(4)}° N
+                              <br />
+                              {area.coords.lng.toFixed(4)}° E
+                            </strong>
+                            <small>No verified UHD area reference</small>
+                          </Link>
+                        )}
+                        <Link href={areaHref} className={styles.cardBody}>
+                          <span className={styles.cardMeta}>
+                            <span>{area.kind.replaceAll("-", " ")}</span>
+                            <span>{area.emirate}</span>
+                          </span>
+                          <h3>{area.name}</h3>
+                          <small>
+                            {media
+                              ? "Verified editorial context · market evidence review pending"
+                              : "Coordinate-only record · market evidence review pending"}
+                          </small>
+                        </Link>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
-      </div>
-    </section>
+
+        <section className={styles.method}>
+          <span>Method</span>
+          <h2>Evidence before market language.</h2>
+          <p>
+            An area record is not a market report. Until citations and reviewed
+            body copy exist, detail pages remain out of search indexes and show
+            only the location fields needed to navigate the reporting graph.
+          </p>
+        </section>
+      </main>
+    </>
   );
 }

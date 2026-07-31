@@ -8,6 +8,10 @@
 
 import type { RawEntry, FetchResult } from "./types";
 import type { VerifiedSource } from "@/lib/sources/registry";
+import {
+  safeFetchBytes,
+  urlOnApprovedHost,
+} from "@/lib/sources/safe-fetch";
 
 const FETCH_TIMEOUT_MS = 20_000;
 const USER_AGENT =
@@ -24,32 +28,18 @@ export async function fetchWebPage(
 ): Promise<FetchResult> {
   const t0 = performance.now();
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
   try {
-    const res = await fetch(source.url, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      return {
-        source,
-        entries: [],
-        error: `HTTP ${res.status} from ${source.url}`,
-        durationMs: performance.now() - t0,
-      };
-    }
-
-    const html = await res.text();
     const domain = new URL(source.url).hostname.replace("www.", "");
+    const res = await safeFetchBytes(source.url, {
+      allowedDomains: [domain],
+      userAgent: USER_AGENT,
+      accept: "text/html,application/xhtml+xml",
+      allowedContentTypes: /(?:text\/html|application\/xhtml\+xml)/i,
+      maxBytes: 2 * 1024 * 1024,
+      timeoutMs: FETCH_TIMEOUT_MS,
+      maxRedirects: 3,
+    });
+    const html = res.bytes.toString("utf8");
     const entries = extractCandidateLinks(html, source.url, source.name, source.tier, domain, limit);
 
     return {
@@ -59,7 +49,6 @@ export async function fetchWebPage(
       durationMs: performance.now() - t0,
     };
   } catch (e) {
-    clearTimeout(timeout);
     return {
       source,
       entries: [],
@@ -105,6 +94,7 @@ function extractCandidateLinks(
     } catch {
       continue;
     }
+    if (!urlOnApprovedHost(absoluteUrl, [domain])) continue;
     if (seen.has(absoluteUrl)) continue;
     seen.add(absoluteUrl);
 

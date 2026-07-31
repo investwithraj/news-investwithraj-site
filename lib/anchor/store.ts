@@ -19,33 +19,28 @@ const KV_URL = process.env.KV_REST_API_URL || "";
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || "";
 const KV_KEY = "iwr:anchor:current";
 
-function useKv(): boolean {
+function hasKv(): boolean {
   return Boolean(KV_URL && KV_TOKEN);
 }
 
 // ─── KV adapter (Upstash REST) ───────────────────────────────────────
 
 async function kvReadAnchor(): Promise<DailyAnchor | null> {
-  try {
-    const res = await fetch(`${KV_URL}/get/${KV_KEY}`, {
-      headers: { Authorization: `Bearer ${KV_TOKEN}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { result?: unknown };
-    if (data.result == null) return null;
-    if (typeof data.result === "string") {
-      try {
-        return JSON.parse(data.result) as DailyAnchor;
-      } catch {
-        return null;
-      }
-    }
-    if (typeof data.result === "object") return data.result as DailyAnchor;
-    return null;
-  } catch {
-    return null;
+  const res = await fetch(`${KV_URL}/get/${KV_KEY}`, {
+    headers: { Authorization: `Bearer ${KV_TOKEN}` },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Anchor storage read failed (${res.status}).`);
   }
+  const data = (await res.json()) as { result?: unknown };
+  if (data.result == null) return null;
+  if (typeof data.result === "string") {
+    const parsed = JSON.parse(data.result) as unknown;
+    if (parsed && typeof parsed === "object") return parsed as DailyAnchor;
+  }
+  if (typeof data.result === "object") return data.result as DailyAnchor;
+  throw new Error("Anchor storage returned an invalid payload.");
 }
 
 async function kvWriteAnchor(anchor: DailyAnchor): Promise<boolean> {
@@ -66,19 +61,18 @@ async function kvWriteAnchor(anchor: DailyAnchor): Promise<boolean> {
 }
 
 async function kvArchiveAnchor(anchor: DailyAnchor): Promise<void> {
-  try {
-    const key = `iwr:anchor:archive:${anchor.date}`;
-    await fetch(`${KV_URL}/set/${key}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${KV_TOKEN}`,
-        "Content-Type": "text/plain",
-      },
-      body: JSON.stringify(anchor),
-      cache: "no-store",
-    });
-  } catch {
-    // Best-effort
+  const key = `iwr:anchor:archive:${anchor.date}`;
+  const response = await fetch(`${KV_URL}/set/${key}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${KV_TOKEN}`,
+      "Content-Type": "text/plain",
+    },
+    body: JSON.stringify(anchor),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Anchor archive write failed (${response.status}).`);
   }
 }
 
@@ -116,22 +110,27 @@ async function fsWriteAnchor(anchor: DailyAnchor): Promise<boolean> {
 // ─── Public API ──────────────────────────────────────────────────────
 
 export async function readCurrentAnchor(): Promise<DailyAnchor | null> {
-  return useKv() ? kvReadAnchor() : fsReadAnchor();
+  return hasKv() ? kvReadAnchor() : fsReadAnchor();
 }
 
 export async function writeCurrentAnchor(anchor: DailyAnchor): Promise<void> {
-  if (useKv()) {
+  if (process.env.NODE_ENV === "production" && !hasKv()) {
+    throw new Error("Durable anchor storage is required in production.");
+  }
+  if (hasKv()) {
     // Archive previous day before overwriting (KV is single-key per "current")
     const existing = await kvReadAnchor();
     if (existing && existing.date !== anchor.date) {
       await kvArchiveAnchor(existing);
     }
-    await kvWriteAnchor(anchor);
+    const written = await kvWriteAnchor(anchor);
+    if (!written) throw new Error("Anchor storage write failed.");
     return;
   }
-  await fsWriteAnchor(anchor);
+  const written = await fsWriteAnchor(anchor);
+  if (!written) throw new Error("Anchor storage write failed.");
 }
 
 export function getAnchorStorageBackend(): "vercel-kv" | "file-system" {
-  return useKv() ? "vercel-kv" : "file-system";
+  return hasKv() ? "vercel-kv" : "file-system";
 }

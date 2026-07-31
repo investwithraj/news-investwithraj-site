@@ -6,7 +6,7 @@
 //   LISTMONK_API_USERNAME — Listmonk API user (Settings → Users → Create API user)
 //   LISTMONK_API_TOKEN — API token for that user
 //   LISTMONK_DIGEST_LIST_ID — numeric ID of the "Beyond the Deal Daily Digest" list
-//   LISTMONK_FROM_EMAIL — e.g. raj@news.investwithraj.com
+//   LISTMONK_FROM_EMAIL — e.g. office@investwithraj.com
 //   LISTMONK_FROM_NAME — "Raj Tomar"
 //   LISTMONK_TEMPLATE_ID — optional, numeric ID of a saved Listmonk template
 //

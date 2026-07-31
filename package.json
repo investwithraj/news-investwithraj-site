@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "news:fetch": "tsx scripts/news-pipeline.ts"
+    "news:fetch": "tsx scripts/news-pipeline.ts",
+    "test:order98:storage": "tsx scripts/test-queue-concurrency.ts && tsx scripts/test-publication-concurrency.ts"
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^4.0.137",
@@ -27,6 +28,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "resend": "^6.12.3",
+    "sharp": "^0.34.5",
     "three": "^0.184.0"
   },
   "devDependencies": {

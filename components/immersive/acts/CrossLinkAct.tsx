@@ -67,7 +67,7 @@ function practiceUrl(path = "", content?: string): string {
 const PRACTICE_LINKS = [
   { label: "Area studies", href: practiceUrl("/areas", "areas") },
   { label: "The Note", href: practiceUrl("/notes", "notes") },
-  { label: "Book a call", href: practiceUrl("/start", "book-call") },
+  { label: "Book a call", href: practiceUrl("/engage", "book-call") },
 ] as const;
 
 /**

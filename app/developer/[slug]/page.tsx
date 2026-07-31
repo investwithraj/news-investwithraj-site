@@ -1,22 +1,33 @@
-// Per-developer landing page — /developer/[slug]
-//
-// SEO honeypot for "[developer] news 2026" queries. Each page = developer
-// profile + Raj's credit take + active areas (linked) + flagship projects +
-// recent news mentions.
-
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import {
-  DEVELOPERS,
-  getDeveloperBySlug,
-  getAllDeveloperSlugs,
-} from "@/lib/developers";
+import { notFound } from "next/navigation";
+
 import { AREAS } from "@/content/areas";
-import { NEWS_ARTICLES } from "@/content/news";
+import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
+import {
+  advisoryLinkForDeveloper,
+  generalAdvisoryUrl,
+} from "@/lib/advisory-relations";
 import { SITE } from "@/lib/constants";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
-import PageMotion from "@/components/v21/PageMotion";
+import {
+  getAllDeveloperSlugs,
+  getDeveloperBySlug,
+} from "@/lib/developers";
+import {
+  articleMentionsDeveloper,
+  categoryLabel,
+  displayMarkets,
+  formatEditorialDate,
+} from "@/lib/news-editorial";
+import {
+  asGraph,
+  breadcrumbSchema,
+  collectionPageSchemas,
+} from "@/lib/schema";
+import { getVerifiedDeveloperMedia } from "@/lib/verified-media";
+
+import styles from "../../developers/DeveloperPages.module.css";
 
 export const dynamicParams = false;
 export const dynamic = "force-static";
@@ -31,16 +42,38 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const d = getDeveloperBySlug(slug);
-  if (!d) return { title: "Not found" };
+  const developer = getDeveloperBySlug(slug);
+  if (!developer) return { title: "Developer not found" };
+  const media = getVerifiedDeveloperMedia(slug);
+
+  const relatedNews = NEWS_ARTICLES.filter(
+    (article) =>
+      article.status !== "research" &&
+      articleMentionsDeveloper(article, developer),
+  );
+  const hasReporting = relatedNews.length > 0;
   return {
-    title: `${d.name} developer news and market coverage`,
-    description: d.excerpt,
+    title: `${developer.name} — developer reporting index`,
+    description: `Source-linked reports that explicitly mention ${developer.name}. Profile facts remain under source review.`,
     alternates: { canonical: `${SITE.url}/developer/${slug}` },
+    robots: { index: hasReporting, follow: true },
     openGraph: {
-      title: `${d.name} — Invest With Raj`,
-      description: d.excerpt,
+      type: "website",
+      title: `${developer.name} reporting index`,
+      description: `Explicit source-linked reporting for ${developer.name}.`,
       url: `${SITE.url}/developer/${slug}`,
+      ...(media
+        ? {
+            images: [
+              {
+                url: `${SITE.url}${media.src}`,
+                width: media.width,
+                height: media.height,
+                alt: media.alt,
+              },
+            ],
+          }
+        : {}),
     },
   };
 }
@@ -51,306 +84,234 @@ export default async function DeveloperPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const d = getDeveloperBySlug(slug);
-  if (!d) notFound();
+  const developer = getDeveloperBySlug(slug);
+  if (!developer) notFound();
+  const media = getVerifiedDeveloperMedia(developer.slug);
 
-  const activeAreas = AREAS.filter((a) => d.activeAreas.includes(a.slug));
-  const relatedNews = NEWS_ARTICLES.filter((n) =>
-    n.title.toLowerCase().includes(d.name.toLowerCase().split(" ")[0])
-  ).slice(0, 6);
-
-  // JSON-LD — Organization + breadcrumb
-  const orgSchema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${SITE.url}/developer/${d.slug}#org`,
-    name: d.name,
-    description: d.excerpt,
-    foundingDate: d.founded ? `${d.founded}` : undefined,
-    foundingLocation: {
-      "@type": "Place",
-      name: d.hq,
-      containedInPlace: { "@type": "Country", name: "United Arab Emirates" },
+  const relatedNews = sortNewsArticles(NEWS_ARTICLES)
+    .filter((article) => article.status !== "research")
+    .filter((article) => articleMentionsDeveloper(article, developer))
+    .slice(0, 10);
+  const connectedAreas = AREAS.filter((area) =>
+    developer.activeAreas.includes(area.slug),
+  );
+  const advisoryLink = advisoryLinkForDeveloper(
+    developer.slug,
+    developer.name,
+  );
+  const pageUrl = `${SITE.url}/developer/${developer.slug}`;
+  const [collection, itemList] = collectionPageSchemas({
+    url: pageUrl,
+    name: `${developer.name} reporting index`,
+    description: `Source-linked reports that explicitly mention ${developer.name}.`,
+    dateModified: relatedNews[0]?.modifiedAt,
+    itemListOrder: "descending",
+    items: relatedNews.map((article) => ({
+      name: article.title,
+      url: `${SITE.url}/news/${article.slug}`,
+      description: article.subtitle,
+    })),
+  });
+  const graph = asGraph(
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": `${pageUrl}#entity`,
+      name: developer.name,
+      url: pageUrl,
     },
-    ...(d.ticker && {
-      tickerSymbol: d.ticker,
-    }),
-  };
+    collection,
+    itemList,
+    breadcrumbSchema([
+      { name: "Developers", url: `${SITE.url}/developers` },
+      { name: developer.name, url: pageUrl },
+    ]),
+  );
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+        }}
       />
-
-      <main className="min-h-screen">
-        {/* V21 — PageMotion island. The h1 keeps its existing KineticHeadline
-            reveal (no data-split → no double-mount); motion here is ONE grid
-            stagger on the Active-areas cards via data-reveal. */}
-        <PageMotion />
-        {/* Hero */}
-        <section
-          className="relative pt-20 md:pt-28 pb-12 md:pb-16"
-          style={{ background: "var(--paper-warm)" }}
-        >
-          <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8"
-              style={{ color: "var(--ink-soft)" }}
-              data-magnetic
-            >
-              <span aria-hidden>←</span>
-              <span>Back to the desk</span>
-            </Link>
-
-            <div className="flex items-start gap-6 md:gap-10">
-              <span
-                aria-hidden
-                className="leading-none shrink-0"
-                style={{
-                  color: d.accent,
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontSize: "clamp(4rem, 10vw, 7rem)",
-                  opacity: 0.78,
-                }}
-              >
-                {d.glyph}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] mb-3" style={{ color: "var(--ink-faint)" }}>
-                  <span style={{ color: "var(--gold-deep)" }}>{d.hq}</span>
-                  <span aria-hidden>·</span>
-                  <span>{d.kind.replace(/-/g, " ")}</span>
-                  {d.ticker && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <span style={{ color: "var(--gold-deep)" }}>{d.ticker}</span>
-                    </>
-                  )}
-                  {d.founded && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <span>Founded {d.founded}</span>
-                    </>
-                  )}
-                </div>
-                <KineticHeadline
-                  className="leading-[1.02] tracking-[-0.025em]"
-                  style={{
-                    color: "var(--ink)",
-                    fontSize: "clamp(2.25rem, 5vw, 4rem)",
-                    fontWeight: 500,
-                  }}
-                >
-                  {d.name}
-                </KineticHeadline>
-                <p
-                  className="mt-5 text-base md:text-xl leading-[1.5] max-w-[60ch] editorial-italic"
-                  style={{ color: "var(--ink-soft)", fontStyle: "italic" }}
-                >
-                  {d.tagline}
-                </p>
-              </div>
+      <main id="main" className={styles.page}>
+        <header className={styles.detailHero}>
+          <Link href="/developers" className={styles.back}>
+            ← Developer reporting index
+          </Link>
+          <div className={styles.detailHead}>
+            <div>
+              <p className={styles.eyebrow}>
+                {developer.hq} · entity-led reporting
+              </p>
+              <h1>{developer.name}</h1>
+              <p className={styles.dek}>
+                This page is a reporting index, not a corporate profile or
+                inventory sheet. Ownership, listing, delivery and current
+                release claims remain unpublished until a dedicated source
+                pack exists.
+              </p>
             </div>
+            <div className={styles.profileMark}>
+              <span>Evidence state</span>
+              <strong>
+                {relatedNews.length
+                  ? `${relatedNews.length} explicit reports`
+                  : "No matched reports"}
+              </strong>
+              <small>Profile-source review pending</small>
+            </div>
+          </div>
+        </header>
 
-            <p
-              className="mt-10 text-base md:text-lg leading-[1.65] max-w-[65ch]"
-              style={{ color: "var(--ink-soft)" }}
-            >
-              {d.excerpt}
+        {media ? (
+          <figure className={styles.detailFigure}>
+            <Image
+              src={media.src}
+              width={media.width}
+              height={media.height}
+              alt={media.alt}
+              sizes="100vw"
+              quality={95}
+              priority
+            />
+            <figcaption className={styles.detailCredit}>
+              <span>{media.notice}</span>
+              <span>
+                <a
+                  href={media.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {media.sourceLabel}
+                </a>
+                {" · "}
+                {media.licenseLabel}
+              </span>
+            </figcaption>
+          </figure>
+        ) : null}
+
+        <section
+          className={styles.reviewStrip}
+          aria-label="Developer evidence status"
+        >
+          <div>
+            <span>Entity match</span>
+            <strong>Full identity or approved alias</strong>
+          </div>
+          <div>
+            <span>Latest reporting</span>
+            <strong>
+              {relatedNews[0]
+                ? formatEditorialDate(relatedNews[0].publishedAt)
+                : "No explicit mention"}
+            </strong>
+          </div>
+          <div>
+            <span>Search status</span>
+            <p>
+              {relatedNews.length
+                ? "Indexable source-linked collection"
+                : "Noindex until explicit reporting exists"}
             </p>
           </div>
         </section>
 
-        {/* Raj's take */}
-        <section className="py-16 md:py-20" style={{ background: "var(--paper)" }}>
-          <div className="max-w-[920px] mx-auto px-6 md:px-12">
-            <div
-              className="rounded-3xl p-8 md:p-12"
-              style={{
-                background: "var(--paper-warm)",
-                border: "1px solid var(--gold-soft)",
-                boxShadow: "0 12px 40px -12px rgba(10, 16, 36, 0.12)",
-              }}
-            >
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-deep)" }}
-              >
-                The Raj take
-              </span>
-              <p
-                className="mt-5 text-xl md:text-2xl leading-[1.4]"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontVariationSettings: '"SOFT" 80, "opsz" 144',
-                }}
-              >
-                “{d.rajTake}”
-              </p>
-              <p
-                className="mt-5 text-[10px] font-mono uppercase tracking-[0.22em]"
-                style={{ color: "var(--ink-faint)" }}
-              >
-                — Raj Tomar · real-estate consultant
-              </p>
+        <section className={styles.coverage}>
+          <header className={styles.sectionHeader}>
+            <h2>Explicit developer mentions.</h2>
+            <p>{relatedNews.length} live reports</p>
+          </header>
+          {relatedNews.length ? (
+            <div className={styles.reportList}>
+              {relatedNews.map((article) => (
+                <Link href={`/news/${article.slug}`} key={article.slug}>
+                  <span>
+                    {displayMarkets(article).join(" / ")} ·{" "}
+                    {categoryLabel(article.category)} · {article.displayDate}
+                  </span>
+                  <strong>{article.title}</strong>
+                  <i aria-hidden="true">↗</i>
+                </Link>
+              ))}
             </div>
-          </div>
+          ) : (
+            <p className={styles.emptyState}>
+              No live report explicitly names this developer. Generic mentions
+              of {developer.hq} are not counted.
+            </p>
+          )}
         </section>
 
-        {/* Active areas */}
-        {activeAreas.length > 0 && (
-          <section className="py-16 md:py-20" style={{ background: "var(--paper-warm)" }}>
-            <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-deep)" }}
-              >
-                Where they build
-              </span>
-              <h2
-                className="mt-3 mb-8 leading-[1.05] tracking-[-0.025em]"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
-                  fontWeight: 500,
-                }}
-              >
-                Active areas
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeAreas.map((a) => (
-                  <Link
-                    key={a.slug}
-                    href={`/areas/${a.slug}`}
-                    data-magnetic
-                    data-reveal=""
-                    className="group rounded-2xl border p-5 hover:-translate-y-0.5 transition-transform"
-                    style={{
-                      borderColor: "var(--gold-soft)",
-                      background: "var(--paper-pure, #1A1A1B)",
-                    }}
-                  >
-                    <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--ink-faint)" }}>
-                      {a.emirate} · {a.kind.replace(/-/g, " ")}
-                    </div>
-                    <h3
-                      className="text-base md:text-lg leading-tight mb-1.5 transition-colors group-hover:text-[var(--gold-deep)]"
-                      style={{
-                        color: "var(--ink)",
-                        fontFamily: "var(--font-fraunces), Georgia, serif",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {a.name}
-                    </h3>
-                    <p className="text-sm leading-[1.5]" style={{ color: "var(--ink-soft)" }}>
-                      {a.oneLiner}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+        <section className={styles.connections}>
+          <header className={styles.sectionHeader}>
+            <h2>Connected area records.</h2>
+            <p>Internal coverage map · not current inventory</p>
+          </header>
+          {connectedAreas.length ? (
+            <div className={styles.connectionList}>
+              {connectedAreas.map((area) => (
+                <Link href={`/areas/${area.slug}`} key={area.slug}>
+                  <span>
+                    {area.emirate} · {area.kind.replaceAll("-", " ")}
+                  </span>
+                  <strong>{area.name}</strong>
+                  <i aria-hidden="true">↗</i>
+                </Link>
+              ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className={styles.emptyState}>
+              No area record is connected to this entity in the publication
+              registry.
+            </p>
+          )}
+        </section>
 
-        {/* Flagship projects */}
-        {d.flagshipProjects.length > 0 && (
-          <section className="py-16 md:py-20" style={{ background: "var(--paper)" }}>
-            <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-deep)" }}
-              >
-                Flagship inventory
-              </span>
-              <h2
-                className="mt-3 mb-8 leading-[1.05] tracking-[-0.025em]"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
-                  fontWeight: 500,
-                }}
-              >
-                What they&apos;re known for
-              </h2>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {d.flagshipProjects.map((p, i) => (
-                  <li
-                    key={i}
-                    className="pl-5 relative text-base md:text-lg leading-[1.55] py-1"
-                    style={{ color: "var(--ink-soft)" }}
-                  >
-                    <span
-                      className="absolute left-0 top-[0.75em] w-3 h-px"
-                      style={{ background: d.accent }}
-                      aria-hidden
-                    />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        )}
+        <section className={styles.independence}>
+          <span>Commercial independence</span>
+          <h2>Coverage is not endorsement.</h2>
+          <p>
+            Coverage is selected for market relevance. A commercial
+            relationship does not change the source standard or remove a
+            material watchpoint. Sponsored material, if introduced, is
+            labelled and kept distinct.{" "}
+            <Link href="/about/editorial-standards">
+              Read the full editorial standard.
+            </Link>
+          </p>
+        </section>
 
-        {/* Related news */}
-        {relatedNews.length > 0 && (
-          <section className="py-16 md:py-20" style={{ background: "var(--paper-warm)" }}>
-            <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-              <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em]"
-                style={{ color: "var(--gold-deep)" }}
-              >
-                Recent coverage
-              </span>
-              <h2
-                className="mt-3 mb-8 leading-[1.05] tracking-[-0.025em]"
-                style={{
-                  color: "var(--ink)",
-                  fontFamily: "var(--font-fraunces), Georgia, serif",
-                  fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
-                  fontWeight: 500,
-                }}
-              >
-                On the desk
-              </h2>
-              <div className="grid gap-5">
-                {relatedNews.map((n) => (
-                  <Link
-                    key={n.slug}
-                    href={`/news/${n.slug}`}
-                    data-magnetic
-                    className="group block rounded-2xl border p-5 md:p-6 transition-transform hover:-translate-y-0.5"
-                    style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #1A1A1B)" }}
-                  >
-                    <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--ink-faint)" }}>
-                      {n.category} · {n.displayDate}
-                    </div>
-                    <h3
-                      className="text-lg md:text-xl leading-[1.15] mb-1 transition-colors group-hover:text-[var(--gold-deep)]"
-                      style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif", fontWeight: 500 }}
-                    >
-                      {n.title}
-                    </h3>
-                    <p className="text-sm leading-[1.55]" style={{ color: "var(--ink-soft)" }}>
-                      {n.subtitle}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+        <section className={styles.advisory}>
+          <header className={styles.sectionHeader}>
+            <h2>Put the entity against the decision.</h2>
+            <p>Invest With Raj · advisory site</p>
+          </header>
+          {advisoryLink ? (
+            <div className={styles.advisoryLinks}>
+              <a href={advisoryLink.href}>
+                <span>{advisoryLink.eyebrow}</span>
+                <strong>{advisoryLink.label}</strong>
+                <i aria-hidden="true">↗</i>
+              </a>
             </div>
-          </section>
-        )}
+          ) : null}
+          <div className={styles.cta}>
+            <p>
+              If {developer.name} is part of a live shortlist, bring the
+              project, payment schedule, holding period and exit constraint.
+              Raj can test the exposure without turning this reporting index
+              into an endorsement.
+            </p>
+            <a href={generalAdvisoryUrl("developer", developer.slug)}>
+              Discuss this developer ↗
+            </a>
+          </div>
+        </section>
       </main>
     </>
   );
 }
-
-// Suppress unused-import warnings
-void DEVELOPERS;

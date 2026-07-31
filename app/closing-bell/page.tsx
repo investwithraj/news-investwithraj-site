@@ -1,132 +1,314 @@
-// /closing-bell — daily 16:30 GST end-of-business-day flash archive.
-
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CLOSING_BELLS, sortBells } from "@/content/closing-bell";
-import { SITE } from "@/lib/constants";
-import DrawLine from "@/components/v21/DrawLine";
-import WordmarkSignoff from "@/components/v21/WordmarkSignoff";
+import { getNewsBySlug } from "@/content/news";
+import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
+import styles from "./closing-bell.module.css";
 
 export const dynamic = "force-static";
 
+const canonical = `${SITE.url}/closing-bell`;
+const hasPublishedEntries = CLOSING_BELLS.length > 0;
+
 export const metadata: Metadata = {
-  title: "Closing Bell — 16:30 GST end-of-day flash",
+  title: "Closing Bell — a concise UAE property market close",
   description:
-    "Every weekday at 16:30 GST. The end-of-business-day UAE real-estate flash — DLD prints, off-plan moves, the headlines that matter for tomorrow.",
-  alternates: { canonical: `${SITE.url}/closing-bell` },
+    "An evidence-led format for what changed, why it matters and what to watch next in UAE property.",
+  alternates: {
+    canonical,
+    types: { "application/rss+xml": `${SITE.url}/rss.xml` },
+  },
+  robots: { index: hasPublishedEntries, follow: true },
+  openGraph: {
+    title: "Closing Bell — Invest With Raj",
+    description:
+      "An evidence-led format for what changed, why it matters and what to watch next in UAE property.",
+    type: "website",
+    url: canonical,
+  },
 };
 
-export default function ClosingBellIndex() {
-  const bells = sortBells(CLOSING_BELLS);
+export default function ClosingBellPage() {
+  const entries = sortBells(CLOSING_BELLS);
+
   return (
-    <main className="min-h-screen" style={{ background: "var(--paper)" }}>
-      <section className="relative pt-20 md:pt-28 pb-12 md:pb-16" style={{ background: "var(--paper)", color: "var(--ink)" }}>
-        <div className="max-w-[1080px] mx-auto px-6 md:px-12">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] mb-8 opacity-70 hover:opacity-100"
-            style={{ color: "var(--ink)" }}
-            data-magnetic
-          >
-            <span aria-hidden>←</span>
-            <span>Back to the terminal</span>
-          </Link>
-          <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep, #C9A961)" }}>
-            The closing desk · 16:30 GST · weekdays
-          </span>
-          <h1
-            className="mt-3 leading-[1.02] tracking-[-0.02em]"
-            style={{
-              color: "var(--ink)",
-              fontFamily: "var(--font-space-grotesk), sans-serif",
-              fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
-              fontWeight: 500,
-            }}
-          >
-            Closing{" "}
-            <span
-              style={{
-                fontFamily: "var(--font-fraunces), Georgia, serif",
-                fontStyle: "italic",
-                color: "var(--gold-deep, #C9A961)",
-              }}
-            >
-              Bell.
-            </span>
-          </h1>
+    <main className={styles.page}>
+      <JsonLd data={buildSchema(entries)} />
 
-          {/* V21 data-cinematics — DrawSVG hairline under the page heading */}
-          <DrawLine
-            className="mt-6 max-w-[520px]"
-            color="var(--gold-bright, #E0C076)"
-            style={{ opacity: 0.9 }}
-          />
-
-          <p
-            className="mt-6 text-base md:text-lg leading-[1.65] max-w-[60ch]"
-            style={{ color: "rgba(242, 238, 231, 0.78)" }}
-          >
-            The Dubai-business-day close, in three bullets and a line. Drops
-            on Telegram and Discord at 16:30 GST. The desk's last word before
-            the lights go out.
-          </p>
+      <section className={styles.hero}>
+        <div className={styles.shell}>
+          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
+            <Link href="/">Daily Market Read</Link>
+            <span aria-hidden>/</span>
+            <span aria-current="page">Closing Bell</span>
+          </nav>
+          <div className={styles.heroGrid}>
+            <div>
+              <p className={styles.kicker}>Editorial format · in production</p>
+              <h1>Closing Bell.</h1>
+            </div>
+            <p className={styles.standfirst}>
+              A concise, sourced answer to three questions after a consequential
+              market day: what changed, why it matters and what deserves
+              attention next.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="py-16 md:py-20">
-        <div className="max-w-[920px] mx-auto px-6 md:px-12">
-          {bells.length === 0 ? (
-            <div
-              className="rounded-2xl border p-10 text-center"
-              style={{ borderColor: "var(--gold-soft)", background: "var(--paper-warm)" }}
-            >
-              <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--gold-deep)" }}>
-                Bell · forthcoming
-              </span>
-              <p className="mt-4 text-lg leading-[1.55] max-w-[44ch] mx-auto" style={{ color: "var(--ink-soft)" }}>
-                First Closing Bell drops with the next business-day close.
-                Subscribe to the Telegram channel to catch every one.
+      {entries.length === 0 ? (
+        <EmptySlate />
+      ) : (
+        <PublishedEntries entries={entries} />
+      )}
+
+      <section className={styles.method} aria-labelledby="bell-method">
+        <div className={`${styles.shell} ${styles.methodGrid}`}>
+          <div>
+            <p className={styles.kicker}>Publication gate</p>
+            <h2 id="bell-method">Short does not mean lightly sourced.</h2>
+          </div>
+          <ol>
+            <li>
+              <span>01</span>
+              <p>
+                Select only changes supported by a primary source or an
+                attributable published report.
               </p>
-            </div>
-          ) : (
-            <div className="grid gap-6">
-              {bells.map((b) => (
-                <Link
-                  key={b.slug}
-                  href={`/closing-bell/${b.slug}`}
-                  data-magnetic
-                  className="group block rounded-2xl border p-6 md:p-8 transition-transform hover:-translate-y-0.5"
-                  style={{ borderColor: "var(--gold-soft)", background: "var(--paper-pure, #202021)" }}
-                >
-                  <div className="text-[10px] font-mono uppercase tracking-[0.22em] mb-2" style={{ color: "var(--gold-deep)" }}>
-                    {b.displayDate} · 16:30 GST
-                  </div>
-                  <h2
-                    className="text-xl md:text-2xl leading-[1.15] mb-3 transition-colors group-hover:text-[var(--gold-deep)]"
-                    style={{ color: "var(--ink)", fontFamily: "var(--font-fraunces), Georgia, serif", fontWeight: 500 }}
-                  >
-                    {b.title}
-                  </h2>
-                  <ul className="space-y-1.5 text-sm" style={{ color: "var(--ink-soft)" }}>
-                    {b.highlights.map((h, i) => (
-                      <li key={i} className="pl-4 relative">
-                        <span className="absolute left-0 top-[0.6em] w-2 h-px" style={{ background: "var(--gold-deep)" }} aria-hidden />
-                        {h}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-4 italic text-sm" style={{ color: "var(--ink-soft)" }}>
-                    “{b.rajClose}”
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
+            </li>
+            <li>
+              <span>02</span>
+              <p>
+                Separate the observed fact from Raj’s interpretation of its
+                consequence.
+              </p>
+            </li>
+            <li>
+              <span>03</span>
+              <p>
+                Withhold the edition if the evidence cannot support all three
+                parts of the close.
+              </p>
+            </li>
+          </ol>
         </div>
       </section>
 
-      {/* V21 — giant INVEST WITH RAJ sign-off (same band as the Terminal home) */}
-      <WordmarkSignoff />
+      <section className={styles.paths} aria-labelledby="bell-paths">
+        <div className={styles.shell}>
+          <p className={styles.kicker}>Continue reading</p>
+          <h2 id="bell-paths">The published record is already open.</h2>
+          <div className={styles.pathGrid}>
+            <Link href="/news">
+              <span>Reporting</span>
+              <strong>All verified news</strong>
+              <p>Read the complete articles and their visible citations.</p>
+            </Link>
+            <Link href="/rss.xml">
+              <span>Feed</span>
+              <strong>RSS</strong>
+              <p>Follow new published reports in your preferred reader.</p>
+            </Link>
+            <Link href="/about/editorial-standards">
+              <span>Method</span>
+              <strong>Editorial standards</strong>
+              <p>See how sourcing, corrections and review are handled.</p>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.cta}>
+        <div className={`${styles.shell} ${styles.ctaGrid}`}>
+          <div>
+            <p className={styles.kicker}>The next move is yours</p>
+            <h2>Pressure-test the decision with Raj.</h2>
+            <p>
+              Bring a property, a price and the decision you are weighing. The
+              call is a working conversation, not a mass-market pitch.
+            </p>
+          </div>
+          <div className={styles.ctaLinks}>
+            <a
+              className={styles.primary}
+              href={rootCtaUrl({
+                campaign: "closing-bell",
+                content: "book-a-call",
+              })}
+            >
+              Book a call with Raj
+            </a>
+            <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+          </div>
+        </div>
+      </section>
     </main>
   );
+}
+
+function EmptySlate() {
+  const parts = [
+    {
+      title: "What changed",
+      copy: "The observed market event, stated precisely and linked to its supporting evidence.",
+    },
+    {
+      title: "Why it matters",
+      copy: "The consequence for buyers, owners or investors, without turning interpretation into fact.",
+    },
+    {
+      title: "What to watch",
+      copy: "A clearly labelled forward-looking question, not a guaranteed outcome.",
+    },
+  ];
+
+  return (
+    <section className={styles.slate} aria-labelledby="bell-slate">
+      <div className={styles.shell}>
+        <p className={styles.kicker}>No editions published yet</p>
+        <h2 id="bell-slate">
+          The format is ready. The archive remains empty until a close clears
+          review.
+        </h2>
+        <div className={styles.slateGrid}>
+          {parts.map((part, index) => (
+            <article key={part.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{part.title}</h3>
+              <p>{part.copy}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PublishedEntries({
+  entries,
+}: {
+  entries: typeof CLOSING_BELLS;
+}) {
+  return (
+    <section className={styles.archive} aria-labelledby="bell-archive">
+      <div className={styles.shell}>
+        <p className={styles.kicker}>Published editions</p>
+        <h2 id="bell-archive">The Closing Bell archive</h2>
+        <ol className={styles.entryList}>
+          {entries.map((entry) => {
+            const related = entry.relatedNewsSlug
+              ? getNewsBySlug(entry.relatedNewsSlug)
+              : null;
+            const canLinkRelated = related && related.status !== "research";
+
+            return (
+              <li key={entry.slug}>
+                <article>
+                  <div className={styles.entryHead}>
+                    <time dateTime={entry.publishedAt}>
+                      {entry.displayDate}
+                    </time>
+                    <h3>{entry.title}</h3>
+                  </div>
+                  <ol className={styles.highlights}>
+                    {entry.highlights.map((highlight, index) => (
+                      <li key={`${entry.slug}-${index}`}>
+                        <span>{String(index + 1).padStart(2, "0")}</span>
+                        <p>{highlight}</p>
+                      </li>
+                    ))}
+                  </ol>
+                  <blockquote>{entry.rajClose}</blockquote>
+                  {canLinkRelated && (
+                    <Link href={`/news/${related.slug}`}>
+                      Read the related report ↗
+                    </Link>
+                  )}
+                </article>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+function JsonLd({ data }: { data: Record<string, unknown> }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(data).replace(/</g, "\\u003c"),
+      }}
+    />
+  );
+}
+
+function buildSchema(entries: typeof CLOSING_BELLS): Record<string, unknown> {
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    "@id": `${canonical}#breadcrumb`,
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Daily Market Read",
+        item: SITE.url,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Closing Bell",
+        item: canonical,
+      },
+    ],
+  };
+
+  if (entries.length === 0) {
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": `${canonical}#webpage`,
+          url: canonical,
+          name: "Closing Bell",
+          description:
+            "The production slate and publication method for a concise UAE property market close.",
+          breadcrumb: { "@id": `${canonical}#breadcrumb` },
+        },
+        breadcrumb,
+      ],
+    };
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${canonical}#collection`,
+        url: canonical,
+        name: "Closing Bell",
+        mainEntity: { "@id": `${canonical}#editions` },
+        breadcrumb: { "@id": `${canonical}#breadcrumb` },
+      },
+      {
+        "@type": "ItemList",
+        "@id": `${canonical}#editions`,
+        numberOfItems: entries.length,
+        itemListElement: entries.map((entry, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          item: {
+            "@type": "Article",
+            headline: entry.title,
+            datePublished: entry.publishedAt,
+          },
+        })),
+      },
+      breadcrumb,
+    ],
+  };
 }

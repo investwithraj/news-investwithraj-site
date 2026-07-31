@@ -31,6 +31,15 @@ export interface HeroImage {
   alt: string;
   /** Photo credit / caption (e.g. "Modon" / "Nakheel" / "DLD" / "Unsplash — Photographer Name") */
   credit: string;
+  /** Canonical first-party, provider or licence record for the original. */
+  sourceUrl?: string;
+  /** Human-readable rights basis retained with the article record. */
+  rightsStatus?: string;
+  /** Dimensions of the approved source master, not a card derivative. */
+  width?: number;
+  height?: number;
+  /** Only this explicit value makes an image eligible for public editorial use. */
+  approval?: "approved-editorial" | "withheld";
 }
 
 export interface Cta {
@@ -115,6 +124,8 @@ export type NewsArticleStatus = "live" | "research";
 export interface NewsArticle {
   /** URL slug — kebab-case, no leading slash. Used at /news/{slug}. */
   slug: string;
+  /** Immutable reviewed-draft hash emitted only by the publication pipeline. */
+  publicationContentHash?: string;
   /** Publication state. Omitted = live (back-compat with existing entries). */
   status?: NewsArticleStatus;
   /** Headline ≤ 90 chars (validator gate 3) */

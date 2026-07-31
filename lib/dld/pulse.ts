@@ -184,6 +184,7 @@ export async function fetchLiveDldPulse(): Promise<DldDailyPulse | null> {
 /** Public — real live data if the Dubai Pulse key is wired, else the cited
  *  official reference print. Never fabricated. */
 export async function getDldPulse(_date?: string): Promise<DldDailyPulse> {
+  void _date;
   const live = await fetchLiveDldPulse();
   if (live) return live;
   return getReferenceDldPulse();

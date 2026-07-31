@@ -5,8 +5,15 @@
 // Needs GITHUB_TOKEN (fine-grained PAT, contents:write on the news repo).
 // Owner/repo/branch default to the news repo; override via env if needed.
 
+import { createHash } from "node:crypto";
+
+import { verifyImageBytes } from "@/lib/media/image-integrity";
+import { assertCanonicalNewsSlug } from "@/lib/news-review/integrity";
 import { serializeArticle, patchIndex } from "./serialize";
-import type { DraftArticle } from "./types";
+import type {
+  DraftArticle,
+  MediaApprovalLedger,
+} from "./types";
 
 const TOKEN = process.env.GITHUB_TOKEN || "";
 const OWNER = process.env.GITHUB_OWNER || "investwithraj";
@@ -37,13 +44,105 @@ async function gh<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function ghOptional<T>(path: string): Promise<T | null> {
+  const res = await fetch(`${API}${path}`, {
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`GitHub GET ${path} failed (${res.status}).`);
+  }
+  return (await res.json()) as T;
+}
+
+export interface InspectedEditorialMedia {
+  repoPath: string;
+  contentSha256: string;
+  mime: MediaApprovalLedger["mime"];
+  width: number;
+  height: number;
+}
+
+/**
+ * Inspect the one real article cover already present on the publication
+ * branch. Metadata is decoded from bytes, not trusted from a filename or form.
+ */
+export async function inspectEditorialMedia(
+  slug: string,
+): Promise<InspectedEditorialMedia> {
+  assertCanonicalNewsSlug(slug);
+  if (!TOKEN) throw new Error("GITHUB_TOKEN not set");
+  const base = `/repos/${OWNER}/${REPO}`;
+  const candidates = ["jpg", "jpeg", "png", "webp"];
+  const matches: Array<{
+    repoPath: string;
+    sha: string;
+    size: number;
+  }> = [];
+  for (const extension of candidates) {
+    const repoPath = `public/news/${slug}/cover.${extension}`;
+    const encoded = repoPath
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    const file = await ghOptional<{
+      type?: string;
+      size?: number;
+      sha?: string;
+    }>(`${base}/contents/${encoded}?ref=${encodeURIComponent(BRANCH)}`);
+    if (file?.type === "file" && file.sha && file.size) {
+      matches.push({ repoPath, sha: file.sha, size: file.size });
+    }
+  }
+  if (matches.length !== 1) {
+    throw new Error(
+      matches.length === 0
+        ? "No article-local cover exists on the publication branch."
+        : "Multiple cover files exist; retain exactly one reviewed source.",
+    );
+  }
+  if (matches[0].size > 40 * 1024 * 1024) {
+    throw new Error("Editorial cover exceeds the 40 MB review limit.");
+  }
+  const blob = await gh<{ content: string; encoding: string; size?: number }>(
+    `${base}/git/blobs/${encodeURIComponent(matches[0].sha)}`,
+  );
+  if (blob.encoding !== "base64" || !blob.content) {
+    throw new Error("Editorial cover bytes are unavailable for verification.");
+  }
+  const bytes = Buffer.from(blob.content.replace(/\s+/g, ""), "base64");
+  if (bytes.length !== matches[0].size) {
+    throw new Error("Editorial cover byte length does not match GitHub.");
+  }
+  const decoded = await verifyImageBytes(bytes);
+  if (decoded.width < 3840 || decoded.height < 2160) {
+    throw new Error("Editorial cover source is not genuine UHD.");
+  }
+  return {
+    repoPath: matches[0].repoPath,
+    contentSha256: createHash("sha256").update(bytes).digest("hex"),
+    ...decoded,
+  };
+}
+
 /** Commit the article file + the registry update in a single commit.
  *  Returns the new commit SHA. */
 export async function publishArticleCommit(
   slug: string,
   article: DraftArticle,
+  mediaApproval: MediaApprovalLedger,
+  publicationContentHash: string,
 ): Promise<string> {
   if (!TOKEN) throw new Error("GITHUB_TOKEN not set");
+  assertCanonicalNewsSlug(slug);
+  if (article.slug !== slug || mediaApproval.slug !== slug) {
+    throw new Error("Publication slug does not match the reviewed records.");
+  }
 
   const base = `/repos/${OWNER}/${REPO}`;
 
@@ -53,6 +152,34 @@ export async function publishArticleCommit(
   const headCommit = await gh<{ tree: { sha: string } }>(`${base}/git/commits/${headSha}`);
   const baseTree = headCommit.tree.sha;
 
+  const inspected = await inspectEditorialMedia(slug);
+  if (
+    inspected.repoPath !== mediaApproval.repoPath ||
+    inspected.contentSha256 !== mediaApproval.contentSha256 ||
+    inspected.mime !== mediaApproval.mime ||
+    inspected.width !== mediaApproval.width ||
+    inspected.height !== mediaApproval.height
+  ) {
+    throw new Error(
+      "Publication cover bytes do not match the immutable media approval ledger.",
+    );
+  }
+
+  const approvedArticle: DraftArticle = {
+    ...article,
+    publicationContentHash,
+    heroImage: {
+      ...article.heroImage,
+      src: `/${mediaApproval.repoPath.replace(/^public\//, "")}`,
+      credit: mediaApproval.credit,
+      sourceUrl: mediaApproval.sourceUrl,
+      rightsStatus: mediaApproval.rightsStatus,
+      width: mediaApproval.width,
+      height: mediaApproval.height,
+      approval: "approved-editorial",
+    },
+  };
+
   // 2. Read + patch the registry.
   const indexFile = await gh<{ content: string; encoding: string }>(
     `${base}/contents/content/news/index.ts?ref=${BRANCH}`,
@@ -60,62 +187,68 @@ export async function publishArticleCommit(
   const currentIndex = Buffer.from(indexFile.content, "base64").toString("utf-8");
   const nextIndex = patchIndex(currentIndex, slug);
 
-  // 2b. Self-host the hero image. The auto-sourcer stores a remote CDN URL on
-  //     the draft (for The Desk preview); at publish we download it and add it
-  //     to THIS atomic commit as public/news/<slug>/cover.<ext>, then rewrite
-  //     heroImage.src to the local path. Any failure is non-fatal — we keep the
-  //     remote URL so the article still renders via the source CDN.
-  let finalArticle = article;
-  const heroTree: Array<{ path: string; mode: "100644"; type: "blob"; sha: string }> = [];
-  const remoteHero = article.heroImage?.src ?? "";
-  if (/^https?:\/\//i.test(remoteHero)) {
-    try {
-      // For Wikimedia originals, fetch a 1600px thumbnail (caps a 15MB original
-      // to a web-sized cover). Non-Wikimedia URLs pass through unchanged.
-      const dlUrl = remoteHero.includes("/thumb/")
-        ? remoteHero
-        : remoteHero.replace(
-            /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons)\/([0-9a-f])\/([0-9a-f]{2})\/(.+\.(?:jpe?g|png|webp))$/i,
-            "$1/thumb/$2/$3/$4/1600px-$4",
-          );
-      // Wikimedia 404s the 1600px thumbnail when the original is narrower than
-      // that, so retry the original URL before giving up (the missed-self-host
-      // bug that left some articles on a generic remote cover).
-      const fetchImage = async (u: string) => {
-        const r = await fetch(u, {
-          headers: {
-            "User-Agent": "InvestWithRajNewsBot/1.0 (https://news.investwithraj.com)",
-            Referer: "https://commons.wikimedia.org/",
-          },
-        });
-        const c = (r.headers.get("content-type") || "").split(";")[0].toLowerCase();
-        if (r.ok && c.startsWith("image/")) {
-          const b = Buffer.from(await r.arrayBuffer());
-          if (b.length > 3000) return { buf: b, ct: c };
-        }
-        return null;
-      };
-      const got = (await fetchImage(dlUrl)) || (dlUrl !== remoteHero ? await fetchImage(remoteHero) : null);
-      if (got) {
-        const ext = got.ct.includes("png") ? "png" : got.ct.includes("webp") ? "webp" : "jpg";
-        const imgBlob = await gh<{ sha: string }>(`${base}/git/blobs`, {
-          method: "POST",
-          body: JSON.stringify({ content: got.buf.toString("base64"), encoding: "base64" }),
-        });
-        heroTree.push({ path: `public/news/${slug}/cover.${ext}`, mode: "100644", type: "blob", sha: imgBlob.sha });
-        finalArticle = { ...article, heroImage: { ...article.heroImage, src: `/news/${slug}/cover.${ext}` } };
-      }
-    } catch {
-      // non-fatal — keep the remote heroImage.src; article renders via the CDN.
+  const articlePath = `content/news/${slug}.ts`;
+  const encodedArticlePath = articlePath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const expectedArticleTs = serializeArticle(approvedArticle);
+  const existingArticle = await ghOptional<{
+    content?: string;
+    encoding?: string;
+    sha?: string;
+  }>(`${base}/contents/${encodedArticlePath}?ref=${encodeURIComponent(BRANCH)}`);
+  if (existingArticle) {
+    const existingText =
+      existingArticle.encoding === "base64" && existingArticle.content
+        ? Buffer.from(existingArticle.content, "base64").toString("utf8")
+        : "";
+    if (existingText !== expectedArticleTs) {
+      throw new Error(
+        "A different article already occupies the reviewed publication slug.",
+      );
     }
+    if (!currentIndex.includes(`from "./${slug}"`)) {
+      throw new Error(
+        "Article exists but the registry is inconsistent; reconcile it before retrying.",
+      );
+    }
+    const commits = await gh<Array<{ sha?: string }>>(
+      `${base}/commits?sha=${encodeURIComponent(BRANCH)}&path=${encodeURIComponent(articlePath)}&per_page=1`,
+    );
+    const publicationCommitSha = commits[0]?.sha;
+    if (!publicationCommitSha || !existingArticle.sha) {
+      throw new Error(
+        "The existing article's exact publication commit could not be proven.",
+      );
+    }
+    const committedArticle = await ghOptional<{
+      content?: string;
+      encoding?: string;
+      sha?: string;
+    }>(
+      `${base}/contents/${encodedArticlePath}?ref=${encodeURIComponent(publicationCommitSha)}`,
+    );
+    const committedText =
+      committedArticle?.encoding === "base64" && committedArticle.content
+        ? Buffer.from(committedArticle.content, "base64").toString("utf8")
+        : "";
+    if (
+      committedArticle?.sha !== existingArticle.sha ||
+      committedText !== expectedArticleTs
+    ) {
+      throw new Error(
+        "The existing article is not bound to the recovered publication commit.",
+      );
+    }
+    return publicationCommitSha;
   }
 
   // 3. Blobs for both files.
-  const articleTs = serializeArticle(finalArticle);
   const [articleBlob, indexBlob] = await Promise.all([
     gh<{ sha: string }>(`${base}/git/blobs`, {
       method: "POST",
-      body: JSON.stringify({ content: articleTs, encoding: "utf-8" }),
+      body: JSON.stringify({ content: expectedArticleTs, encoding: "utf-8" }),
     }),
     gh<{ sha: string }>(`${base}/git/blobs`, {
       method: "POST",
@@ -131,7 +264,6 @@ export async function publishArticleCommit(
       tree: [
         { path: `content/news/${slug}.ts`, mode: "100644", type: "blob", sha: articleBlob.sha },
         { path: "content/news/index.ts", mode: "100644", type: "blob", sha: indexBlob.sha },
-        ...heroTree,
       ],
     }),
   });

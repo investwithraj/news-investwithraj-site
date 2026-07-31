@@ -493,9 +493,9 @@ export async function searchStock(
   }
 
   // 3. Last resort — Imagen 4 via Vertex AI (covered by $100 GCP credit).
-  // Skipped when allowSynthetic === false — news heroes must be real photos,
-  // never AI-generated imagery presented as reporting.
-  if (opts.allowSynthetic === false) return [];
+  // Explicit opt-in only. Omission is fail-closed so a normal stock search
+  // cannot silently become an AI-generated editorial image.
+  if (opts.allowSynthetic !== true) return [];
   return generateImagen(opts);
 }
 

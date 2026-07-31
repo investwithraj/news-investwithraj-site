@@ -1,6 +1,6 @@
-// Power List — annual editorial. UAE's most influential real-estate figures.
-// Manually curated by Raj; populated by year. Each entry = name + role +
-// company + 1-line "why they matter" + optional avatar.
+// The Power List is an evidence-led annual research file. Entries are
+// published in editorial order; the model makes no promise about list size or
+// numeric rank.
 
 export type PowerListCategory =
   | "developer"
@@ -11,32 +11,29 @@ export type PowerListCategory =
   | "advisor"
   | "media";
 
+export interface PowerListEvidence {
+  label: string;
+  url: string;
+}
+
 export interface PowerListEntry {
-  /** Rank position within the list */
-  rank: number;
-  /** Full name */
   name: string;
-  /** Role / title */
   role: string;
-  /** Company / affiliation */
   company: string;
-  /** Category for grouping */
   category: PowerListCategory;
-  /** 1-2 sentence "why they matter this year" */
-  why: string;
-  /** Optional last year's rank — drives delta arrow */
-  lastYearRank?: number;
-  /** Optional LinkedIn for cross-link */
+  /** Evidence-led editorial case for inclusion in this edition. */
+  caseForInclusion: string;
+  /** Public sources supporting the case for inclusion. */
+  evidence: PowerListEvidence[];
+  /** Optional public professional profile. */
   linkedin?: string;
 }
 
 export interface PowerListYear {
-  /** Year — e.g. "2026" */
   year: string;
-  /** Standfirst paragraph */
   intro: string;
-  /** Ordered list (rank 1 first) */
+  /** Editorial sequence, not a numeric ranking. */
   entries: PowerListEntry[];
-  /** ISO publish timestamp */
   publishedAt: string;
+  modifiedAt?: string;
 }

@@ -5,33 +5,42 @@
 import { SITE } from "@/lib/constants";
 import type { NewsArticle, FaqItem } from "@/content/news/types";
 import type { InsightArticle } from "@/content/insights/types";
+import {
+  displayMarkets,
+  hasVerifiedEditorialImage,
+  readingMinutes,
+} from "@/lib/news-editorial";
 import { rajPersonRef } from "./person";
 import { newsOrgRef } from "./organization";
+import { newsWebsiteRef } from "./website";
 
 /** NewsArticle JSON-LD — the headliner schema for /news/[slug] pages.
  *  Google News + Top Stories indexing depends on this being correct. */
 export function newsArticleSchema(article: NewsArticle): Record<string, unknown> {
   const url = `${SITE.url}/news/${article.slug}`;
+  const hasImage = hasVerifiedEditorialImage(article);
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     "@id": `${url}#article`,
     headline: article.title,
     description: article.metaDescription ?? article.subtitle,
-    image: article.heroImage.src.startsWith("http")
-      ? article.heroImage.src
-      : `${SITE.url}${article.heroImage.src}`,
+    ...(hasImage ? { image: { "@id": `${url}#primaryimage` } } : {}),
     datePublished: article.publishedAt,
     dateModified: article.modifiedAt,
     author: rajPersonRef,
     publisher: newsOrgRef,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     articleSection: article.category,
-    keywords: article.market.join(", "),
+    keywords: displayMarkets(article).join(", "),
     inLanguage: "en-AE",
+    wordCount: countWords(article.body),
+    timeRequired: `PT${readingMinutes(article)}M`,
     isAccessibleForFree: true,
-    isPartOf: { "@type": "WebSite", "@id": `${SITE.url}#website` },
-    speakable: speakableSchema(article.speakableSelector),
+    isPartOf: newsWebsiteRef,
+    ...(article.speakableSelector
+      ? { speakable: speakableSchema(article.speakableSelector) }
+      : {}),
     citation: article.citations.map((c) => ({
       "@type": "CreativeWork",
       name: c.source,
@@ -66,7 +75,7 @@ export function insightArticleSchema(article: InsightArticle): Record<string, un
     wordCount: countWords(article.body),
     timeRequired: `PT${article.readTimeMin}M`,
     isAccessibleForFree: true,
-    isPartOf: { "@type": "WebSite", "@id": `${SITE.url}#website` },
+    isPartOf: newsWebsiteRef,
     speakable: speakableSchema(article.speakableSelector),
     citation: article.citations.map((c) => ({
       "@type": "CreativeWork",

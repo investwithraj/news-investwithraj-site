@@ -1,8 +1,18 @@
 // Barrel export — single import surface for all schema generators.
 // Use: `import { newsArticleSchema, faqPageSchema } from "@/lib/schema";`
 
-export { rajPersonSchema, rajPersonRef } from "./person";
-export { newsOrgSchema, newsOrgRef, parentOrgRef } from "./organization";
+export { RAJ_PERSON_ID, rajPersonSchema, rajPersonRef } from "./person";
+export {
+  NEWS_ORG_ID,
+  newsOrgSchema,
+  newsOrgRef,
+  parentOrgRef,
+} from "./organization";
+export {
+  NEWS_WEBSITE_ID,
+  newsWebsiteSchema,
+  newsWebsiteRef,
+} from "./website";
 export {
   newsArticleSchema,
   insightArticleSchema,
@@ -11,6 +21,11 @@ export {
 } from "./article";
 export { placeSchema, realEstateAgentSchema } from "./area";
 export { breadcrumbSchema, BREADCRUMB_PRESETS, type Crumb } from "./breadcrumb";
+export {
+  collectionPageSchemas,
+  newsImageObjectSchema,
+  type CollectionItem,
+} from "./collection";
 
 /* ─── Composite injection helper ─────────────────────────────────────
    Useful when a page needs to emit multiple schemas as a single JSON-LD

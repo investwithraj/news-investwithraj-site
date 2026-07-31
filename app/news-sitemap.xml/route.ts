@@ -1,7 +1,6 @@
-// /news-sitemap.xml — Google News spec sitemap.
-// Per the spec: only include articles published within the last 48 hours.
-// Submit this URL separately to Google News Publisher Center (different
-// from the regular sitemap.xml which is for general indexing).
+// /news-sitemap.xml — Google News sitemap.
+// Google News eligibility is automatic. This separate 48-hour feed supports
+// discovery and Search Console monitoring; it is not a Publisher Center form.
 
 import { SITE } from "@/lib/constants";
 import { getNewsForGoogleNewsSitemap } from "@/content/news";
@@ -9,11 +8,21 @@ import { getNewsForGoogleNewsSitemap } from "@/content/news";
 export const dynamic = "force-static";
 export const revalidate = 3600; // hourly — must always be fresh per spec
 
-const PUBLICATION_NAME = "Invest With Raj — Daily Market Read";
+const PUBLICATION_NAME = SITE.name;
 const PUBLICATION_LANG = "en";
 
 export function GET(): Response {
-  const articles = getNewsForGoogleNewsSitemap();
+  const now = Date.now();
+  const articles = getNewsForGoogleNewsSitemap()
+    .filter((article) => {
+      const published = new Date(article.publishedAt).getTime();
+      return Number.isFinite(published) && published <= now;
+    })
+    .filter(
+      (article, index, all) =>
+        all.findIndex((candidate) => candidate.slug === article.slug) === index,
+    )
+    .slice(0, 1_000);
 
   const urls = articles
     .map((a) => {
@@ -21,11 +30,8 @@ export function GET(): Response {
       // Use escapeXml ONLY on user-controlled strings (title, etc).
       // Slugs are kebab-case by validator so they're safe.
       const escapedTitle = escapeXml(a.title);
-      const escapedKeywords = escapeXml(
-        [a.category, ...a.market].join(", ")
-      );
       return `  <url>
-    <loc>${url}</loc>
+    <loc>${escapeXml(url)}</loc>
     <news:news>
       <news:publication>
         <news:name>${PUBLICATION_NAME}</news:name>
@@ -33,7 +39,6 @@ export function GET(): Response {
       </news:publication>
       <news:publication_date>${a.publishedAt}</news:publication_date>
       <news:title>${escapedTitle}</news:title>
-      <news:keywords>${escapedKeywords}</news:keywords>
     </news:news>
   </url>`;
     })
@@ -51,6 +56,7 @@ ${urls || "  <!-- No articles published in the last 48 hours -->"}
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600, s-maxage=3600",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

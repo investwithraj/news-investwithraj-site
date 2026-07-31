@@ -1,0 +1,510 @@
+.page {
+  --paper: #f0ece4;
+  --paper-deep: #ddd4c7;
+  --ink: #181714;
+  --muted: #676158;
+  --line: rgba(24, 23, 20, 0.2);
+  --bronze: #896442;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.shell {
+  width: min(1200px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.hero {
+  min-height: 68svh;
+  padding: clamp(7rem, 13vw, 10rem) 0 clamp(4rem, 8vw, 6.5rem);
+  display: flex;
+  align-items: flex-end;
+  background: var(--ink);
+  color: #f4efe7;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: clamp(3rem, 8vw, 6rem);
+  color: rgba(244, 239, 231, 0.6);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.heroGrid,
+.methodGrid,
+.ctaGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);
+  gap: clamp(2.5rem, 8vw, 8rem);
+  align-items: end;
+}
+
+.kicker {
+  margin: 0 0 1rem;
+  color: var(--bronze);
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hero .kicker,
+.method .kicker {
+  color: #caa47e;
+}
+
+.hero h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(3.2rem, 7.5vw, 6.8rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 0.91;
+}
+
+.standfirst {
+  margin: 0;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(244, 239, 231, 0.3);
+  color: rgba(244, 239, 231, 0.72);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.atlasSection,
+.method,
+.cta {
+  padding: clamp(4.5rem, 9vw, 8rem) 0;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  align-items: end;
+  margin-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+
+.sectionHead h2,
+.method h2,
+.cta h2 {
+  max-width: 21ch;
+  margin: 0;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(2.1rem, 4.5vw, 4.2rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.sectionHead > p {
+  max-width: 28ch;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  text-align: right;
+}
+
+.atlasTool {
+  border-top: 1px solid var(--line);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  align-items: end;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.filters label {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 210px;
+}
+
+.filters label span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.filters select {
+  min-height: 44px;
+  padding: 0.6rem 2.5rem 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.filters > p {
+  margin: 0 0 0 auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.atlasLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(270px, 0.55fr);
+  min-height: 600px;
+  border-bottom: 1px solid var(--line);
+}
+
+.plot {
+  position: relative;
+  min-height: 600px;
+  overflow: hidden;
+  border-right: 1px solid var(--line);
+  background: #e4dace;
+}
+
+.plot > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.plotGround {
+  fill: #e4dace;
+}
+
+.gridLine {
+  stroke: rgba(24, 23, 20, 0.09);
+  stroke-width: 1;
+}
+
+.coastline {
+  fill: none;
+  stroke: rgba(137, 100, 66, 0.55);
+  stroke-width: 3;
+}
+
+.plotLabel {
+  fill: rgba(24, 23, 20, 0.32);
+  font-family: Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.node {
+  position: absolute;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.node > span {
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: var(--ink);
+  box-shadow: 0 0 0 1px #e4dace;
+}
+
+.node:hover > span,
+.node:focus-visible > span,
+.nodeSelected > span {
+  background: var(--bronze);
+  box-shadow: 0 0 0 4px rgba(137, 100, 66, 0.24);
+}
+
+.node:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 5px;
+}
+
+.node small {
+  position: absolute;
+  left: 18px;
+  top: -2px;
+  width: max-content;
+  max-width: 150px;
+  padding: 0.18rem 0.3rem;
+  background: rgba(228, 218, 206, 0.9);
+  color: var(--ink);
+  font-size: 0.62rem;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.node:hover small,
+.node:focus-visible small,
+.nodeSelected small {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.selection {
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: #1c1b18;
+  color: #f4efe7;
+}
+
+.selection > p {
+  margin: 0;
+  color: #caa47e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.selection h3 {
+  margin: 2rem 0 3rem;
+  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-size: clamp(1.7rem, 3vw, 2.8rem);
+  font-weight: 550;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.selection dl {
+  margin: 0;
+}
+
+.selection dl div {
+  padding: 1rem 0;
+  border-top: 1px solid rgba(244, 239, 231, 0.22);
+}
+
+.selection dt {
+  color: rgba(244, 239, 231, 0.52);
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.selection dd {
+  margin: 0.45rem 0 0;
+  color: rgba(244, 239, 231, 0.82);
+  text-transform: capitalize;
+}
+
+.selection a {
+  display: block;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f4efe7;
+  color: var(--ink);
+  text-align: center;
+  font-weight: 800;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.tableWrap table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.tableWrap caption {
+  padding: 1.2rem 0;
+  color: var(--muted);
+  text-align: left;
+}
+
+.tableWrap th,
+.tableWrap td {
+  padding: 1rem 0.8rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  text-align: left;
+}
+
+.tableWrap thead th {
+  color: var(--ink);
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.tableWrap tbody th {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tableWrap button {
+  border: 0;
+  border-bottom: 1px solid transparent;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.tableWrap button:hover,
+.tableWrap button[aria-pressed="true"] {
+  border-bottom-color: currentColor;
+}
+
+.tableWrap a {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.disclaimer {
+  max-width: 78ch;
+  margin: 1.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.method {
+  background: #1c1b18;
+  color: #f4efe7;
+}
+
+.methodGrid {
+  align-items: start;
+}
+
+.methodGrid > div:last-child > p {
+  margin: 0 0 2rem;
+  color: rgba(244, 239, 231, 0.68);
+  line-height: 1.7;
+}
+
+.method dl {
+  margin: 0;
+  border-top: 1px solid rgba(244, 239, 231, 0.22);
+}
+
+.method dl div {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(244, 239, 231, 0.22);
+}
+
+.method dt {
+  color: #caa47e;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.method dd {
+  margin: 0.45rem 0 0;
+  color: rgba(244, 239, 231, 0.72);
+}
+
+.cta {
+  background: var(--bronze);
+  color: #fff9ef;
+}
+
+.ctaGrid {
+  align-items: center;
+}
+
+.cta .kicker {
+  color: rgba(255, 249, 239, 0.66);
+}
+
+.cta p:not(.kicker) {
+  max-width: 58ch;
+  color: rgba(255, 249, 239, 0.72);
+  line-height: 1.65;
+}
+
+.ctaLinks {
+  display: grid;
+  gap: 1rem;
+}
+
+.ctaLinks a {
+  color: #fff9ef;
+}
+
+.primary {
+  padding: 1.15rem 1.3rem;
+  background: var(--ink);
+  text-align: center;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .heroGrid,
+  .methodGrid,
+  .ctaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: 620px;
+  }
+
+  .atlasLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .plot {
+    min-height: 520px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 620px) {
+  .shell {
+    width: min(100% - 28px, 1200px);
+  }
+
+  .sectionHead {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .sectionHead > p {
+    text-align: left;
+  }
+
+  .filters {
+    display: grid;
+  }
+
+  .filters > p {
+    margin-left: 0;
+  }
+
+  .plot {
+    min-height: 430px;
+  }
+
+  .node small {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node small {
+    transition: none;
+  }
+}

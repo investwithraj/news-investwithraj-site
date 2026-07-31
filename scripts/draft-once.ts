@@ -1,105 +1,230 @@
-// Draft one article — runs in the GitHub Actions runner (no 60s limit, unlike
-// the Vercel function). Does the full pipeline + web-research draft, then POSTs
-// the finished draft to /api/news/draft so it lands in The Desk for review.
+// Stage one researched article for human review from GitHub Actions.
 //
-//   npx tsx scripts/draft-once.ts
-//
-// Env (set as GitHub Actions secrets):
-//   POST_PUBLISH_SECRET  — to GET existing drafts + POST the new one
-//   ANTHROPIC_API_KEY    — for the web-research draft (read by callClaudeResearch)
-//   SITE_URL             — default https://news.investwithraj.com
-//   DRAFT_MODEL          — optional model override (default Sonnet, full quality)
+// A durable cluster reservation is acquired before any paid model work.
+// Successful staging and the reservation transition happen atomically in the
+// server draft store. This script never publishes.
 
-import { fetchAllSources, flattenEntries } from "../lib/sources/fetchers/index.js";
-import { dedupeEntries, similarity } from "../lib/pipeline/dedupe.js";
-import { clusterAndScore } from "../lib/pipeline/cluster.js";
-import { getWhitelistDomains } from "../lib/sources/registry.js";
-import { draftFromCluster } from "../lib/news-review/draft-engine.js";
 import { NEWS_ARTICLES } from "../content/news/index.js";
+import { dubaiCalendarDate } from "../lib/dubai-time.js";
+import { draftFromCluster } from "../lib/news-review/draft-engine.js";
 import { runAutoApprove } from "../lib/news-review/auto-approve.js";
+import { clusterAndScore } from "../lib/pipeline/cluster.js";
+import { dedupeEntries, similarity } from "../lib/pipeline/dedupe.js";
+import {
+  fetchAllSources,
+  flattenEntries,
+} from "../lib/sources/fetchers/index.js";
+import { getWhitelistDomains } from "../lib/sources/registry.js";
 
 const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
-const MIN_SCORE = parseInt(process.env.PIPELINE_MIN_SCORE ?? "45", 10);
-const MAX_DRAFTS = parseInt(process.env.PIPELINE_CAP ?? "1", 10);
-const MAX_ATTEMPTS = parseInt(process.env.PIPELINE_MAX_ATTEMPTS ?? "3", 10);
+const MIN_SCORE = Number.parseInt(process.env.PIPELINE_MIN_SCORE ?? "45", 10);
+const MAX_DRAFTS = Number.parseInt(process.env.PIPELINE_CAP ?? "1", 10);
+const MAX_ATTEMPTS = Number.parseInt(
+  process.env.PIPELINE_MAX_ATTEMPTS ?? "3",
+  10,
+);
+
+interface ReservationResponse {
+  acquired?: boolean;
+  reservation?: { token?: string };
+  error?: string;
+}
 
 function isToday(iso: string): boolean {
-  return iso.slice(0, 10) === new Date().toISOString().slice(0, 10);
+  return dubaiCalendarDate(iso) === dubaiCalendarDate(new Date());
+}
+
+async function reserveCluster(
+  clusterId: string,
+  topic: string,
+): Promise<string | null> {
+  const response = await fetch(`${SITE}/api/news/draft/reservation`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-post-publish-secret": SECRET,
+    },
+    body: JSON.stringify({ action: "reserve", clusterId, topic }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as
+    ReservationResponse;
+  if (response.status === 409 && payload.acquired === false) return null;
+  const token = payload.reservation?.token;
+  if (!response.ok || !token) {
+    throw new Error(
+      typeof payload.error === "string"
+        ? payload.error
+        : `cluster reservation failed (${response.status})`,
+    );
+  }
+  return token;
+}
+
+async function markClusterFailed(
+  clusterId: string,
+  token: string,
+  result: string,
+): Promise<void> {
+  const response = await fetch(`${SITE}/api/news/draft/reservation`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-post-publish-secret": SECRET,
+    },
+    body: JSON.stringify({
+      action: "fail",
+      clusterId,
+      token,
+      result: result.slice(0, 500),
+    }),
+  });
+  if (!response.ok && response.status !== 409) {
+    throw new Error(`reservation failure record failed (${response.status})`);
+  }
 }
 
 async function main(): Promise<void> {
-  if (!SECRET) throw new Error("POST_PUBLISH_SECRET not set");
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
+  if (new TextEncoder().encode(SECRET).byteLength < 32) {
+    throw new Error("A strong POST_PUBLISH_SECRET is required.");
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error("ANTHROPIC_API_KEY not set.");
+  }
 
-  console.log(`\n━━━ draft-once · ${new Date().toISOString()} ━━━\n`);
+  console.log(`draft-once · ${new Date().toISOString()}`);
 
-  // What's already staged / published today (so staggered runs differ).
-  const existing = await fetch(`${SITE}/api/news/draft?secret=${SECRET}`)
-    .then((r) => r.json())
-    .catch(() => ({ drafts: [] as Array<{ provenance: { clusterId: string }; article: { title: string } }> }));
-  const draftedIds = new Set((existing.drafts ?? []).map((d: { provenance: { clusterId: string } }) => d.provenance.clusterId));
-  const coveredTitles: string[] = [
-    ...(existing.drafts ?? []).map((d: { article: { title: string } }) => d.article.title),
-    ...NEWS_ARTICLES.filter((a) => a.status !== "research" && isToday(a.publishedAt)).map((a) => a.title),
+  const existingResponse = await fetch(`${SITE}/api/news/draft`, {
+    headers: { "x-post-publish-secret": SECRET },
+    cache: "no-store",
+  });
+  if (!existingResponse.ok) {
+    throw new Error(
+      `existing draft list failed closed (${existingResponse.status})`,
+    );
+  }
+  const existing = (await existingResponse.json()) as {
+    drafts?: Array<{
+      provenance: { clusterId: string };
+      article: { title: string };
+    }>;
+  };
+  const existingDrafts = existing.drafts ?? [];
+  const draftedIds = new Set(
+    existingDrafts.map((draft) => draft.provenance.clusterId),
+  );
+  const coveredTitles = [
+    ...existingDrafts.map((draft) => draft.article.title),
+    ...NEWS_ARTICLES.filter(
+      (article) =>
+        article.status !== "research" && isToday(article.publishedAt),
+    ).map((article) => article.title),
   ];
 
-  // Pipeline.
   const run = await fetchAllSources();
   const deduped = dedupeEntries(flattenEntries(run));
-  const clusters = clusterAndScore(deduped, 12).filter((c) => c.score >= MIN_SCORE);
-  const candidates = clusters.filter(
-    (c) => !draftedIds.has(c.id) && !coveredTitles.some((t) => similarity(c.topic, t) >= 0.55),
+  const clusters = clusterAndScore(deduped, 12).filter(
+    (cluster) => cluster.score >= MIN_SCORE,
   );
-  console.log(`clusters≥${MIN_SCORE}: ${clusters.length} · undrafted candidates: ${candidates.length}\n`);
+  const candidates = clusters.filter(
+    (cluster) =>
+      !draftedIds.has(cluster.id) &&
+      !coveredTitles.some(
+        (title) => similarity(cluster.topic, title) >= 0.55,
+      ),
+  );
+  console.log(
+    `clusters >= ${MIN_SCORE}: ${clusters.length}; candidates: ${candidates.length}`,
+  );
 
   const whitelist = getWhitelistDomains();
   let staged = 0;
   let attempts = 0;
   for (const cluster of candidates) {
     if (staged >= MAX_DRAFTS || attempts >= MAX_ATTEMPTS) break;
-    attempts++;
-    console.log(`▸ researching: ${cluster.topic.slice(0, 72)}  (score ${cluster.score})`);
-    const r = await draftFromCluster(cluster, whitelist, {
-      model: process.env.DRAFT_MODEL,
-      maxSearches: 4,
-      maxTokens: 4200,
-    });
-    if (!r.ok || !r.article) {
-      console.log(`  · skip — ${r.reason}`);
+    attempts += 1;
+
+    const reservationToken = await reserveCluster(cluster.id, cluster.topic);
+    if (!reservationToken) {
+      console.log(`skip reserved cluster: ${cluster.topic.slice(0, 72)}`);
       continue;
     }
-    const res = await fetch(`${SITE}/api/news/draft?secret=${SECRET}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ article: r.article, provenance: r.provenance }),
-    });
-    if (res.ok) {
-      staged++;
-      console.log(`  ✓ staged → ${r.article.slug}`);
-    } else {
-      const t = await res.text().catch(() => "");
-      console.log(`  ✗ POST ${res.status}: ${t.slice(0, 200)}`);
+
+    console.log(
+      `researching: ${cluster.topic.slice(0, 72)} (score ${cluster.score})`,
+    );
+    let result: Awaited<ReturnType<typeof draftFromCluster>>;
+    try {
+      result = await draftFromCluster(cluster, whitelist, {
+        model: process.env.DRAFT_MODEL,
+        maxSearches: 4,
+        maxTokens: 4_200,
+      });
+    } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : "draft provider failed";
+      await markClusterFailed(cluster.id, reservationToken, reason);
+      console.log(`held: ${reason}`);
+      continue;
     }
+
+    if (!result.ok || !result.article || !result.provenance) {
+      const reason = result.reason ?? "draft did not pass staging";
+      await markClusterFailed(cluster.id, reservationToken, reason);
+      console.log(`held: ${reason}`);
+      continue;
+    }
+
+    const response = await fetch(`${SITE}/api/news/draft`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-post-publish-secret": SECRET,
+      },
+      body: JSON.stringify({
+        article: result.article,
+        provenance: result.provenance,
+        reservationToken,
+      }),
+    });
+    if (response.ok) {
+      staged += 1;
+      console.log(`staged for review: ${result.article.slug}`);
+      continue;
+    }
+
+    const responseText = await response.text().catch(() => "");
+    await markClusterFailed(
+      cluster.id,
+      reservationToken,
+      `draft staging failed (${response.status})`,
+    ).catch(() => undefined);
+    console.log(
+      `staging failed (${response.status}): ${responseText.slice(0, 200)}`,
+    );
   }
 
-  console.log(`\n━━━ done: ${staged} staged from ${attempts} attempt(s) ━━━\n`);
+  console.log(`done: ${staged} staged from ${attempts} attempt(s)`);
 
-  // Autonomous publish — push every verified-source draft live (every figure
-  // traces to a whitelisted cited source; the rest wait in The Desk). Raj's
-  // call, Jun 14. Set AUTO_APPROVE=0 to disable. Guarded so an auto-approve
-  // hiccup can never fail the drafting run.
-  if (process.env.AUTO_APPROVE !== "0") {
+  if (process.env.AUTO_APPROVE === "1") {
     try {
-      const s = await runAutoApprove({ site: SITE, secret: SECRET, publish: true });
-      console.log(`auto-approve: published ${s.published}/${s.approved}, ${s.failed} failed, ${s.held} held`);
-    } catch (e) {
-      console.error("auto-approve step failed (drafting unaffected):", e);
+      const summary = await runAutoApprove({
+        site: SITE,
+        secret: SECRET,
+        publish: false,
+      });
+      console.log(
+        `assessment: ${summary.approved} evidence-ready, ${summary.held} held; nothing published`,
+      );
+    } catch (error) {
+      console.error("assessment failed; drafting is unaffected:", error);
     }
+  } else {
+    console.log("assessment disabled; all drafts remain in The Desk");
   }
 }
 
-main().catch((e) => {
-  console.error("draft-once failed:", e);
+main().catch((error) => {
+  console.error("draft-once failed:", error);
   process.exit(1);
 });

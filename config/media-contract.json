@@ -1,0 +1,839 @@
+{
+  "schemaVersion": 1,
+  "site": "news.investwithraj.com",
+  "reviewedAt": "2026-07-31",
+  "policy": {
+    "purpose": "Editorial news site using source-recorded media as clearly labelled context, never as market or listing evidence.",
+    "unknownDefault": "withheld",
+    "fullscreenMinimum": {
+      "width": 3840,
+      "height": 2160
+    },
+    "responsiveDerivativeRule": "Lower-resolution derivatives are permitted only in explicitly non-fullscreen roles and must retain the same subject.",
+    "zeroRepetition": "A normalized source path or identical file hash may appear only once per visible route unless the duplicate is hidden metadata.",
+    "fallbackRule": "Unsupported article covers are withheld. No unrelated, random or generic fallback image is permitted.",
+    "videoRule": "No public video is currently mounted. Any future video must be source-cleared, opt-in, silent by default and static under reduced motion.",
+    "audioRule": "No public audio is currently mounted. Any future audio must be off by default and start only after an explicit user gesture.",
+    "aiRule": "Higgsfield output is never property, place, person, transaction or documentary evidence. No AI background video is approved.",
+    "deploymentRule": "Dormant legacy media does not become public merely because its file exists."
+  },
+  "collections": [
+    {
+      "pathPrefix": "/media/verified/areas/",
+      "classification": "verified-area-context",
+      "defaultApproval": "approved-context",
+      "evidenceUse": "area-context-only",
+      "sourceRecord": "assets array in this contract"
+    },
+    {
+      "pathPrefix": "/media/verified/developers/",
+      "classification": "official-developer-context",
+      "defaultApproval": "approved-context",
+      "evidenceUse": "developer-context-only-no-affiliation",
+      "sourceRecord": "assets array in this contract"
+    },
+    {
+      "pathPrefix": "/images/",
+      "classification": "legacy-article-media",
+      "defaultApproval": "withheld-unless-article-source-recorded",
+      "evidenceUse": "article-context-only",
+      "sourceRecord": "content/news article-level heroImage record"
+    },
+    {
+      "pathPrefix": "/cinema/",
+      "classification": "dormant-legacy-video",
+      "defaultApproval": "withheld",
+      "evidenceUse": "none",
+      "sourceRecord": "No current production clearance or mounted public use."
+    },
+    {
+      "pathPrefix": "/brand/",
+      "classification": "dormant-legacy-brand-video",
+      "defaultApproval": "withheld",
+      "evidenceUse": "none",
+      "sourceRecord": "No current production clearance or mounted public use."
+    },
+    {
+      "pathPrefix": "/audio/",
+      "classification": "dormant-legacy-audio",
+      "defaultApproval": "withheld",
+      "evidenceUse": "none",
+      "sourceRecord": "No current production clearance or mounted public use."
+    },
+    {
+      "pathPrefix": "/hero.mp4",
+      "classification": "dormant-legacy-background-video",
+      "defaultApproval": "withheld",
+      "evidenceUse": "none",
+      "sourceRecord": "No current production clearance or mounted public use."
+    }
+  ],
+  "assets": [
+    {
+      "key": "area:hudayriyat-island",
+      "path": "/media/verified/areas/hudayriyat-island.webp",
+      "mediaType": "image",
+      "subject": "Hudayriyat Island",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/hudayriyat-island",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Hudayriyat Island official media",
+        "creator": "Modon / DCT",
+        "sourceId": "Marsana-east-beach",
+        "url": "https://d1xqol1alpy9hf.cloudfront.net/sthudayriyatwebmobileprod/2025-01/Marsana-east-beach.jpg"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Modon/DCT source URL retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official source photograph"
+      },
+      "renderNotice": "Official location photograph; area context only, not market evidence.",
+      "aiGenerated": false,
+      "alt": "Beach umbrellas, loungers and shoreline at Marsana on Hudayriyat Island, Abu Dhabi."
+    },
+    {
+      "key": "area:palm-jebel-ali",
+      "path": "/media/verified/areas/palm-jebel-ali.webp",
+      "mediaType": "image",
+      "subject": "Palm Jebel Ali",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/palm-jebel-ali",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Nakheel official media",
+        "creator": "Nakheel",
+        "sourceId": "palm-jebel-ali-coral-villa",
+        "url": "https://www.nakheel.com/en/communities"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Nakheel source page retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official marketing render"
+      },
+      "renderNotice": "Official developer visualisation; design intent only, not completion, view or availability evidence.",
+      "aiGenerated": false,
+      "alt": "Official rendering of a contemporary Coral villa framed by palms at Palm Jebel Ali."
+    },
+    {
+      "key": "area:downtown-dubai",
+      "path": "/media/verified/areas/downtown-dubai.webp",
+      "mediaType": "image",
+      "subject": "Downtown Dubai",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/downtown-dubai",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Wikimedia Commons",
+        "creator": "Pixabay contributor",
+        "sourceId": "The_Dubai_Fountain_&_Burj_Khalifa_Pixabay",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/The_Dubai_Fountain_%26_Burj_Khalifa_Pixabay.jpg"
+      },
+      "rights": {
+        "status": "verified-open-license",
+        "record": "CC0 1.0 Public Domain Dedication",
+        "license": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "open-license source photograph"
+      },
+      "renderNotice": "Real location photograph; area context only, not market evidence.",
+      "aiGenerated": false,
+      "alt": "Burj Khalifa and the Dubai Fountain lake in Downtown Dubai at sunset."
+    },
+    {
+      "key": "area:dubai-marina",
+      "path": "/media/verified/areas/dubai-marina.webp",
+      "mediaType": "image",
+      "subject": "Dubai Marina",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/dubai-marina",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Unsplash",
+        "creator": "Source creator retained by Unsplash asset URL",
+        "sourceId": "photo-1459787915554-b34915863013",
+        "url": "https://images.unsplash.com/photo-1459787915554-b34915863013?fm=jpg&q=80&w=3000&auto=format&fit=crop"
+      },
+      "rights": {
+        "status": "verified-provider-license",
+        "record": "Unsplash asset URL retained",
+        "license": "https://unsplash.com/license"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "licensed source photograph"
+      },
+      "renderNotice": "Real location photograph; area context only, not market evidence.",
+      "aiGenerated": false,
+      "alt": "High-angle view of Dubai Marina towers, waterways and bridges at dusk."
+    },
+    {
+      "key": "area:palm-jumeirah",
+      "path": "/media/verified/areas/palm-jumeirah.webp",
+      "mediaType": "image",
+      "subject": "Palm Jumeirah",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/palm-jumeirah",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Copernicus Sentinel-2 via Wikimedia Commons",
+        "creator": "European Union, Copernicus Sentinel-2",
+        "sourceId": "Palm_Jumeirah_sentinel-2",
+        "url": "https://commons.wikimedia.org/wiki/File:Palm_Jumeirah_sentinel-2.jpg"
+      },
+      "rights": {
+        "status": "verified-data-terms",
+        "record": "Contains modified Copernicus Sentinel data 2023",
+        "license": "https://dataspace.copernicus.eu/terms-and-conditions"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "satellite source image"
+      },
+      "renderNotice": "Satellite image; geographic context only, not current property or market evidence.",
+      "aiGenerated": false,
+      "alt": "Copernicus Sentinel-2 satellite view of Palm Jumeirah and the Dubai coast."
+    },
+    {
+      "key": "area:dubai-hills-estate",
+      "path": "/media/verified/areas/dubai-hills-estate.webp",
+      "mediaType": "image",
+      "subject": "Dubai Hills Estate area context",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/dubai-hills-estate",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Unsplash",
+        "creator": "Source creator retained by Unsplash asset URL",
+        "sourceId": "photo-1721170628992-ddd25faa162e",
+        "url": "https://images.unsplash.com/photo-1721170628992-ddd25faa162e?fm=jpg&q=80&w=3000&auto=format&fit=crop"
+      },
+      "rights": {
+        "status": "verified-provider-license",
+        "record": "Unsplash asset URL retained",
+        "license": "https://unsplash.com/license"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "licensed source photograph"
+      },
+      "renderNotice": "Broad real-location context; not evidence of a named project, property or market condition.",
+      "aiGenerated": false,
+      "alt": "Aerial view of low-rise residential neighbourhoods, lakes and a distant Dubai skyline."
+    },
+    {
+      "key": "area:sobha-hartland",
+      "path": "/media/verified/areas/sobha-hartland.webp",
+      "mediaType": "image",
+      "subject": "Sobha Hartland",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/sobha-hartland",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Sobha Realty official media",
+        "creator": "Sobha Realty",
+        "sourceId": "1418x771-community-render",
+        "url": "https://www.sobharealty.com/sites/default/files/styles/webp/public/2025-04/1418%20x%20771.jpg.webp?itok=Oy7ELMJM"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Sobha Realty source URL retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official marketing render"
+      },
+      "renderNotice": "Official developer visualisation; design intent only, not completion or availability evidence.",
+      "aiGenerated": false,
+      "alt": "Official rendering of landscaped communal terraces between residential buildings at Sobha Hartland."
+    },
+    {
+      "key": "area:dubai-creek-harbour",
+      "path": "/media/verified/areas/dubai-creek-harbour.webp",
+      "mediaType": "image",
+      "subject": "Dubai Creek Harbour",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/dubai-creek-harbour",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Wikimedia Commons",
+        "creator": "Yousrafayed",
+        "sourceId": "Dubai_Creek_Harbor",
+        "url": "https://commons.wikimedia.org/wiki/File:Dubai_Creek_Harbor.jpg"
+      },
+      "rights": {
+        "status": "verified-open-license",
+        "record": "Credit: Yousrafayed",
+        "license": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "open-license source photograph"
+      },
+      "renderNotice": "Real location photograph; area context only, not market evidence.",
+      "aiGenerated": false,
+      "alt": "Sailing boat and marina at Dubai Creek Harbour at sunset, with the Downtown skyline beyond."
+    },
+    {
+      "key": "area:saadiyat-island",
+      "path": "/media/verified/areas/saadiyat-island.webp",
+      "mediaType": "image",
+      "subject": "Saadiyat Island",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/saadiyat-island",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Wikimedia Commons",
+        "creator": "Adman Payne",
+        "sourceId": "Saadiyat_Beach",
+        "url": "https://commons.wikimedia.org/wiki/File:Saadiyat_Beach.jpg"
+      },
+      "rights": {
+        "status": "verified-open-license",
+        "record": "Credit: Adman Payne",
+        "license": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "open-license source photograph"
+      },
+      "renderNotice": "Real location photograph; area context only, not market evidence.",
+      "aiGenerated": false,
+      "alt": "Saadiyat Beach shoreline, dunes and beach umbrellas on Saadiyat Island."
+    },
+    {
+      "key": "area:yas-island",
+      "path": "/media/verified/areas/yas-island.webp",
+      "mediaType": "image",
+      "subject": "Yas Island",
+      "classification": "verified-area-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/areas",
+          "role": "area-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/areas/yas-island",
+          "role": "area-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Pexels",
+        "creator": "Source creator retained by Pexels asset URL",
+        "sourceId": "7058845",
+        "url": "https://images.pexels.com/photos/7058845/pexels-photo-7058845.jpeg?auto=compress&cs=tinysrgb&w=5000&dpr=1"
+      },
+      "rights": {
+        "status": "verified-provider-license",
+        "record": "Pexels asset URL retained",
+        "license": "https://www.pexels.com/license/"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "licensed source photograph"
+      },
+      "renderNotice": "Real location photograph; area context only, not market evidence.",
+      "aiGenerated": false,
+      "alt": "Yas Marina Circuit buildings and waterfront on Yas Island, Abu Dhabi."
+    },
+    {
+      "key": "developer:emaar",
+      "path": "/media/verified/developers/emaar.webp",
+      "mediaType": "image",
+      "subject": "Emaar context",
+      "classification": "official-developer-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/developers",
+          "role": "developer-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/developer/emaar",
+          "role": "developer-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Emaar official media",
+        "creator": "Emaar",
+        "sourceId": "emaar-communities",
+        "url": "https://www.emaar.com/en/communities/"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Emaar source page retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official source media"
+      },
+      "renderNotice": "Official developer reference; editorial context only and no affiliation implied.",
+      "aiGenerated": false,
+      "alt": "Dubai skyline centred on Burj Khalifa, an Emaar landmark, viewed through haze."
+    },
+    {
+      "key": "developer:aldar",
+      "path": "/media/verified/developers/aldar.webp",
+      "mediaType": "image",
+      "subject": "Aldar context",
+      "classification": "official-developer-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/developers",
+          "role": "developer-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/developer/aldar",
+          "role": "developer-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Aldar official media",
+        "creator": "Aldar",
+        "sourceId": "aldar-communities",
+        "url": "https://www.aldar.com/en/explore-aldar/communities"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Aldar source page retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official marketing render"
+      },
+      "renderNotice": "Official developer visualisation; editorial context only, no completion claim and no affiliation implied.",
+      "aiGenerated": false,
+      "alt": "Aerial masterplan rendering of an Aldar waterfront community in Abu Dhabi."
+    },
+    {
+      "key": "developer:nakheel",
+      "path": "/media/verified/developers/nakheel.webp",
+      "mediaType": "image",
+      "subject": "Nakheel context",
+      "classification": "official-developer-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/developers",
+          "role": "developer-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/developer/nakheel",
+          "role": "developer-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Nakheel official media",
+        "creator": "Nakheel",
+        "sourceId": "nakheel-communities",
+        "url": "https://www.nakheel.com/en/communities"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Nakheel source page retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official source media"
+      },
+      "renderNotice": "Official developer reference; editorial context only and no affiliation implied.",
+      "aiGenerated": false,
+      "alt": "Family walking beside palms and a lagoon in a Nakheel residential community."
+    },
+    {
+      "key": "developer:modon",
+      "path": "/media/verified/developers/modon.webp",
+      "mediaType": "image",
+      "subject": "Modon context",
+      "classification": "official-developer-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/developers",
+          "role": "developer-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/developer/modon",
+          "role": "developer-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Modon official media",
+        "creator": "Modon",
+        "sourceId": "modon-world",
+        "url": "https://world.modon.com"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Modon source page retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official source media"
+      },
+      "renderNotice": "Official developer reference; editorial context only and no affiliation implied.",
+      "aiGenerated": false,
+      "alt": "Abu Dhabi golf course at sunset with the city skyline beyond."
+    },
+    {
+      "key": "developer:sobha",
+      "path": "/media/verified/developers/sobha.webp",
+      "mediaType": "image",
+      "subject": "Sobha Realty context",
+      "classification": "official-developer-context",
+      "approval": "approved-context",
+      "routes": [
+        {
+          "path": "/developers",
+          "role": "developer-card",
+          "fullscreen": false
+        },
+        {
+          "path": "/developer/sobha",
+          "role": "developer-lead",
+          "fullscreen": true
+        }
+      ],
+      "source": {
+        "provider": "Sobha Realty official media",
+        "creator": "Sobha Realty",
+        "sourceId": "sobha-communities",
+        "url": "https://www.sobharealty.com/communities/"
+      },
+      "rights": {
+        "status": "official-source-context",
+        "record": "Official Sobha Realty source page retained"
+      },
+      "derivative": {
+        "width": 3840,
+        "height": 2160,
+        "from": "official marketing render"
+      },
+      "renderNotice": "Official developer visualisation; editorial context only, no completion claim and no affiliation implied.",
+      "aiGenerated": false,
+      "alt": "Official Sobha waterfront tower rendering with an infinity pool and Ain Dubai beyond."
+    },
+    {
+      "key": "person:raj-tomar",
+      "path": "/media/real-uhd/raj-tomar-portrait.webp",
+      "mediaType": "image",
+      "subject": "Raj Tomar",
+      "classification": "real-raj-owned-portrait",
+      "approval": "approved",
+      "routes": [
+        {
+          "path": "/about",
+          "role": "lead-portrait",
+          "fullscreen": false
+        }
+      ],
+      "source": {
+        "provider": "Raj Tomar archive",
+        "creator": "Raj Tomar production archive",
+        "sourceId": "raj-portrait-source",
+        "url": "local-private-original"
+      },
+      "rights": {
+        "status": "verified-owner-supplied",
+        "record": "Advisory docs/VISUAL-ASSET-REGISTER.md"
+      },
+      "derivative": {
+        "width": 2160,
+        "height": 2880,
+        "from": "real 1200x1600 portrait; non-generative crop and resize"
+      },
+      "renderNotice": "Real portrait of Raj Tomar; owner-supplied and non-generative.",
+      "aiGenerated": false,
+      "alt": "Raj Tomar, independent UAE property advisor in Dubai."
+    }
+  ],
+  "playback": [],
+  "dormantMedia": [
+    {
+      "path": "/hero.mp4",
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Legacy background film; provenance and UHD production clearance are absent."
+    },
+    {
+      "path": "/brand/ident-fall.mp4",
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Legacy brand ident; provenance record absent."
+    },
+    {
+      "path": "/cinema/library/hero-dubai-coast.mp4",
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant legacy library asset."
+    },
+    {
+      "path": "/cinema/library/hudayriyat-aerial.mp4",
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant legacy library asset."
+    },
+    {
+      "path": "/cinema/library/portrait-chapter06.mp4",
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant legacy portrait asset; identity provenance not production-cleared."
+    },
+    {
+      "path": "/cinema/library/portrait-hero.mp4",
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant legacy portrait asset; identity provenance not production-cleared."
+    },
+    {
+      "path": "/cinema/library/portrait-operator.mp4",
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant legacy portrait asset; identity provenance not production-cleared."
+    },
+    {
+      "pathPrefix": "/cinema/raw/",
+      "paths": [
+        "/cinema/raw/01-hero-lamp.mp4",
+        "/cinema/raw/02-operator-notebook.mp4",
+        "/cinema/raw/03-market-terminal.mp4",
+        "/cinema/raw/04-notes-archive.mp4",
+        "/cinema/raw/05-hudayriyat-aerial.mp4",
+        "/cinema/raw/06-mispricing-split.mp4",
+        "/cinema/raw/07-the-ask.mp4",
+        "/cinema/raw/08-brass-monogram.mp4",
+        "/cinema/raw/09-portrait-hero-rt.mp4",
+        "/cinema/raw/10-portrait-operator-rt.mp4",
+        "/cinema/raw/11-portrait-chapter06-rt.mp4"
+      ],
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant raw production files; never public evidence."
+    },
+    {
+      "pathPrefix": "/cinema/v21/",
+      "paths": [
+        "/cinema/v21/atmosphere.mp4",
+        "/cinema/v21/pulse-loop.mp4"
+      ],
+      "mediaType": "video",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant legacy motion system; not mounted by the current editorial shell."
+    },
+    {
+      "pathPrefix": "/audio/",
+      "paths": [
+        "/audio/iwr-ambient.mp3",
+        "/audio/iwr-ambient-classic.mp3",
+        "/audio/raj-intro.mp3",
+        "/audio/ui/audio-on.mp3",
+        "/audio/ui/cmdk-swell.mp3",
+        "/audio/ui/cta-click.mp3",
+        "/audio/ui/cta-hover.mp3",
+        "/audio/ui/cursor-tick.mp3",
+        "/audio/ui/form-submit.mp3",
+        "/audio/ui/page-turn.mp3",
+        "/audio/ui/section-reveal.mp3"
+      ],
+      "mediaType": "audio",
+      "approval": "withheld",
+      "mounted": false,
+      "reason": "Dormant audio. Provenance is not complete and the current public layout mounts no audio controls."
+    }
+  ],
+  "motion": {
+    "scrollEngineOwner": null,
+    "maximumScrollEngines": 1,
+    "activeSources": [
+      "components/redesign/NewsChrome.tsx",
+      "components/redesign/NewsHome.tsx",
+      "components/redesign/NewsArticle.tsx"
+    ],
+    "bannedPatterns": [
+      "sci-fi",
+      "holographic",
+      "hud",
+      "particle",
+      "cyber",
+      "nested smooth scroll"
+    ],
+    "requirements": [
+      "Editorial content remains readable without JavaScript motion.",
+      "Reduced motion has no animated dependency.",
+      "Mobile has no horizontal page overflow or forced media playback.",
+      "Dormant immersive and v16/v21 components are not part of the mounted public shell."
+    ]
+  },
+  "providers": {
+    "Motion Array": {
+      "ingest": "manual-and-project-specific",
+      "productionRequires": [
+        "assetId",
+        "creator",
+        "catalogueUrl",
+        "private per-asset receipt or certificate",
+        "source and derivative SHA-256 chain"
+      ],
+      "warehouseDownloads": false,
+      "currentApprovedAssets": 0
+    },
+    "Adobe Stock": {
+      "productionRequires": [
+        "clean licensed original",
+        "Adobe asset ID",
+        "licence record"
+      ],
+      "previewOrWatermarkAllowed": false,
+      "currentApprovedAssets": 0
+    },
+    "Higgsfield": {
+      "allowed": "clearly labelled abstract transition art only after Raj approval",
+      "propertyEvidence": false,
+      "personEvidence": false,
+      "backgroundVideo": false,
+      "currentApprovedAssets": 0
+    }
+  }
+}

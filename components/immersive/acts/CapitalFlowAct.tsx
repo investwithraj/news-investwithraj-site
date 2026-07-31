@@ -51,7 +51,7 @@ export default function CapitalFlowAct() {
 
     // SSR-safe fallback — if IO is unavailable, just mount the globe.
     if (typeof IntersectionObserver === "undefined") {
-      setGlobeVisible(true);
+      queueMicrotask(() => setGlobeVisible(true));
       return;
     }
 

@@ -2,7 +2,7 @@
 // articles to schedule social posts + fire Telegram/Discord immediately.
 //
 // Usage:
-//   POST /api/distribute?secret=<POST_PUBLISH_SECRET>
+//   POST /api/distribute with the server credential header
 //   body: {
 //     "slugs": ["2026-05-26-modon-phase-2", "2026-05-26-rera-q1-bulletin"],
 //     "channels": ["linkedin-personal", "x", "telegram", "discord"]  (optional)
@@ -10,20 +10,32 @@
 //
 // Returns DistributionRun summary per article.
 
-import { NextRequest, NextResponse } from "next/server";
-import { distributeBatch, type Channel, DEFAULT_PHASE_1_CHANNELS, getActiveChannels } from "@/lib/distribute";
+import { NextRequest } from "next/server";
+import {
+  ALL_CHANNELS,
+  type Channel,
+  DEFAULT_PHASE_1_CHANNELS,
+  getActiveChannels,
+} from "@/lib/distribute";
+import { buildVariants } from "@/lib/distribute/content-adapter";
 import { NEWS_ARTICLES } from "@/content/news";
+import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
+import {
+  authorizeServerMutation,
+  privateJson,
+  publicStatusJson,
+  readJsonBody,
+} from "@/lib/security/mutation";
 
 export const dynamic = "force-dynamic";
 
-const SECRET = process.env.POST_PUBLISH_SECRET || "";
-
 export async function GET() {
   const { active, inactive } = getActiveChannels();
-  return NextResponse.json({
+  return publicStatusJson({
     name: "news.investwithraj.com distribution endpoint",
-    method: "POST",
-    auth: "?secret=<POST_PUBLISH_SECRET>",
+    mutationMethod: "POST",
+    delivery:
+      "disabled; this endpoint produces reviewed channel previews only",
     body: {
       slugs: "string[] — article slugs (from content/news/*.ts) to distribute",
       channels: `string[] (optional) — defaults to ${DEFAULT_PHASE_1_CHANNELS.join(", ")}`,
@@ -38,28 +50,19 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!SECRET) {
-    return NextResponse.json(
-      { error: "POST_PUBLISH_SECRET env var not set — endpoint disabled" },
-      { status: 503 }
-    );
-  }
-  const provided = request.nextUrl.searchParams.get("secret");
-  if (provided !== SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: { slugs?: unknown; channels?: unknown } = {};
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  const auth = authorizeServerMutation(request);
+  if (!auth.ok) return auth.response;
+  const parsed = await readJsonBody<{
+    slugs?: unknown;
+    channels?: unknown;
+  }>(request, { maxBytes: 32_768 });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
 
   if (!Array.isArray(body.slugs)) {
-    return NextResponse.json(
+    return privateJson(
       { error: "Body must be { slugs: string[] }" },
-      { status: 400 }
+      400,
     );
   }
 
@@ -69,8 +72,18 @@ export async function POST(request: NextRequest) {
 
   const channels: Channel[] =
     Array.isArray(body.channels) && body.channels.length > 0
-      ? (body.channels.filter((c): c is Channel => typeof c === "string") as Channel[])
+      ? body.channels.filter(
+          (c): c is Channel =>
+            typeof c === "string" && ALL_CHANNELS.includes(c as Channel),
+        )
       : DEFAULT_PHASE_1_CHANNELS;
+
+  if (channels.length === 0) {
+    return privateJson(
+      { error: "No recognised distribution channels were supplied." },
+      400,
+    );
+  }
 
   // Resolve slugs to articles
   const articles = slugs
@@ -79,26 +92,26 @@ export async function POST(request: NextRequest) {
 
   const missing = slugs.filter((s) => !articles.find((a) => a.slug === s));
 
-  const runs = await distributeBatch(articles, channels);
+  const previews = articles.map((article) => ({
+    articleSlug: article.slug,
+    variants: buildVariants(article, channels).map((variant) => ({
+      ...variant,
+      imageUrl: hasVerifiedEditorialImage(article)
+        ? variant.imageUrl
+        : undefined,
+    })),
+  }));
 
-  const totalScheduled = runs.reduce((sum, r) => sum + r.successCount, 0);
-  const totalFailed = runs.reduce((sum, r) => sum + r.failureCount, 0);
-  const totalSkipped = runs.reduce((sum, r) => sum + r.skippedCount, 0);
-
-  return NextResponse.json(
-    {
-      ok: totalFailed === 0,
-      processedArticles: articles.length,
-      missingSlugs: missing,
-      channelsRequested: channels,
-      totals: {
-        scheduled: totalScheduled,
-        failed: totalFailed,
-        skipped: totalSkipped,
-      },
-      runs,
-      timestamp: new Date().toISOString(),
-    },
-    { status: totalFailed > 0 ? 207 : 200 }
-  );
+  return privateJson({
+    ok: true,
+    preview: true,
+    delivered: false,
+    processedArticles: articles.length,
+    missingSlugs: missing,
+    channelsRequested: channels,
+    previews,
+    message:
+      "Channel drafts were generated for review. No post, webhook or schedule call was attempted.",
+    timestamp: new Date().toISOString(),
+  });
 }

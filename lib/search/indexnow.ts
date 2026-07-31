@@ -26,7 +26,7 @@ import { SITE } from "@/lib/constants";
 const INDEXNOW_HOST = "https://api.indexnow.org/IndexNow";
 
 /** Per-site key — must match the contents of /<key>.txt at site root */
-export const INDEXNOW_KEY = process.env.INDEXNOW_KEY || "0d6e3835646ccbe5dba5ed6ab2646308";
+export const INDEXNOW_KEY = "0d6e3835646ccbe5dba5ed6ab2646308";
 
 export interface IndexNowResult {
   ok: boolean;

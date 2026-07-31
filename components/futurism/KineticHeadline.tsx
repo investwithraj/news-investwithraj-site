@@ -6,7 +6,7 @@
 //
 // Use sparingly — only on hero + section H1s. Don't apply to body type.
 
-import { createElement, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   children: React.ReactNode;
@@ -35,7 +35,7 @@ export function KineticHeadline({
     const el = ref.current;
     if (!el) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setAnimated(true);
+      queueMicrotask(() => setAnimated(true));
       return;
     }
     const observer = new IntersectionObserver(
@@ -54,20 +54,21 @@ export function KineticHeadline({
   }, []);
 
   const softValue = animated ? targetSoft : initialSoft;
+  const Heading = as;
 
-  return createElement(
-    as,
-    {
-      ref,
-      className: `kinetic-headline ${className}`,
-      style: {
+  return (
+    <Heading
+      ref={ref}
+      className={`kinetic-headline ${className}`}
+      style={{
         ...style,
         fontFamily: "var(--font-fraunces), Georgia, serif",
         fontVariationSettings: `"SOFT" ${softValue}, "opsz" 144`,
         transition: `font-variation-settings ${duration}ms cubic-bezier(0.16, 1, 0.3, 1), letter-spacing ${duration}ms cubic-bezier(0.16, 1, 0.3, 1)`,
         letterSpacing: animated ? "-0.04em" : "-0.02em",
-      },
-    },
-    children
+      }}
+    >
+      {children}
+    </Heading>
   );
 }

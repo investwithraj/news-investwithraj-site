@@ -2,21 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import GlassCard from "@/components/v16/GlassCard";
-import DataPanel from "@/components/v16/DataPanel";
-import { AuroraBackground } from "@/components/futurism/AuroraBackground";
-import { KineticHeadline } from "@/components/futurism/KineticHeadline";
+
 import { SemaformLayout } from "@/components/article/SemaformLayout";
 import type { NewsArticle } from "@/content/news/types";
-import type { NewsDraft, ProvenanceSource } from "@/lib/news-review/types";
+import type { NewsDraft } from "@/lib/news-review/types";
 
-/* ───────────────────────────────────────────────────────────────────────
-   "The Desk" — the editorial review cockpit. Cinematic, built from the v16
-   library, at public-site calibre. Source-verification (gold numbers ↔ their
-   source) is the hero interaction, because a fabricated figure is the known
-   failure. Nothing publishes until Raj ticks "figures verified" AND the 8
-   gates pass. No native prompt/alert/confirm anywhere.
-   ─────────────────────────────────────────────────────────────────────── */
+import styles from "./ReviewDesk.module.css";
 
 interface Stats {
   awaiting: number;
@@ -28,911 +19,871 @@ interface Stats {
 const GATE_NAMES: Record<number, string> = {
   1: "Banned lexicon",
   2: "Approved lexicon",
-  3: "Headline ≤90",
-  4: "P1 has a number",
+  3: "Headline length",
+  4: "Opening evidence",
   5: "Citation whitelist",
   6: "Forbidden patterns",
   7: "Word count",
-  8: "Em-dash voice",
+  8: "Editorial voice",
 };
 
-// Figures: currency/number runs with optional unit. Used to glow numbers gold.
 const NUMBER_RE =
   /(?:AED|USD|Dh|\$|€|£)?\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:%|bps|bn|mn|billion|million|sqft|sq\.?\s?ft|M|B|K))?/gi;
 
-function digitsOf(s: string): string {
-  return s.replace(/[^\d]/g, "");
+function digitsOf(value: string): string {
+  return value.replace(/[^\d]/g, "");
 }
 
-/** Is this figure's digit-core attributed to a source — either present in a
- *  provenance source summary, or inside the text the drafter cited (citedText)? */
-function figureBacked(figure: string, sources: ProvenanceSource[], citedText = ""): boolean {
+function figureBacked(
+  figure: string,
+  evidence: NonNullable<NewsDraft["provenance"]["fetchedEvidence"]>,
+): boolean {
   const core = digitsOf(figure);
-  if (core.length < 2) return true; // single digits ("3 beats") — don't nag
-  if (citedText && digitsOf(citedText).includes(core)) return true;
-  return sources.some((s) => digitsOf(s.summary).includes(core));
+  if (core.length < 2) return true;
+  return evidence.some((record) => digitsOf(record.text).includes(core));
 }
 
 export default function ReviewDesk({
   drafts,
   backend,
   stats,
-  actionSecret,
+  error,
 }: {
   drafts: NewsDraft[];
   backend: string;
   stats: Stats;
-  actionSecret: string;
+  error?: string;
 }) {
-  return (
-    <div
-      style={{
-        position: "relative",
-        minHeight: "100vh",
-        background:
-          "radial-gradient(1200px 800px at 50% -10%, #24241E 0%, #1A1A1B 55%, #141414 100%)",
-        color: "var(--v16-paper, #F2EEE7)",
-        overflow: "hidden",
-        fontFamily: "var(--v16-font-body), system-ui, sans-serif",
-      }}
-    >
-      <AuroraBackground opacity={0.35} speed={0.6} />
+  const statItems = [
+    ["Awaiting review", String(stats.awaiting)],
+    ["Validator average", `${stats.avgConfidence}%`],
+    ["Published today", String(stats.publishedToday)],
+    ["Published in 7 days", String(stats.publishedThisWeek)],
+  ];
 
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          maxWidth: "1180px",
-          margin: "0 auto",
-          padding: "72px 24px 120px",
-        }}
-      >
-        {/* Header */}
-        <div style={{ marginBottom: "40px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "16px",
-              fontFamily: "var(--v16-font-mono), monospace",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.24em",
-              textTransform: "uppercase",
-              color: "var(--v16-holo-blue, #C9A961)",
-            }}
-          >
-            <span
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "var(--v16-holo-blue, #C9A961)",
-                boxShadow: "0 0 10px var(--v16-holo-blue, #C9A961)",
-              }}
-            />
-            news.investwithraj.com · editorial desk · {backend}
-            <a
-              href="/internal/dashboard"
-              style={{ marginLeft: "auto", color: "var(--v16-ink-faint, rgba(242,238,231,0.42))", textDecoration: "none" }}
-            >
-              outreach queue →
-            </a>
+  return (
+    <main className={styles.desk}>
+      <header className={styles.header}>
+        <div className={styles.register}>
+          <span>Internal · Editorial review · {backend}</span>
+          <a href="/internal/dashboard">Open outreach queue →</a>
+        </div>
+        <div className={styles.titleRow}>
+          <div>
+            <p>Human publication gate</p>
+            <h1>The Desk</h1>
           </div>
-          <KineticHeadline
-            as="h1"
-            style={{
-              fontFamily: "var(--v16-font-display), Georgia, serif",
-              fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
-              fontWeight: 500,
-              lineHeight: 1,
-              letterSpacing: "-0.03em",
-              margin: 0,
-            }}
-          >
-            The Desk
-          </KineticHeadline>
-          <p
-            style={{
-              marginTop: "14px",
-              maxWidth: "60ch",
-              color: "var(--v16-ink-soft, #D8D3CA)",
-              fontSize: "1.02rem",
-              lineHeight: 1.55,
-            }}
-          >
-            Every draft below is AI-written, gate-checked, and waiting on you. Verify each
-            figure against its source, then publish. Nothing goes live under your name until
-            you say so.
+          <p>
+            Verify the source record, edit the draft and make the publishing
+            decision. Automation cannot approve an article in Raj&apos;s name.
           </p>
         </div>
+      </header>
 
-        {/* Instrument row */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "16px",
-            marginBottom: "48px",
-          }}
-        >
-          <DataPanel
-            variant="holo"
-            eyebrow="Awaiting review"
-            value={String(stats.awaiting)}
-          />
-          <DataPanel
-            variant="dark"
-            eyebrow="Validator avg"
-            value={`${stats.avgConfidence}%`}
-            delta={{
-              value: stats.avgConfidence >= 80 ? "healthy" : "check",
-              trend: stats.avgConfidence >= 80 ? "up" : "flat",
-            }}
-          />
-          <DataPanel variant="dark" eyebrow="Published today" value={String(stats.publishedToday)} />
-          <DataPanel
-            variant="dark"
-            eyebrow="Published / 7d"
-            value={String(stats.publishedThisWeek)}
-          />
-        </div>
+      <div className={styles.frame}>
+        {error ? (
+          <section className={styles.error} role="alert">
+            <strong>Draft store unavailable</strong>
+            <p>{error}</p>
+          </section>
+        ) : null}
 
-        {/* Drafts */}
+        <section className={styles.stats} aria-label="Editorial review status">
+          {statItems.map(([label, value]) => (
+            <article key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </article>
+          ))}
+        </section>
+
         {drafts.length === 0 ? (
-          <EmptyState />
+          <section className={styles.empty}>
+            <span>{error ? "Unavailable" : "Queue clear"}</span>
+            <h2>{error ? "No state has been inferred." : "No drafts await review."}</h2>
+            <p>
+              {error
+                ? "Restore the configured draft store, then reload this page."
+                : "A new draft appears here only after it has been staged by the newsroom pipeline."}
+            </p>
+          </section>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
-            {drafts.map((d) => (
-              <DraftSlab key={d.id} draft={d} actionSecret={actionSecret} />
+          <section className={styles.drafts} aria-label="Drafts awaiting review">
+            {drafts.map((draft) => (
+              <DraftCard
+                key={`${draft.id}:${draft.recordVersion}`}
+                draft={draft}
+              />
             ))}
-          </div>
+          </section>
         )}
       </div>
-    </div>
+    </main>
   );
 }
-
-/* ─── Empty state ─────────────────────────────────────────────────────── */
-
-function EmptyState() {
-  return (
-    <GlassCard variant="dark" padding="lg" style={{ textAlign: "center", padding: "56px 32px" }}>
-      <p
-        style={{
-          fontFamily: "var(--v16-font-display), Georgia, serif",
-          fontSize: "1.5rem",
-          marginBottom: "10px",
-        }}
-      >
-        The desk is clear.
-      </p>
-      <p style={{ color: "var(--v16-ink-faint, rgba(242,238,231,0.42))", fontSize: "0.95rem", lineHeight: 1.6 }}>
-        The morning run posts the day&apos;s drafts here around 07:00 GST. When one lands,
-        it&apos;ll appear as a slab to verify and publish.
-      </p>
-    </GlassCard>
-  );
-}
-
-/* ─── One draft ───────────────────────────────────────────────────────── */
 
 type View = "verify" | "preview" | "edit";
 
-function DraftSlab({ draft, actionSecret }: { draft: NewsDraft; actionSecret: string }) {
+function DraftCard({ draft }: { draft: NewsDraft }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [view, setView] = useState<View>("verify");
   const [busy, setBusy] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const [confirmStage, setConfirmStage] = useState<"publish" | "reject" | null>(null);
-  const [figuresVerified, setFiguresVerified] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [confirmStage, setConfirmStage] = useState<
+    "publish" | "reject" | null
+  >(null);
+  const [verifiedSources, setVerifiedSources] = useState(
+    draft.verifiedSources ?? [],
+  );
+  const [evidenceApprovalHash, setEvidenceApprovalHash] = useState(
+    draft.evidenceApproval?.hash ?? "",
+  );
+  const [revision, setRevision] = useState(draft.revision);
+  const [recordVersion, setRecordVersion] = useState(draft.recordVersion);
+  const [contentHash, setContentHash] = useState(draft.contentHash);
+  const [mediaApproval, setMediaApproval] = useState(draft.mediaApproval);
+  const [mediaRecord, setMediaRecord] = useState({
+    sourceUrl: draft.mediaApproval?.sourceUrl ?? "",
+    rightsStatus: draft.mediaApproval?.rightsStatus ?? "",
+    credit: draft.mediaApproval?.credit ?? "",
+  });
   const [activeSource, setActiveSource] = useState<string | null>(null);
-
-  // Editable copy for the Edit view.
   const [edit, setEdit] = useState({
     title: draft.article.title,
     subtitle: draft.article.subtitle,
     body: draft.article.body,
   });
 
-  const v = draft.validator;
+  const validator = draft.validator;
   const blockedGates = useMemo(
-    () => new Set(v.failures.filter((f) => f.severity === "block").map((f) => f.gate)),
-    [v],
+    () =>
+      new Set(
+        validator.failures
+          .filter((failure) => failure.severity === "block")
+          .map((failure) => failure.gate),
+      ),
+    [validator],
   );
-  const warnGates = useMemo(
-    () => new Set(v.failures.filter((f) => f.severity === "warn").map((f) => f.gate)),
-    [v],
+  const warningGates = useMemo(
+    () =>
+      new Set(
+        validator.failures
+          .filter((failure) => failure.severity === "warn")
+          .map((failure) => failure.gate),
+      ),
+    [validator],
   );
-  const gatesPassed = 8 - blockedGates.size;
-  const confidence = Math.round((gatesPassed / 8) * 100);
-
-  // Figures flagged as not-found-in-any-source (the fabrication signal).
+  const confidence = Math.round(((8 - blockedGates.size) / 8) * 100);
   const unbackedCount = useMemo(() => {
-    const figs = draft.article.body.match(NUMBER_RE) ?? [];
-    const cited = draft.provenance.citedText ?? "";
-    return figs.filter(
-      (f) => digitsOf(f).length >= 2 && !figureBacked(f, draft.provenance.sources, cited),
+    const figures = draft.article.body.match(NUMBER_RE) ?? [];
+    const evidence = draft.provenance.fetchedEvidence ?? [];
+    return figures.filter(
+      (figure) =>
+        digitsOf(figure).length >= 2 &&
+        !figureBacked(figure, evidence),
     ).length;
   }, [draft]);
+  const citationUrls = draft.article.citations.map(
+    (citation) => citation.url,
+  );
+  const allSourcesVerified =
+    citationUrls.length >= 2 &&
+    citationUrls.every((url) => verifiedSources.includes(url));
+  const figuresVerified = unbackedCount === 0;
+  const mediaApprovalHash = mediaApproval?.hash ?? "";
+  const canPublish =
+    validator.ok &&
+    figuresVerified &&
+    allSourcesVerified &&
+    Boolean(evidenceApprovalHash) &&
+    Boolean(mediaApprovalHash);
 
-  const canPublish = v.ok && figuresVerified;
-
-  function flash(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2600);
+  function showMessage(value: string) {
+    setMessage(value);
+    window.setTimeout(() => setMessage(null), 3_000);
   }
 
-  async function api(path: string, method: string, body?: unknown) {
-    // Basic-Auth is scoped to /internal/* by the browser, so authenticate the
-    // /api/news/draft/* mutations with the action secret instead.
-    const url = actionSecret
-      ? `${path}${path.includes("?") ? "&" : "?"}secret=${encodeURIComponent(actionSecret)}`
-      : path;
-    const res = await fetch(url, {
+  async function callApi(path: string, method: string, body?: unknown) {
+    const response = await fetch(path, {
       method,
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      throw new Error(j.error ?? `HTTP ${res.status}`);
+    const payload = (await response.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
+    if (!response.ok) {
+      throw new Error(
+        typeof payload.error === "string"
+          ? payload.error
+          : `Request failed (${response.status})`,
+      );
     }
-    return res.json();
+    return payload;
   }
 
   async function saveEdit() {
     setBusy("save");
     try {
-      await api(`/api/news/draft/${draft.id}`, "PATCH", {
+      const payload = await callApi(`/api/news/draft/${encodeURIComponent(draft.id)}`, "PATCH", {
+        expectedRevision: revision,
+        expectedRecordVersion: recordVersion,
+        expectedContentHash: contentHash,
         article: { ...draft.article, ...edit },
       });
-      flash("Saved ✓ — re-validated");
-      startTransition(() => router.refresh());
+      const updated = payload.draft as NewsDraft | undefined;
+      if (!updated) throw new Error("The updated draft was not returned.");
+      setRevision(updated.revision);
+      setRecordVersion(updated.recordVersion);
+      setContentHash(updated.contentHash);
+      setVerifiedSources(updated.verifiedSources ?? []);
+      setEvidenceApprovalHash(updated.evidenceApproval?.hash ?? "");
+      setMediaApproval(updated.mediaApproval);
+      showMessage("Draft saved and re-validated.");
       setView("verify");
-    } catch (e) {
-      flash(e instanceof Error ? e.message : "Save failed");
+      startTransition(() => router.refresh());
+    } catch (caught) {
+      showMessage(caught instanceof Error ? caught.message : "Save failed.");
     } finally {
       setBusy(null);
     }
   }
 
-  async function doPublish() {
+  async function publish() {
     setBusy("publish");
     try {
-      const r = await api(`/api/news/draft/${draft.id}/publish`, "POST");
-      flash(`Published ✓ → ${r.slug}`);
+      const payload = await callApi(
+        `/api/news/draft/${encodeURIComponent(draft.id)}/publish`,
+        "POST",
+        {
+          expectedRevision: revision,
+          expectedRecordVersion: recordVersion,
+          expectedContentHash: contentHash,
+          mediaApprovalHash,
+          evidenceApprovalHash,
+        },
+      );
+      showMessage(
+        typeof payload.slug === "string"
+          ? `Committed: ${payload.slug}. Waiting for deployment verification.`
+          : "Committed. Waiting for deployment verification.",
+      );
       startTransition(() => router.refresh());
-    } catch (e) {
-      flash(e instanceof Error ? e.message : "Publish failed");
+    } catch (caught) {
+      showMessage(caught instanceof Error ? caught.message : "Publish failed.");
       setConfirmStage(null);
     } finally {
       setBusy(null);
     }
   }
 
-  async function doReject() {
+  async function reject() {
     setBusy("reject");
     try {
-      await api(`/api/news/draft/${draft.id}`, "DELETE");
-      flash("Rejected — draft cleared");
+      await callApi(
+        `/api/news/draft/${encodeURIComponent(draft.id)}`,
+        "DELETE",
+        {
+          expectedRevision: revision,
+          expectedRecordVersion: recordVersion,
+          expectedContentHash: contentHash,
+        },
+      );
+      showMessage("Draft rejected and removed.");
       startTransition(() => router.refresh());
-    } catch (e) {
-      flash(e instanceof Error ? e.message : "Reject failed");
+    } catch (caught) {
+      showMessage(caught instanceof Error ? caught.message : "Reject failed.");
       setConfirmStage(null);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function toggleSource(url: string, checked: boolean) {
+    const next = checked
+      ? [...new Set([...verifiedSources, url])]
+      : verifiedSources.filter((item) => item !== url);
+    setBusy(`source:${url}`);
+    try {
+      const payload = await callApi(
+        `/api/news/draft/${encodeURIComponent(draft.id)}`,
+        "PATCH",
+        {
+          expectedRevision: revision,
+          expectedRecordVersion: recordVersion,
+          expectedContentHash: contentHash,
+          verifiedSources: next,
+        },
+      );
+      const updated = payload.draft as NewsDraft | undefined;
+      setVerifiedSources(updated?.verifiedSources ?? next);
+      setEvidenceApprovalHash(updated?.evidenceApproval?.hash ?? "");
+      if (updated) {
+        setRevision(updated.revision);
+        setRecordVersion(updated.recordVersion);
+        setContentHash(updated.contentHash);
+        setMediaApproval(updated.mediaApproval);
+      }
+      showMessage(
+        updated?.evidenceApproval
+          ? "Evidence approval bound to this exact revision."
+          : "Source check saved; every cited source and fetched record is required.",
+      );
+    } catch (caught) {
+      showMessage(
+        caught instanceof Error ? caught.message : "Source check failed.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function approveMedia() {
+    setBusy("media");
+    try {
+      const payload = await callApi(
+        `/api/news/draft/${encodeURIComponent(draft.id)}/media-approval`,
+        "POST",
+        {
+          expectedRevision: revision,
+          expectedRecordVersion: recordVersion,
+          expectedContentHash: contentHash,
+          ...mediaRecord,
+        },
+      );
+      const approved = payload.mediaApproval as
+        | NewsDraft["mediaApproval"]
+        | undefined;
+      if (!approved) {
+        throw new Error("The media approval ledger was not returned.");
+      }
+      setMediaApproval(approved);
+      if (typeof payload.revision === "number") {
+        setRevision(payload.revision);
+      }
+      if (typeof payload.recordVersion === "number") {
+        setRecordVersion(payload.recordVersion);
+      }
+      if (typeof payload.contentHash === "string") {
+        setContentHash(payload.contentHash);
+      }
+      showMessage("Real UHD cover bytes and rights record approved.");
+    } catch (caught) {
+      showMessage(
+        caught instanceof Error ? caught.message : "Media approval failed.",
+      );
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <GlassCard variant="holo" padding="none" style={{ overflow: "hidden" }}>
-      {/* Header band */}
-      <div style={{ padding: "24px 24px 18px", display: "flex", gap: "20px", alignItems: "flex-start" }}>
-        <ConfidenceArc pct={confidence} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
-            <Chip tone="gold">{draft.article.category}</Chip>
-            <Chip tone="holo">score {draft.provenance.score}</Chip>
-            <Chip tone="muted">draft · review</Chip>
-            {unbackedCount > 0 && <Chip tone="warn">{unbackedCount} figure(s) to check</Chip>}
-          </div>
-          <h2
-            style={{
-              fontFamily: "var(--v16-font-display), Georgia, serif",
-              fontSize: "clamp(1.4rem, 2.6vw, 2rem)",
-              fontWeight: 500,
-              lineHeight: 1.12,
-              letterSpacing: "-0.02em",
-              margin: 0,
-              color: "var(--v16-ink, #F2EEE7)",
-            }}
-          >
-            {draft.article.title}
-          </h2>
-          <p style={{ marginTop: "6px", color: "var(--v16-ink-muted, rgba(242,238,231,0.62))", fontSize: "0.95rem" }}>
-            {draft.article.subtitle}
-          </p>
+    <article className={styles.draft}>
+      <header className={styles.draftHeader}>
+        <div className={styles.score}>
+          <span>Gate score</span>
+          <strong>{confidence}</strong>
+          <i aria-hidden="true">
+            <b style={{ width: `${confidence}%` }} />
+          </i>
         </div>
-      </div>
+        <div className={styles.draftTitle}>
+          <div className={styles.tags}>
+            <span>{draft.article.category}</span>
+            <span>Source score {draft.provenance.score}</span>
+            {unbackedCount > 0 ? (
+              <span className={styles.warning}>
+                {unbackedCount} figure{unbackedCount === 1 ? "" : "s"} to check
+              </span>
+            ) : null}
+          </div>
+          <h2>{draft.article.title}</h2>
+          <p>{draft.article.subtitle}</p>
+        </div>
+      </header>
 
-      {/* Validator constellation + metrics */}
-      <div
-        style={{
-          padding: "0 24px 18px",
-          display: "flex",
-          gap: "18px",
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ display: "flex", gap: "7px" }}>
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((g) => {
-            const tone = blockedGates.has(g) ? "#FF6B6B" : warnGates.has(g) ? "#E0A33B" : "#3FCF8E";
+      <div className={styles.gates}>
+        <div aria-label="Validator gates">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((gate) => {
+            const state = blockedGates.has(gate)
+              ? "fail"
+              : warningGates.has(gate)
+                ? "warn"
+                : "pass";
             return (
               <span
-                key={g}
-                title={`Gate ${g} — ${GATE_NAMES[g]}: ${blockedGates.has(g) ? "FAIL" : warnGates.has(g) ? "warn" : "pass"}`}
-                style={{
-                  width: "11px",
-                  height: "11px",
-                  borderRadius: "3px",
-                  background: tone,
-                  boxShadow: `0 0 8px ${tone}80`,
-                }}
-              />
+                key={gate}
+                className={styles[state]}
+                title={`Gate ${gate}: ${GATE_NAMES[gate]} — ${state}`}
+              >
+                {gate}
+              </span>
             );
           })}
         </div>
-        <MetricRow
-          items={[
-            [`${v.metrics.wordCount}`, "words"],
-            [`${v.metrics.headlineLength}c`, "headline"],
-            [`${v.metrics.approvedLexiconCount}`, "voice"],
-            [`${v.metrics.citationsFromWhitelist}/${v.metrics.citationCount}`, "cites"],
-            [v.metrics.p1HasNumber ? "yes" : "no", "p1 #"],
-            [`${v.metrics.emDashCount}`, "em-dash"],
-          ]}
-        />
+        <dl>
+          <Metric value={validator.metrics.wordCount} label="Words" />
+          <Metric
+            value={validator.metrics.headlineLength}
+            label="Headline characters"
+          />
+          <Metric
+            value={`${validator.metrics.citationsFromWhitelist}/${validator.metrics.citationCount}`}
+            label="Allowed citations"
+          />
+          <Metric
+            value={validator.metrics.p1HasNumber ? "Yes" : "No"}
+            label="Opening evidence"
+          />
+        </dl>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "2px", padding: "0 24px", borderBottom: "1px solid var(--v16-chrome, rgba(242,238,231,0.12))" }}>
-        {(["verify", "preview", "edit"] as View[]).map((t) => (
+      <nav className={styles.tabs} aria-label="Draft review views">
+        {(["verify", "preview", "edit"] as View[]).map((tab) => (
           <button
-            key={t}
-            onClick={() => setView(t)}
-            style={{
-              padding: "10px 16px",
-              background: "transparent",
-              border: "none",
-              borderBottom: `2px solid ${view === t ? "var(--v16-holo-blue, #C9A961)" : "transparent"}`,
-              color: view === t ? "var(--v16-ink, #F2EEE7)" : "var(--v16-ink-muted, rgba(242,238,231,0.62))",
-              fontFamily: "var(--v16-font-mono), monospace",
-              fontSize: "0.7rem",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-            }}
+            type="button"
+            key={tab}
+            aria-pressed={view === tab}
+            onClick={() => setView(tab)}
           >
-            {t === "verify" ? "Verify figures" : t}
+            {tab === "verify" ? "Verify evidence" : tab}
           </button>
         ))}
-      </div>
+      </nav>
 
-      {/* Body of the active view */}
-      <div style={{ padding: "24px", background: "rgba(242,238,231,0.04)", color: "var(--v16-ink, #F2EEE7)" }}>
-        {view === "verify" && (
-          <VerifySplit
+      <div className={styles.reviewBody}>
+        {view === "verify" ? (
+          <VerifyView
             draft={draft}
             activeSource={activeSource}
             setActiveSource={setActiveSource}
+            verifiedSources={verifiedSources}
+            toggleSource={toggleSource}
+            busy={busy}
           />
-        )}
-        {view === "preview" && (
-          <div style={{ borderRadius: "12px", overflow: "hidden", background: "rgba(242,238,231,0.04)" }}>
-            <SemaformLayout article={{ ...draft.article, status: "live" } as NewsArticle} />
+        ) : null}
+        {view === "preview" ? (
+          <div className={styles.preview}>
+            <SemaformLayout
+              article={{ ...draft.article, status: "live" } as NewsArticle}
+            />
           </div>
-        )}
-        {view === "edit" && (
-          <EditForm edit={edit} setEdit={setEdit} onSave={saveEdit} busy={busy === "save"} />
-        )}
+        ) : null}
+        {view === "edit" ? (
+          <EditView
+            edit={edit}
+            setEdit={setEdit}
+            save={saveEdit}
+            busy={busy === "save"}
+          />
+        ) : null}
       </div>
 
-      {/* Verify gate + actions */}
-      <div
-        style={{
-          padding: "18px 24px 24px",
-          background: "var(--v16-ink-card, #1A1A1B)",
-          borderTop: "1px solid var(--v16-ink-card-border, rgba(242,238,231,0.1))",
-        }}
-      >
-        {/* The human gate */}
-        <button
-          onClick={() => setFiguresVerified((s) => !s)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            marginBottom: "14px",
-          }}
-        >
-          <span
-            style={{
-              width: "20px",
-              height: "20px",
-              borderRadius: "6px",
-              border: `1.5px solid ${figuresVerified ? "#3FCF8E" : "var(--v16-ink-faint, rgba(242,238,231,0.42))"}`,
-              background: figuresVerified ? "#3FCF8E" : "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#141414",
-              fontSize: "0.8rem",
-              boxShadow: figuresVerified ? "0 0 12px #3FCF8E80" : "none",
-              transition: "all 200ms var(--v16-ease-out, ease)",
-            }}
-          >
-            {figuresVerified ? "✓" : ""}
-          </span>
-          <span style={{ fontSize: "0.85rem", color: "var(--v16-paper, #F2EEE7)" }}>
-            I&apos;ve checked every figure against its source
-            {unbackedCount > 0 && (
-              <span style={{ color: "#E0A33B" }}> — {unbackedCount} not found in any source</span>
-            )}
-          </span>
-        </button>
+      <section className={styles.mediaPanel} aria-label="UHD media approval">
+        <div>
+          <span>Immutable media gate</span>
+          <h3>Inspect the real article cover</h3>
+          <p>
+            The Desk reads the cover bytes from the publication branch,
+            fully decodes the image and requires genuine 3840 × 2160 detail
+            before binding its hash and rights record to this revision.
+          </p>
+        </div>
+        {mediaApproval ? (
+          <dl>
+            <div>
+              <dt>Approved size</dt>
+              <dd>
+                {mediaApproval.width} × {mediaApproval.height}
+              </dd>
+            </div>
+            <div>
+              <dt>Repository file</dt>
+              <dd>{mediaApproval.repoPath}</dd>
+            </div>
+            <div>
+              <dt>Credit</dt>
+              <dd>{mediaApproval.credit}</dd>
+            </div>
+            <div>
+              <dt>Byte proof</dt>
+              <dd>{mediaApproval.contentSha256.slice(0, 16)}…</dd>
+            </div>
+          </dl>
+        ) : (
+          <div className={styles.mediaForm}>
+            <label>
+              Official source URL
+              <input
+                type="url"
+                value={mediaRecord.sourceUrl}
+                onChange={(event) =>
+                  setMediaRecord({
+                    ...mediaRecord,
+                    sourceUrl: event.target.value,
+                  })
+                }
+                placeholder="https://official-source.example/asset"
+              />
+            </label>
+            <label>
+              Rights basis
+              <input
+                value={mediaRecord.rightsStatus}
+                onChange={(event) =>
+                  setMediaRecord({
+                    ...mediaRecord,
+                    rightsStatus: event.target.value,
+                  })
+                }
+                placeholder="Owned or licensed editorial use"
+              />
+            </label>
+            <label>
+              Visible credit
+              <input
+                value={mediaRecord.credit}
+                onChange={(event) =>
+                  setMediaRecord({
+                    ...mediaRecord,
+                    credit: event.target.value,
+                  })
+                }
+                placeholder="Developer / photographer"
+              />
+            </label>
+            <Button
+              tone="quiet"
+              busy={busy === "media"}
+              disabled={
+                !mediaRecord.sourceUrl.trim() ||
+                mediaRecord.rightsStatus.trim().length < 8 ||
+                mediaRecord.credit.trim().length < 2
+              }
+              onClick={approveMedia}
+            >
+              {busy === "media"
+                ? "Inspecting UHD bytes…"
+                : "Inspect and approve UHD cover"}
+            </Button>
+          </div>
+        )}
+      </section>
 
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-          {/* Approve & publish */}
+      <footer className={styles.actions}>
+        <p className={styles.humanGate}>
+          Figures: {figuresVerified
+            ? "verified against fetched evidence"
+            : `${unbackedCount} require human confirmation`}
+          {" · "}
+          Evidence: {allSourcesVerified && evidenceApprovalHash
+            ? "approved for this revision"
+            : "source-by-source review incomplete"}
+          {" · "}
+          Media: {mediaApprovalHash
+            ? "approved byte ledger attached"
+            : "UHD rights/byte approval required"}
+        </p>
+
+        <div className={styles.actionRow}>
           {confirmStage === "publish" ? (
-            <>
-              <PillButton tone="confirm" busy={busy === "publish"} onClick={doPublish}>
-                {busy === "publish" ? "Publishing…" : "Confirm — go live"}
-              </PillButton>
-              <PillButton tone="ghost" onClick={() => setConfirmStage(null)}>
+            <div className={styles.confirm}>
+              <strong>Publish this reviewed draft?</strong>
+              <Button tone="positive" busy={busy === "publish"} onClick={publish}>
+                {busy === "publish" ? "Publishing…" : "Confirm publication"}
+              </Button>
+              <Button tone="quiet" onClick={() => setConfirmStage(null)}>
                 Cancel
-              </PillButton>
-            </>
+              </Button>
+            </div>
           ) : (
-            <PillButton
+            <Button
               tone="primary"
               disabled={!canPublish}
               onClick={() => setConfirmStage("publish")}
               title={
-                !v.ok
-                  ? "Validator gates must pass first"
-                  : !figuresVerified
-                    ? "Tick the figures-checked box first"
-                    : "Publish this article live"
+                !validator.ok
+                  ? "All blocking validator gates must pass."
+                  : unbackedCount > 0
+                    ? "Every material figure must appear in fetched evidence."
+                    : !allSourcesVerified || !evidenceApprovalHash
+                      ? "Complete the source-by-source evidence check."
+                      : !mediaApprovalHash
+                        ? "Attach an approved UHD media ledger."
+                    : undefined
               }
             >
-              Approve &amp; publish
-            </PillButton>
+              Approve and publish
+            </Button>
           )}
 
-          {/* Reject */}
           {confirmStage === "reject" ? (
-            <>
-              <PillButton tone="danger" busy={busy === "reject"} onClick={doReject}>
-                {busy === "reject" ? "Rejecting…" : "Confirm reject"}
-              </PillButton>
-              <PillButton tone="ghost" onClick={() => setConfirmStage(null)}>
+            <div className={styles.confirm}>
+              <strong>Reject and remove this draft?</strong>
+              <Button tone="danger" busy={busy === "reject"} onClick={reject}>
+                {busy === "reject" ? "Rejecting…" : "Confirm rejection"}
+              </Button>
+              <Button tone="quiet" onClick={() => setConfirmStage(null)}>
                 Cancel
-              </PillButton>
-            </>
+              </Button>
+            </div>
           ) : (
-            <PillButton tone="ghost" onClick={() => setConfirmStage("reject")}>
+            <Button tone="quiet" onClick={() => setConfirmStage("reject")}>
               Reject
-            </PillButton>
+            </Button>
           )}
 
-          <span style={{ marginLeft: "auto" }}>
-            <LaunchConsole distribution={draft.article.distribution} />
-          </span>
+          <DistributionState distribution={draft.article.distribution} />
         </div>
 
-        {!v.ok && (
-          <p style={{ marginTop: "12px", fontSize: "0.78rem", color: "#FF8C8C" }}>
-            Blocked: {v.failures.filter((f) => f.severity === "block").map((f) => f.name).join(" · ")}.
-            Fix in Edit, then re-check.
+        {!validator.ok ? (
+          <p className={styles.blocked} role="status">
+            Publishing blocked:{" "}
+            {validator.failures
+              .filter((failure) => failure.severity === "block")
+              .map((failure) => failure.name)
+              .join(" · ")}
           </p>
-        )}
-      </div>
+        ) : null}
+      </footer>
 
-      {/* Toast */}
-      {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            right: "24px",
-            zIndex: 50,
-            padding: "12px 18px",
-            borderRadius: "10px",
-            background: "var(--v16-ink-card, #1A1A1B)",
-            border: "1px solid var(--v16-holo-blue, #C9A961)",
-            color: "var(--v16-paper, #F2EEE7)",
-            fontFamily: "var(--v16-font-mono), monospace",
-            fontSize: "0.8rem",
-            boxShadow: "0 12px 40px rgba(0,0,0,0.5), 0 0 20px var(--v16-holo-glow, rgba(178,146,79,0.24))",
-          }}
-        >
-          {toast}
+      {message ? (
+        <div className={styles.message} role="status" aria-live="polite">
+          {message}
         </div>
-      )}
-    </GlassCard>
+      ) : null}
+    </article>
   );
 }
 
-/* ─── Verify split: reading column + source rail ──────────────────────── */
+function Metric({
+  value,
+  label,
+}: {
+  value: string | number;
+  label: string;
+}) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
 
-function VerifySplit({
+function VerifyView({
   draft,
   activeSource,
   setActiveSource,
+  verifiedSources,
+  toggleSource,
+  busy,
 }: {
   draft: NewsDraft;
   activeSource: string | null;
-  setActiveSource: (u: string | null) => void;
+  setActiveSource: (url: string | null) => void;
+  verifiedSources: string[];
+  toggleSource: (url: string, checked: boolean) => void;
+  busy: string | null;
 }) {
-  const sources = draft.provenance.sources;
-  const citedText = draft.provenance.citedText ?? "";
-
+  const evidence = draft.provenance.fetchedEvidence ?? [];
+  const citations = draft.article.citations;
+  const sources = citations.map((citation) => {
+    const record = evidence.find((item) => item.url === citation.url);
+    return {
+      name: citation.source,
+      tier: record ? "Fetched evidence" : "Evidence unavailable",
+      url: citation.url,
+      summary: record?.text ?? "No independently fetched text is attached.",
+    };
+  });
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)", gap: "24px" }} className="desk-verify-grid">
-      {/* Reading column */}
-      <div style={{ maxWidth: "62ch" }}>
-        <p
-          style={{
-            fontFamily: "var(--v16-font-mono), monospace",
-            fontSize: "0.62rem",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "var(--v16-holo-deep, #C9A961)",
-            marginBottom: "12px",
-          }}
-        >
-          Draft body — figures glow gold
-        </p>
-        {draft.article.body.split(/\n\n+/).map((para, i) => (
-          <p key={i} style={{ marginBottom: "14px", lineHeight: 1.7, fontSize: "1rem", color: "var(--v16-ink-soft, #D8D3CA)" }}>
-            {highlightFigures(para, sources, setActiveSource, citedText)}
+    <div className={styles.verify}>
+      <div className={styles.copy}>
+        <p className={styles.viewLabel}>Draft copy · figures highlighted</p>
+        {draft.article.body.split(/\n\n+/).map((paragraph, index) => (
+          <p key={index}>
+            {highlightFigures(
+              paragraph,
+              evidence,
+              setActiveSource,
+            )}
           </p>
         ))}
       </div>
-
-      {/* Source rail */}
-      <div>
-        <p
-          style={{
-            fontFamily: "var(--v16-font-mono), monospace",
-            fontSize: "0.62rem",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "var(--v16-holo-deep, #C9A961)",
-            marginBottom: "12px",
-          }}
-        >
-          {sources.length} source{sources.length === 1 ? "" : "s"}
+      <aside className={styles.sources}>
+        <p className={styles.viewLabel}>
+          {citations.length} cited source{citations.length === 1 ? "" : "s"}
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {sources.length === 0 && (
-            <p style={{ fontSize: "0.85rem", color: "var(--v16-ink-muted, rgba(242,238,231,0.62))" }}>
-              No source cluster attached to this draft.
+        {citations.length === 0 ? (
+          <div className={styles.noSources}>
+            No source cluster is attached. Do not approve material claims.
+          </div>
+        ) : null}
+        {sources.map((source) => (
+          <a
+            key={source.url}
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-active={activeSource === source.url}
+            onMouseEnter={() => setActiveSource(source.url)}
+            onMouseLeave={() => setActiveSource(null)}
+            onFocus={() => setActiveSource(source.url)}
+            onBlur={() => setActiveSource(null)}
+          >
+            <span>
+              <strong>{source.name}</strong>
+              <small>{source.tier}</small>
+            </span>
+            <p>
+              {source.summary.slice(0, 240)}
+              {source.summary.length > 240 ? "…" : ""}
             </p>
-          )}
-          {sources.map((s) => {
-            const active = activeSource === s.url;
+          </a>
+        ))}
+        <div className={styles.sourceChecks}>
+          {citations.map((citation) => {
+            const hasEvidence = evidence.some(
+              (item) => item.url === citation.url,
+            );
             return (
-              <a
-                key={s.url}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onMouseEnter={() => setActiveSource(s.url)}
-                onMouseLeave={() => setActiveSource(null)}
-                style={{
-                  display: "block",
-                  padding: "14px",
-                  borderRadius: "12px",
-                  textDecoration: "none",
-                  background: "rgba(242,238,231,0.05)",
-                  border: `1px solid ${active ? "var(--v16-holo-blue, #C9A961)" : "var(--v16-chrome, rgba(242,238,231,0.12))"}`,
-                  boxShadow: active ? "0 0 22px var(--v16-holo-glow, rgba(178,146,79,0.24))" : "none",
-                  transition: "all 180ms var(--v16-ease-out, ease)",
-                  transform: active ? "translateY(-1px)" : "none",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", marginBottom: "6px" }}>
-                  <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--v16-ink, #F2EEE7)" }}>{s.name}</span>
-                  <span
-                    style={{
-                      fontFamily: "var(--v16-font-mono), monospace",
-                      fontSize: "0.58rem",
-                      letterSpacing: "0.12em",
-                      textTransform: "uppercase",
-                      color: "var(--v16-holo-deep, #C9A961)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {s.tier}
-                  </span>
-                </div>
-                <p style={{ fontSize: "0.8rem", lineHeight: 1.5, color: "var(--v16-ink-muted, rgba(242,238,231,0.62))", margin: 0 }}>
-                  {s.summary.slice(0, 220)}
-                  {s.summary.length > 220 ? "…" : ""}
-                </p>
-              </a>
+              <label key={`check-${citation.url}`}>
+                <input
+                  type="checkbox"
+                  checked={verifiedSources.includes(citation.url)}
+                  disabled={!hasEvidence || busy !== null}
+                  onChange={(event) =>
+                    toggleSource(citation.url, event.target.checked)
+                  }
+                />
+                <span>{citation.source}</span>
+                <small>
+                  {hasEvidence
+                    ? "Checked against exact source"
+                    : "Fetched evidence required"}
+                </small>
+              </label>
             );
           })}
         </div>
-      </div>
-
-      <style jsx>{`
-        @media (max-width: 760px) {
-          .desk-verify-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+      </aside>
     </div>
   );
 }
 
-/** Split a paragraph into text + gold figure marks. Hovering a figure lights
- *  the source whose summary contains its digits. */
 function highlightFigures(
   text: string,
-  sources: ProvenanceSource[],
-  setActiveSource: (u: string | null) => void,
-  citedText = "",
+  evidence: NonNullable<NewsDraft["provenance"]["fetchedEvidence"]>,
+  setActiveSource: (url: string | null) => void,
 ) {
-  const out: React.ReactNode[] = [];
-  let last = 0;
-  let m: RegExpExecArray | null;
-  const re = new RegExp(NUMBER_RE.source, "gi");
-  const citedDigits = digitsOf(citedText);
+  const output: React.ReactNode[] = [];
+  const matcher = new RegExp(NUMBER_RE.source, "gi");
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
   let key = 0;
-  while ((m = re.exec(text)) !== null) {
-    const fig = m[0];
-    if (!/\d/.test(fig)) continue;
-    if (m.index > last) out.push(text.slice(last, m.index));
-    const core = digitsOf(fig);
-    const inCited = core.length >= 2 && citedDigits.includes(core);
-    const match = sources.find((s) => digitsOf(s.summary).includes(core));
-    const backed = core.length < 2 || inCited || Boolean(match);
-    out.push(
+
+  while ((match = matcher.exec(text)) !== null) {
+    const figure = match[0];
+    if (match.index > lastIndex) {
+      output.push(text.slice(lastIndex, match.index));
+    }
+    const core = digitsOf(figure);
+    const source = evidence.find((item) =>
+      digitsOf(item.text).includes(core),
+    );
+    const backed = core.length < 2 || Boolean(source);
+
+    output.push(
       <mark
-        key={`f${key++}`}
-        onMouseEnter={() => match && setActiveSource(match.url)}
+        key={`figure-${key++}`}
+        data-backed={backed}
+        onMouseEnter={() => source && setActiveSource(source.url)}
         onMouseLeave={() => setActiveSource(null)}
-        style={{
-          background: backed ? "rgba(201,169,97,0.18)" : "rgba(224,163,59,0.12)",
-          color: backed ? "var(--v16-brass, #D8C089)" : "#E0A33B",
-          padding: "0 3px",
-          borderRadius: "4px",
-          borderBottom: `1.5px solid ${backed ? "var(--v16-brass, #C9A961)" : "#E0A33B"}`,
-          cursor: match ? "help" : "default",
-          fontWeight: 600,
-          fontVariantNumeric: "tabular-nums",
-        }}
-        title={backed ? "Found in a source — hover to highlight it" : "Not found in any attached source — verify manually"}
+        title={
+          backed
+            ? "Present in the attached source record"
+            : "Not found in the attached source record"
+        }
       >
-        {fig}
+        {figure}
       </mark>,
     );
-    last = m.index + fig.length;
+    lastIndex = match.index + figure.length;
   }
-  if (last < text.length) out.push(text.slice(last));
-  return out;
+
+  if (lastIndex < text.length) output.push(text.slice(lastIndex));
+  return output;
 }
 
-/* ─── Edit form ───────────────────────────────────────────────────────── */
-
-function EditForm({
+function EditView({
   edit,
   setEdit,
-  onSave,
+  save,
   busy,
 }: {
   edit: { title: string; subtitle: string; body: string };
-  setEdit: (e: { title: string; subtitle: string; body: string }) => void;
-  onSave: () => void;
+  setEdit: (value: { title: string; subtitle: string; body: string }) => void;
+  save: () => void;
   busy: boolean;
 }) {
-  const field: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    background: "rgba(242,238,231,0.05)",
-    border: "1px solid var(--v16-chrome, rgba(242,238,231,0.12))",
-    borderRadius: "8px",
-    fontFamily: "inherit",
-    fontSize: "0.95rem",
-    color: "var(--v16-ink, #F2EEE7)",
-    marginBottom: "14px",
-  };
   return (
-    <div>
-      <Label>Headline</Label>
-      <input style={field} value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
-      <Label>Subtitle</Label>
-      <input style={field} value={edit.subtitle} onChange={(e) => setEdit({ ...edit, subtitle: e.target.value })} />
-      <Label>Body</Label>
-      <textarea
-        style={{ ...field, minHeight: "320px", lineHeight: 1.6, resize: "vertical" }}
-        value={edit.body}
-        onChange={(e) => setEdit({ ...edit, body: e.target.value })}
-      />
-      <PillButton tone="primary" busy={busy} onClick={onSave}>
-        {busy ? "Saving…" : "Save & re-validate"}
-      </PillButton>
-    </div>
-  );
-}
-
-/* ─── Small parts ─────────────────────────────────────────────────────── */
-
-function ConfidenceArc({ pct }: { pct: number }) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
-  const tone = pct >= 88 ? "#3FCF8E" : pct >= 60 ? "#E0A33B" : "#FF6B6B";
-  return (
-    <div style={{ position: "relative", width: "64px", height: "64px", flexShrink: 0 }}>
-      <svg width="64" height="64" viewBox="0 0 64 64" style={{ transform: "rotate(-90deg)" }}>
-        <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(242,238,231,0.12)" strokeWidth="5" />
-        <circle
-          cx="32"
-          cy="32"
-          r={r}
-          fill="none"
-          stroke={tone}
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${c}`}
-          style={{ filter: `drop-shadow(0 0 4px ${tone})`, transition: "stroke-dasharray 700ms var(--v16-ease-display, ease)" }}
+    <div className={styles.edit}>
+      <label>
+        Headline
+        <input
+          value={edit.title}
+          onChange={(event) => setEdit({ ...edit, title: event.target.value })}
         />
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "var(--v16-font-display), Georgia, serif",
-          fontSize: "1rem",
-          fontWeight: 500,
-          color: "var(--v16-ink, #F2EEE7)",
-        }}
-      >
-        {pct}
-      </div>
+      </label>
+      <label>
+        Subtitle
+        <input
+          value={edit.subtitle}
+          onChange={(event) =>
+            setEdit({ ...edit, subtitle: event.target.value })
+          }
+        />
+      </label>
+      <label>
+        Body
+        <textarea
+          value={edit.body}
+          onChange={(event) => setEdit({ ...edit, body: event.target.value })}
+        />
+      </label>
+      <Button tone="primary" busy={busy} onClick={save}>
+        {busy ? "Saving…" : "Save and re-validate"}
+      </Button>
     </div>
   );
 }
 
-function Chip({ children, tone }: { children: React.ReactNode; tone: "gold" | "holo" | "muted" | "warn" }) {
-  const map = {
-    gold: { bg: "rgba(201,169,97,0.16)", fg: "#C9A961", bd: "rgba(201,169,97,0.5)" },
-    holo: { bg: "rgba(178,146,79,0.14)", fg: "#D8C089", bd: "rgba(178,146,79,0.5)" },
-    muted: { bg: "rgba(242,238,231,0.08)", fg: "rgba(242,238,231,0.62)", bd: "rgba(242,238,231,0.2)" },
-    warn: { bg: "rgba(224,163,59,0.16)", fg: "#E0A33B", bd: "rgba(224,163,59,0.5)" },
-  }[tone];
+function DistributionState({
+  distribution,
+}: {
+  distribution: NewsArticle["distribution"];
+}) {
+  const channels = [
+    ["IndexNow", true],
+    ["Telegram", Boolean(distribution?.telegram)],
+    ["LinkedIn", Boolean(distribution?.postiz?.linkedin)],
+  ] as const;
   return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "3px 9px",
-        borderRadius: "999px",
-        background: map.bg,
-        color: map.fg,
-        border: `1px solid ${map.bd}`,
-        fontFamily: "var(--v16-font-mono), monospace",
-        fontSize: "0.6rem",
-        fontWeight: 600,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function MetricRow({ items }: { items: [string, string][] }) {
-  return (
-    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-      {items.map(([val, label]) => (
-        <span key={label} style={{ display: "flex", flexDirection: "column" }}>
-          <span
-            style={{
-              fontFamily: "var(--v16-font-display), Georgia, serif",
-              fontSize: "1.05rem",
-              fontWeight: 500,
-              color: "var(--v16-ink, #F2EEE7)",
-              fontVariantNumeric: "tabular-nums",
-              lineHeight: 1,
-            }}
-          >
-            {val}
-          </span>
-          <span
-            style={{
-              fontFamily: "var(--v16-font-mono), monospace",
-              fontSize: "0.56rem",
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              color: "var(--v16-ink-muted, rgba(242,238,231,0.62))",
-              marginTop: "3px",
-            }}
-          >
-            {label}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <label
-      style={{
-        display: "block",
-        fontFamily: "var(--v16-font-mono), monospace",
-        fontSize: "0.6rem",
-        letterSpacing: "0.18em",
-        textTransform: "uppercase",
-        color: "var(--v16-ink-muted, rgba(242,238,231,0.62))",
-        marginBottom: "6px",
-      }}
-    >
-      {children}
-    </label>
-  );
-}
-
-function LaunchConsole({ distribution }: { distribution: NewsArticle["distribution"] }) {
-  const channels: { label: string; on: boolean }[] = [
-    { label: "IndexNow", on: true },
-    { label: "Telegram", on: Boolean(distribution?.telegram) },
-    { label: "LinkedIn", on: Boolean(distribution?.postiz?.linkedin) },
-    { label: "Listmonk", on: false },
-  ];
-  return (
-    <span style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
-      {channels.map((c) => (
-        <span
-          key={c.label}
-          title={c.on ? "Will fan out on publish" : "Not configured — dormant"}
-          style={{
-            fontFamily: "var(--v16-font-mono), monospace",
-            fontSize: "0.58rem",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            padding: "3px 8px",
-            borderRadius: "999px",
-            color: c.on ? "#3FCF8E" : "var(--v16-ink-faint, rgba(242,238,231,0.42))",
-            border: `1px solid ${c.on ? "rgba(63,207,142,0.4)" : "rgba(242,238,231,0.2)"}`,
-            background: c.on ? "rgba(63,207,142,0.1)" : "transparent",
-            opacity: c.on ? 1 : 0.6,
-          }}
-        >
-          {c.label}
+    <span className={styles.distribution}>
+      {channels.map(([label, active]) => (
+        <span key={label} data-active={active}>
+          {label}: {active ? "configured" : "off"}
         </span>
       ))}
     </span>
   );
 }
 
-function PillButton({
+function Button({
   children,
   onClick,
   tone,
@@ -942,37 +893,18 @@ function PillButton({
 }: {
   children: React.ReactNode;
   onClick?: () => void;
-  tone: "primary" | "confirm" | "danger" | "ghost";
+  tone: "primary" | "positive" | "danger" | "quiet";
   disabled?: boolean;
   busy?: boolean;
   title?: string;
 }) {
-  const map = {
-    primary: { bg: "var(--v16-holo-blue, #C9A961)", fg: "#141414", bd: "transparent" },
-    confirm: { bg: "#3FCF8E", fg: "#141414", bd: "transparent" },
-    danger: { bg: "#FF6B6B", fg: "#1a0606", bd: "transparent" },
-    ghost: { bg: "transparent", fg: "var(--v16-ink-faint, rgba(242,238,231,0.42))", bd: "rgba(242,238,231,0.18)" },
-  }[tone];
   return (
     <button
+      type="button"
+      className={`${styles.button} ${styles[tone]}`}
       onClick={onClick}
       disabled={disabled || busy}
       title={title}
-      style={{
-        padding: "11px 20px",
-        borderRadius: "999px",
-        background: map.bg,
-        color: map.fg,
-        border: `1px solid ${map.bd}`,
-        fontFamily: "var(--v16-font-mono), monospace",
-        fontSize: "0.72rem",
-        fontWeight: 700,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        cursor: disabled || busy ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.45 : 1,
-        transition: "all 160ms var(--v16-ease-out, ease)",
-      }}
     >
       {children}
     </button>

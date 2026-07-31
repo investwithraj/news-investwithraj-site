@@ -7,14 +7,14 @@
 //   2. Web Speech API records + transcribes their question.
 //   3. Question fires POST /api/brief with topic.
 //   4. Brief comes back as text.
-//   5. Brief is POSTed to /api/voice to synthesise with Raj's voice.
+//   5. The brief's signed, single-use voice grant is POSTed to /api/voice.
 //   6. Audio plays back inline.
 //
 // Visual chrome inspired by Apple Vision Pro's hold-to-record affordance:
 //   a gold ring that pulses while listening, then a spectrum bar while
 //   transcribing, then a play indicator on the response.
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 type Phase = "idle" | "listening" | "thinking" | "speaking" | "error";
 
@@ -61,16 +61,11 @@ export function VoiceMode() {
   const [expanded, setExpanded] = useState(false);
   const recogRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [supported, setSupported] = useState(false);
-
-  useEffect(() => {
-    // Check support — Web Speech API still vendor-prefixed in many browsers
-    const SR =
-      typeof window !== "undefined"
-        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
-        : undefined;
-    setSupported(!!SR);
-  }, []);
+  const [supported] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
+  );
 
   function startListening() {
     if (!supported) {
@@ -132,6 +127,7 @@ export function VoiceMode() {
       const briefJson = (await briefRes.json()) as {
         ok?: boolean;
         brief?: string;
+        voiceGrant?: string | null;
         message?: string;
         error?: string;
       };
@@ -145,11 +141,17 @@ export function VoiceMode() {
       const voiceText = briefJson.brief.split("\n\n").slice(0, 3).join(" ").slice(0, 600);
       setAnswerSnippet(voiceText);
 
+      if (!briefJson.voiceGrant) {
+        setError("Voice playback is temporarily unavailable.");
+        setPhase("error");
+        return;
+      }
+
       setPhase("speaking");
       const voiceRes = await fetch("/api/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: voiceText }),
+        body: JSON.stringify({ grant: briefJson.voiceGrant }),
       });
       if (!voiceRes.ok) {
         const j = await voiceRes.json().catch(() => ({}));

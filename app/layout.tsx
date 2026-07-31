@@ -1,68 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter, JetBrains_Mono, Fraunces, Raleway, Playfair_Display } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { SITE, CONTACT } from "@/lib/constants";
+import { SITE } from "@/lib/constants";
 import { ConsentRoot } from "@/components/consent/ConsentRoot";
-import CustomCursor from "@/components/CustomCursor";
-import { FxProvider } from "@/components/ticker/FxProvider";
-import { DldTicker } from "@/components/ticker/DldTicker";
-import PageLoadCurtain from "@/components/PageLoadCurtain";
-import NavCurtain from "@/components/v21/NavCurtain";
-import AmbientAudio from "@/components/AmbientAudio";
-import NewsNav from "@/components/v22/pangea/NewsNav";
-import KonamiEasterEgg from "@/components/KonamiEasterEgg";
-import UISounds from "@/components/UISounds";
-import EditorialFooter from "@/components/EditorialFooter";
+import NewsChrome from "@/components/redesign/NewsChrome";
+import NewsFooter from "@/components/redesign/NewsFooter";
+import {
+  asGraph,
+  newsOrgSchema,
+  newsWebsiteSchema,
+  rajPersonSchema,
+} from "@/lib/schema";
 import "./globals.css";
+
+const IS_VERCEL_RUNTIME = process.env.VERCEL === "1";
 
 /* v11 fonts — same stack as IWR root, for visual continuity across the
    brand family. Light-theme only, no dark variant (same lesson learned). */
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  display: "swap",
-});
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
-  display: "swap",
-});
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  display: "swap",
-});
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  display: "swap",
-  axes: ["SOFT", "opsz"],
-});
-
 /* v25 Barnes-register pairing (parity with investwithraj.com): Raleway
    ultra-light tracked display + Playfair Didot-class serif. */
-const raleway = Raleway({
-  variable: "--font-raleway",
-  subsets: ["latin"],
-  weight: ["200", "300", "400", "600"],
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -139,49 +97,19 @@ export const metadata: Metadata = {
     title: SITE.name,
     statusBarStyle: "default",
   },
-  // F17 — Vision Pro / visionOS Safari spatial-web hints. Honored on
-  // spatial browsers, silently ignored on flat-web ones. /spatial route
-  // is the depth-optimised landing.
-  other: {
-    "apple-spatial-capable": "yes",
-    "apple-spatial-alternate": `${SITE.url}/spatial`,
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: {
+      "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? "",
+    },
   },
 };
 
-/* JSON-LD — WebSite + NewsMediaOrganization + author Person.
-   Cross-references back to IWR root (the canonical brand entity). */
-const websiteSchema = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": `${SITE.url}#website`,
-  url: SITE.url,
-  name: SITE.name,
-  description: SITE.description,
-  inLanguage: "en-AE",
-  publisher: { "@id": `${SITE.url}#newsmediaorg` },
-};
-
-const newsOrgSchema = {
-  "@context": "https://schema.org",
-  "@type": "NewsMediaOrganization",
-  "@id": `${SITE.url}#newsmediaorg`,
-  name: SITE.name,
-  url: SITE.url,
-  logo: {
-    "@type": "ImageObject",
-    url: `${SITE.rootUrl}/publisher-logo.png`,
-    width: 1000,
-    height: 1000,
-  },
-  parentOrganization: { "@id": `${SITE.rootUrl}#organization` },
-  founder: { "@id": `${SITE.rootUrl}#raj` },
-  diversityPolicy: `${SITE.url}/about/editorial-standards`,
-  ethicsPolicy: `${SITE.url}/about/editorial-standards`,
-  masthead: `${SITE.url}/about`,
-  missionCoveragePrioritiesPolicy: `${SITE.url}/about/editorial-standards`,
-  verificationFactCheckingPolicy: `${SITE.url}/about/editorial-standards`,
-  correctionsPolicy: `${SITE.url}/about/editorial-standards#corrections`,
-};
+const publicationIdentityGraph = asGraph(
+  newsWebsiteSchema,
+  newsOrgSchema,
+  rajPersonSchema,
+);
 
 export default function RootLayout({
   children,
@@ -189,7 +117,7 @@ export default function RootLayout({
   return (
     <html
       lang="en-AE"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} ${fraunces.variable} ${raleway.variable} ${playfair.variable} ${GeistSans.variable} ${GeistMono.variable} h-full`}
+      className={`${GeistSans.variable} ${GeistMono.variable} h-full`}
       suppressHydrationWarning
     >
       <head>
@@ -206,17 +134,14 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://investwithraj.com" />
 
-        {/* JSON-LD */}
+        {/* One linked identity graph: WebSite + publisher + Raj. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(websiteSchema).replace(/</g, "\\u003c"),
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(newsOrgSchema).replace(/</g, "\\u003c"),
+            __html: JSON.stringify(publicationIdentityGraph).replace(
+              /</g,
+              "\\u003c",
+            ),
           }}
         />
       </head>
@@ -224,7 +149,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {/* v13 SOTY — page-load curtain. RT monogram strokes draw on,
             then curtain wipes up over ~1.9s on first paint. */}
-        <PageLoadCurtain />
+        <NewsChrome />
 
         {/* V21 brand-motion unification — the main site's NavCurtain
             (B&C route-change wipe: wordmark panel covers down, client
@@ -232,7 +157,6 @@ export default function RootLayout({
             first-paint only, and app/template.tsx's curtain div never
             paints (its transform is identical in both phases) — only its
             subtle 320ms content fade runs, underneath this cover. */}
-        <NavCurtain />
 
         {/* v29 — THE NAV IS GLOBAL. It used to be mounted by three pages
             only (/, /about, /about/editorial-standards), which left every
@@ -240,46 +164,35 @@ export default function RootLayout({
             all: /closing-bell and /power-list/2026 were pure dead ends whose
             only internal link was the logo. Mounting it here is the fix for
             "lack of connectivity inside the news section". */}
-        <NewsNav />
 
-        <FxProvider>
           {/* DLD daily-pulse ticker — Bloomberg-style strip pinned to top */}
-          <DldTicker />
 
+        <div id="news-content" tabIndex={-1}>
           {children}
-        </FxProvider>
+        </div>
 
-        <EditorialFooter />
+        <NewsFooter />
 
         {/* v13 SOTY — cursor system with [data-cursor-label] + magnetic */}
-        <CustomCursor />
 
         {/* v13 SOTY — Web Audio ambient toggle, Cartier W&W pattern */}
-        <AmbientAudio />
 
         {/* v13 SOTY — UI sound dispatcher, gated by ambient master switch */}
-        <UISounds />
 
         {/* v13 SOTY easter egg — Konami unlocks Bulgari emerald palette */}
-        <KonamiEasterEgg />
 
         {/* v12 SOTM — 35mm film-grain overlay, ~4% opacity, multiply blend */}
-        <div className="film-grain" aria-hidden="true" />
 
-        <Analytics />
-        <SpeedInsights />
+        {IS_VERCEL_RUNTIME ? (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        ) : null}
 
         {/* GDPR/PDPL consent banner + 8-pixel network loader (gated by consent) */}
         <ConsentRoot />
 
-        {/* Hidden footer-of-footer — cross-domain link discoverability */}
-        <a
-          href={CONTACT.email}
-          className="sr-only"
-          aria-hidden="true"
-        >
-          {CONTACT.email}
-        </a>
       </body>
     </html>
   );

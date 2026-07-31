@@ -112,7 +112,6 @@ export default function PortraitFrame({
   return (
     <div className={`v16-portrait-frame ${className ?? ""}`} style={frameStyle}>
       {mediaType === "video" ? (
-        // eslint-disable-next-line jsx-a11y/media-has-caption
         <video
           ref={videoRef}
           src={src}

@@ -1,71 +1,31 @@
-// Raj Tomar as Person — used as author on every article. Linked to the
-// canonical Person entity at investwithraj.com/#raj via @id so Google
-// understands "this is the same person as the one on the IWR root site."
+// Raj Tomar has one canonical entity across the advisory and publication.
+// Keep this intentionally narrow: only claims visible on the public sites and
+// controlled profile URLs belong in structured data.
 
-import { SITE, CONTACT } from "@/lib/constants";
+import { CONTACT, SITE } from "@/lib/constants";
 
-/** Canonical Person schema for Raj Tomar — author of every article. */
+export const RAJ_PERSON_ID = `${SITE.rootUrl}#raj`;
+
+/** Canonical Person schema used by public author and profile pages. */
 export const rajPersonSchema = {
   "@context": "https://schema.org",
   "@type": "Person",
-  "@id": `${SITE.rootUrl}#raj`,
+  "@id": RAJ_PERSON_ID,
   name: "Raj Tomar",
-  givenName: "Raj",
-  familyName: "Tomar",
-  jobTitle: "Real Estate Advisor",
+  jobTitle: "UAE Property Advisor and Publisher",
   description:
-    "Real estate advisor based in Dubai. 10+ years across the full property cycle in India and the UAE. Serial entrepreneur with deep international sales expertise, US market in particular.",
-  url: `${SITE.rootUrl}/about`,
-  mainEntityOfPage: `${SITE.rootUrl}/about`,
-  image: `${SITE.rootUrl}/raj-hero.jpg`,
+    "Dubai-based property advisor and named publisher of Invest With Raj Intelligence.",
+  url: SITE.rootUrl,
   email: `mailto:${CONTACT.email}`,
-  telephone: `+${CONTACT.whatsappE164}`,
-  alumniOf: [
-    {
-      "@type": "EducationalOrganization",
-      name: "Mahatma Gandhi University",
-      department: "MBA, Construction Management",
-    },
-    {
-      "@type": "EducationalOrganization",
-      name: "Manipal University Jaipur",
-      department: "B.Plan, Urban & Regional Planning",
-    },
-    {
-      "@type": "EducationalOrganization",
-      name: "The Wharton School",
-      department: "Certificate, AI Applications in People Management",
-    },
-  ],
-  knowsAbout: [
-    "UAE Real Estate Investment",
-    "Dubai Land Department (DLD) Regulations",
-    "RERA Compliance",
-    "Off-Plan Property Advisory",
-    "Portfolio Strategy",
-    "Cross-Border Real Estate Structuring",
-    "Golden Visa Pathways",
-    "Master Planning",
-    "Feasibility Analysis",
-    "Urban Planning",
-    "Construction Management",
-  ],
+  image: `${SITE.rootUrl}/media/real-uhd/raj-tomar-portrait.webp`,
   sameAs: [
     CONTACT.linkedin,
     CONTACT.linkedinNewsletter,
     CONTACT.instagram,
     CONTACT.youtube,
-    `https://wa.me/${CONTACT.whatsappE164}`,
   ],
-  address: {
-    "@type": "PostalAddress",
-    addressLocality: "Dubai",
-    addressRegion: "Dubai",
-    addressCountry: "AE",
-  },
-  worksFor: { "@id": `${SITE.rootUrl}#organization` },
+  worksFor: { "@id": `${SITE.url}#newsmediaorg` },
 };
 
-/** Reference object — used inside Article.author to point at the
- *  canonical Person entity without re-emitting the full Person schema. */
-export const rajPersonRef = { "@id": `${SITE.rootUrl}#raj` };
+/** Reference object for Article.author and other linked schemas. */
+export const rajPersonRef = { "@id": RAJ_PERSON_ID };

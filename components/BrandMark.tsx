@@ -30,7 +30,7 @@ export default function BrandMark({
 
     const hero = document.getElementById("hero");
     if (!hero) {
-      setOverHero(false);
+      queueMicrotask(() => setOverHero(false));
       return;
     }
 

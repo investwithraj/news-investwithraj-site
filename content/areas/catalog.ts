@@ -41,11 +41,6 @@ function area(input: {
     netYieldBand: input.netYieldBand,
     faq: [],
     citations: [],
-    heroImage: {
-      src: `/areas/${input.slug}-placeholder.jpg`,
-      alt: `${input.name}, ${input.emirate}`,
-      credit: "Placeholder — sourced image to follow",
-    },
     iwrNoteSlug: input.iwrNoteSlug,
     iwrRootAreaSlug: input.iwrRootAreaSlug,
   };

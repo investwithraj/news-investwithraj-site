@@ -31,7 +31,7 @@ export async function purgeOldTerminalItems(retentionDays = 30, now = new Date()
   );
   let deleted = 0;
   for (const item of stale) {
-    if (await deleteItem(item.id)) deleted++;
+    if (await deleteItem(item.id, item.recordVersion)) deleted++;
   }
   return deleted;
 }

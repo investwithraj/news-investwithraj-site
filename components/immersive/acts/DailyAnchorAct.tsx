@@ -25,7 +25,7 @@ import { DailyAnchorPane } from "@/components/anchor/DailyAnchorPane";
 
 const WHATSAPP_URL = "https://wa.me/971589966085";
 
-// Pangea dark-register gold aurora stops (real-gold glow on the warm-black void).
+// Legacy dark-register gold aurora stops (real-gold glow on the warm-black void).
 const AURORA_GOLD_STOPS: AuroraStop[] = [
   { r: 178, g: 146, b: 79, a: 0.30 },   // gold
   { r: 201, g: 169, b: 97, a: 0.20 },   // bright gold
@@ -60,7 +60,7 @@ export default function DailyAnchorAct() {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (reduceMotion) {
-      setRevealed(true);
+      queueMicrotask(() => setRevealed(true));
       return;
     }
 

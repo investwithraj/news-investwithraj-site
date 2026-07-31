@@ -238,9 +238,10 @@ export function CapitalFlowGlobe({
           c.userData.phase += 0.04 * c.userData.weight + 0.01;
           const s = 1 + Math.sin(c.userData.phase) * 0.3;
           c.scale.set(s, s, s);
-          (c as THREE.Mesh).material instanceof THREE.MeshBasicMaterial &&
-            (((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity =
-              0.7 - (s - 1) * 1.2);
+          if ((c as THREE.Mesh).material instanceof THREE.MeshBasicMaterial) {
+            ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity =
+              0.7 - (s - 1) * 1.2;
+          }
         }
       });
 
@@ -259,13 +260,6 @@ export function CapitalFlowGlobe({
       });
 
       // Rotate all dots + Dubai + rings with globe
-      sourceVecs.forEach((_s, idx) => {
-        const ringIdx = idx * 2 + 1;
-        const dotIdx = idx * 2;
-        // Their positions are already on sphere — we apply globe rotation
-        // via the same rotation matrix.
-      });
-
       // Easier — just rotate the whole group? We add a group below in a refactor pass.
       dubaiDot.position.copy(dubaiVec).applyMatrix4(rotMat);
 

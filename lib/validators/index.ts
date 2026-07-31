@@ -6,7 +6,7 @@
 // with specific corrections.
 //
 // Gates (run in order, all must pass):
-//   1. Citation gate (≥1 from 20-source whitelist)
+//   1. Citation gate (one high-authority source or two verified sources)
 //   2. Voice gate (banned/approved lexicon, headline length, body length,
 //      paragraph 1 contains number, TL;DR has 3 entries)
 //

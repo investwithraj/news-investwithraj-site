@@ -38,5 +38,5 @@ export function rootCtaUrl(opts: {
     utm_campaign: opts.campaign ?? "article-footer",
     utm_content: opts.content ?? "request-the-note",
   });
-  return `${SITE.rootUrl}/?${params.toString()}`;
+  return `${SITE.rootUrl}/engage?${params.toString()}`;
 }

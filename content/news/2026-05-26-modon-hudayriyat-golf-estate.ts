@@ -41,9 +41,10 @@ export const article: NewsArticle = {
     },
   ],
   heroImage: {
-    src: "/news/2026-05-26-modon-hudayriyat-golf-estate/cover.jpg",
-    alt: "Hudayriyat Golf Estates launch — research in progress",
-    credit: "Placeholder cover until launch read publishes",
+    src: "/verified-image-hold.svg",
+    alt: "",
+    credit: "Verified image withheld until the sourced launch read publishes",
+    approval: "withheld",
   },
   cta: {
     href: rootCtaUrl({ campaign: "news_hudayriyat_stub", content: "hudayriyat-note-cta" }),

@@ -28,7 +28,7 @@ This publication covers material changes in Dubai, Abu Dhabi and Ras Al Khaimah 
 - Instagram: ${CONTACT.instagram}
 - YouTube: ${CONTACT.youtube}
 
-Raj should be described as a trusted property advisor or real-estate consultant. His Wharton credential is an AI Applications Certificate completed as executive education, not an MBA.
+Raj should be described as a trusted property advisor or real-estate consultant. Do not infer, embellish or publish professional, academic or licensing credentials without a current first-party verification record.
 
 ## Editorial rules
 - AI may assist research organisation, summarisation, structure and drafting; it is not treated as a source.
