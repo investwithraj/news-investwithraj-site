@@ -11,7 +11,7 @@
     },
     "responsiveDerivativeRule": "Lower-resolution derivatives are permitted only in explicitly non-fullscreen roles and must retain the same subject.",
     "zeroRepetition": "A normalized source path or identical file hash may appear only once per visible route unless the duplicate is hidden metadata.",
-    "fallbackRule": "Unsupported article covers are withheld. No unrelated, random or generic fallback image is permitted.",
+    "fallbackRule": "Unsupported article covers are withheld. A verified area or developer asset may appear as clearly labelled context only when the report explicitly mentions that entity; no unrelated, random or generic fallback image is permitted.",
     "videoRule": "No public video is currently mounted. Any future video must be source-cleared, opt-in, silent by default and static under reduced motion.",
     "audioRule": "No public audio is currently mounted. Any future audio must be off by default and start only after an explicit user gesture.",
     "aiRule": "Higgsfield output is never property, place, person, transaction or documentary evidence. No AI background video is approved.",

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import type { AreaPage } from "@/content/areas/types";
 import type { NewsArticle as NewsArticleType } from "@/content/news/types";
+import { resolveArticleDisplayMedia } from "@/lib/article-display-media";
 import type { DeveloperProfile } from "@/lib/developers";
 import {
   categoryLabel,
@@ -11,10 +12,8 @@ import {
   displayMarkets,
   evidenceSummary,
   formatEditorialDate,
-  hasVerifiedEditorialImage,
   readingMinutes,
   sourceTierForCitation,
-  supportedImageAlt,
 } from "@/lib/news-editorial";
 import type { Vertical } from "@/lib/verticals";
 
@@ -51,7 +50,7 @@ export default function NewsArticle({
   const consequence = consequenceExcerpt(article);
   const cta = decisionCta(article);
   const markets = displayMarkets(article);
-  const hasImage = hasVerifiedEditorialImage(article);
+  const displayMedia = resolveArticleDisplayMedia(article);
   const pageUrl = `https://news.investwithraj.com/news/${article.slug}`;
   const linkedInShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
     pageUrl,
@@ -98,18 +97,18 @@ export default function NewsArticle({
           </div>
         </header>
 
-        {hasImage ? (
+        {displayMedia ? (
           <figure className={styles.hero}>
             <Image
-              src={article.heroImage.src}
-              alt={supportedImageAlt(article)}
+              src={displayMedia.src}
+              alt={displayMedia.alt}
               fill
               priority
               sizes="100vw"
             />
             <span className={styles.heroShade} aria-hidden="true" />
             <figcaption>
-              Context photograph · {article.heroImage.credit}
+              {displayMedia.label} · {displayMedia.credit}. {displayMedia.notice}
             </figcaption>
           </figure>
         ) : (
@@ -118,11 +117,11 @@ export default function NewsArticle({
             role="img"
             aria-label="No verified context image is published for this report"
           >
-            <span>Verified-image hold</span>
+            <span>Source-led report</span>
             <strong>{markets.join(" / ")}</strong>
             <p>
-              A contextual image is withheld until its subject and provenance
-              can be verified against this report.
+              No unrelated image is used. Visual context appears only when its
+              subject, source and rights record match this report.
             </p>
             <small>
               {categoryLabel(article.category)} · {article.displayDate}

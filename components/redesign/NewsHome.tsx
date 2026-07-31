@@ -3,28 +3,32 @@ import Link from "next/link";
 
 import type { NewsArticle } from "@/content/news/types";
 import {
+  planDistinctArticleMedia,
+  type ArticleDisplayMedia,
+} from "@/lib/article-display-media";
+import {
   categoryLabel,
   displayMarkets,
   evidenceSummary,
   formatEditorialDate,
-  hasVerifiedEditorialImage,
   selectDistinctArticles,
-  supportedImageAlt,
 } from "@/lib/news-editorial";
 
 import styles from "./NewsHome.module.css";
 
 function ArticleImage({
   article,
+  media,
   priority = false,
 }: {
   article: NewsArticle;
+  media?: ArticleDisplayMedia;
   priority?: boolean;
 }) {
-  if (!hasVerifiedEditorialImage(article)) {
+  if (!media) {
     return (
       <span className={styles.mediaFallback}>
-        <span>Verified-image hold</span>
+        <span>Source-led report</span>
         <strong>{displayMarkets(article).join(" / ")}</strong>
         <small>
           {categoryLabel(article.category)} · {article.displayDate}
@@ -36,8 +40,8 @@ function ArticleImage({
   return (
     <>
       <Image
-        src={article.heroImage.src}
-        alt={supportedImageAlt(article)}
+        src={media.src}
+        alt={media.alt}
         fill
         priority={priority}
         sizes={
@@ -47,7 +51,7 @@ function ArticleImage({
         }
       />
       <span className={styles.imageContext}>
-        Context photograph · {article.heroImage.credit}
+        {media.label} · {media.credit}
       </span>
     </>
   );
@@ -60,6 +64,7 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
 
   const rail = rest.slice(0, 3);
   const ledger = rest.slice(3, 9);
+  const mediaPlan = planDistinctArticleMedia(featured);
   const leadEvidence = evidenceSummary(lead);
 
   return (
@@ -92,7 +97,11 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
         <div className={styles.leadGrid}>
           <Link className={styles.lead} href={`/news/${lead.slug}`}>
             <span className={styles.leadMedia}>
-              <ArticleImage article={lead} priority />
+              <ArticleImage
+                article={lead}
+                media={mediaPlan.get(lead.slug)}
+                priority
+              />
               <span className={styles.imageShade} />
               <span className={styles.imageIndex}>01</span>
             </span>
@@ -173,7 +182,10 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
               key={article.slug}
             >
               <span className={styles.cardMedia}>
-                <ArticleImage article={article} />
+                <ArticleImage
+                  article={article}
+                  media={mediaPlan.get(article.slug)}
+                />
                 <span className={styles.imageShade} />
               </span>
               <span className={styles.cardBody}>
