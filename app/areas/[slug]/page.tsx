@@ -3,21 +3,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getAllAreaSlugs, getAreaBySlug } from "@/content/areas";
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 import {
   advisoryLinksForArea,
   generalAdvisoryUrl,
 } from "@/lib/advisory-relations";
 import { SITE } from "@/lib/constants";
-import { DEVELOPERS } from "@/lib/developers";
 import {
-  articleMentionsArea,
   categoryLabel,
   displayMarkets,
   formatEditorialDate,
   relatedDevelopersForArea,
 } from "@/lib/news-editorial";
+import {
+  getAllPublicAreaSlugs,
+  getPublicAreaRecord,
+  PUBLIC_DEVELOPERS,
+} from "@/lib/public-content";
 import {
   asGraph,
   BREADCRUMB_PRESETS,
@@ -33,7 +34,7 @@ export const dynamic = "force-static";
 export const revalidate = 86400;
 
 export function generateStaticParams() {
-  return getAllAreaSlugs().map((slug) => ({ slug }));
+  return getAllPublicAreaSlugs().map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -42,26 +43,20 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const area = getAreaBySlug(slug);
-  if (!area) return { title: "Area not found" };
+  const record = getPublicAreaRecord(slug);
+  if (!record) return { title: "Area not found" };
+  const { area, reports } = record;
   const media = getVerifiedAreaMedia(slug);
 
-  const evidenceReady =
-    Boolean(area.body.trim()) && area.citations.length > 0;
   return {
-    title: `${area.name} — property research index`,
-    description: `${area.name}, ${area.emirate}: a coordinate-led research index with linked reporting. Market evidence review is ${
-      evidenceReady ? "complete" : "pending"
-    }.`,
+    title: `${area.name} property news and market intelligence`,
+    description: `${reports.length} source-linked reports about ${area.name}, ${area.emirate}, with the latest market developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/areas/${slug}` },
-    robots: {
-      index: evidenceReady,
-      follow: true,
-    },
+    robots: { index: true, follow: true },
     openGraph: {
       type: "website",
-      title: `${area.name} research index`,
-      description: `Location identity and source-linked reporting for ${area.name}, ${area.emirate}.`,
+      title: `${area.name} property intelligence`,
+      description: `${reports.length} source-linked reports for ${area.name}, ${area.emirate}.`,
       url: `${SITE.url}/areas/${slug}`,
       ...(media
         ? {
@@ -85,18 +80,18 @@ export default async function AreaPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const area = getAreaBySlug(slug);
-  if (!area) notFound();
+  const record = getPublicAreaRecord(slug);
+  if (!record) notFound();
+  const { area, reports: relatedNews } = record;
   const media = getVerifiedAreaMedia(area.slug);
 
-  const evidenceReady =
-    Boolean(area.body.trim()) && area.citations.length > 0;
-  const relatedNews = sortNewsArticles(NEWS_ARTICLES)
-    .filter((article) => article.status !== "research")
-    .filter((article) => articleMentionsArea(article, area))
-    .slice(0, 8);
-  const developers = relatedDevelopersForArea(area, DEVELOPERS);
+  const developers = relatedDevelopersForArea(area, PUBLIC_DEVELOPERS);
   const advisoryLinks = advisoryLinksForArea(area);
+  const sourceCount = new Set(
+    relatedNews.flatMap((article) =>
+      article.citations.map((citation) => citation.url),
+    ),
+  ).size;
   const pageUrl = `${SITE.url}/areas/${area.slug}`;
   const [collection, itemList] = collectionPageSchemas({
     url: pageUrl,
@@ -155,13 +150,13 @@ export default async function AreaPage({
               </p>
               <h1>{area.name}</h1>
               <p className={styles.dek}>
-                This is a research-index entry, not a market appraisal. Numeric
-                pricing, yield, supply and ownership fields remain unpublished
-                while the source pack is empty.
+                Follow the latest source-linked reporting connected to {area.name}.
+                Each report separates the observed facts from the decision it may
+                affect for buyers and investors.
               </p>
             </div>
             <div className={styles.coordinatePanel}>
-              <span>Coordinate record</span>
+              <span>Location</span>
               <strong>
                 {area.coords.lat.toFixed(4)}° N
                 <br />
@@ -211,22 +206,18 @@ export default async function AreaPage({
           </figure>
         ) : null}
 
-        <section className={styles.reviewStrip} aria-label="Area review status">
+        <section className={styles.reviewStrip} aria-label="Area reporting summary">
           <div>
-            <span>Source review</span>
-            <strong>{evidenceReady ? "Evidence pack present" : "Pending"}</strong>
+            <span>Published coverage</span>
+            <strong>{relatedNews.length} source-linked reports</strong>
           </div>
           <div>
-            <span>Registry last touched</span>
-            <strong>{formatEditorialDate(area.modifiedAt)}</strong>
+            <span>Latest report</span>
+            <strong>{formatEditorialDate(relatedNews[0].publishedAt)}</strong>
           </div>
           <div>
-            <span>Search status</span>
-            <p>
-              {evidenceReady
-                ? "Eligible for indexing"
-                : "Noindex until citations and reviewed body copy exist"}
-            </p>
+            <span>Sources available</span>
+            <p>{sourceCount} direct links across this collection</p>
           </div>
         </section>
 
@@ -239,55 +230,41 @@ export default async function AreaPage({
 
         <section className={styles.coverage}>
           <header className={styles.sectionHeader}>
-            <h2>Explicit area mentions.</h2>
+            <h2>Latest {area.name} reporting.</h2>
             <p>{relatedNews.length} source-linked reports</p>
           </header>
-          {relatedNews.length ? (
-            <div className={styles.reportList}>
-              {relatedNews.map((article) => (
-                <Link href={`/news/${article.slug}`} key={article.slug}>
-                  <span>
-                    {displayMarkets(article).join(" / ")} ·{" "}
-                    {categoryLabel(article.category)} · {article.displayDate}
-                  </span>
-                  <strong>{article.title}</strong>
-                  <i aria-hidden="true">↗</i>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyState}>
-              No live report explicitly names this area yet. Emirate-wide
-              stories are not used as substitutes.
-            </p>
-          )}
+          <div className={styles.reportList}>
+            {relatedNews.map((article) => (
+              <Link href={`/news/${article.slug}`} key={article.slug}>
+                <span>
+                  {displayMarkets(article).join(" / ")} ·{" "}
+                  {categoryLabel(article.category)} · {article.displayDate}
+                </span>
+                <strong>{article.title}</strong>
+                <i aria-hidden="true">↗</i>
+              </Link>
+            ))}
+          </div>
         </section>
 
-        <section className={styles.relations}>
+        {developers.length ? <section className={styles.relations}>
           <header className={styles.sectionHeader}>
-            <h2>Connected developer records.</h2>
-            <p>Registry relationship · not current inventory</p>
+            <h2>Developers connected to this coverage.</h2>
+            <p>Continue through the reporting network</p>
           </header>
-          {developers.length ? (
-            <div className={styles.developerList}>
-              {developers.map((developer) => (
-                <Link
-                  href={`/developer/${developer.slug}`}
-                  key={developer.slug}
-                >
-                  <span>Developer reporting index</span>
-                  <strong>{developer.name}</strong>
-                  <i aria-hidden="true">↗</i>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyState}>
-              No developer profile is connected to this area in the current
-              registry.
-            </p>
-          )}
-        </section>
+          <div className={styles.developerList}>
+            {developers.map((developer) => (
+              <Link
+                href={`/developer/${developer.slug}`}
+                key={developer.slug}
+              >
+                <span>Developer reporting</span>
+                <strong>{developer.name}</strong>
+                <i aria-hidden="true">↗</i>
+              </Link>
+            ))}
+          </div>
+        </section> : null}
 
         <section className={styles.advisory}>
           <header className={styles.sectionHeader}>
@@ -309,7 +286,7 @@ export default async function AreaPage({
             <p>
               If this geography is part of a live brief, bring the objective,
               holding period and exit constraint. Raj can test the decision
-              without presenting this unfinished index as market evidence.
+              against the published evidence and the alternatives available.
             </p>
             <a href={generalAdvisoryUrl("area", area.slug)}>
               Discuss this area ↗

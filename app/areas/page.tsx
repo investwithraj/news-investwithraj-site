@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { AREAS, filterByEmirate, sortAreas } from "@/content/areas";
+import { filterByEmirate, sortAreas } from "@/content/areas";
 import { SITE } from "@/lib/constants";
 import { formatEditorialDate } from "@/lib/news-editorial";
 import {
@@ -11,6 +11,10 @@ import {
   collectionPageSchemas,
 } from "@/lib/schema";
 import { getVerifiedAreaMedia } from "@/lib/verified-media";
+import {
+  PUBLIC_AREAS,
+  PUBLIC_AREA_RECORDS,
+} from "@/lib/public-content";
 
 import styles from "./AreaPages.module.css";
 
@@ -18,37 +22,40 @@ export const dynamic = "force-static";
 
 const PAGE_URL = `${SITE.url}/areas`;
 const DESCRIPTION =
-  "A transparent research index of UAE property areas, showing registry coordinates and linked reporting while source packs are reviewed.";
+  "Source-linked UAE property reporting organised by area across Dubai, Abu Dhabi and Ras Al Khaimah.";
 
 export const metadata: Metadata = {
-  title: "Areas — UAE property research index",
+  title: "UAE property intelligence by area",
   description: DESCRIPTION,
   alternates: { canonical: PAGE_URL },
 };
 
 export default function AreasIndex() {
   const groups = [
-    ["Dubai", sortAreas(filterByEmirate(AREAS, "Dubai"))],
-    ["Abu Dhabi", sortAreas(filterByEmirate(AREAS, "Abu Dhabi"))],
+    ["Dubai", sortAreas(filterByEmirate(PUBLIC_AREAS, "Dubai"))],
+    ["Abu Dhabi", sortAreas(filterByEmirate(PUBLIC_AREAS, "Abu Dhabi"))],
     [
       "Ras Al Khaimah",
-      sortAreas(filterByEmirate(AREAS, "Ras Al Khaimah")),
+      sortAreas(filterByEmirate(PUBLIC_AREAS, "Ras Al Khaimah")),
     ],
   ] as const;
-  const latestRegistryDate = [...AREAS]
-    .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))[0]?.modifiedAt;
-  const evidenceReady = AREAS.filter(
-    (area) => area.body.trim() && area.citations.length > 0,
-  ).length;
+  const totalReports = new Set(
+    PUBLIC_AREA_RECORDS.flatMap(({ reports }) =>
+      reports.map((article) => article.slug),
+    ),
+  ).size;
+  const latestReportingDate = PUBLIC_AREA_RECORDS.flatMap(({ reports }) =>
+    reports.map((article) => article.modifiedAt),
+  ).sort((a, b) => b.localeCompare(a))[0];
   const [collection, itemList] = collectionPageSchemas({
     url: PAGE_URL,
-    name: "UAE property area research index",
+    name: "UAE property intelligence by area",
     description: DESCRIPTION,
-    dateModified: latestRegistryDate,
-    items: AREAS.map((area) => ({
+    dateModified: latestReportingDate,
+    items: PUBLIC_AREAS.map((area) => ({
       name: area.name,
       url: `${SITE.url}/areas/${area.slug}`,
-      description: `${area.kind.replaceAll("-", " ")} research index entry in ${area.emirate}.`,
+      description: `Published property reporting for ${area.name}, ${area.emirate}.`,
     })),
   });
   const graph = asGraph(
@@ -71,32 +78,29 @@ export default function AreasIndex() {
             ← Intelligence desk
           </Link>
           <p className={styles.eyebrow}>
-            Research atlas · {AREAS.length} coordinate records
+            Area intelligence · {PUBLIC_AREAS.length} covered markets
           </p>
-          <h1>Places, before the pitch.</h1>
+          <h1>Read the market, place by place.</h1>
           <p className={styles.dek}>
-            This directory publishes location identity and coordinates first.
-            Price, yield, ownership and supply claims remain hidden until each
-            area has a cited evidence pack.
+            Move through source-linked reporting for the UAE locations that are
+            shaping current buyer and investor decisions.
           </p>
           <div className={styles.statusGrid}>
             <div>
-              <span>Evidence-ready profiles</span>
-              <strong>
-                {evidenceReady} of {AREAS.length}
-              </strong>
+              <span>Covered areas</span>
+              <strong>{PUBLIC_AREAS.length}</strong>
             </div>
             <div>
-              <span>Registry last touched</span>
+              <span>Published reports</span>
+              <strong>{totalReports}</strong>
+            </div>
+            <div>
+              <span>Latest update</span>
               <strong>
-                {latestRegistryDate
-                  ? formatEditorialDate(latestRegistryDate)
+                {latestReportingDate
+                  ? formatEditorialDate(latestReportingDate)
                   : "Not recorded"}
               </strong>
-            </div>
-            <div>
-              <span>Publication rule</span>
-              <strong>No uncited market statistics</strong>
             </div>
           </div>
         </header>
@@ -131,12 +135,15 @@ export default function AreasIndex() {
               <section key={emirate} aria-labelledby={headingId}>
                 <header className={styles.groupHeader}>
                   <h2 id={headingId}>{emirate}</h2>
-                  <span>{items.length} records</span>
+                  <span>{items.length} covered areas</span>
                 </header>
                 <div className={styles.areaGrid}>
                   {items.map((area) => {
                     const media = getVerifiedAreaMedia(area.slug);
                     const areaHref = `/areas/${area.slug}`;
+                    const reports = PUBLIC_AREA_RECORDS.find(
+                      (record) => record.area.slug === area.slug,
+                    )!.reports;
 
                     return (
                       <article key={area.slug} className={styles.areaCard}>
@@ -145,7 +152,7 @@ export default function AreasIndex() {
                             <Link
                               href={areaHref}
                               className={styles.cardImageLink}
-                              aria-label={`Open ${area.name} research record`}
+                              aria-label={`Open ${area.name} property intelligence`}
                             >
                               <Image
                                 src={media.src}
@@ -187,13 +194,13 @@ export default function AreasIndex() {
                             href={areaHref}
                             className={styles.coordinateTile}
                           >
-                            <span>Coordinate record</span>
+                            <span>Area intelligence</span>
                             <strong>
                               {area.coords.lat.toFixed(4)}° N
                               <br />
                               {area.coords.lng.toFixed(4)}° E
                             </strong>
-                            <small>No verified UHD area reference</small>
+                            <small>{reports.length} published reports</small>
                           </Link>
                         )}
                         <Link href={areaHref} className={styles.cardBody}>
@@ -203,9 +210,8 @@ export default function AreasIndex() {
                           </span>
                           <h3>{area.name}</h3>
                           <small>
-                            {media
-                              ? "Verified editorial context · market evidence review pending"
-                              : "Coordinate-only record · market evidence review pending"}
+                            {reports.length} source-linked {reports.length === 1 ? "report" : "reports"}
+                            {reports[0] ? ` · Latest ${reports[0].displayDate}` : ""}
                           </small>
                         </Link>
                       </article>
@@ -218,12 +224,12 @@ export default function AreasIndex() {
         </div>
 
         <section className={styles.method}>
-          <span>Method</span>
-          <h2>Evidence before market language.</h2>
+          <span>Editorial method</span>
+          <h2>Only covered places enter this directory.</h2>
           <p>
-            An area record is not a market report. Until citations and reviewed
-            body copy exist, detail pages remain out of search indexes and show
-            only the location fields needed to navigate the reporting graph.
+            Every linked area has at least one published report that names it
+            explicitly. Each story keeps its source links visible so the
+            underlying evidence can be checked directly.
           </p>
         </section>
       </main>

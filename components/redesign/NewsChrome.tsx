@@ -31,8 +31,6 @@ const menuGroups = [
       { label: "Latest intelligence", href: "/" },
       { label: "All news", href: "/news" },
       { label: "Market pulse", href: "/pulse" },
-      { label: "Closing bell", href: "/closing-bell" },
-      { label: "UAE Power List", href: "/power-list/2026" },
     ],
   },
   {
@@ -49,7 +47,6 @@ const menuGroups = [
     links: [
       { label: "Ask Raj", href: "/ask" },
       { label: "Intelligence terminal", href: "/terminal" },
-      { label: "Market wallet", href: "/wallet" },
       { label: "RSS feed", href: "/rss.xml" },
     ],
   },

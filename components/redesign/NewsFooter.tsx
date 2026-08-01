@@ -19,8 +19,6 @@ const groups = [
       { label: "Latest", href: "/" },
       { label: "All news", href: "/news" },
       { label: "Market pulse", href: "/pulse" },
-      { label: "Closing bell", href: "/closing-bell" },
-      { label: "Power List 2026", href: "/power-list/2026" },
     ],
   },
   {
@@ -37,7 +35,6 @@ const groups = [
     links: [
       { label: "Ask Raj", href: "/ask" },
       { label: "Terminal", href: "/terminal" },
-      { label: "Market wallet", href: "/wallet" },
       { label: "RSS", href: "/rss.xml" },
     ],
   },

@@ -283,7 +283,7 @@ export function DailyAnchorPane() {
             <span>
               {anchor?.date
                 ? `Generated · ${anchor.date}`
-                : "Awaiting first generation"}
+                : "Read the latest verified briefing"}
             </span>
             <span className="text-right" style={{ color: "rgba(242, 238, 231, 0.6)" }}>
               {anchor?.audioUrl && (

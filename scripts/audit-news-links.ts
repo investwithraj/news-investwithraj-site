@@ -12,6 +12,17 @@ const CONTACT_EMAIL = "office@investwithraj.com";
 const CANONICAL_HOST = "news.investwithraj.com";
 const CONCURRENCY = 8;
 const REQUEST_TIMEOUT_MS = 20_000;
+const FORBIDDEN_PUBLIC_COPY = [
+  /research-index/i,
+  /source packs? (?:is|are|remain|being|empty|reviewed)/i,
+  /profile-source review/i,
+  /internal coverage/i,
+  /not current inventory/i,
+  /market evidence review pending/i,
+  /no verified uhd/i,
+  /noindex until/i,
+  /awaiting first generation/i,
+] as const;
 
 const VERTICAL_REPLACEMENTS = [
   {
@@ -237,6 +248,14 @@ async function main(): Promise<void> {
         `Sitemap page ${normalizePath(new URL(page.url))}: expected HTML, got ${page.contentType || "no content-type"}`,
       );
       continue;
+    }
+
+    for (const pattern of FORBIDDEN_PUBLIC_COPY) {
+      if (pattern.test(page.body)) {
+        failures.push(
+          `${normalizePath(new URL(page.url))} exposes implementation-status copy matching ${pattern}`,
+        );
+      }
     }
 
     for (const tag of anchorTags(page.body)) {

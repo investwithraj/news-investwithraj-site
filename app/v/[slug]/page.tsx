@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AREAS } from "@/content/areas";
 import { NEWS_ARTICLES } from "@/content/news";
 import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
-import { DEVELOPERS } from "@/lib/developers";
+import { PUBLIC_AREAS, PUBLIC_DEVELOPERS } from "@/lib/public-content";
 import {
   getVerticalArticles,
   getVerticalBySlug,
@@ -63,14 +62,14 @@ export default async function VerticalPage({
 
   const articles = getVerticalArticles(vertical, NEWS_ARTICLES);
   const areas = vertical.relatedAreaSlugs
-    .map((areaSlug) => AREAS.find((area) => area.slug === areaSlug))
-    .filter((area): area is (typeof AREAS)[number] => Boolean(area));
+    .map((areaSlug) => PUBLIC_AREAS.find((area) => area.slug === areaSlug))
+    .filter((area): area is (typeof PUBLIC_AREAS)[number] => Boolean(area));
   const developers = vertical.relatedDeveloperSlugs
     .map((developerSlug) =>
-      DEVELOPERS.find((developer) => developer.slug === developerSlug),
+      PUBLIC_DEVELOPERS.find((developer) => developer.slug === developerSlug),
     )
     .filter(
-      (developer): developer is (typeof DEVELOPERS)[number] =>
+      (developer): developer is (typeof PUBLIC_DEVELOPERS)[number] =>
         Boolean(developer),
     );
   const canonical = `${SITE.url}/v/${vertical.slug}`;

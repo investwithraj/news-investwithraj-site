@@ -518,7 +518,7 @@ export default function VerticalsAct() {
             <article
               key={read.id}
               data-reveal
-              aria-label={`${read.title} — article coming soon`}
+              aria-label={`Explore ${read.title}`}
               style={{ display: "block" }}
             >
             <GlassCard

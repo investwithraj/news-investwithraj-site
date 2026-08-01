@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { NEWS_ARTICLES } from "@/content/news";
-import { AREAS } from "@/content/areas";
 import { CLOSING_BELLS } from "@/content/closing-bell";
 import { SITE } from "@/lib/constants";
+import { PUBLIC_AREAS } from "@/lib/public-content";
 import { TerminalShell } from "@/components/terminal/TerminalShell";
 
 export const dynamic = "force-static";
@@ -44,7 +44,7 @@ export default function TerminalPage() {
       ].slice(0, 3),
     }));
 
-  const areas = AREAS.map((area) => ({
+  const areas = PUBLIC_AREAS.map((area) => ({
     slug: area.slug,
     name: area.name,
     emirate: area.emirate,

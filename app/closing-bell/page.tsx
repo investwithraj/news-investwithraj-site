@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { CLOSING_BELLS, sortBells } from "@/content/closing-bell";
 import { getNewsBySlug } from "@/content/news";
 import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
 };
 
 export default function ClosingBellPage() {
+  if (!hasPublishedEntries) notFound();
   const entries = sortBells(CLOSING_BELLS);
 
   return (

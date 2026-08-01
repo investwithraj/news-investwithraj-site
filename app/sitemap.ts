@@ -1,14 +1,13 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/constants";
-import { NEWS_ARTICLES } from "@/content/news";
-import { AREAS } from "@/content/areas";
 import { CLOSING_BELLS } from "@/content/closing-bell";
 import { POWER_LISTS } from "@/content/power-list";
-import { DEVELOPERS } from "@/lib/developers";
+import { selectDistinctArticles } from "@/lib/news-editorial";
 import {
-  articleMentionsDeveloper,
-  selectDistinctArticles,
-} from "@/lib/news-editorial";
+  PUBLIC_AREA_RECORDS,
+  PUBLIC_DEVELOPER_RECORDS,
+  PUBLISHED_NEWS_ARTICLES,
+} from "@/lib/public-content";
 import { getVerticalArticles, VERTICALS } from "@/lib/verticals";
 
 const SITE_UPDATED = new Date("2026-07-25T00:00:00+04:00");
@@ -23,26 +22,21 @@ const SITE_UPDATED = new Date("2026-07-25T00:00:00+04:00");
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const liveNews = selectDistinctArticles(
-    NEWS_ARTICLES.filter((article) => article.status !== "research"),
-    NEWS_ARTICLES.length,
+    PUBLISHED_NEWS_ARTICLES,
+    PUBLISHED_NEWS_ARTICLES.length,
   );
   const latestNewsUpdate = new Date(
     Math.max(...liveNews.map((article) => new Date(article.modifiedAt).getTime())),
   );
   const latestAreaUpdate = new Date(
-    Math.max(...AREAS.map((area) => new Date(area.modifiedAt).getTime())),
-  );
-  const developerReporting = DEVELOPERS.map((developer) => {
-    const reports = liveNews.filter((article) =>
-      articleMentionsDeveloper(article, developer),
-    );
-    return { developer, reports };
-  });
-  const indexedDevelopers = developerReporting.filter(
-    ({ reports }) => reports.length > 0,
+    Math.max(
+      ...PUBLIC_AREA_RECORDS.flatMap(({ reports }) =>
+        reports.map((article) => new Date(article.modifiedAt).getTime()),
+      ),
+    ),
   );
   const latestDeveloperTimestamp = Math.max(
-    ...indexedDevelopers.flatMap(({ reports }) =>
+    ...PUBLIC_DEVELOPER_RECORDS.flatMap(({ reports }) =>
       reports.map((article) => new Date(article.modifiedAt).getTime()),
     ),
   );
@@ -95,19 +89,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   // Dynamic content — areas
-  for (const a of AREAS) {
-    // Detail pages are noindex until reviewed body copy and citations exist.
-    if (!a.body.trim() || a.citations.length === 0) continue;
+  for (const { area, reports } of PUBLIC_AREA_RECORDS) {
     entries.push({
-      url: `${SITE.url}/areas/${a.slug}`,
-      lastModified: new Date(a.modifiedAt),
+      url: `${SITE.url}/areas/${area.slug}`,
+      lastModified: new Date(reports[0].modifiedAt),
       changeFrequency: "weekly",
       priority: 0.85,
     });
   }
 
   // Dynamic content — developers (per-developer landing pages)
-  for (const { developer, reports } of indexedDevelopers) {
+  for (const { developer, reports } of PUBLIC_DEVELOPER_RECORDS) {
     const lastModified = new Date(
       Math.max(
         ...reports.map((article) => new Date(article.modifiedAt).getTime()),

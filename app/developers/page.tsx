@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 import { SITE } from "@/lib/constants";
-import { DEVELOPERS } from "@/lib/developers";
 import {
-  articleMentionsDeveloper,
   categoryLabel,
   displayMarkets,
   formatEditorialDate,
   selectDistinctArticles,
 } from "@/lib/news-editorial";
+import {
+  PUBLIC_DEVELOPER_RECORDS,
+  PUBLIC_DEVELOPERS,
+} from "@/lib/public-content";
 import {
   asGraph,
   breadcrumbSchema,
@@ -34,26 +35,13 @@ export const metadata: Metadata = {
 };
 
 export default function DevelopersIndex() {
-  const live = sortNewsArticles(NEWS_ARTICLES).filter(
-    (article) => article.status !== "research",
-  );
-  const records = DEVELOPERS.map((developer) => {
-    const reports = live.filter((article) =>
-      articleMentionsDeveloper(article, developer),
-    );
-    return {
-      developer,
-      reports,
-      media: getVerifiedDeveloperMedia(developer.slug),
-    };
-  });
-  const reportingRecords = records.filter(({ reports }) => reports.length > 0);
+  const records = PUBLIC_DEVELOPER_RECORDS.map(({ developer, reports }) => ({
+    developer,
+    reports,
+    media: getVerifiedDeveloperMedia(developer.slug),
+  }));
   const latestReports = selectDistinctArticles(
-    live.filter((article) =>
-      DEVELOPERS.some((developer) =>
-        articleMentionsDeveloper(article, developer),
-      ),
-    ),
+    PUBLIC_DEVELOPER_RECORDS.flatMap(({ reports }) => reports),
     8,
   );
   const latestReportingDate = latestReports[0]?.publishedAt;
@@ -62,7 +50,7 @@ export default function DevelopersIndex() {
     name: "UAE developer reporting index",
     description: DESCRIPTION,
     dateModified: latestReports[0]?.modifiedAt,
-    items: DEVELOPERS.map((developer) => ({
+    items: PUBLIC_DEVELOPERS.map((developer) => ({
       name: developer.name,
       url: `${SITE.url}/developer/${developer.slug}`,
       description: `Developer reporting index for ${developer.name}.`,
@@ -88,27 +76,24 @@ export default function DevelopersIndex() {
             ← Intelligence desk
           </Link>
           <p className={styles.eyebrow}>
-            Developer desk · {DEVELOPERS.length} entity records
+            Developer intelligence · {PUBLIC_DEVELOPERS.length} covered entities
           </p>
           <h1>Reporting by full identity.</h1>
           <p className={styles.dek}>
-            This directory organises source-linked reporting by developer. It
-            does not publish uncited ownership, delivery, financial or
-            current-release claims from the profile registry.
+            Track the developers explicitly named in published UAE property
+            reporting, then open the underlying stories and source links.
           </p>
           <div className={styles.statusGrid}>
             <div>
-              <span>Entities with live reporting</span>
-              <strong>
-                {reportingRecords.length} of {DEVELOPERS.length}
-              </strong>
+              <span>Covered developers</span>
+              <strong>{PUBLIC_DEVELOPERS.length}</strong>
             </div>
             <div>
               <span>Latest matched report</span>
               <strong>
                 {latestReportingDate
                   ? formatEditorialDate(latestReportingDate)
-                  : "No matched report"}
+                  : "No report published"}
               </strong>
             </div>
             <div>
@@ -128,7 +113,7 @@ export default function DevelopersIndex() {
           <Link href="/areas">
             <span>02</span>
             <strong>Areas</strong>
-            <p>Move from the entity to its internal coverage geography.</p>
+            <p>Move from each entity to the markets connected to its coverage.</p>
             <i>Open atlas ↗</i>
           </Link>
           <Link href="/map">
@@ -141,8 +126,8 @@ export default function DevelopersIndex() {
 
         <section className={styles.directory}>
           <header className={styles.sectionHeader}>
-            <h2>Entity records.</h2>
-            <p>Identity fields · evidence state visible</p>
+            <h2>Developer reporting desks.</h2>
+            <p>Only entities with published coverage appear</p>
           </header>
           <div className={styles.developerGrid}>
             {records.map(({ developer, reports, media }) => {
@@ -189,9 +174,9 @@ export default function DevelopersIndex() {
                       href={developerHref}
                       className={styles.identityTile}
                     >
-                      <span>Entity record</span>
+                      <span>Developer intelligence</span>
                       <strong>{developer.name}</strong>
-                      <small>No verified UHD developer reference</small>
+                      <small>{reports.length} published reports</small>
                     </Link>
                   )}
                   <Link
@@ -204,10 +189,7 @@ export default function DevelopersIndex() {
                     </span>
                     <h3>{developer.name}</h3>
                     <small>
-                      {reports[0]
-                        ? `Latest explicit mention: ${reports[0].displayDate}`
-                        : "No live report explicitly matches this identity yet"}
-                      . Profile-source review remains pending.
+                      Latest report: {reports[0].displayDate}
                     </small>
                   </Link>
                 </article>
@@ -223,9 +205,9 @@ export default function DevelopersIndex() {
           </header>
           <div className={styles.reportList}>
             {latestReports.map((article) => {
-              const names = DEVELOPERS.filter((developer) =>
-                articleMentionsDeveloper(article, developer),
-              ).map((developer) => developer.name);
+              const names = PUBLIC_DEVELOPER_RECORDS.filter(({ reports }) =>
+                reports.some((report) => report.slug === article.slug),
+              ).map(({ developer }) => developer.name);
               return (
                 <Link href={`/news/${article.slug}`} key={article.slug}>
                   <span>
@@ -247,8 +229,8 @@ export default function DevelopersIndex() {
           <p>
             Developer relations require the full identity or a curated alias.
             “Dubai” cannot match Dubai Holding, and an emirate-wide report
-            cannot stand in for a developer mention. Profile facts stay
-            unpublished until they have their own evidence pack.
+            cannot stand in for a developer mention. Every item in this
+            directory therefore leads to substantive published coverage.
           </p>
         </section>
       </main>

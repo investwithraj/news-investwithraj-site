@@ -214,13 +214,13 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
         <Link href="/areas">
           <span>01</span>
           <strong>Areas</strong>
-          <p>Research-index entries and source-cited reporting by place.</p>
+          <p>Source-linked reporting organised by covered market.</p>
           <i>Open ↗</i>
         </Link>
         <Link href="/developers">
           <span>02</span>
           <strong>Developers</strong>
-          <p>Entity-led reporting without unverified profile claims.</p>
+          <p>Published reporting organised by developer.</p>
           <i>Open ↗</i>
         </Link>
         <Link href="/map">
@@ -233,18 +233,6 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
           <span>04</span>
           <strong>Market pulse</strong>
           <p>The live numbers and the direction underneath them.</p>
-          <i>Open ↗</i>
-        </Link>
-        <Link href="/closing-bell">
-          <span>05</span>
-          <strong>Closing bell</strong>
-          <p>The end-of-day move, compressed into the signal that matters.</p>
-          <i>Open ↗</i>
-        </Link>
-        <Link href="/power-list/2026">
-          <span>06</span>
-          <strong>Power list</strong>
-          <p>The institutions, principals and operators shaping the market.</p>
           <i>Open ↗</i>
         </Link>
       </section>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AREAS } from "@/content/areas";
 import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
+import { PUBLIC_AREAS, PUBLIC_AREA_RECORDS } from "@/lib/public-content";
 import OrientationAtlas, { type AtlasArea } from "./OrientationAtlas";
 import styles from "./map.module.css";
 
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default function MapPage() {
-  const areas: AtlasArea[] = AREAS.map((area) => ({
+  const areas: AtlasArea[] = PUBLIC_AREAS.map((area) => ({
     slug: area.slug,
     name: area.name,
     emirate: area.emirate,
@@ -34,8 +34,9 @@ export default function MapPage() {
     lng: area.coords.lng,
   })).sort((a, b) => a.name.localeCompare(b.name));
 
-  const newestReview = [...AREAS]
-    .map((area) => area.modifiedAt)
+  const newestReview = PUBLIC_AREA_RECORDS.flatMap(({ reports }) =>
+    reports.map((article) => article.modifiedAt),
+  )
     .sort((a, b) => b.localeCompare(a))[0];
   const reviewLabel = new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -62,8 +63,8 @@ export default function MapPage() {
             </div>
             <p className={styles.standfirst}>
               Explore the places covered by Invest With Raj using only the
-              area name, emirate, type and coordinates held in the published
-              editorial registry.
+              area name, emirate, type and coordinates connected to published
+              reporting.
             </p>
           </div>
         </div>
@@ -76,7 +77,7 @@ export default function MapPage() {
               <p className={styles.kicker}>Orientation atlas</p>
               <h2 id="atlas-heading">Choose a place. Open its area guide.</h2>
             </div>
-            <p>{areas.length} registered area guides across three emirates.</p>
+          <p>{areas.length} covered areas across three emirates.</p>
           </div>
           <OrientationAtlas areas={areas} />
           <p className={styles.disclaimer}>
@@ -95,7 +96,7 @@ export default function MapPage() {
           </div>
           <div>
             <p>
-              The public atlas is generated from the existing area registry.
+              The public atlas includes only places with published reporting.
               It does not display transaction volume, price, sentiment,
               “chatter” or real-time status.
             </p>
@@ -105,7 +106,7 @@ export default function MapPage() {
                 <dd>Name, emirate, area type and coordinates</dd>
               </div>
               <div>
-                <dt>Newest registry review</dt>
+                <dt>Newest reporting update</dt>
                 <dd>{reviewLabel}</dd>
               </div>
               <div>

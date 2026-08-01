@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import NewsArticle from "@/components/redesign/NewsArticle";
-import { AREAS } from "@/content/areas";
 import { getNewsBySlug, NEWS_ARTICLES } from "@/content/news";
 import { SITE } from "@/lib/constants";
-import { DEVELOPERS } from "@/lib/developers";
 import {
   displayMarkets,
   hasVerifiedEditorialImage,
@@ -24,6 +22,7 @@ import {
   rajPersonSchema,
 } from "@/lib/schema";
 import { VERTICALS } from "@/lib/verticals";
+import { PUBLIC_AREAS, PUBLIC_DEVELOPERS } from "@/lib/public-content";
 
 export const dynamicParams = false;
 export const dynamic = "force-static";
@@ -129,10 +128,10 @@ export default async function NewsArticlePage({
   const index = live.findIndex((item) => item.slug === slug);
   const newer = index > 0 ? live[index - 1] : null;
   const older = index >= 0 && index < live.length - 1 ? live[index + 1] : null;
-  const relatedAreas = relatedAreasForArticle(article, AREAS).slice(0, 6);
+  const relatedAreas = relatedAreasForArticle(article, PUBLIC_AREAS).slice(0, 6);
   const relatedDevelopers = relatedDevelopersForArticle(
     article,
-    DEVELOPERS,
+    PUBLIC_DEVELOPERS,
   ).slice(0, 6);
   const relatedVerticals = relatedVerticalsForArticle(
     article,

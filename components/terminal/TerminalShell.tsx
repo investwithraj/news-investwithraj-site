@@ -75,7 +75,20 @@ type FeedState<T> =
   | { status: "error"; data: null; message: string };
 
 export function TerminalShell({ reports, areas, bells }: Props) {
-  const [layout, setLayout] = useState<PaneKey[]>(DEFAULT_LAYOUT);
+  const availablePanes = useMemo(
+    () =>
+      (Object.keys(PANE_LABELS) as PaneKey[]).filter(
+        (pane) => pane !== "closing" || bells.length > 0,
+      ),
+    [bells.length],
+  );
+  const defaultLayout = useMemo(
+    () => DEFAULT_LAYOUT.filter((pane) => availablePanes.includes(pane)),
+    [availablePanes],
+  );
+  const [layout, setLayout] = useState<PaneKey[]>(() =>
+    DEFAULT_LAYOUT.filter((pane) => pane !== "closing" || bells.length > 0),
+  );
   const [pulse, setPulse] = useState<FeedState<DldDailyPulse>>({
     status: "loading",
     data: null,
@@ -97,7 +110,7 @@ export function TerminalShell({ reports, areas, bells }: Props) {
       if (
         Array.isArray(parsed) &&
         parsed.length > 0 &&
-        parsed.every((pane) => pane in PANE_LABELS)
+        parsed.every((pane) => availablePanes.includes(pane))
       ) {
         savedLayout = [...new Set(parsed)];
       }
@@ -109,7 +122,7 @@ export function TerminalShell({ reports, areas, bells }: Props) {
       setLayout(savedLayout);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [availablePanes]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -210,10 +223,10 @@ export function TerminalShell({ reports, areas, bells }: Props) {
 
   const hiddenPanes = useMemo(
     () =>
-      (Object.keys(PANE_LABELS) as PaneKey[]).filter(
+      availablePanes.filter(
         (pane) => !layout.includes(pane),
       ),
-    [layout],
+    [availablePanes, layout],
   );
 
   return (
@@ -249,13 +262,13 @@ export function TerminalShell({ reports, areas, bells }: Props) {
         <div className={styles.frame}>
           <div className={styles.workspaceHead}>
             <div>
-              <p className={styles.kicker}>Seven-pane desk</p>
+              <p className={styles.kicker}>{availablePanes.length}-pane desk</p>
               <h2 id="workspace-heading">Your working view</h2>
             </div>
             <button
               type="button"
               className={styles.reset}
-              onClick={() => persist(DEFAULT_LAYOUT)}
+              onClick={() => persist(defaultLayout)}
             >
               Reset layout
             </button>
@@ -280,7 +293,7 @@ export function TerminalShell({ reports, areas, bells }: Props) {
             <div className={styles.emptyDesk}>
               <h2>The workspace is clear.</h2>
               <p>Add a pane above or restore the complete desk.</p>
-              <button type="button" onClick={() => persist(DEFAULT_LAYOUT)}>
+              <button type="button" onClick={() => persist(defaultLayout)}>
                 Restore all panes
               </button>
             </div>
@@ -570,23 +583,6 @@ function HeadlinesPane({ reports }: { reports: Report[] }) {
 }
 
 function ClosingPane({ bells }: { bells: Props["bells"] }) {
-  if (bells.length === 0) {
-    return (
-      <div className={styles.dataStack}>
-        <FeedNotice tone="neutral">
-          No Closing Bell edition has passed editorial review.
-        </FeedNotice>
-        <p className={styles.explainer}>
-          The pane stays empty until a dated edition is published. There is no
-          automated or simulated close.
-        </p>
-        <Link className={styles.textLink} href="/closing-bell">
-          Open Closing Bell method
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <ol className={styles.headlines}>
       {bells.map((bell, index) => (

@@ -3,23 +3,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AREAS } from "@/content/areas";
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 import {
   advisoryLinkForDeveloper,
   generalAdvisoryUrl,
 } from "@/lib/advisory-relations";
 import { SITE } from "@/lib/constants";
 import {
-  getAllDeveloperSlugs,
-  getDeveloperBySlug,
-} from "@/lib/developers";
-import {
-  articleMentionsDeveloper,
   categoryLabel,
   displayMarkets,
   formatEditorialDate,
 } from "@/lib/news-editorial";
+import {
+  getAllPublicDeveloperSlugs,
+  getPublicDeveloperRecord,
+  PUBLIC_AREAS,
+} from "@/lib/public-content";
 import {
   asGraph,
   breadcrumbSchema,
@@ -33,7 +31,7 @@ export const dynamicParams = false;
 export const dynamic = "force-static";
 
 export function generateStaticParams() {
-  return getAllDeveloperSlugs().map((slug) => ({ slug }));
+  return getAllPublicDeveloperSlugs().map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -42,21 +40,16 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const developer = getDeveloperBySlug(slug);
-  if (!developer) return { title: "Developer not found" };
+  const record = getPublicDeveloperRecord(slug);
+  if (!record) return { title: "Developer not found" };
+  const { developer, reports } = record;
   const media = getVerifiedDeveloperMedia(slug);
 
-  const relatedNews = NEWS_ARTICLES.filter(
-    (article) =>
-      article.status !== "research" &&
-      articleMentionsDeveloper(article, developer),
-  );
-  const hasReporting = relatedNews.length > 0;
   return {
     title: `${developer.name} — developer reporting index`,
-    description: `Source-linked reports that explicitly mention ${developer.name}. Profile facts remain under source review.`,
+    description: `${reports.length} source-linked reports that explicitly mention ${developer.name}, with the latest UAE property developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/developer/${slug}` },
-    robots: { index: hasReporting, follow: true },
+    robots: { index: true, follow: true },
     openGraph: {
       type: "website",
       title: `${developer.name} reporting index`,
@@ -84,15 +77,12 @@ export default async function DeveloperPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const developer = getDeveloperBySlug(slug);
-  if (!developer) notFound();
+  const record = getPublicDeveloperRecord(slug);
+  if (!record) notFound();
+  const { developer, reports: relatedNews } = record;
   const media = getVerifiedDeveloperMedia(developer.slug);
 
-  const relatedNews = sortNewsArticles(NEWS_ARTICLES)
-    .filter((article) => article.status !== "research")
-    .filter((article) => articleMentionsDeveloper(article, developer))
-    .slice(0, 10);
-  const connectedAreas = AREAS.filter((area) =>
+  const connectedAreas = PUBLIC_AREAS.filter((area) =>
     developer.activeAreas.includes(area.slug),
   );
   const advisoryLink = advisoryLinkForDeveloper(
@@ -148,20 +138,15 @@ export default async function DeveloperPage({
               </p>
               <h1>{developer.name}</h1>
               <p className={styles.dek}>
-                This page is a reporting index, not a corporate profile or
-                inventory sheet. Ownership, listing, delivery and current
-                release claims remain unpublished until a dedicated source
-                pack exists.
+                Follow the source-linked reporting that explicitly names {developer.name}.
+                Use the collection to track material launches, delivery events,
+                corporate moves and the markets they affect.
               </p>
             </div>
             <div className={styles.profileMark}>
-              <span>Evidence state</span>
-              <strong>
-                {relatedNews.length
-                  ? `${relatedNews.length} explicit reports`
-                  : "No matched reports"}
-              </strong>
-              <small>Profile-source review pending</small>
+              <span>Published coverage</span>
+              <strong>{relatedNews.length} explicit reports</strong>
+              <small>Latest {relatedNews[0].displayDate}</small>
             </div>
           </div>
         </header>
@@ -196,27 +181,21 @@ export default async function DeveloperPage({
 
         <section
           className={styles.reviewStrip}
-          aria-label="Developer evidence status"
+          aria-label="Developer reporting summary"
         >
           <div>
-            <span>Entity match</span>
-            <strong>Full identity or approved alias</strong>
+            <span>Published coverage</span>
+            <strong>{relatedNews.length} reports</strong>
           </div>
           <div>
             <span>Latest reporting</span>
             <strong>
-              {relatedNews[0]
-                ? formatEditorialDate(relatedNews[0].publishedAt)
-                : "No explicit mention"}
+              {formatEditorialDate(relatedNews[0].publishedAt)}
             </strong>
           </div>
           <div>
-            <span>Search status</span>
-            <p>
-              {relatedNews.length
-                ? "Indexable source-linked collection"
-                : "Noindex until explicit reporting exists"}
-            </p>
+            <span>Match method</span>
+            <p>Full identity or an approved, unambiguous alias</p>
           </div>
         </section>
 
@@ -225,51 +204,37 @@ export default async function DeveloperPage({
             <h2>Explicit developer mentions.</h2>
             <p>{relatedNews.length} live reports</p>
           </header>
-          {relatedNews.length ? (
-            <div className={styles.reportList}>
-              {relatedNews.map((article) => (
-                <Link href={`/news/${article.slug}`} key={article.slug}>
-                  <span>
-                    {displayMarkets(article).join(" / ")} ·{" "}
-                    {categoryLabel(article.category)} · {article.displayDate}
-                  </span>
-                  <strong>{article.title}</strong>
-                  <i aria-hidden="true">↗</i>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyState}>
-              No live report explicitly names this developer. Generic mentions
-              of {developer.hq} are not counted.
-            </p>
-          )}
+          <div className={styles.reportList}>
+            {relatedNews.map((article) => (
+              <Link href={`/news/${article.slug}`} key={article.slug}>
+                <span>
+                  {displayMarkets(article).join(" / ")} ·{" "}
+                  {categoryLabel(article.category)} · {article.displayDate}
+                </span>
+                <strong>{article.title}</strong>
+                <i aria-hidden="true">↗</i>
+              </Link>
+            ))}
+          </div>
         </section>
 
-        <section className={styles.connections}>
+        {connectedAreas.length ? <section className={styles.connections}>
           <header className={styles.sectionHeader}>
-            <h2>Connected area records.</h2>
-            <p>Internal coverage map · not current inventory</p>
+            <h2>Areas connected to this coverage.</h2>
+            <p>Continue through the reporting network</p>
           </header>
-          {connectedAreas.length ? (
-            <div className={styles.connectionList}>
-              {connectedAreas.map((area) => (
-                <Link href={`/areas/${area.slug}`} key={area.slug}>
-                  <span>
-                    {area.emirate} · {area.kind.replaceAll("-", " ")}
-                  </span>
-                  <strong>{area.name}</strong>
-                  <i aria-hidden="true">↗</i>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyState}>
-              No area record is connected to this entity in the publication
-              registry.
-            </p>
-          )}
-        </section>
+          <div className={styles.connectionList}>
+            {connectedAreas.map((area) => (
+              <Link href={`/areas/${area.slug}`} key={area.slug}>
+                <span>
+                  {area.emirate} · {area.kind.replaceAll("-", " ")}
+                </span>
+                <strong>{area.name}</strong>
+                <i aria-hidden="true">↗</i>
+              </Link>
+            ))}
+          </div>
+        </section> : null}
 
         <section className={styles.independence}>
           <span>Commercial independence</span>

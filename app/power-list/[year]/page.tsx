@@ -12,12 +12,8 @@ import styles from "./power-list.module.css";
 export const dynamic = "force-static";
 export const dynamicParams = false;
 
-const currentEdition = new Date().getFullYear().toString();
-
 export function generateStaticParams() {
-  return Array.from(
-    new Set([...getAllPowerListYears(), currentEdition]),
-  ).map((year) => ({ year }));
+  return getAllPowerListYears().map((year) => ({ year }));
 }
 
 export async function generateMetadata({
@@ -57,6 +53,7 @@ export default async function PowerListPage({
   if (!/^\d{4}$/.test(year)) notFound();
 
   const edition = getPowerListByYear(year);
+  if (!edition || edition.entries.length === 0) notFound();
   const entries = edition?.entries ?? [];
   const canonical = `${SITE.url}/power-list/${year}`;
 
