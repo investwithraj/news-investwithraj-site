@@ -165,7 +165,20 @@ async function requestOnce(
           "Accept-Encoding": "identity",
           Host: url.hostname,
         },
-        lookup: ((_hostname, _lookupOptions, callback) => {
+        lookup: ((_hostname, lookupOptions, callback) => {
+          // Node 24 enables address-family auto-selection for HTTPS requests
+          // and asks custom lookup functions for `all` results. Returning the
+          // legacy single-address callback shape in that mode makes Node read
+          // an undefined address and reject every source request. Preserve DNS
+          // pinning while matching the callback shape requested by the client.
+          if (
+            typeof lookupOptions === "object" &&
+            lookupOptions !== null &&
+            lookupOptions.all
+          ) {
+            callback(null, [pinned]);
+            return;
+          }
           callback(null, pinned.address, pinned.family);
         }) as LookupFunction,
       },

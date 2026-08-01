@@ -13,6 +13,7 @@ import { dedupeEntries, similarity } from "../lib/pipeline/dedupe.js";
 import {
   fetchAllSources,
   flattenEntries,
+  summarizeFetchRun,
 } from "../lib/sources/fetchers/index.js";
 import { getWhitelistDomains } from "../lib/sources/registry.js";
 
@@ -122,6 +123,12 @@ async function main(): Promise<void> {
   ];
 
   const run = await fetchAllSources();
+  console.log(summarizeFetchRun(run));
+  if (run.okCount === 0) {
+    throw new Error(
+      `source ingestion failed closed: all ${run.errorCount} configured sources errored`,
+    );
+  }
   const deduped = dedupeEntries(flattenEntries(run));
   const clusters = clusterAndScore(deduped, 12).filter(
     (cluster) => cluster.score >= MIN_SCORE,
