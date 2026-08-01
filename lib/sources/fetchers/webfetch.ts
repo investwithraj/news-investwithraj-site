@@ -29,8 +29,9 @@ export async function fetchWebPage(
   const t0 = performance.now();
 
   try {
+    const fetchUrl = source.fetchUrl ?? source.url;
     const domain = new URL(source.url).hostname.replace("www.", "");
-    const res = await safeFetchBytes(source.url, {
+    const res = await safeFetchBytes(fetchUrl, {
       allowedDomains: [domain],
       userAgent: USER_AGENT,
       accept: "text/html,application/xhtml+xml",
@@ -40,7 +41,7 @@ export async function fetchWebPage(
       maxRedirects: 3,
     });
     const html = res.bytes.toString("utf8");
-    const entries = extractCandidateLinks(html, source.url, source.name, source.tier, domain, limit);
+    const entries = extractCandidateLinks(html, fetchUrl, source.name, source.tier, domain, limit);
 
     return {
       source,
@@ -70,8 +71,8 @@ function extractCandidateLinks(
   domain: string,
   limit: number
 ): RawEntry[] {
-  const contentPathRe = /\/(news|press|releases|research|insights|reports|publications|articles)\//i;
-  const linkRe = /<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  const contentPathRe = /\/(news(?:-and-media)?|latest-news|press(?:-release(?:s|-listing)?)?|releases|media-(?:centre|center)|research|insights|reports|publications|articles)(?:\/|-)/i;
+  const linkRe = /<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
 
   const seen = new Set<string>();
   const entries: RawEntry[] = [];
@@ -79,15 +80,12 @@ function extractCandidateLinks(
   let m: RegExpExecArray | null;
   while ((m = linkRe.exec(html)) !== null && entries.length < limit * 3) {
     const href = m[1];
-    const inner = m[2]
+    let inner = decodeHtmlText(m[2]
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
-      .trim();
+      .trim());
 
     if (!contentPathRe.test(href)) continue;
-    if (inner.length < 20) continue;
-    if (inner.length > 200) continue; // probably a section block, not a headline
-
     let absoluteUrl: string;
     try {
       absoluteUrl = new URL(href, baseUrl).toString();
@@ -95,7 +93,12 @@ function extractCandidateLinks(
       continue;
     }
     if (!urlOnApprovedHost(absoluteUrl, [domain])) continue;
+    if (normaliseUrl(absoluteUrl) === normaliseUrl(baseUrl)) continue;
     if (seen.has(absoluteUrl)) continue;
+    if (inner.length < 20 || inner.length > 200) {
+      inner = headlineFromUrl(absoluteUrl);
+    }
+    if (inner.length < 20 || inner.length > 200) continue;
     seen.add(absoluteUrl);
 
     entries.push({
@@ -112,6 +115,40 @@ function extractCandidateLinks(
   }
 
   return entries;
+}
+
+function normaliseUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    url.search = "";
+    return url.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return value.replace(/\/$/, "").toLowerCase();
+  }
+}
+
+function headlineFromUrl(value: string): string {
+  try {
+    const slug = new URL(value).pathname.split("/").filter(Boolean).at(-1) ?? "";
+    return decodeURIComponent(slug)
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  } catch {
+    return "";
+  }
+}
+
+function decodeHtmlText(value: string): string {
+  return value
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_, code: string) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;|&#39;/gi, "'")
+    .replace(/&nbsp;/gi, " ");
 }
 
 function hashUrl(url: string): string {

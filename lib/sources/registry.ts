@@ -21,6 +21,10 @@ export interface VerifiedSource {
   market: ("Dubai" | "Abu Dhabi" | "Ras Al Khaimah" | "UAE" | "GCC" | "Global")[];
   /** How the pipeline pulls from it */
   fetchType: SourceFetchType;
+  /** Optional index page to collect while keeping `url` as the canonical citation anchor. */
+  fetchUrl?: string;
+  /** True only after the index page has passed a live server-side collection test. */
+  directFetchEnabled?: boolean;
   /** RSS feed URL when fetchType === "rss" */
   rssUrl?: string;
   /** Optional notes for the pipeline (e.g. paywall, scrape-rate-limit) */
@@ -221,17 +225,22 @@ export const SOURCE_WHITELIST: VerifiedSource[] = [
   { name: "Reidin", url: "https://www.reidin.com", tier: "institutional-research", market: ["UAE"], fetchType: "webfetch" },
   { name: "dxbinteract", url: "https://dxbinteract.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
   { name: "Dubai Pulse (open data)", url: "https://www.dubaipulse.gov.ae", tier: "government", market: ["Dubai"], fetchType: "webfetch" },
-  { name: "Emaar Properties", url: "https://www.emaar.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
-  { name: "Nakheel", url: "https://www.nakheel.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
-  { name: "Aldar Properties", url: "https://www.aldar.com", tier: "industry-portal", market: ["Abu Dhabi"], fetchType: "webfetch" },
-  { name: "Modon Properties", url: "https://www.modon.ae", tier: "industry-portal", market: ["Abu Dhabi"], fetchType: "webfetch" },
-  { name: "Sobha Realty", url: "https://www.sobharealty.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
+  { name: "Emaar Properties", url: "https://www.emaar.com", fetchUrl: "https://www.emaar.com/press-release-listing/", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
+  { name: "Nakheel", url: "https://www.nakheel.com", fetchUrl: "https://www.nakheel.com/en/media-centre", directFetchEnabled: true, tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
+  { name: "Aldar Properties", url: "https://www.aldar.com", fetchUrl: "https://www.aldar.com/en/news-and-media", tier: "industry-portal", market: ["Abu Dhabi"], fetchType: "webfetch" },
+  { name: "Modon Properties", url: "https://www.modon.com", fetchUrl: "https://www.modon.com/about-modon/media-centre/details", directFetchEnabled: true, tier: "industry-portal", market: ["Abu Dhabi"], fetchType: "webfetch" },
+  { name: "Sobha Realty", url: "https://www.sobharealty.com", fetchUrl: "https://sobharealty.com/media-center/press-releases", directFetchEnabled: true, tier: "industry-portal", market: ["Dubai", "Abu Dhabi"], fetchType: "webfetch" },
   { name: "Damac Properties", url: "https://www.damacproperties.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
   { name: "Meraas", url: "https://www.meraas.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
+  { name: "Dubai Holding", url: "https://www.dubaiholding.com", fetchUrl: "https://www.dubaiholding.com/en/media-hub/press-releases", directFetchEnabled: true, tier: "industry-portal", market: ["Dubai", "UAE"], fetchType: "webfetch" },
+  { name: "Marjan", url: "https://marjan.ae", fetchUrl: "https://marjan.ae/press-releases", directFetchEnabled: true, tier: "industry-portal", market: ["Ras Al Khaimah"], fetchType: "webfetch" },
   { name: "Binghatti", url: "https://www.binghatti.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
   { name: "Azizi Developments", url: "https://www.azizidevelopments.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
   { name: "Danube Properties", url: "https://www.danubeproperties.com", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
-  { name: "Ellington Properties", url: "https://ellingtonproperties.ae", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
+  { name: "Ellington Properties", url: "https://ellingtonproperties.ae", fetchUrl: "https://ellingtonproperties.ae/en/media-center/news-events", directFetchEnabled: true, tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
+  { name: "Select Group", url: "https://www.select-group.ae", fetchUrl: "https://www.select-group.ae/media", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
+  { name: "Arada", url: "https://www.arada.com", fetchUrl: "https://www.arada.com/en/news/", directFetchEnabled: true, tier: "industry-portal", market: ["Dubai", "Abu Dhabi", "UAE"], fetchType: "webfetch" },
+  { name: "Shamal Holding", url: "https://www.shamal.com", fetchUrl: "https://www.shamal.com/press-releases", tier: "industry-portal", market: ["Dubai"], fetchType: "webfetch" },
   { name: "Reuters", url: "https://www.reuters.com", tier: "national-press", market: ["Global"], fetchType: "webfetch" },
   { name: "Bloomberg", url: "https://www.bloomberg.com", tier: "national-press", market: ["Global"], fetchType: "webfetch" },
   { name: "Financial Times", url: "https://www.ft.com", tier: "national-press", market: ["Global"], fetchType: "webfetch" },
@@ -325,6 +334,13 @@ const AGBI: VerifiedSource = {
   rssUrl: "https://www.agbi.com/feed/",
 };
 
+/** First-party claim sources. These surface launches, milestones and company
+ *  announcements, but do not independently confirm their own claims. Every
+ *  resulting draft remains subject to source verification in The Desk. */
+export const DEVELOPER_DIRECT_FEEDS: VerifiedSource[] = SOURCE_WHITELIST.filter(
+  (source) => source.fetchType === "webfetch" && source.directFetchEnabled === true,
+);
+
 /** Reddit communities — DISABLED: Reddit now 403s unauthenticated JSON from
  *  datacenter IPs (needs OAuth). The fetcher (`fetchers/reddit.ts`) + the
  *  "reddit" fetchType stay wired for a future OAuth credential; not fetched
@@ -338,6 +354,7 @@ export const REDDIT_FEEDS: VerifiedSource[] = [
 export const FETCH_SOURCES: VerifiedSource[] = [
   ...DISCOVERY_FEEDS,
   AGBI,
+  ...DEVELOPER_DIRECT_FEEDS,
 ];
 
 /** Per-tier weight for ranking which articles to draft first.

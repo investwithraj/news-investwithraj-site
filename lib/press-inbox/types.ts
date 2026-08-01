@@ -80,6 +80,12 @@ export const SENDER_DOMAIN_TIERS: Record<string, PressSenderTier> = {
   "ifa.ae": "developer-tier-1",
   "damacproperties.com": "developer-tier-1",
   "marjan.ae": "developer-tier-1",
+  "sobharealty.com": "developer-tier-1",
+  "meraas.com": "developer-tier-1",
+  "select-group.ae": "developer-tier-1",
+  "ellingtonproperties.ae": "developer-tier-1",
+  "shamal.com": "developer-tier-1",
+  "arada.com": "developer-tier-1",
   // Advisors
   "knightfrank.com": "advisor-tier-1",
   "jll.com": "advisor-tier-1",
@@ -126,7 +132,9 @@ export function classifySender(email: string): PressSenderTier {
 const TAG_PATTERNS = [
   // Developers
   /\bmodon\b/i, /\bemaar\b/i, /\baldar\b/i, /\bnakheel\b/i, /\bdamac\b/i,
-  /\bdubai holding\b/i, /\bifa hotels\b/i, /\bmarjan\b/i,
+  /\bdubai holding\b/i, /\bifa hotels\b/i, /\bmarjan\b/i, /\bsobha\b/i,
+  /\bmeraas\b/i, /\bselect group\b/i, /\bellington\b/i, /\bshamal\b/i,
+  /\barada\b/i,
   // Projects
   /\bhudayriyat\b/i, /\bsaadiyat\b/i, /\bpalm jebel ali\b/i, /\bpalm jumeirah\b/i,
   /\bwynn\b/i, /\bal marjan\b/i, /\babu dhabi island\b/i, /\byas island\b/i,

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "news:fetch": "tsx scripts/news-pipeline.ts",
+    "test:developer-sources": "tsx scripts/test-developer-source-registry.ts",
     "test:public-content": "tsx scripts/test-public-content-gate.ts",
     "test:order98:storage": "tsx scripts/test-queue-concurrency.ts && tsx scripts/test-publication-concurrency.ts"
   },
