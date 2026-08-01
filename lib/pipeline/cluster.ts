@@ -6,6 +6,7 @@ import type { RawEntry } from "@/lib/sources/fetchers";
 import type { Cluster, ClusterEntities } from "./types";
 import { TIER_WEIGHT } from "@/lib/sources/registry";
 import { similarity } from "./dedupe";
+import { createHash } from "node:crypto";
 
 /* ─── Entity dictionaries ──────────────────────────────────────────────
    These are the named entities Raj's audience cares about. Extending
@@ -313,6 +314,18 @@ function topicIsRealEstate(topic: string): boolean {
   return RE_TOPIC_TERMS.some((k) => t.includes(k));
 }
 
+/** Stable, reservation-safe ID for headline-similarity clusters. Feed GUIDs
+ * can contain URL/base64 characters that the server automation contract
+ * deliberately rejects. Hash the source identity instead of weakening that
+ * boundary or truncating a shared GUID prefix. */
+export function topicClusterId(entry: Pick<RawEntry, "id" | "title">): string {
+  const digest = createHash("sha256")
+    .update(`${entry.id}\n${entry.title}`, "utf8")
+    .digest("hex")
+    .slice(0, 32);
+  return `topic:${digest}`;
+}
+
 /* ─── Main entrypoint ────────────────────────────────────────────────── */
 
 /**
@@ -357,7 +370,9 @@ export function clusterAndScore(
     }
     if (!placed) simClusters.push([e]);
   }
-  simClusters.forEach((c, i) => groups.set(`topic--${i}-${c[0].id}`, c));
+  simClusters.forEach((cluster) =>
+    groups.set(topicClusterId(cluster[0]), cluster),
+  );
 
   // 2. Build cluster objects
   const clusters: Cluster[] = [];
