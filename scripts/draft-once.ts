@@ -23,7 +23,7 @@ const SECRET = process.env.POST_PUBLISH_SECRET || "";
 const MIN_SCORE = Number.parseInt(process.env.PIPELINE_MIN_SCORE ?? "45", 10);
 const MAX_DRAFTS = Number.parseInt(process.env.PIPELINE_CAP ?? "1", 10);
 const MAX_ATTEMPTS = Number.parseInt(
-  process.env.PIPELINE_MAX_ATTEMPTS ?? "3",
+  process.env.PIPELINE_MAX_ATTEMPTS ?? "6",
   10,
 );
 const CANDIDATE_POOL = Number.parseInt(
@@ -200,8 +200,8 @@ async function main(): Promise<void> {
     try {
       result = await draftFromCluster(cluster, whitelist, {
         model: process.env.DRAFT_MODEL,
-        maxSearches: 6,
-        maxTokens: 4_200,
+        maxSearches: 8,
+        maxTokens: 5_200,
       });
     } catch (error) {
       const reason =

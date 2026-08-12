@@ -271,7 +271,13 @@ function scoreSourceTier(entries: RawEntry[]): number {
   const maxWeight = Math.max(
     ...entries.map((e) => TIER_WEIGHT[e.source.tier])
   );
-  return Math.round(maxWeight * 100);
+  const publisherDomains = new Set(
+    entries.map((entry) => entry.source.domain.replace(/^www\./, "")),
+  ).size;
+  return Math.min(
+    100,
+    Math.round(maxWeight * 70 + Math.min(30, (publisherDomains - 1) * 15)),
+  );
 }
 
 function scoreFreshness(entries: RawEntry[]): number {

@@ -37,7 +37,7 @@ ABSOLUTE RULES (a draft that breaks these is rejected):
 - The FIRST paragraph must contain a specific, sourced number.
 - Banned: synergy, unlock value, platform play, 10x, passive income, amazing, incredible, guaranteed, risk-free, game-changer, "in today's market", "no-brainer", "don't miss out".
 - Use the analytical register (≥3): thesis, mandate, structural, absorption, catalyst, compression, precinct, typology, archetype, basis points/bps, sovereign-backed, escrow, payment plan, secondary market.
-- Body 650–1100 words. No markdown headings — paragraphs separated by blank lines.
+- Body 800–1100 words. No markdown headings — paragraphs separated by blank lines.
 
 OUTPUT: a single JSON object, no prose, no code fences:
 {
@@ -62,6 +62,50 @@ interface DraftJson {
   citations?: { source?: string; url?: string }[];
 }
 
+/** Recover the final JSON object from a tool-assisted model turn. */
+export function parseDraftJsonResponse(text: string): DraftJson | null {
+  const candidates: DraftJson[] = [];
+  for (let start = 0; start < text.length; start += 1) {
+    if (text[start] !== "{") continue;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let end = start; end < text.length; end += 1) {
+      const char = text[end];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') inString = false;
+        continue;
+      }
+      if (char === '"') inString = true;
+      else if (char === "{") depth += 1;
+      else if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          try {
+            const value = JSON.parse(text.slice(start, end + 1)) as DraftJson;
+            if (
+              value &&
+              typeof value === "object" &&
+              (value.skip === true ||
+                (typeof value.title === "string" &&
+                  typeof value.body === "string" &&
+                  Array.isArray(value.tldr)))
+            ) {
+              candidates.push(value);
+            }
+          } catch {
+            // Keep scanning: a later complete object may still be valid.
+          }
+          break;
+        }
+      }
+    }
+  }
+  return candidates.at(-1) ?? null;
+}
+
 export interface DraftAttempt {
   ok: boolean;
   reason?: string;
@@ -75,8 +119,16 @@ export interface DraftOpts {
   maxTokens?: number;
 }
 
-function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+export function slugify(s: string): string {
+  const normalised = s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (normalised.length <= 60) return normalised;
+  const truncated = normalised.slice(0, 60);
+  const wordBoundary = truncated.lastIndexOf("-");
+  return (wordBoundary >= 40 ? truncated.slice(0, wordBoundary) : truncated)
+    .replace(/-+$/g, "");
 }
 
 export function buildProvenance(cluster: Cluster): NewsDraftProvenance {
@@ -85,13 +137,22 @@ export function buildProvenance(cluster: Cluster): NewsDraftProvenance {
     topic: cluster.topic,
     score: cluster.score,
     scoreBreakdown: cluster.scoreBreakdown,
-    sources: cluster.entries.slice(0, 12).map((e) => ({
-      name: e.source.name,
-      tier: e.source.tier,
-      url: e.url,
-      summary: e.summary,
-      publishedAt: e.publishedAt,
-    })),
+    sources: cluster.entries
+      .filter((entry) => {
+        try {
+          return new URL(entry.url).protocol === "https:";
+        } catch {
+          return false;
+        }
+      })
+      .slice(0, 12)
+      .map((e) => ({
+        name: e.source.name.slice(0, 240),
+        tier: e.source.tier,
+        url: e.url,
+        summary: (e.summary.trim() || e.title).slice(0, 9_000),
+        publishedAt: e.publishedAt,
+      })),
   };
 }
 
@@ -162,11 +223,8 @@ export async function draftFromCluster(
 
   if (!res.ok || !res.text) return { ok: false, reason: res.error ?? "no text" };
 
-  let parsed: DraftJson;
-  try {
-    const m = res.text.match(/\{[\s\S]*\}/);
-    parsed = JSON.parse(m ? m[0] : res.text);
-  } catch {
+  const parsed = parseDraftJsonResponse(res.text);
+  if (!parsed) {
     return { ok: false, reason: "unparseable JSON" };
   }
   if (parsed.skip || !parsed.title || !parsed.body || !Array.isArray(parsed.tldr)) {
@@ -289,14 +347,15 @@ export async function draftFromCluster(
   }
   for (const u of res.searchedUrls ?? []) {
     if (seenUrls.has(u)) continue;
-    seenUrls.add(u);
-    let name = u;
     try {
-      name = new URL(u).hostname.replace(/^www\./, "");
+      const parsedUrl = new URL(u);
+      if (parsedUrl.protocol !== "https:" || u.length > 2_048) continue;
+      seenUrls.add(u);
+      const name = parsedUrl.hostname.replace(/^www\./, "");
+      extra.push({ name, tier: "national-press", url: u, summary: "Consulted during web research." });
     } catch {
-      /* keep raw */
+      continue;
     }
-    extra.push({ name, tier: "national-press", url: u, summary: "Consulted during web research." });
   }
   provenance.sources = [...provenance.sources, ...extra].slice(0, 24);
   if (citedText) provenance.citedText = citedText;
