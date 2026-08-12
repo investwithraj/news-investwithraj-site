@@ -26,6 +26,10 @@ const MAX_ATTEMPTS = Number.parseInt(
   process.env.PIPELINE_MAX_ATTEMPTS ?? "3",
   10,
 );
+const CANDIDATE_POOL = Number.parseInt(
+  process.env.PIPELINE_CANDIDATE_POOL ?? "30",
+  10,
+);
 
 interface ReservationResponse {
   acquired?: boolean;
@@ -162,7 +166,7 @@ async function main(): Promise<void> {
     );
   }
   const deduped = dedupeEntries(flattenEntries(run));
-  const clusters = clusterAndScore(deduped, 12).filter(
+  const clusters = clusterAndScore(deduped, CANDIDATE_POOL).filter(
     (cluster) => cluster.score >= MIN_SCORE,
   );
   const candidates = clusters.filter(
@@ -181,13 +185,13 @@ async function main(): Promise<void> {
   let attempts = 0;
   for (const cluster of candidates) {
     if (staged >= MAX_DRAFTS || attempts >= MAX_ATTEMPTS) break;
-    attempts += 1;
 
     const reservationToken = await reserveCluster(cluster.id, cluster.topic);
     if (!reservationToken) {
       console.log(`skip reserved cluster: ${cluster.topic.slice(0, 72)}`);
       continue;
     }
+    attempts += 1;
 
     console.log(
       `researching: ${cluster.topic.slice(0, 72)} (score ${cluster.score})`,
