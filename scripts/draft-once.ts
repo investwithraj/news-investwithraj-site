@@ -200,7 +200,7 @@ async function main(): Promise<void> {
     try {
       result = await draftFromCluster(cluster, whitelist, {
         model: process.env.DRAFT_MODEL,
-        maxSearches: 4,
+        maxSearches: 6,
         maxTokens: 4_200,
       });
     } catch (error) {

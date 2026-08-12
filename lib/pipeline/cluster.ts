@@ -314,6 +314,13 @@ function topicIsRealEstate(topic: string): boolean {
   return RE_TOPIC_TERMS.some((k) => t.includes(k));
 }
 
+const EDITORIAL_EXCLUSION_RE =
+  /\b(celebrity|fortune|net worth|private[- ]jet|home tour|lifestyle of|inside (?:his|her|their) (?:home|estate|penthouse))\b/i;
+
+function topicFitsPropertyDesk(topic: string): boolean {
+  return topicIsRealEstate(topic) && !EDITORIAL_EXCLUSION_RE.test(topic);
+}
+
 /** Stable, reservation-safe ID for headline-similarity clusters. Feed GUIDs
  * can contain URL/base64 characters that the server automation contract
  * deliberately rejects. Hash the source identity instead of weakening that
@@ -387,7 +394,7 @@ export function clusterAndScore(
     // Composite — weighted average (UHNW + Raj angle weighted highest), plus a
     // headline real-estate bonus so genuine property stories outrank tangential
     // macro/lifestyle pieces that ride press-tier + freshness.
-    const reBonus = topicIsRealEstate(groupEntries[0].title) ? 15 : 0;
+    const reBonus = topicFitsPropertyDesk(groupEntries[0].title) ? 15 : 0;
     const score = Math.min(
       100,
       Math.round(
@@ -420,10 +427,11 @@ export function clusterAndScore(
   // + freshness alone; this keeps the top slots for actual property stories.
   const relevant = clusters.filter(
     (c) =>
-      c.entities.places.length > 0 ||
-      c.entities.developers.length > 0 ||
-      topicIsRealEstate(c.topic) ||
-      c.scoreBreakdown.rajAngle >= 24, // ≥3 strong Raj-angle hits
+      !EDITORIAL_EXCLUSION_RE.test(c.topic) &&
+      (c.entities.places.length > 0 ||
+        c.entities.developers.length > 0 ||
+        topicFitsPropertyDesk(c.topic) ||
+        c.scoreBreakdown.rajAngle >= 24), // ≥3 strong Raj-angle hits
   );
 
   // 4. Sort by score, take top-N

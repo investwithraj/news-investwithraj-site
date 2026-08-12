@@ -31,7 +31,7 @@ You are given a story lead (a cluster of headlines + snippets). RESEARCH it with
 ABSOLUTE RULES (a draft that breaks these is rejected):
 - Synthetic imagery is forbidden. The drafting system does not select, generate, or approve media; a human reviewer must attach a rights-cleared real UHD cover.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
-- Use at least two independently accessible, approved sources. Cite the exact article or release URLs, not homepages, search pages or aggregator redirects. If two source pages cannot be opened without a login or paywall, return {"skip": true, "reason": "..."} and nothing else.
+- Use at least two independently accessible, approved sources from two different publisher domains. Cite the exact article or release URLs, not homepages, search pages or aggregator redirects. If two source pages on different domains cannot be opened without a login or paywall, return {"skip": true, "reason": "..."} and nothing else.
 - If, after searching, you cannot verify enough for a defensible 650+ word article, return {"skip": true, "reason": "..."} and nothing else.
 - UK English. Em-dashes — like this — are signature; use several.
 - The FIRST paragraph must contain a specific, sourced number.
@@ -103,6 +103,7 @@ function buildCitations(
 ): { source: string; url: string; accessedAt: string }[] {
   const out: { source: string; url: string; accessedAt: string }[] = [];
   const seen = new Set<string>();
+  const seenHosts = new Set<string>();
   const isWhitelisted = (u: string) => {
     try {
       const h = new URL(u).hostname.replace(/^www\./, "");
@@ -114,7 +115,10 @@ function buildCitations(
   for (const c of claudeCites ?? []) {
     if (!c.url || !/^https?:\/\//i.test(c.url) || seen.has(c.url)) continue;
     if (!isWhitelisted(c.url)) continue;
+    const host = new URL(c.url).hostname.replace(/^www\./, "");
+    if (seenHosts.has(host)) continue;
     seen.add(c.url);
+    seenHosts.add(host);
     out.push({ source: c.source || new URL(c.url).hostname.replace(/^www\./, ""), url: c.url, accessedAt: now });
   }
   if (out.length === 0) {
@@ -151,7 +155,7 @@ export async function draftFromCluster(
     messages: [
       {
         role: "user",
-        content: `STORY LEAD: ${cluster.topic}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. Use at least two exact, independently accessible article or official-release URLs from the approved domains. If that is not possible, skip. Then output the article JSON.`,
+        content: `STORY LEAD: ${cluster.topic}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. Use at least two exact, independently accessible article or official-release URLs from two different approved publisher domains. If that is not possible, skip. Then output the article JSON.`,
       },
     ],
   });
@@ -249,6 +253,29 @@ export async function draftFromCluster(
       }),
     })),
   );
+  const fetchedEvidence = citedTexts
+    .filter(({ fetched }) => fetched.text.trim().length >= 80)
+    .map(({ c, fetched }) => ({
+      url: c.url,
+      finalUrl: fetched.finalUrl ?? undefined,
+      text: fetched.text.slice(0, 9_000),
+      fetchedAt: now,
+      contentHash: createHash("sha256")
+        .update(fetched.text.slice(0, 9_000))
+        .digest("hex"),
+    }));
+  const fetchedDomains = new Set(
+    fetchedEvidence.map((evidence) =>
+      new URL(evidence.finalUrl ?? evidence.url).hostname.replace(/^www\./, ""),
+    ),
+  );
+  if (fetchedDomains.size < 2) {
+    return {
+      ok: false,
+      reason: `only ${fetchedDomains.size} independently fetched publisher domain(s); need at least 2`,
+    };
+  }
+
   for (const { c, fetched } of citedTexts) {
     const text = fetched.text;
     if (seenUrls.has(c.url)) continue;
@@ -273,17 +300,7 @@ export async function draftFromCluster(
   }
   provenance.sources = [...provenance.sources, ...extra].slice(0, 24);
   if (citedText) provenance.citedText = citedText;
-  provenance.fetchedEvidence = citedTexts
-    .filter(({ fetched }) => fetched.text.trim().length >= 80)
-    .map(({ c, fetched }) => ({
-      url: c.url,
-      finalUrl: fetched.finalUrl ?? undefined,
-      text: fetched.text.slice(0, 9_000),
-      fetchedAt: now,
-      contentHash: createHash("sha256")
-        .update(fetched.text.slice(0, 9_000))
-        .digest("hex"),
-    }));
+  provenance.fetchedEvidence = fetchedEvidence;
 
   return { ok: true, article, provenance };
 }

@@ -123,13 +123,22 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     (evidence) =>
       citationUrls.has(evidence.url) && norm(evidence.text).length >= 80,
   );
-  const distinctEvidenceUrls = new Set(
-    fetchedEvidence.map((evidence) => evidence.url),
+  const distinctEvidenceDomains = new Set(
+    fetchedEvidence.map((evidence) => {
+      try {
+        return new URL(evidence.finalUrl ?? evidence.url).hostname.replace(
+          /^www\./,
+          "",
+        );
+      } catch {
+        return "";
+      }
+    }).filter(Boolean),
   );
-  const fetchedEvidenceCount = distinctEvidenceUrls.size;
+  const fetchedEvidenceCount = distinctEvidenceDomains.size;
   if (fetchedEvidenceCount < MIN_WHITELIST_CITATIONS) {
     reasons.push(
-      `only ${fetchedEvidenceCount} cited source(s) have independently fetched evidence text (need >= ${MIN_WHITELIST_CITATIONS})`,
+      `only ${fetchedEvidenceCount} cited publisher domain(s) have independently fetched evidence text (need >= ${MIN_WHITELIST_CITATIONS})`,
     );
   }
   const sourceText = norm(

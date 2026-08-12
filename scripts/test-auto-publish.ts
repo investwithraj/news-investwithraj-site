@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 
-import { runAutoApprove } from "../lib/news-review/auto-approve.js";
+import {
+  assessDraft,
+  runAutoApprove,
+} from "../lib/news-review/auto-approve.js";
 import type { NewsDraft } from "../lib/news-review/types.js";
 
 const sourceA = "https://example.com/source-a";
@@ -86,6 +89,30 @@ globalThis.fetch = async (input) => {
 
 async function main() {
   try {
+    const samePublisherDraft = {
+      ...draft,
+      id: "auto-publish-same-publisher",
+      article: {
+        ...draft.article,
+        citations: [
+          { source: "Source A", url: sourceA },
+          { source: "Source A", url: "https://example.com/source-b" },
+        ],
+      },
+      provenance: {
+        ...draft.provenance,
+        fetchedEvidence: [
+          { url: sourceA, text: evidence },
+          { url: "https://example.com/source-b", text: evidence },
+        ],
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(samePublisherDraft).verdict,
+      "manual",
+      "two URLs from one publisher must not satisfy independent corroboration",
+    );
+
     const result = await runAutoApprove({
       site: "https://news.example.test",
       secret: "s".repeat(32),
