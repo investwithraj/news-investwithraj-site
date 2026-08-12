@@ -51,7 +51,12 @@ async function reserveCluster(
       "content-type": "application/json",
       "x-post-publish-secret": SECRET,
     },
-    body: JSON.stringify({ action: "reserve", clusterId, topic }),
+    body: JSON.stringify({
+      action: "reserve",
+      clusterId,
+      topic,
+      retryFailed: process.env.PIPELINE_RETRY_FAILED === "1",
+    }),
   });
   const payload = (await response.json().catch(() => ({}))) as
     ReservationResponse;

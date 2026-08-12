@@ -469,6 +469,7 @@ export async function reserveDraftCluster(
   clusterId: string,
   topic: string,
   now = Date.now(),
+  retryFailed = false,
 ): Promise<{ acquired: boolean; reservation: ClusterReservation }> {
   const timestamp = new Date(now).toISOString();
   const candidate: ClusterReservation = {
@@ -486,7 +487,7 @@ export async function reserveDraftCluster(
 local raw = redis.call("GET", KEYS[1])
 if raw then
   local current = cjson.decode(raw)
-  if current.expiresAt and current.expiresAt > ARGV[1] then return raw end
+  if current.expiresAt and current.expiresAt > ARGV[1] and not (ARGV[4] == "1" and current.state == "failed") then return raw end
 end
 redis.call("SET", KEYS[1], ARGV[2], "EX", tonumber(ARGV[3]))
 return ARGV[2]
@@ -494,7 +495,7 @@ return ARGV[2]
     const raw = await kvEval(
       script,
       [clusterKey(clusterId)],
-      [timestamp, JSON.stringify(candidate), 45 * 60],
+      [timestamp, JSON.stringify(candidate), 45 * 60, retryFailed ? "1" : "0"],
     );
     if (typeof raw !== "string") {
       throw new Error("Cluster reservation returned invalid state.");
@@ -507,7 +508,11 @@ return ARGV[2]
   }
   return withLocalMutation(async () => {
     const current = await readLocalReservation(clusterId);
-    if (current && current.expiresAt > timestamp) {
+    if (
+      current &&
+      current.expiresAt > timestamp &&
+      !(retryFailed && current.state === "failed")
+    ) {
       return { acquired: false, reservation: current };
     }
     await writeLocalReservation(candidate);

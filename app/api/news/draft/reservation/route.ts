@@ -26,9 +26,10 @@ export async function POST(request: NextRequest) {
     topic?: unknown;
     token?: unknown;
     result?: unknown;
+    retryFailed?: unknown;
   }>(request, { maxBytes: 8_192 });
   if (!parsed.ok) return parsed.response;
-  const { action, clusterId, topic, token, result } = parsed.value;
+  const { action, clusterId, topic, token, result, retryFailed } = parsed.value;
   if (
     typeof clusterId !== "string" ||
     !/^[A-Za-z0-9:_-]{1,256}$/.test(clusterId)
@@ -45,7 +46,15 @@ export async function POST(request: NextRequest) {
       ) {
         return privateJson({ error: "topic is invalid." }, 400);
       }
-      const reservation = await reserveDraftCluster(clusterId, topic);
+      if (retryFailed !== undefined && typeof retryFailed !== "boolean") {
+        return privateJson({ error: "retryFailed must be boolean." }, 400);
+      }
+      const reservation = await reserveDraftCluster(
+        clusterId,
+        topic,
+        Date.now(),
+        retryFailed === true,
+      );
       return privateJson(
         {
           ok: reservation.acquired,

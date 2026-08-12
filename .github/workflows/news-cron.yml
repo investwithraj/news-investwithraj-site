@@ -29,3 +29,6 @@ jobs:
           AUTO_PUBLISH_ORDER: ${{ github.event_name == 'workflow_dispatch' && 'newest' || (github.event.schedule == '7 3 * * *' && 'newest' || 'backlog') }}
           AUTO_BACKLOG_MIN_AGE_HOURS: "12"
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"
+          # A manual recovery run may retry failed (never processing/staged)
+          # reservations immediately after a pipeline fix.
+          PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
