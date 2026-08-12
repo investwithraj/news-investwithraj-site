@@ -23,6 +23,9 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AUTO_APPROVE: "1"
           AUTO_PUBLISH_LIMIT: "1"
-          # Morning protects freshness. Midday + evening clear verified backlog.
-          # A manual run defaults to newest so it cannot unexpectedly drain old work.
-          AUTO_PUBLISH_ORDER: ${{ github.event_name == 'workflow_dispatch' && 'newest' || (github.event.schedule == '7 3 * * *' && 'newest' || 'oldest') }}
+          # Morning researches + publishes the latest story. Midday and evening
+          # skip paid drafting and publish the strongest still-timely backlog item.
+          DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && '1' || (github.event.schedule == '7 3 * * *' && '1' || '0') }}
+          AUTO_PUBLISH_ORDER: ${{ github.event_name == 'workflow_dispatch' && 'newest' || (github.event.schedule == '7 3 * * *' && 'newest' || 'backlog') }}
+          AUTO_BACKLOG_MIN_AGE_HOURS: "12"
+          AUTO_BACKLOG_MAX_AGE_DAYS: "21"

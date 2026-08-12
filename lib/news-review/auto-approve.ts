@@ -179,6 +179,7 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
 
 export interface AutoApproveSummary {
   total: number;
+  eligible: number;
   approved: number;
   published: number;
   failed: number;
@@ -195,7 +196,10 @@ export async function runAutoApprove(opts: {
   secret: string;
   publish: boolean;
   publishLimit?: number;
-  publishOrder?: "newest" | "oldest";
+  publishOrder?: "newest" | "backlog";
+  backlogMinAgeHours?: number;
+  backlogMaxAgeDays?: number;
+  now?: Date;
   deploymentAttempts?: number;
   log?: (msg: string) => void;
 }): Promise<AutoApproveSummary> {
@@ -210,23 +214,44 @@ export async function runAutoApprove(opts: {
   if (!res.ok) throw new Error(`draft list failed (${res.status})`);
   const { drafts } = (await res.json()) as { drafts: NewsDraft[] };
 
-  const activeDrafts = drafts
-    .filter((draft) => !draft.publication)
-    .sort((left, right) =>
-      opts.publishOrder === "oldest"
-        ? left.article.publishedAt.localeCompare(right.article.publishedAt)
-        : right.article.publishedAt.localeCompare(left.article.publishedAt),
-    );
-  const assessments = activeDrafts.map(assessDraft);
+  const activeDrafts = drafts.filter((draft) => !draft.publication);
+  const publishOrder = opts.publishOrder ?? "newest";
+  const now = (opts.now ?? new Date()).getTime();
+  const backlogMinAgeMs =
+    Math.max(0, opts.backlogMinAgeHours ?? 12) * 60 * 60 * 1_000;
+  const backlogMaxAgeMs =
+    Math.max(1, opts.backlogMaxAgeDays ?? 21) * 24 * 60 * 60 * 1_000;
+  const eligibleDrafts = activeDrafts
+    .filter((draft) => {
+      if (publishOrder !== "backlog") return true;
+      const publishedAt = Date.parse(draft.article.publishedAt);
+      if (!Number.isFinite(publishedAt)) return false;
+      const age = now - publishedAt;
+      return age >= backlogMinAgeMs && age <= backlogMaxAgeMs;
+    })
+    .sort((left, right) => {
+      if (publishOrder === "backlog") {
+        const scoreDifference = right.provenance.score - left.provenance.score;
+        if (scoreDifference !== 0) return scoreDifference;
+      }
+      return right.article.publishedAt.localeCompare(left.article.publishedAt);
+    });
+  const assessments = eligibleDrafts.map(assessDraft);
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");
   const publishLimit = Math.max(1, Math.min(10, opts.publishLimit ?? 1));
   const selected = opts.publish ? approve.slice(0, publishLimit) : [];
   const deferred = opts.publish ? Math.max(0, approve.length - selected.length) : 0;
 
+  if (publishOrder === "backlog") {
+    log(
+      `backlog window: ${eligibleDrafts.length}/${activeDrafts.length} active draft(s) are ${opts.backlogMinAgeHours ?? 12}h-${opts.backlogMaxAgeDays ?? 21}d old`,
+    );
+  }
+
   log(
     `auto-approve: ${activeDrafts.length} active draft(s) · ${approve.length} pass · ${held.length} held · ` +
-      `mode ${opts.publish ? `PUBLISH (${opts.publishOrder ?? "newest"}, limit ${publishLimit})` : "REVIEW ONLY"} ` +
+      `mode ${opts.publish ? `PUBLISH (${publishOrder}, limit ${publishLimit})` : "REVIEW ONLY"} ` +
       `(>= ${MIN_WHITELIST_CITATIONS} whitelisted cites + fetched evidence)`,
   );
   for (const a of approve) {
@@ -303,6 +328,7 @@ export async function runAutoApprove(opts: {
   }
   return {
     total: activeDrafts.length,
+    eligible: eligibleDrafts.length,
     approved: approve.length,
     published,
     failed,

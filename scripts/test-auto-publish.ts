@@ -43,8 +43,26 @@ const olderDraft = {
     slug: "2026-08-11-auto-publish-regression-older",
     publishedAt: "2026-08-11T10:00:00.000Z",
   },
+  provenance: {
+    ...draft.provenance,
+    score: 80,
+  },
+} as NewsDraft;
+const staleDraft = {
+  ...draft,
+  id: "auto-publish-regression-stale",
+  article: {
+    ...draft.article,
+    slug: "2026-07-01-auto-publish-regression-stale",
+    publishedAt: "2026-07-01T10:00:00.000Z",
+  },
+  provenance: {
+    ...draft.provenance,
+    score: 100,
+  },
 } as NewsDraft;
 draft.article.publishedAt = "2026-08-12T10:00:00.000Z";
+draft.provenance.score = 50;
 
 const originalFetch = globalThis.fetch;
 const calls: string[] = [];
@@ -52,7 +70,7 @@ globalThis.fetch = async (input) => {
   const url = String(input);
   calls.push(url);
   if (url.endsWith("/api/news/draft")) {
-    return Response.json({ drafts: [olderDraft, draft] });
+    return Response.json({ drafts: [staleDraft, olderDraft, draft] });
   }
   if (/\/api\/news\/draft\/[^/]+\/publish$/.test(url)) {
     return Response.json(
@@ -76,11 +94,11 @@ async function main() {
       deploymentAttempts: 0,
       log: () => undefined,
     });
-    assert.equal(result.approved, 2);
+    assert.equal(result.approved, 3);
     assert.equal(result.published, 1);
     assert.equal(result.failed, 0);
     assert.equal(result.held, 0);
-    assert.equal(result.deferred, 1);
+    assert.equal(result.deferred, 2);
     assert.equal(calls.length, 2);
     assert.match(calls[1], /\/publish$/);
     assert.ok(calls[1].includes(draft.id), "newest passing draft must publish first");
@@ -91,18 +109,20 @@ async function main() {
       secret: "s".repeat(32),
       publish: true,
       publishLimit: 1,
-      publishOrder: "oldest",
+      publishOrder: "backlog",
+      now: new Date("2026-08-12T12:00:00.000Z"),
       deploymentAttempts: 0,
       log: () => undefined,
     });
     assert.equal(backlogResult.published, 1);
+    assert.equal(backlogResult.eligible, 1);
     assert.equal(calls.length, 2);
     assert.ok(
       calls[1].includes(olderDraft.id),
-      "backlog lane must publish the oldest passing draft first",
+      "backlog lane must publish the strongest still-timely draft first",
     );
     console.log(
-      "Auto-publish regression passed: newest and backlog lanes each selected one evidence-ready draft.",
+      "Auto-publish regression passed: newest and timely-backlog lanes each selected one evidence-ready draft.",
     );
   } finally {
     globalThis.fetch = originalFetch;

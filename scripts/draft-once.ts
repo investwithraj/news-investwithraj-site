@@ -86,9 +86,40 @@ async function markClusterFailed(
   }
 }
 
+async function runPublicationPass(): Promise<void> {
+  if (process.env.AUTO_APPROVE !== "1") {
+    console.log("assessment disabled; all drafts remain in The Desk");
+    return;
+  }
+  const summary = await runAutoApprove({
+    site: SITE,
+    secret: SECRET,
+    publish: true,
+    publishLimit: Number.parseInt(process.env.AUTO_PUBLISH_LIMIT ?? "1", 10),
+    publishOrder:
+      process.env.AUTO_PUBLISH_ORDER === "backlog" ? "backlog" : "newest",
+    backlogMinAgeHours: Number.parseInt(
+      process.env.AUTO_BACKLOG_MIN_AGE_HOURS ?? "12",
+      10,
+    ),
+    backlogMaxAgeDays: Number.parseInt(
+      process.env.AUTO_BACKLOG_MAX_AGE_DAYS ?? "21",
+      10,
+    ),
+  });
+  console.log(
+    `publication: ${summary.published} committed, ${summary.held} held, ${summary.deferred} deferred, ${summary.failed} failed`,
+  );
+}
+
 async function main(): Promise<void> {
   if (new TextEncoder().encode(SECRET).byteLength < 32) {
     throw new Error("A strong POST_PUBLISH_SECRET is required.");
+  }
+  if (process.env.DRAFT_ENABLED === "0") {
+    console.log("publication-only run: paid drafting and source ingestion skipped");
+    await runPublicationPass();
+    return;
   }
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY not set.");
@@ -214,27 +245,10 @@ async function main(): Promise<void> {
 
   console.log(`done: ${staged} staged from ${attempts} attempt(s)`);
 
-  if (process.env.AUTO_APPROVE === "1") {
-    try {
-      const summary = await runAutoApprove({
-        site: SITE,
-        secret: SECRET,
-        publish: true,
-        publishLimit: Number.parseInt(
-          process.env.AUTO_PUBLISH_LIMIT ?? "1",
-          10,
-        ),
-        publishOrder:
-          process.env.AUTO_PUBLISH_ORDER === "oldest" ? "oldest" : "newest",
-      });
-      console.log(
-        `publication: ${summary.published} committed, ${summary.held} held, ${summary.deferred} deferred, ${summary.failed} failed`,
-      );
-    } catch (error) {
-      console.error("assessment failed; drafting is unaffected:", error);
-    }
-  } else {
-    console.log("assessment disabled; all drafts remain in The Desk");
+  try {
+    await runPublicationPass();
+  } catch (error) {
+    console.error("assessment failed; drafting is unaffected:", error);
   }
 }
 

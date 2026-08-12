@@ -28,7 +28,15 @@ async function main() {
     publish: true,
     publishLimit: Number.parseInt(process.env.AUTO_PUBLISH_LIMIT ?? "1", 10),
     publishOrder:
-      process.env.AUTO_PUBLISH_ORDER === "oldest" ? "oldest" : "newest",
+      process.env.AUTO_PUBLISH_ORDER === "backlog" ? "backlog" : "newest",
+    backlogMinAgeHours: Number.parseInt(
+      process.env.AUTO_BACKLOG_MIN_AGE_HOURS ?? "12",
+      10,
+    ),
+    backlogMaxAgeDays: Number.parseInt(
+      process.env.AUTO_BACKLOG_MAX_AGE_DAYS ?? "21",
+      10,
+    ),
   });
   console.log(
     `\nAUTO-PUBLISH — ${s.published} committed, ${s.held} held, ${s.deferred} deferred, ${s.failed} failed.`,
