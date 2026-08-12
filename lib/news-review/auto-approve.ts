@@ -37,6 +37,17 @@ export interface AutoApproveAssessment {
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 
+/** Preserve the value and unit while normalising publisher typography such as
+ * AED3.5 vs AED 3.5, 8,000 vs 8000, and 30 per cent vs 30%. */
+export function normNumericEvidence(value: string): string {
+  return norm(value)
+    .replace(/\b(?:dhs?|aed)\b/g, "aed")
+    .replace(/\b(?:per\s*cent|percent)\b/g, "%")
+    .replace(/(?<=\d),(?=\d{3}\b)/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[–—]/g, "-");
+}
+
 const CUR = String.raw`(?:AED|USD|US\$|\$|€|£|Dhs|Dh)`;
 // A comma only counts as a thousands separator (comma + exactly 3 digits), so a
 // year followed by a prose comma ("2026,") is NOT read as a comma-number.
@@ -141,7 +152,7 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
       `only ${fetchedEvidenceCount} cited publisher domain(s) have independently fetched evidence text (need >= ${MIN_WHITELIST_CITATIONS})`,
     );
   }
-  const sourceText = norm(
+  const sourceText = normNumericEvidence(
     fetchedEvidence.map((evidence) => evidence.text).join(" "),
   );
   const figures = extractFigures(article.body);
@@ -152,7 +163,9 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
       "no independently fetched source text on the draft — model citation markup cannot verify figures",
     );
   } else {
-    amberFigures = figures.filter((f) => !sourceText.includes(f));
+    amberFigures = figures.filter(
+      (figure) => !sourceText.includes(normNumericEvidence(figure)),
+    );
     if (amberFigures.length > 0) {
       reasons.push(
         `${amberFigures.length} unsourced figure(s): ${amberFigures

@@ -113,6 +113,35 @@ async function main() {
       "two URLs from one publisher must not satisfy independent corroboration",
     );
 
+    const typographyVariantDraft = {
+      ...draft,
+      article: {
+        ...draft.article,
+        body:
+          "The contracts total AED3.5 billion, cover 8,000 homes and represent 30 per cent of the programme.",
+      },
+      provenance: {
+        ...draft.provenance,
+        fetchedEvidence: [
+          {
+            url: sourceA,
+            text:
+              "The official release states that contracts total AED 3.5 billion and cover 8000 homes across the verified development programme.",
+          },
+          {
+            url: sourceB,
+            text:
+              "Independent reporting says the awards represent 30% of the programme and confirms the same construction mandate in its full report.",
+          },
+        ],
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(typographyVariantDraft).verdict,
+      "auto-approve",
+      "equivalent currency, comma and percentage typography must verify",
+    );
+
     const result = await runAutoApprove({
       site: "https://news.example.test",
       secret: "s".repeat(32),
