@@ -159,18 +159,15 @@
   align-content: end;
   padding: clamp(2rem, 6vw, 7rem) clamp(1.25rem, 8vw, 10rem);
   background:
-    linear-gradient(rgba(255, 255, 255, 0.075) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.075) 1px, transparent 1px),
-    radial-gradient(circle at 72% 26%, rgba(89, 107, 255, 0.3), transparent 32%),
-    #11141c;
-  background-size: 6rem 6rem, 6rem 6rem, auto, auto;
-  color: #f0f0ec;
+    radial-gradient(circle at 78% 18%, rgba(127, 91, 51, 0.14), transparent 30%),
+    linear-gradient(135deg, #e7e0d4 0%, #cfc4b4 100%);
+  color: #171714;
 }
 
 .heroFallback > span,
 .heroFallback > small {
   align-self: start;
-  color: #b8c0ff;
+  color: rgba(23, 23, 20, 0.58);
   font-size: 0.64rem;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -188,14 +185,14 @@
 .heroFallback > p {
   max-width: 28rem;
   margin: 0;
-  color: rgba(240, 240, 236, 0.62);
+  color: rgba(23, 23, 20, 0.66);
   line-height: 1.62;
 }
 
 .heroFallback > small {
   grid-column: 2;
   margin-top: 1rem;
-  color: rgba(240, 240, 236, 0.52);
+  color: rgba(23, 23, 20, 0.52);
 }
 
 .articleGrid {

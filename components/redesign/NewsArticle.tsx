@@ -108,21 +108,18 @@ export default function NewsArticle({
             />
             <span className={styles.heroShade} aria-hidden="true" />
             <figcaption>
-              {displayMedia.label} · {displayMedia.credit}. {displayMedia.notice}
+              {displayMedia.label} · {displayMedia.credit}
             </figcaption>
           </figure>
         ) : (
           <div
             className={styles.heroFallback}
             role="img"
-            aria-label="No verified context image is published for this report"
+            aria-label={`${categoryLabel(article.category)} report for ${markets.join(", ")}`}
           >
-            <span>Source-led report</span>
-            <strong>{markets.join(" / ")}</strong>
-            <p>
-              No unrelated image is used. Visual context appears only when its
-              subject, source and rights record match this report.
-            </p>
+            <span>IWR market intelligence</span>
+            <strong>The brief.</strong>
+            <p>{article.subtitle}</p>
             <small>
               {categoryLabel(article.category)} · {article.displayDate}
             </small>
@@ -143,18 +140,6 @@ export default function NewsArticle({
           </aside>
 
           <div className={styles.body}>
-            <div className={styles.disclosure}>
-              <span>AI assistance</span>
-              <p>
-                AI may assist discovery, research organisation, summarisation,
-                structure and drafting. It is never treated as a source. The
-                same sourcing and verification rules apply to every draft.{" "}
-                <Link href="/about/editorial-standards">
-                  Read the editorial standard.
-                </Link>
-              </p>
-            </div>
-
             {paragraphs.map((paragraph, index) => (
               <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
             ))}
@@ -212,8 +197,7 @@ export default function NewsArticle({
             <p>Evidence</p>
             <h2 id="sources-title">Sources &amp; provenance.</h2>
             <p>
-              Open the original reporting. Access dates and source tiers are
-              shown without implying claim-by-claim binding.
+              Open the primary reporting behind this analysis.
             </p>
           </header>
           <ol>
@@ -257,9 +241,8 @@ export default function NewsArticle({
               <p>Entity paths</p>
               <h2 id="related-entities-title">Follow the entities.</h2>
               <p>
-                Area and developer links require an explicit name or approved
-                alias in this report. Desk links follow the publication
-                taxonomy.
+                Continue through the places, developers and market desks
+                connected to this report.
               </p>
             </header>
             <div className={styles.relationGrid}>

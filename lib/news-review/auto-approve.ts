@@ -97,6 +97,16 @@ export function bodyHasStatSignal(body: string): boolean {
   return STAT_SIGNAL_RE.test(body);
 }
 
+export function findUnsupportedFigures(
+  body: string,
+  evidenceText: string,
+): string[] {
+  const source = normNumericEvidence(evidenceText);
+  return extractFigures(body).filter(
+    (figure) => !source.includes(normNumericEvidence(figure)),
+  );
+}
+
 export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
   const reasons: string[] = [];
   const { article, validator, provenance } = draft;
@@ -163,9 +173,7 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
       "no independently fetched source text on the draft — model citation markup cannot verify figures",
     );
   } else {
-    amberFigures = figures.filter(
-      (figure) => !sourceText.includes(normNumericEvidence(figure)),
-    );
+    amberFigures = findUnsupportedFigures(article.body, sourceText);
     if (amberFigures.length > 0) {
       reasons.push(
         `${amberFigures.length} unsourced figure(s): ${amberFigures
