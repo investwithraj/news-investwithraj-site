@@ -10,14 +10,14 @@ configured discovery sources
   → deduplicate and cluster
   → research and draft
   → stage in durable storage
-  → evidence assessment
-  → Raj reviews in The Desk
-  → signed review session publishes
+  → deterministic evidence assessment
+  → bounded auto-publish or Raj reviews held drafts in The Desk
   → sitemap, News sitemap and RSS expose reviewed content
 ```
 
-Automation stops at staging. No scheduled job or server credential can publish
-an article.
+Automation publishes at most one evidence-ready article per scheduled run.
+Anything that fails a source, figure, validator or integrity gate remains held
+in The Desk. Raj can still review and publish held drafts manually.
 
 ## Scheduled drafting
 
@@ -31,11 +31,11 @@ The runner:
 3. Deduplicates and ranks clusters.
 4. Researches a bounded number of candidates.
 5. Posts successful drafts to `/api/news/draft` with the server-only header.
-6. Leaves every draft in The Desk.
+6. Publishes at most one passing draft and leaves every failed draft in The Desk.
 
-The workflow explicitly sets `AUTO_APPROVE` to `0`. If an operator deliberately
-sets it to exactly `1`, the script runs a fail-closed evidence assessment only.
-It still does not publish.
+The workflow explicitly sets `AUTO_APPROVE` to `1` and
+`AUTO_PUBLISH_LIMIT` to `1`. The kill switch is fail-closed: changing
+`AUTO_APPROVE` to any other value stops publication while drafting continues.
 
 `POST /api/cron/draft` is a fallback. It requires an authenticated server or
 cron request, `ENABLE_NEWS_DRAFT_CRON=1`, a configured drafting provider, and
@@ -62,8 +62,8 @@ curl -X POST "https://news.investwithraj.com/api/cron/draft" \
 ```
 
 Browser mutations use the signed, HttpOnly review-session cookie and same-origin
-checks. The publication endpoint accepts that review session only; a valid
-server credential is deliberately insufficient.
+checks. The publication endpoint also accepts the server credential used by the
+scheduled publisher, but it independently re-runs every hard publication gate.
 
 ## Draft acceptance and evidence
 
@@ -81,7 +81,13 @@ A staged draft is not an approved article. Before publication, verify:
 If evidence is absent, withheld, contradictory, or source-only, keep the draft
 on hold.
 
-## Human publication
+## Publication
+
+Automated publication is bounded to one draft per run and requires all
+deterministic evidence gates. Articles without an approved UHD cover publish
+text-only; public surfaces must never substitute unverified media.
+
+For held drafts:
 
 1. Sign in through `/internal/review`.
 2. Inspect the article, citations, fetched evidence, media provenance, and

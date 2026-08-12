@@ -1,5 +1,5 @@
-// Deterministic evidence assessor. It reports which staged drafts satisfy the
-// conservative source and figure gates, but publication remains human-only.
+// Deterministic evidence assessor and fail-closed publisher. Only drafts that
+// satisfy every conservative source and figure gate can enter auto-publish.
 //
 // A draft is AUTO-APPROVABLE iff ALL of:
 //   1. the 8-gate voice validator passes              (draft.validator.ok)
@@ -183,13 +183,19 @@ export interface AutoApproveSummary {
   published: number;
   failed: number;
   held: number;
+  deferred: number;
 }
 
-/** Orchestrator: assess The Desk's drafts. Publishing remains human-only. */
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
+/** Assess The Desk and, when explicitly enabled, publish a bounded batch. */
 export async function runAutoApprove(opts: {
   site: string;
   secret: string;
   publish: boolean;
+  publishLimit?: number;
+  deploymentAttempts?: number;
   log?: (msg: string) => void;
 }): Promise<AutoApproveSummary> {
   const log = opts.log ?? ((m: string) => console.log(m));
@@ -203,29 +209,97 @@ export async function runAutoApprove(opts: {
   if (!res.ok) throw new Error(`draft list failed (${res.status})`);
   const { drafts } = (await res.json()) as { drafts: NewsDraft[] };
 
-  const assessments = drafts.map(assessDraft);
+  const activeDrafts = drafts.filter((draft) => !draft.publication);
+  const assessments = activeDrafts.map(assessDraft);
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");
+  const publishLimit = Math.max(1, Math.min(10, opts.publishLimit ?? 1));
+  const selected = opts.publish ? approve.slice(0, publishLimit) : [];
+  const deferred = opts.publish ? Math.max(0, approve.length - selected.length) : 0;
 
   log(
-    `auto-approve: ${drafts.length} draft(s) · ${approve.length} pass · ${held.length} held · ` +
-      `mode REVIEW ONLY (>= ${MIN_WHITELIST_CITATIONS} whitelisted cites + fetched evidence)`,
+    `auto-approve: ${activeDrafts.length} active draft(s) · ${approve.length} pass · ${held.length} held · ` +
+      `mode ${opts.publish ? `PUBLISH (limit ${publishLimit})` : "REVIEW ONLY"} ` +
+      `(>= ${MIN_WHITELIST_CITATIONS} whitelisted cites + fetched evidence)`,
   );
   for (const a of approve) {
     log(`  ok  ${a.slug}  (${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);
   }
   for (const a of held) log(`  hold ${a.slug} -> ${a.reasons.join("; ")}`);
 
-  if (opts.publish) {
-    log(
-      "auto-publish request ignored: a signed human review session is required",
+  let published = 0;
+  let failed = 0;
+  for (const assessment of selected) {
+    const response = await fetch(
+      `${base}/api/news/draft/${encodeURIComponent(assessment.id)}/publish`,
+      {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "content-type": "application/json",
+        },
+        body: "{}",
+      },
     );
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      claimId?: string;
+      commitSha?: string;
+      idempotent?: boolean;
+    };
+    if (!response.ok || !payload.commitSha || !payload.claimId) {
+      failed += 1;
+      log(
+        `  fail ${assessment.slug} -> ${payload.error ?? `publish returned ${response.status}`}`,
+      );
+      continue;
+    }
+    published += 1;
+    log(
+      `  live ${assessment.slug} -> commit ${payload.commitSha.slice(0, 8)}${payload.idempotent ? " (idempotent)" : ""}`,
+    );
+
+    // Finalise the durable queue receipt only after the canonical page proves
+    // that the exact reviewed content is serving. A timeout leaves the commit
+    // safely pending for a later verifier; it does not create a second commit.
+    const attempts = Math.max(0, Math.min(20, opts.deploymentAttempts ?? 12));
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      await wait(15_000);
+      const deployed = await fetch(
+        `${base}/api/news/draft/${encodeURIComponent(assessment.id)}/deployment`,
+        {
+          method: "POST",
+          headers: {
+            ...authHeaders,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            claimId: payload.claimId,
+            deploymentStatus: "READY",
+            deployedCommitSha: payload.commitSha,
+          }),
+        },
+      );
+      if (deployed.ok) {
+        log(`  verified ${assessment.slug} on the canonical newsroom`);
+        break;
+      }
+      if (attempt === attempts) {
+        const detail = (await deployed.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        log(
+          `  pending ${assessment.slug} -> ${detail.error ?? "deployment verification timed out"}`,
+        );
+      }
+    }
   }
   return {
-    total: drafts.length,
+    total: activeDrafts.length,
     approved: approve.length,
-    published: 0,
-    failed: 0,
+    published,
+    failed,
     held: held.length,
+    deferred,
   };
 }

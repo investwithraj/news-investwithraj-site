@@ -511,6 +511,7 @@ export function evidenceApprovalFor(
   verifiedSources: string[],
   provenance: NewsDraftProvenance,
   now = new Date().toISOString(),
+  reviewer: EvidenceApproval["reviewer"] = "raj-review-session",
 ): EvidenceApproval | null {
   const citedUrls = [...new Set(verifiedSources)].sort();
   const evidence = (provenance.fetchedEvidence ?? [])
@@ -534,11 +535,21 @@ export function evidenceApprovalFor(
     contentHash,
     sourceUrls: citedUrls,
     evidenceHashes: evidence,
-    reviewer: "raj-review-session" as const,
+    reviewer,
     approvedAt: now,
   };
   return { ...payload, hash: sha256Json(payload) };
 }
+
+/**
+ * Publication can proceed without a cover only in deterministic auto-publish
+ * mode. Public surfaces recognise the article's `withheld` media state and
+ * render no image rather than substituting an unverified asset.
+ */
+export const WITHHELD_MEDIA_APPROVAL_HASH = sha256Json({
+  state: "withheld",
+  reason: "verified UHD editorial media pending",
+});
 
 export function mediaApprovalHash(
   value: Omit<MediaApprovalLedger, "hash">,

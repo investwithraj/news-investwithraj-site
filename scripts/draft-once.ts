@@ -1,8 +1,9 @@
-// Stage one researched article for human review from GitHub Actions.
+// Research, stage and optionally auto-publish one evidence-ready article from
+// GitHub Actions.
 //
 // A durable cluster reservation is acquired before any paid model work.
 // Successful staging and the reservation transition happen atomically in the
-// server draft store. This script never publishes.
+// server draft store. AUTO_APPROVE=1 enables the bounded publication pass.
 
 import { NEWS_ARTICLES } from "../content/news/index.js";
 import { dubaiCalendarDate } from "../lib/dubai-time.js";
@@ -218,10 +219,14 @@ async function main(): Promise<void> {
       const summary = await runAutoApprove({
         site: SITE,
         secret: SECRET,
-        publish: false,
+        publish: true,
+        publishLimit: Number.parseInt(
+          process.env.AUTO_PUBLISH_LIMIT ?? "1",
+          10,
+        ),
       });
       console.log(
-        `assessment: ${summary.approved} evidence-ready, ${summary.held} held; nothing published`,
+        `publication: ${summary.published} committed, ${summary.held} held, ${summary.deferred} deferred, ${summary.failed} failed`,
       );
     } catch (error) {
       console.error("assessment failed; drafting is unaffected:", error);

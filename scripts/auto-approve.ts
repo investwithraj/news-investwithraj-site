@@ -1,5 +1,5 @@
-// Assess queued drafts whose material figures trace to independently fetched,
-// allowlisted evidence. This command never publishes.
+// Assess and publish a bounded batch of queued drafts whose material figures
+// trace to independently fetched, allowlisted evidence.
 //
 //   AUTO_APPROVE=1 npx tsx scripts/auto-approve.ts
 //
@@ -22,9 +22,14 @@ async function main() {
     );
     return;
   }
-  const s = await runAutoApprove({ site: SITE, secret: SECRET, publish: false });
+  const s = await runAutoApprove({
+    site: SITE,
+    secret: SECRET,
+    publish: true,
+    publishLimit: Number.parseInt(process.env.AUTO_PUBLISH_LIMIT ?? "1", 10),
+  });
   console.log(
-    `\nASSESSMENT ONLY — ${s.approved} evidence-ready, ${s.held} held; 0 published.`,
+    `\nAUTO-PUBLISH — ${s.published} committed, ${s.held} held, ${s.deferred} deferred, ${s.failed} failed.`,
   );
 }
 

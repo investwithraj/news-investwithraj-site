@@ -57,7 +57,7 @@ export interface EvidenceApproval {
   contentHash: string;
   sourceUrls: string[];
   evidenceHashes: { url: string; contentHash: string }[];
-  reviewer: "raj-review-session";
+  reviewer: "raj-review-session" | "deterministic-auto-publisher";
   approvedAt: string;
 }
 

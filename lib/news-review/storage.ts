@@ -13,6 +13,7 @@ import { validateDraft, type DraftArticle as ValidatorInput } from "@/lib/voice/
 import {
   draftContentHash,
   evidenceApprovalFor,
+  WITHHELD_MEDIA_APPROVAL_HASH,
 } from "./integrity";
 import type {
   ClusterReservation,
@@ -674,6 +675,9 @@ export async function updateReviewedDraft(
     recordVersion: number;
     contentHash: string;
   },
+  options: {
+    evidenceReviewer?: "raj-review-session" | "deterministic-auto-publisher";
+  } = {},
 ): Promise<NewsDraft | null> {
   const current = await getStoredDraft(id);
   if (!current) return null;
@@ -707,6 +711,8 @@ export async function updateReviewedDraft(
         next.contentHash,
         patch.verifiedSources,
         next.provenance,
+        new Date().toISOString(),
+        options.evidenceReviewer ?? "raj-review-session",
       ) ?? undefined;
   }
   await replaceDraftCas(current, next);
@@ -823,11 +829,15 @@ export async function claimDraftPublication(
 ): Promise<{ draft: NewsDraft; acquired: boolean } | null> {
   const current = await getStoredDraft(id);
   if (!current) return null;
+  const mediaApprovalMatches =
+    current.mediaApproval?.hash === expected.mediaApprovalHash ||
+    (!current.mediaApproval &&
+      expected.mediaApprovalHash === WITHHELD_MEDIA_APPROVAL_HASH);
   if (
     current.revision !== expected.revision ||
     current.recordVersion !== expected.recordVersion ||
     current.contentHash !== expected.contentHash ||
-    current.mediaApproval?.hash !== expected.mediaApprovalHash ||
+    !mediaApprovalMatches ||
     current.evidenceApproval?.hash !== expected.evidenceApprovalHash
   ) {
     throw new DraftConflictError(

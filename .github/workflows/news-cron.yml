@@ -21,4 +21,5 @@ jobs:
           SITE_URL: https://news.investwithraj.com
           POST_PUBLISH_SECRET: ${{ secrets.POST_PUBLISH_SECRET }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AUTO_APPROVE: "0"
+          AUTO_APPROVE: "1"
+          AUTO_PUBLISH_LIMIT: "1"

@@ -10,7 +10,7 @@ The news property has four distinct layers:
 
 1. Public editorial pages and read-only discovery feeds.
 2. A research pipeline that creates staged drafts.
-3. A protected human review desk that is the only publication authority.
+3. A protected review desk plus a bounded, fail-closed publication authority.
 4. Explicit, independently gated external operations such as IndexNow.
 
 The advisory site consumes the public `/api/front` feed. It does not receive
@@ -26,7 +26,7 @@ source registry
   → research draft
   → durable draft store
   → validator and evidence assessment
-  → signed human review
+  → deterministic auto-publish or signed human review for held drafts
   → GitHub publication commit
   → deployment
   → sitemap, News sitemap, RSS and advisory feed
@@ -87,10 +87,12 @@ operations.
 configured discovery sources, deduplicates and scores clusters, researches
 candidates, and posts successful drafts to `/api/news/draft`.
 
-The workflow explicitly sets `AUTO_APPROVE` to `0`.
+The workflow explicitly sets `AUTO_APPROVE` to `1` and
+`AUTO_PUBLISH_LIMIT` to `1`.
 
-If `AUTO_APPROVE` is deliberately set to exactly `1`, `runAutoApprove` performs
-an assessment only. It does not publish.
+If `AUTO_APPROVE` is exactly `1`, `runAutoApprove` publishes only drafts that
+pass the validator, allowlisted-source, independently fetched evidence and
+figure-traceability gates. All other drafts remain held.
 
 ### Fail-closed evidence assessment
 
@@ -129,7 +131,7 @@ deployment must be verified separately.
 |---|---|---|
 | `/api/news/draft` | Authenticated draft list | Authenticated staging only |
 | `/api/news/draft/[id]` | — | Authenticated patch/delete; revalidates |
-| `/api/news/draft/[id]/publish` | — | Signed human review session only |
+| `/api/news/draft/[id]/publish` | — | Signed human review or bounded server publisher; all hard gates rerun |
 | `/api/queue/add` | Authenticated status/listing | Authenticated queue staging |
 | `/api/queue/action/[id]` | Authenticated item read | Authenticated reviewed action |
 

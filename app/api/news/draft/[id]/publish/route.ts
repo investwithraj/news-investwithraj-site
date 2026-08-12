@@ -15,12 +15,14 @@ import {
   mediaApprovalHash,
   validateDraftArticleShape,
   validateProvenanceShape,
+  WITHHELD_MEDIA_APPROVAL_HASH,
 } from "@/lib/news-review/integrity";
 import {
   claimDraftPublication,
   DraftConflictError,
   getDraft,
   recordDraftPublicationCommit,
+  updateReviewedDraft,
   validateArticle,
 } from "@/lib/news-review/storage";
 import { privateJson, readJsonBody } from "@/lib/security/mutation";
@@ -52,15 +54,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   if (!auth.ok) {
     return privateJson({ error: auth.message }, auth.status ?? 401);
   }
-  if (auth.credential !== "review-session") {
-    return privateJson(
-      {
-        error:
-          "Publishing requires Raj's signed review session. Automation may stage drafts but cannot publish them.",
-      },
-      403,
-    );
-  }
+  const automated = auth.credential === "server-secret";
   if (!githubConfigured()) {
     return privateJson(
       { error: "Publishing is disabled because GitHub is not configured." },
@@ -74,10 +68,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   }
   const parsed = await readJsonBody<PublishRequest>(req, {
     maxBytes: 4_096,
+    allowEmpty: automated,
   });
   if (!parsed.ok) return parsed.response;
   const body = parsed.value;
-  if (
+  if (!automated && (
     typeof body.expectedRevision !== "number" ||
     !Number.isSafeInteger(body.expectedRevision) ||
     body.expectedRevision < 1 ||
@@ -87,7 +82,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     !validHash(body.expectedContentHash) ||
     !validHash(body.mediaApprovalHash) ||
     !validHash(body.evidenceApprovalHash)
-  ) {
+  )) {
     return privateJson(
       {
         error:
@@ -98,17 +93,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const draft = await getDraft(id);
+    let draft = await getDraft(id);
     if (!draft) return privateJson({ error: "Draft not found." }, 404);
     const existingPublication = draft.publication;
     if (
       existingPublication?.state === "committed" &&
       existingPublication.commitSha &&
       existingPublication.url &&
-      existingPublication.revision === body.expectedRevision &&
-      existingPublication.contentHash === body.expectedContentHash &&
-      existingPublication.mediaApprovalHash === body.mediaApprovalHash &&
-      existingPublication.evidenceApprovalHash === body.evidenceApprovalHash
+      (automated ||
+        (existingPublication.revision === body.expectedRevision &&
+          existingPublication.contentHash === body.expectedContentHash &&
+          existingPublication.mediaApprovalHash === body.mediaApprovalHash &&
+          existingPublication.evidenceApprovalHash === body.evidenceApprovalHash))
     ) {
       return privateJson(
         {
@@ -116,17 +112,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           slug: draft.article.slug,
           url: existingPublication.url,
           commitSha: existingPublication.commitSha,
+          claimId: existingPublication.claimId,
           publicationState: "committed-awaiting-deployment-verification",
           idempotent: true,
         },
         202,
       );
     }
-    if (
+    if (!automated && (
       draft.revision !== body.expectedRevision ||
       draft.recordVersion !== body.expectedRecordVersion ||
       draft.contentHash !== body.expectedContentHash
-    ) {
+    )) {
       return privateJson(
         { error: "Draft changed; reload before publishing." },
         409,
@@ -170,6 +167,43 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const assessment = assessDraft({ ...draft, validator });
+    if (assessment.verdict !== "auto-approve") {
+      return privateJson(
+        {
+          error:
+            "Publication is held until the independently fetched evidence contract passes.",
+          reasons: assessment.reasons,
+        },
+        422,
+      );
+    }
+
+    if (automated) {
+      const citationUrls = [
+        ...new Set(draft.article.citations.map((citation) => citation.url)),
+      ];
+      const preparedSources = draft.verifiedSources ?? [];
+      const alreadyPrepared =
+        citationUrls.length === preparedSources.length &&
+        citationUrls.every((url) => preparedSources.includes(url)) &&
+        Boolean(draft.evidenceApproval);
+      if (!alreadyPrepared) {
+        const prepared = await updateReviewedDraft(
+          id,
+          { verifiedSources: citationUrls },
+          {
+            revision: draft.revision,
+            recordVersion: draft.recordVersion,
+            contentHash: draft.contentHash,
+          },
+          { evidenceReviewer: "deterministic-auto-publisher" },
+        );
+        if (!prepared) return privateJson({ error: "Draft not found." }, 404);
+        draft = prepared;
+      }
+    }
+
     const verified = new Set(draft.verifiedSources ?? []);
     const unverifiedSources = draft.article.citations
       .map((citation) => citation.url)
@@ -178,7 +212,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return privateJson(
         {
           error:
-            "Every cited source must be explicitly checked in The Desk before publication.",
+            "Every cited source must be bound to independently fetched evidence before publication.",
           unverifiedSources,
         },
         422,
@@ -196,11 +230,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       draft.verifiedSources ?? [],
       draft.provenance,
       draft.evidenceApproval.approvedAt,
+      draft.evidenceApproval.reviewer,
     );
     if (
       !recomputedEvidence ||
       recomputedEvidence.hash !== draft.evidenceApproval.hash ||
-      draft.evidenceApproval.hash !== body.evidenceApprovalHash
+      (!automated && draft.evidenceApproval.hash !== body.evidenceApprovalHash)
     ) {
       return privateJson(
         { error: "The evidence approval ledger is stale or invalid." },
@@ -208,35 +243,27 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    if (!draft.mediaApproval) {
+    if (!draft.mediaApproval && !automated) {
       return privateJson(
         { error: "The immutable UHD media approval ledger is missing." },
         422,
       );
     }
-    const { hash: storedMediaHash, ...mediaRecord } = draft.mediaApproval;
-    if (
-      mediaApprovalHash(mediaRecord) !== storedMediaHash ||
-      storedMediaHash !== body.mediaApprovalHash ||
-      draft.mediaApproval.revision !== draft.revision ||
-      draft.mediaApproval.contentHash !== draft.contentHash
-    ) {
-      return privateJson(
-        { error: "The UHD media approval ledger is stale or invalid." },
-        409,
-      );
-    }
-
-    const assessment = assessDraft({ ...draft, validator });
-    if (assessment.verdict !== "auto-approve") {
-      return privateJson(
-        {
-          error:
-            "Publication is held until the independently fetched evidence contract passes.",
-          reasons: assessment.reasons,
-        },
-        422,
-      );
+    let storedMediaHash = WITHHELD_MEDIA_APPROVAL_HASH;
+    if (draft.mediaApproval) {
+      const { hash, ...mediaRecord } = draft.mediaApproval;
+      storedMediaHash = hash;
+      if (
+        mediaApprovalHash(mediaRecord) !== hash ||
+        (!automated && hash !== body.mediaApprovalHash) ||
+        draft.mediaApproval.revision !== draft.revision ||
+        draft.mediaApproval.contentHash !== draft.contentHash
+      ) {
+        return privateJson(
+          { error: "The UHD media approval ledger is stale or invalid." },
+          409,
+        );
+      }
     }
 
     const claim = await claimDraftPublication(id, {
@@ -287,7 +314,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const commitSha = await publishArticleCommit(
       slug,
       draft.article,
-      draft.mediaApproval,
+      draft.mediaApproval ?? null,
       draft.contentHash,
     );
     const url = `${NEWS_SITE}/news/${slug}`;

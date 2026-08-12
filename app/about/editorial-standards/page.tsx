@@ -83,7 +83,7 @@ const standards = [
     number: "05",
     title: "AI can assist, never source",
     body:
-      "AI may help organise research, search a bounded editorial packet, summarise, translate, structure or draft. It is not evidence and it cannot approve publication in Raj's name. Generated public briefs are labelled, source-bounded and withheld when their citations fail validation.",
+      "AI may help organise research, search a bounded editorial packet, summarise, translate, structure or draft. It is never treated as evidence. Automated newsroom publication is permitted only when the normal editorial validator passes, at least two allowlisted citations have independently fetched evidence, and every material figure traces to that evidence; anything else remains held for review.",
   },
   {
     id: "conflicts",

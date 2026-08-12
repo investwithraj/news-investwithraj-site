@@ -135,12 +135,12 @@ export async function inspectEditorialMedia(
 export async function publishArticleCommit(
   slug: string,
   article: DraftArticle,
-  mediaApproval: MediaApprovalLedger,
+  mediaApproval: MediaApprovalLedger | null,
   publicationContentHash: string,
 ): Promise<string> {
   if (!TOKEN) throw new Error("GITHUB_TOKEN not set");
   assertCanonicalNewsSlug(slug);
-  if (article.slug !== slug || mediaApproval.slug !== slug) {
+  if (article.slug !== slug || (mediaApproval && mediaApproval.slug !== slug)) {
     throw new Error("Publication slug does not match the reviewed records.");
   }
 
@@ -152,33 +152,45 @@ export async function publishArticleCommit(
   const headCommit = await gh<{ tree: { sha: string } }>(`${base}/git/commits/${headSha}`);
   const baseTree = headCommit.tree.sha;
 
-  const inspected = await inspectEditorialMedia(slug);
-  if (
-    inspected.repoPath !== mediaApproval.repoPath ||
-    inspected.contentSha256 !== mediaApproval.contentSha256 ||
-    inspected.mime !== mediaApproval.mime ||
-    inspected.width !== mediaApproval.width ||
-    inspected.height !== mediaApproval.height
-  ) {
-    throw new Error(
-      "Publication cover bytes do not match the immutable media approval ledger.",
-    );
+  let approvedArticle: DraftArticle;
+  if (mediaApproval) {
+    const inspected = await inspectEditorialMedia(slug);
+    if (
+      inspected.repoPath !== mediaApproval.repoPath ||
+      inspected.contentSha256 !== mediaApproval.contentSha256 ||
+      inspected.mime !== mediaApproval.mime ||
+      inspected.width !== mediaApproval.width ||
+      inspected.height !== mediaApproval.height
+    ) {
+      throw new Error(
+        "Publication cover bytes do not match the immutable media approval ledger.",
+      );
+    }
+    approvedArticle = {
+      ...article,
+      publicationContentHash,
+      heroImage: {
+        ...article.heroImage,
+        src: `/${mediaApproval.repoPath.replace(/^public\//, "")}`,
+        credit: mediaApproval.credit,
+        sourceUrl: mediaApproval.sourceUrl,
+        rightsStatus: mediaApproval.rightsStatus,
+        width: mediaApproval.width,
+        height: mediaApproval.height,
+        approval: "approved-editorial",
+      },
+    };
+  } else {
+    approvedArticle = {
+      ...article,
+      publicationContentHash,
+      heroImage: {
+        ...article.heroImage,
+        credit: "Verified editorial image withheld pending UHD rights approval",
+        approval: "withheld",
+      },
+    };
   }
-
-  const approvedArticle: DraftArticle = {
-    ...article,
-    publicationContentHash,
-    heroImage: {
-      ...article.heroImage,
-      src: `/${mediaApproval.repoPath.replace(/^public\//, "")}`,
-      credit: mediaApproval.credit,
-      sourceUrl: mediaApproval.sourceUrl,
-      rightsStatus: mediaApproval.rightsStatus,
-      width: mediaApproval.width,
-      height: mediaApproval.height,
-      approval: "approved-editorial",
-    },
-  };
 
   // 2. Read + patch the registry.
   const indexFile = await gh<{ content: string; encoding: string }>(
