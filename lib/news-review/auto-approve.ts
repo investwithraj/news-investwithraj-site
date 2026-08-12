@@ -209,7 +209,11 @@ export async function runAutoApprove(opts: {
   if (!res.ok) throw new Error(`draft list failed (${res.status})`);
   const { drafts } = (await res.json()) as { drafts: NewsDraft[] };
 
-  const activeDrafts = drafts.filter((draft) => !draft.publication);
+  const activeDrafts = drafts
+    .filter((draft) => !draft.publication)
+    .sort((left, right) =>
+      right.article.publishedAt.localeCompare(left.article.publishedAt),
+    );
   const assessments = activeDrafts.map(assessDraft);
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");

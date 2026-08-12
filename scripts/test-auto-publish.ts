@@ -35,13 +35,24 @@ const draft = {
   },
 } as unknown as NewsDraft;
 
+const olderDraft = {
+  ...draft,
+  id: "auto-publish-regression-older",
+  article: {
+    ...draft.article,
+    slug: "2026-08-11-auto-publish-regression-older",
+    publishedAt: "2026-08-11T10:00:00.000Z",
+  },
+} as NewsDraft;
+draft.article.publishedAt = "2026-08-12T10:00:00.000Z";
+
 const originalFetch = globalThis.fetch;
 const calls: string[] = [];
 globalThis.fetch = async (input) => {
   const url = String(input);
   calls.push(url);
   if (url.endsWith("/api/news/draft")) {
-    return Response.json({ drafts: [draft] });
+    return Response.json({ drafts: [olderDraft, draft] });
   }
   if (url.endsWith(`/api/news/draft/${draft.id}/publish`)) {
     return Response.json(
@@ -65,13 +76,14 @@ async function main() {
       deploymentAttempts: 0,
       log: () => undefined,
     });
-    assert.equal(result.approved, 1);
+    assert.equal(result.approved, 2);
     assert.equal(result.published, 1);
     assert.equal(result.failed, 0);
     assert.equal(result.held, 0);
-    assert.equal(result.deferred, 0);
+    assert.equal(result.deferred, 1);
     assert.equal(calls.length, 2);
     assert.match(calls[1], /\/publish$/);
+    assert.ok(calls[1].includes(draft.id), "newest passing draft must publish first");
     console.log(
       "Auto-publish regression passed: evidence-ready draft selected and one bounded publish requested.",
     );
