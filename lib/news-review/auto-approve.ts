@@ -195,6 +195,7 @@ export async function runAutoApprove(opts: {
   secret: string;
   publish: boolean;
   publishLimit?: number;
+  publishOrder?: "newest" | "oldest";
   deploymentAttempts?: number;
   log?: (msg: string) => void;
 }): Promise<AutoApproveSummary> {
@@ -212,7 +213,9 @@ export async function runAutoApprove(opts: {
   const activeDrafts = drafts
     .filter((draft) => !draft.publication)
     .sort((left, right) =>
-      right.article.publishedAt.localeCompare(left.article.publishedAt),
+      opts.publishOrder === "oldest"
+        ? left.article.publishedAt.localeCompare(right.article.publishedAt)
+        : right.article.publishedAt.localeCompare(left.article.publishedAt),
     );
   const assessments = activeDrafts.map(assessDraft);
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
@@ -223,7 +226,7 @@ export async function runAutoApprove(opts: {
 
   log(
     `auto-approve: ${activeDrafts.length} active draft(s) · ${approve.length} pass · ${held.length} held · ` +
-      `mode ${opts.publish ? `PUBLISH (limit ${publishLimit})` : "REVIEW ONLY"} ` +
+      `mode ${opts.publish ? `PUBLISH (${opts.publishOrder ?? "newest"}, limit ${publishLimit})` : "REVIEW ONLY"} ` +
       `(>= ${MIN_WHITELIST_CITATIONS} whitelisted cites + fetched evidence)`,
   );
   for (const a of approve) {

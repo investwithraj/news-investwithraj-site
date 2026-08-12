@@ -54,7 +54,7 @@ globalThis.fetch = async (input) => {
   if (url.endsWith("/api/news/draft")) {
     return Response.json({ drafts: [olderDraft, draft] });
   }
-  if (url.endsWith(`/api/news/draft/${draft.id}/publish`)) {
+  if (/\/api\/news\/draft\/[^/]+\/publish$/.test(url)) {
     return Response.json(
       {
         claimId: "00000000-0000-4000-8000-000000000000",
@@ -84,8 +84,25 @@ async function main() {
     assert.equal(calls.length, 2);
     assert.match(calls[1], /\/publish$/);
     assert.ok(calls[1].includes(draft.id), "newest passing draft must publish first");
+
+    calls.length = 0;
+    const backlogResult = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: true,
+      publishLimit: 1,
+      publishOrder: "oldest",
+      deploymentAttempts: 0,
+      log: () => undefined,
+    });
+    assert.equal(backlogResult.published, 1);
+    assert.equal(calls.length, 2);
+    assert.ok(
+      calls[1].includes(olderDraft.id),
+      "backlog lane must publish the oldest passing draft first",
+    );
     console.log(
-      "Auto-publish regression passed: evidence-ready draft selected and one bounded publish requested.",
+      "Auto-publish regression passed: newest and backlog lanes each selected one evidence-ready draft.",
     );
   } finally {
     globalThis.fetch = originalFetch;

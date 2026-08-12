@@ -27,6 +27,8 @@ async function main() {
     secret: SECRET,
     publish: true,
     publishLimit: Number.parseInt(process.env.AUTO_PUBLISH_LIMIT ?? "1", 10),
+    publishOrder:
+      process.env.AUTO_PUBLISH_ORDER === "oldest" ? "oldest" : "newest",
   });
   console.log(
     `\nAUTO-PUBLISH — ${s.published} committed, ${s.held} held, ${s.deferred} deferred, ${s.failed} failed.`,

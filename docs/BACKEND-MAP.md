@@ -89,6 +89,9 @@ candidates, and posts successful drafts to `/api/news/draft`.
 
 The workflow explicitly sets `AUTO_APPROVE` to `1` and
 `AUTO_PUBLISH_LIMIT` to `1`.
+The morning schedule uses `AUTO_PUBLISH_ORDER=newest`; the midday and evening
+schedules use `oldest` to clear the verified backlog without displacing the
+daily current-news lane.
 
 If `AUTO_APPROVE` is exactly `1`, `runAutoApprove` publishes only drafts that
 pass the validator, allowlisted-source, independently fetched evidence and

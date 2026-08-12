@@ -16,6 +16,9 @@ configured discovery sources
 ```
 
 Automation publishes at most one evidence-ready article per scheduled run.
+The 03:07 UTC run selects the newest passing story. The 09:07 and 15:07 UTC
+runs select the oldest passing drafts, clearing two backlog items per day while
+protecting a daily current-news slot.
 Anything that fails a source, figure, validator or integrity gate remains held
 in The Desk. Raj can still review and publish held drafts manually.
 
@@ -36,6 +39,8 @@ The runner:
 The workflow explicitly sets `AUTO_APPROVE` to `1` and
 `AUTO_PUBLISH_LIMIT` to `1`. The kill switch is fail-closed: changing
 `AUTO_APPROVE` to any other value stops publication while drafting continues.
+`AUTO_PUBLISH_ORDER` is `newest` for the morning run and `oldest` for the other
+two scheduled runs. Manual workflow runs always default to `newest`.
 
 `POST /api/cron/draft` is a fallback. It requires an authenticated server or
 cron request, `ENABLE_NEWS_DRAFT_CRON=1`, a configured drafting provider, and

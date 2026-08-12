@@ -224,6 +224,8 @@ async function main(): Promise<void> {
           process.env.AUTO_PUBLISH_LIMIT ?? "1",
           10,
         ),
+        publishOrder:
+          process.env.AUTO_PUBLISH_ORDER === "oldest" ? "oldest" : "newest",
       });
       console.log(
         `publication: ${summary.published} committed, ${summary.held} held, ${summary.deferred} deferred, ${summary.failed} failed`,
