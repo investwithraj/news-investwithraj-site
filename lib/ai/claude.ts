@@ -91,7 +91,9 @@ export async function callClaude(opts: ClaudeOptions): Promise<ClaudeResult> {
 interface ClaudeContentBlock {
   type: string;
   text?: string;
-  content?: Array<{ type: string; url?: string; title?: string }>;
+  content?:
+    | Array<{ type: string; url?: string; title?: string }>
+    | { type?: string; error_code?: string };
 }
 
 export interface ClaudeResearchResult extends ClaudeResult {
@@ -149,8 +151,11 @@ export async function callClaudeResearch(
       for (const block of data.content ?? []) {
         if (block.type === "text" && block.text) text += block.text;
         if (block.type === "server_tool_use") searchCount++;
-        if (block.type === "web_search_tool_result") {
-          for (const r of block.content ?? []) {
+        if (
+          block.type === "web_search_tool_result" &&
+          Array.isArray(block.content)
+        ) {
+          for (const r of block.content) {
             if (r.url) searchedUrls.add(r.url);
           }
         }

@@ -203,7 +203,9 @@ async function main(): Promise<void> {
       const reason =
         error instanceof Error ? error.message : "draft provider failed";
       await markClusterFailed(cluster.id, reservationToken, reason);
-      console.log(`held: ${reason}`);
+      console.log(
+        `held: ${error instanceof Error && error.stack ? error.stack : reason}`,
+      );
       continue;
     }
 
