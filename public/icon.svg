@@ -1,7 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
-  <title id="title">Invest With Raj Intelligence</title>
-  <rect width="512" height="512" fill="#090b10"/>
-  <rect x="38" y="38" width="436" height="436" fill="none" stroke="#f0f0ec" stroke-opacity=".38" stroke-width="2"/>
-  <path d="M154 142h42v228h-42zM236 142h70c60 0 92 27 92 75 0 33-17 57-50 68l63 85h-50l-57-78h-26v78h-42V142zm42 38v75h28c32 0 48-13 48-38 0-25-16-37-48-37h-28z" fill="#f0f0ec"/>
-  <path d="M154 407h244" stroke="#7382ff" stroke-width="5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#111318"/>
+  <path d="M14 15h36v2H14zM14 47h36v2H14z" fill="#D7BC79"/>
+  <text x="32" y="39" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="2" fill="#F8F4EA">IWR</text>
 </svg>

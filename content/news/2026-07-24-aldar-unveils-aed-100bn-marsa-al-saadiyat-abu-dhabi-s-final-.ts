@@ -5,7 +5,7 @@
 import type { NewsArticle } from "./types";
 
 export const article: NewsArticle = {
-  "status": "live",
+  "status": "research",
   "slug": "2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-",
   "title": "Aldar unveils AED 100bn Marsa Al Saadiyat — Abu Dhabi's final Saadiyat phase",
   "subtitle": "Crown Prince witnesses launch of 6.4m sqm waterfront district housing 58,000 residents",

@@ -96,6 +96,12 @@ const nextConfig: NextConfig = {
   // so any indexed /v17 or /v16 links survive.
   async redirects() {
     return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.news.investwithraj.com" }],
+        destination: "https://news.investwithraj.com/:path*",
+        permanent: true,
+      },
       { source: "/v17", destination: "/", permanent: true },
       { source: "/v16", destination: "/", permanent: true },
       { source: "/v16/:path*", destination: "/", permanent: true },

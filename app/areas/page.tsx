@@ -196,9 +196,7 @@ export default function AreasIndex() {
                           >
                             <span>Area intelligence</span>
                             <strong>
-                              {area.coords.lat.toFixed(4)}° N
-                              <br />
-                              {area.coords.lng.toFixed(4)}° E
+                              {area.name}
                             </strong>
                             <small>{reports.length} published reports</small>
                           </Link>

@@ -65,8 +65,13 @@ export const article: NewsArticle = {
   ],
   "heroImage": {
     "src": "/news/2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island/cover.jpg",
-    "alt": "Aldar activates AED 100 bn Marsa Al Saadiyat, Saadiyat Island's final phase",
-    "credit": "Invest With Raj editorial archive — Saadiyat Reserve"
+    "alt": "Official Aldar press image for the Marsa Al Saadiyat masterplan announcement",
+    "credit": "Aldar official Marsa Al Saadiyat press media",
+    "sourceUrl": "https://www.aldar.com/en/news-and-media/his-highness-sheikh-khaled-bin-mohamed-bin-zayed-al-nahyan-inaugurates-aed-100-billion-marsa-al-saadiyat",
+    "rightsStatus": "Official Aldar press media retained with the article record",
+    "width": 4200,
+    "height": 2800,
+    "approval": "approved-editorial"
   },
   "cta": {
     "href": "https://investwithraj.com/?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",

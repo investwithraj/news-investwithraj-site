@@ -8,6 +8,7 @@ import {
   generalAdvisoryUrl,
 } from "@/lib/advisory-relations";
 import { SITE } from "@/lib/constants";
+import { canonicalArea } from "@/content/intelligence/core";
 import {
   categoryLabel,
   displayMarkets,
@@ -83,7 +84,18 @@ export default async function AreaPage({
   const record = getPublicAreaRecord(slug);
   if (!record) notFound();
   const { area, reports: relatedNews } = record;
+  const sharedArea = canonicalArea(slug);
+  if (sharedArea && (sharedArea.name !== area.name || sharedArea.emirate !== area.emirate)) {
+    throw new Error(`Area registry mismatch for ${slug}`);
+  }
   const media = getVerifiedAreaMedia(area.slug);
+  const hasAreaSourcePack = area.citations.length > 0 && area.body.trim().length > 0;
+  const decisionHeadline = hasAreaSourcePack
+    ? area.oneLiner
+    : `How ${area.name} fits a real property brief.`;
+  const decisionContext = hasAreaSourcePack
+    ? area.excerpt
+    : `${area.name} should be compared on use, competing supply, access, operating quality, total holding cost and resale depth—not on a generic area label.`;
 
   const developers = relatedDevelopersForArea(area, PUBLIC_DEVELOPERS);
   const advisoryLinks = advisoryLinksForArea(area);
@@ -128,8 +140,6 @@ export default async function AreaPage({
       BREADCRUMB_PRESETS.area({ slug: area.slug, name: area.name }),
     ),
   );
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${area.coords.lat},${area.coords.lng}`;
-
   return (
     <>
       <script
@@ -156,13 +166,13 @@ export default async function AreaPage({
               </p>
             </div>
             <div className={styles.coordinatePanel}>
-              <span>Location</span>
+              <span>Decision lens</span>
               <strong>
-                {area.coords.lat.toFixed(4)}° N
+                Buy the fit,
                 <br />
-                {area.coords.lng.toFixed(4)}° E
+                not the postcode.
               </strong>
-              <small>{area.emirate} · United Arab Emirates</small>
+              <small>Use · holding period · supply · exit depth</small>
             </div>
           </div>
         </header>
@@ -221,12 +231,15 @@ export default async function AreaPage({
           </div>
         </section>
 
-        <nav className={styles.mapActions} aria-label="Map this area">
-          <Link href={`/map?area=${area.slug}`}>Open on the intelligence map ↗</Link>
-          <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
-            Open exact coordinates ↗
-          </a>
-        </nav>
+        <section className={styles.method} aria-label="Area decision questions">
+          <span>What to decide</span>
+          <h2>{decisionHeadline}</h2>
+          <p>
+            {decisionContext} Before choosing a unit, test competing supply,
+            daily-life fit, total holding cost and the buyer who could
+            credibly take it from you later.
+          </p>
+        </section>
 
         <section className={styles.coverage}>
           <header className={styles.sectionHeader}>

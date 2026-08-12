@@ -472,7 +472,7 @@
         {
           "path": "/developer/emaar",
           "role": "developer-lead",
-          "fullscreen": true
+          "fullscreen": false
         }
       ],
       "source": {
@@ -510,7 +510,7 @@
         {
           "path": "/developer/aldar",
           "role": "developer-lead",
-          "fullscreen": true
+          "fullscreen": false
         }
       ],
       "source": {
@@ -548,7 +548,7 @@
         {
           "path": "/developer/nakheel",
           "role": "developer-lead",
-          "fullscreen": true
+          "fullscreen": false
         }
       ],
       "source": {
@@ -586,7 +586,7 @@
         {
           "path": "/developer/modon",
           "role": "developer-lead",
-          "fullscreen": true
+          "fullscreen": false
         }
       ],
       "source": {
@@ -624,7 +624,7 @@
         {
           "path": "/developer/sobha",
           "role": "developer-lead",
-          "fullscreen": true
+          "fullscreen": false
         }
       ],
       "source": {

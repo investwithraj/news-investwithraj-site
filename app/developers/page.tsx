@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { CANONICAL_DEVELOPERS } from "@/content/intelligence/registry";
 import { SITE } from "@/lib/constants";
 import {
   categoryLabel,
@@ -35,11 +36,21 @@ export const metadata: Metadata = {
 };
 
 export default function DevelopersIndex() {
-  const records = PUBLIC_DEVELOPER_RECORDS.map(({ developer, reports }) => ({
-    developer,
-    reports,
-    media: getVerifiedDeveloperMedia(developer.slug),
-  }));
+  const legacySlug: Record<string, string> = {
+    "dubai-holding-real-estate": "dubai-holding",
+  };
+  const records = CANONICAL_DEVELOPERS.map((entity) => {
+    const publicRecord = PUBLIC_DEVELOPER_RECORDS.find(
+      ({ developer }) => developer.slug === (legacySlug[entity.slug] ?? entity.slug),
+    );
+    return {
+      entity,
+      publicRecord,
+      media: publicRecord
+        ? getVerifiedDeveloperMedia(publicRecord.developer.slug)
+        : undefined,
+    };
+  });
   const latestReports = selectDistinctArticles(
     PUBLIC_DEVELOPER_RECORDS.flatMap(({ reports }) => reports),
     8,
@@ -76,7 +87,7 @@ export default function DevelopersIndex() {
             ← Intelligence desk
           </Link>
           <p className={styles.eyebrow}>
-            Developer intelligence · {PUBLIC_DEVELOPERS.length} covered entities
+            Developer intelligence · {CANONICAL_DEVELOPERS.length} tracked entities
           </p>
           <h1>Reporting by full identity.</h1>
           <p className={styles.dek}>
@@ -85,8 +96,8 @@ export default function DevelopersIndex() {
           </p>
           <div className={styles.statusGrid}>
             <div>
-              <span>Covered developers</span>
-              <strong>{PUBLIC_DEVELOPERS.length}</strong>
+              <span>Tracked developers</span>
+              <strong>{CANONICAL_DEVELOPERS.length}</strong>
             </div>
             <div>
               <span>Latest matched report</span>
@@ -126,16 +137,19 @@ export default function DevelopersIndex() {
 
         <section className={styles.directory}>
           <header className={styles.sectionHeader}>
-            <h2>Developer reporting desks.</h2>
-            <p>Only entities with published coverage appear</p>
+            <h2>The UAE developer index.</h2>
+            <p>{PUBLIC_DEVELOPERS.length} have live reporting desks</p>
           </header>
           <div className={styles.developerGrid}>
-            {records.map(({ developer, reports, media }) => {
-              const developerHref = `/developer/${developer.slug}`;
+            {records.map(({ entity, publicRecord, media }) => {
+              const reports = publicRecord?.reports ?? [];
+              const developerHref = publicRecord
+                ? `/developer/${publicRecord.developer.slug}`
+                : entity.officialUrl;
 
               return (
                 <article
-                  key={developer.slug}
+                  key={entity.slug}
                   className={styles.developerCard}
                 >
                   {media ? (
@@ -143,7 +157,7 @@ export default function DevelopersIndex() {
                       <Link
                         href={developerHref}
                         className={styles.cardImageLink}
-                        aria-label={`Open ${developer.name} reporting index`}
+                        aria-label={`Open ${entity.name} reporting index`}
                       >
                         <Image
                           src={media.src}
@@ -170,28 +184,36 @@ export default function DevelopersIndex() {
                       </figcaption>
                     </figure>
                   ) : (
-                    <Link
+                    <a
                       href={developerHref}
                       className={styles.identityTile}
+                      {...(!publicRecord
+                        ? { target: "_blank", rel: "noopener noreferrer" }
+                        : {})}
                     >
-                      <span>Developer intelligence</span>
-                      <strong>{developer.name}</strong>
-                      <small>{reports.length} published reports</small>
-                    </Link>
+                      <span>{publicRecord ? "Developer intelligence" : `Tier ${entity.tier} watchlist`}</span>
+                      <strong>{entity.name}</strong>
+                      <small>{publicRecord ? `${reports.length} published reports` : "Open developer website"}</small>
+                    </a>
                   )}
-                  <Link
+                  <a
                     href={developerHref}
                     className={styles.cardBody}
+                    {...(!publicRecord
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
                   >
                     <span className={styles.cardMeta}>
-                      <span>{developer.hq}</span>
-                      <span>{reports.length} reports</span>
+                      <span>{entity.markets.slice(0, 2).join(" / ")}</span>
+                      <span>{publicRecord ? `${reports.length} reports` : "Tracked"}</span>
                     </span>
-                    <h3>{developer.name}</h3>
+                    <h3>{entity.name}</h3>
                     <small>
-                      Latest report: {reports[0].displayDate}
+                      {reports[0]
+                        ? `Latest report: ${reports[0].displayDate}`
+                        : "Coverage desk opens after a substantive report is published."}
                     </small>
-                  </Link>
+                  </a>
                 </article>
               );
             })}

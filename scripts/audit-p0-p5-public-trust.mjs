@@ -1,0 +1,16 @@
+import { readFile } from "node:fs/promises";
+import sharp from "sharp";
+const failures=[];
+const config=await readFile("next.config.ts","utf8");
+const areaPage=await readFile("app/areas/[slug]/page.tsx","utf8");
+const marsaPrimary=await readFile("content/news/2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island.ts","utf8");
+const marsaDuplicate=await readFile("content/news/2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-.ts","utf8");
+const developers=await readFile("app/developers/page.tsx","utf8");
+if(!config.includes('value: "www.news.investwithraj.com"')) failures.push("news www host redirect is missing");
+if(areaPage.includes("Open exact coordinates")) failures.push("coordinate-led public navigation remains");
+if(!marsaPrimary.includes('"approval": "approved-editorial"')) failures.push("Marsa exact media approval is missing");
+if(!marsaDuplicate.includes('"status": "research"')) failures.push("duplicate Marsa article remains public");
+if(!developers.includes("CANONICAL_DEVELOPERS")) failures.push("full developer registry is not wired to the directory");
+const image=await sharp("public/news/2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island/cover.jpg").metadata();
+if((image.width??0)<3840||(image.height??0)<2160) failures.push("Marsa official image is not UHD");
+if(failures.length){console.error(failures.join("\n"));process.exitCode=1}else console.log("P0-P5 public-trust gate: PASS");
