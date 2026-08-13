@@ -67,8 +67,10 @@ import { article as art_2026_07_25_dubai_logs_aed_419_94bn_in_h1_transactions_as
 import { article as art_2026_07_26_off_plan_sales_capture_71_of_dubai_transactions_as_h1_2026_h } from "./2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h";
 import { article as art_2026_07_28_burtville_launches_405_unit_bab_al_qasr_garden_residences_65 } from "./2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65";
 import { article as art_2026_08_13_dubai_luxury_segment_posts_aed_87_71bn_as_conviction } from "./2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction";
+import { article as art_2026_08_13_omniyat_acquires_36_600_sqm_marjan_beach_plot_in_first_rak } from "./2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_08_13_omniyat_acquires_36_600_sqm_marjan_beach_plot_in_first_rak,
   art_2026_08_13_dubai_luxury_segment_posts_aed_87_71bn_as_conviction,
   art_2026_07_28_burtville_launches_405_unit_bab_al_qasr_garden_residences_65,
   art_2026_07_26_off_plan_sales_capture_71_of_dubai_transactions_as_h1_2026_h,
