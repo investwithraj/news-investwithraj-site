@@ -13,10 +13,97 @@
 // Anything that fails any check → "manual". Deliberately conservative: a figure
 // we cannot match is a reason to hold the draft.
 
-import type { NewsDraft } from "./types";
+import type { DraftArticle, NewsDraft } from "./types";
+import {
+  findSourceByUrl,
+  isOfficialDeveloperUrl,
+  type SourceTier,
+} from "@/lib/sources/registry";
 
-/** Single-source stories always remain in human review. */
-export const MIN_WHITELIST_CITATIONS = 2;
+export const DEFAULT_CORROBORATION_SOURCES = 2;
+
+export type EvidenceLane =
+  | "official-update"
+  | "fast-news"
+  | "research-release"
+  | "developer-announcement"
+  | "corroborated-analysis";
+
+export interface EvidencePolicy {
+  lane: EvidenceLane;
+  requiredPublisherCount: 1 | 2;
+  reason: string;
+}
+
+const ANALYTICAL_CLAIM_RE =
+  /\b(?:recommend(?:s|ed|ation)?|should\s+(?:buy|sell|avoid)|buy\s+call|sell\s+call|undervalued|overvalued|outperform|underperform|guaranteed|risk[- ]free|forecast(?:s|ed)?|projected\s+return|will\s+(?:rise|fall|increase|decline)\s+by)\b/i;
+const ATTRIBUTION_RE =
+  /\b(?:according to|said|says|announced|reported|confirmed|stated|published|disclosed)\b/i;
+
+function evidenceTiers(urls: string[]): SourceTier[] {
+  return urls
+    .map((url) => findSourceByUrl(url)?.tier)
+    .filter((tier): tier is SourceTier => Boolean(tier));
+}
+
+/** Choose the lightest defensible evidence rule for the article. The policy is
+ * deliberately about claim risk, not a blanket source count. */
+export function determineEvidencePolicy(
+  article: DraftArticle,
+  evidenceUrls: string[],
+): EvidencePolicy {
+  const body = `${article.title}\n${article.subtitle}\n${article.body}`;
+  if (ANALYTICAL_CLAIM_RE.test(body) || article.semaform?.howIdTradeIt) {
+    return {
+      lane: "corroborated-analysis",
+      requiredPublisherCount: 2,
+      reason: "investment conclusions and forecasts require corroboration",
+    };
+  }
+
+  const tiers = evidenceTiers(evidenceUrls);
+  if (tiers.includes("government")) {
+    return {
+      lane: "official-update",
+      requiredPublisherCount: 1,
+      reason: "one fetched government or regulator source is authoritative for its own update",
+    };
+  }
+  if (tiers.includes("national-press")) {
+    return {
+      lane: "fast-news",
+      requiredPublisherCount: 1,
+      reason: "one fetched verified national or international newsroom is sufficient for factual news",
+    };
+  }
+  if (
+    tiers.includes("institutional-research") &&
+    (article.category === "market-pulse" || article.category === "macro") &&
+    ATTRIBUTION_RE.test(body)
+  ) {
+    return {
+      lane: "research-release",
+      requiredPublisherCount: 1,
+      reason: "one attributed institutional report is sufficient for reporting that report's findings",
+    };
+  }
+  if (
+    evidenceUrls.some(isOfficialDeveloperUrl) &&
+    (article.category === "launch" || article.category === "developer-corporate") &&
+    ATTRIBUTION_RE.test(body)
+  ) {
+    return {
+      lane: "developer-announcement",
+      requiredPublisherCount: 1,
+      reason: "one attributed first-party developer release is sufficient for its own announcement",
+    };
+  }
+  return {
+    lane: "corroborated-analysis",
+    requiredPublisherCount: DEFAULT_CORROBORATION_SOURCES,
+    reason: "portal, regional or unattributed claims require independent corroboration",
+  };
+}
 
 export interface AutoApproveAssessment {
   id: string;
@@ -28,6 +115,8 @@ export interface AutoApproveAssessment {
   whitelistCount: number;
   allCitationsWhitelisted: boolean;
   fetchedEvidenceCount: number;
+  evidenceLane: EvidenceLane;
+  requiredPublisherCount: 1 | 2;
   figureCount: number;
   /** Figures present in the body but NOT found in cited-source text. */
   amberFigures: string[];
@@ -121,14 +210,24 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     reasons.push(`fails gates: ${blocked || "unknown"}`);
   }
 
-  // 2 · citations — all whitelisted, at least MIN_WHITELIST_CITATIONS of them
+  const citationUrls = new Set(article.citations.map((citation) => citation.url));
+  const fetchedEvidence = (provenance.fetchedEvidence ?? []).filter(
+    (evidence) =>
+      citationUrls.has(evidence.url) && norm(evidence.text).length >= 80,
+  );
+  const policy = determineEvidencePolicy(
+    article,
+    fetchedEvidence.map((evidence) => evidence.finalUrl ?? evidence.url),
+  );
+
+  // 2 · citations — all whitelisted, with the count selected by claim risk
   const citationCount = validator.metrics.citationCount;
   const whitelistCount = validator.metrics.citationsFromWhitelist;
   const allCitationsWhitelisted =
     citationCount > 0 && whitelistCount === citationCount;
-  if (whitelistCount < MIN_WHITELIST_CITATIONS) {
+  if (whitelistCount < policy.requiredPublisherCount) {
     reasons.push(
-      `only ${whitelistCount} whitelisted citation(s) (need >= ${MIN_WHITELIST_CITATIONS})`,
+      `only ${whitelistCount} whitelisted citation(s) (need >= ${policy.requiredPublisherCount} for ${policy.lane})`,
     );
   }
   if (!allCitationsWhitelisted) {
@@ -139,11 +238,6 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
 
   // 3 + 4 · every figure must trace to text fetched from the cited URL.
   // provenance.citedText is deliberately ignored because it is model output.
-  const citationUrls = new Set(article.citations.map((citation) => citation.url));
-  const fetchedEvidence = (provenance.fetchedEvidence ?? []).filter(
-    (evidence) =>
-      citationUrls.has(evidence.url) && norm(evidence.text).length >= 80,
-  );
   const distinctEvidenceDomains = new Set(
     fetchedEvidence.map((evidence) => {
       try {
@@ -157,9 +251,9 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     }).filter(Boolean),
   );
   const fetchedEvidenceCount = distinctEvidenceDomains.size;
-  if (fetchedEvidenceCount < MIN_WHITELIST_CITATIONS) {
+  if (fetchedEvidenceCount < policy.requiredPublisherCount) {
     reasons.push(
-      `only ${fetchedEvidenceCount} cited publisher domain(s) have independently fetched evidence text (need >= ${MIN_WHITELIST_CITATIONS})`,
+      `only ${fetchedEvidenceCount} cited publisher domain(s) have fetched evidence text (need >= ${policy.requiredPublisherCount} for ${policy.lane})`,
     );
   }
   const sourceText = normNumericEvidence(
@@ -201,6 +295,8 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     whitelistCount,
     allCitationsWhitelisted,
     fetchedEvidenceCount,
+    evidenceLane: policy.lane,
+    requiredPublisherCount: policy.requiredPublisherCount,
     figureCount: figures.length,
     amberFigures,
     reasons,
@@ -282,10 +378,10 @@ export async function runAutoApprove(opts: {
   log(
     `auto-approve: ${activeDrafts.length} active draft(s) · ${approve.length} pass · ${held.length} held · ` +
       `mode ${opts.publish ? `PUBLISH (${publishOrder}, limit ${publishLimit})` : "REVIEW ONLY"} ` +
-      `(>= ${MIN_WHITELIST_CITATIONS} whitelisted cites + fetched evidence)`,
+      `(risk-based evidence policy)`,
   );
   for (const a of approve) {
-    log(`  ok  ${a.slug}  (${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);
+    log(`  ok  ${a.slug}  (${a.evidenceLane} · ${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);
   }
   for (const a of held) log(`  hold ${a.slug} -> ${a.reasons.join("; ")}`);
 

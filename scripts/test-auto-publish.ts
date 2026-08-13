@@ -89,6 +89,83 @@ globalThis.fetch = async (input) => {
 
 async function main() {
   try {
+    const oneSourceDraft = (input: {
+      id: string;
+      url: string;
+      source: string;
+      category: NewsDraft["article"]["category"];
+      body: string;
+    }) => ({
+      ...draft,
+      id: input.id,
+      article: {
+        ...draft.article,
+        category: input.category,
+        body: input.body,
+        citations: [{ source: input.source, url: input.url }],
+      },
+      validator: {
+        ...draft.validator,
+        metrics: { citationCount: 1, citationsFromWhitelist: 1 },
+      },
+      provenance: {
+        ...draft.provenance,
+        fetchedEvidence: [{ url: input.url, text: evidence }],
+      },
+    }) as NewsDraft;
+
+    const reutersDraft = oneSourceDraft({
+      id: "single-reuters",
+      url: "https://www.reuters.com/world/middle-east/example-report",
+      source: "Reuters",
+      category: "market-pulse",
+      body: "Reuters reported that the verified transaction value was AED 10 million.",
+    });
+    const reutersAssessment = assessDraft(reutersDraft);
+    assert.equal(reutersAssessment.verdict, "auto-approve");
+    assert.equal(reutersAssessment.evidenceLane, "fast-news");
+    assert.equal(reutersAssessment.requiredPublisherCount, 1);
+
+    const officialDraft = oneSourceDraft({
+      id: "single-government",
+      url: "https://dubailand.gov.ae/en/news/example-release",
+      source: "Dubai Land Department",
+      category: "regulatory",
+      body: "Dubai Land Department confirmed a verified transaction value of AED 10 million.",
+    });
+    assert.equal(assessDraft(officialDraft).evidenceLane, "official-update");
+    assert.equal(assessDraft(officialDraft).verdict, "auto-approve");
+
+    const developerDraft = oneSourceDraft({
+      id: "single-developer",
+      url: "https://www.aldar.com/en/news-and-media/example-launch",
+      source: "Aldar Properties",
+      category: "launch",
+      body: "Aldar announced that the verified transaction value was AED 10 million.",
+    });
+    assert.equal(
+      assessDraft(developerDraft).evidenceLane,
+      "developer-announcement",
+    );
+    assert.equal(assessDraft(developerDraft).verdict, "auto-approve");
+
+    const recommendationDraft = oneSourceDraft({
+      id: "single-source-recommendation",
+      url: "https://www.reuters.com/world/middle-east/example-analysis",
+      source: "Reuters",
+      category: "market-pulse",
+      body: "We recommend investors buy after the verified transaction value reached AED 10 million.",
+    });
+    assert.equal(
+      assessDraft(recommendationDraft).evidenceLane,
+      "corroborated-analysis",
+    );
+    assert.equal(
+      assessDraft(recommendationDraft).verdict,
+      "manual",
+      "investment recommendations must still require two publishers",
+    );
+
     const samePublisherDraft = {
       ...draft,
       id: "auto-publish-same-publisher",
@@ -178,7 +255,7 @@ async function main() {
       "backlog lane must publish the strongest still-timely draft first",
     );
     console.log(
-      "Auto-publish regression passed: newest and timely-backlog lanes each selected one evidence-ready draft.",
+      "Auto-publish regression passed: four risk lanes plus newest and timely-backlog selection are enforced.",
     );
   } finally {
     globalThis.fetch = originalFetch;

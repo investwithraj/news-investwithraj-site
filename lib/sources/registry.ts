@@ -341,6 +341,39 @@ export const DEVELOPER_DIRECT_FEEDS: VerifiedSource[] = SOURCE_WHITELIST.filter(
   (source) => source.fetchType === "webfetch" && source.directFetchEnabled === true,
 );
 
+const OFFICIAL_DEVELOPER_HOSTS = new Set([
+  "emaar.com",
+  "nakheel.com",
+  "aldar.com",
+  "modon.com",
+  "sobharealty.com",
+  "damacproperties.com",
+  "meraas.com",
+  "dubaiholding.com",
+  "marjan.ae",
+  "binghatti.com",
+  "azizidevelopments.com",
+  "danubeproperties.com",
+  "ellingtonproperties.ae",
+  "select-group.ae",
+  "arada.com",
+  "shamal.com",
+]);
+
+/** True only for a developer's own corporate domain. Developer releases are
+ * valid primary evidence for launches and company announcements, but they are
+ * never treated as independent market analysis. */
+export function isOfficialDeveloperUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return [...OFFICIAL_DEVELOPER_HOSTS].some(
+      (allowed) => host === allowed || host.endsWith(`.${allowed}`),
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Reddit communities — DISABLED: Reddit now 403s unauthenticated JSON from
  *  datacenter IPs (needs OAuth). The fetcher (`fetchers/reddit.ts`) + the
  *  "reddit" fetchType stay wired for a future OAuth credential; not fetched

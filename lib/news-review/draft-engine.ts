@@ -17,7 +17,10 @@ import { fetchArticleText } from "@/lib/sources/extract";
 import { rootCtaUrl } from "@/lib/constants";
 import type { Cluster } from "@/lib/pipeline/types";
 import type { DraftArticle, NewsDraftProvenance } from "./types";
-import { findUnsupportedFigures } from "./auto-approve";
+import {
+  determineEvidencePolicy,
+  findUnsupportedFigures,
+} from "./auto-approve";
 import type { NewsCategory } from "@/content/news/types";
 
 const VALID_CATEGORIES: NewsCategory[] = [
@@ -32,7 +35,7 @@ You are given a story lead (a cluster of headlines + snippets). RESEARCH it with
 ABSOLUTE RULES (a draft that breaks these is rejected):
 - Synthetic imagery is forbidden. The drafting system does not select, generate, or approve media; a human reviewer must attach a rights-cleared real UHD cover.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
-- Use at least two independently accessible, approved sources from two different publisher domains. Cite the exact article or release URLs, not homepages, search pages or aggregator redirects. If two source pages on different domains cannot be opened without a login or paywall, return {"skip": true, "reason": "..."} and nothing else.
+- Use the lightest defensible evidence lane. One directly accessible approved government/regulator source, national or international newsroom, attributed institutional report, or attributed official developer release is sufficient for a factual update about that source's own reporting. Investment recommendations, forecasts, market-wide conclusions, portal claims and disputed claims require two independently accessible approved publisher domains. Cite exact article or release URLs, never homepages, search pages or aggregator redirects.
 - If, after searching, you cannot verify enough for a defensible 650+ word article, return {"skip": true, "reason": "..."} and nothing else.
 - UK English. Em-dashes — like this — are signature; use several.
 - The FIRST paragraph must contain a specific, sourced number.
@@ -50,7 +53,7 @@ OUTPUT: a single JSON object, no prose, no code fences:
   "faq": [{"q": "...", "a": "..."}, {"q": "...", "a": "..."}],
   "citations": [{"source": "Publisher name", "url": "https://real-article-url"}]
 }
-Include 2–5 citations — the actual article URLs you used.`;
+Include 1–5 citations — the actual article URLs you used. Additional citations are welcome only when they add evidence, not repetition.`;
 
 interface DraftJson {
   skip?: boolean;
@@ -217,7 +220,7 @@ export async function draftFromCluster(
     messages: [
       {
         role: "user",
-        content: `STORY LEAD: ${cluster.topic}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. Use at least two exact, independently accessible article or official-release URLs from two different approved publisher domains. If that is not possible, skip. Then output the article JSON.`,
+        content: `STORY LEAD: ${cluster.topic}\nSuggested category: ${cluster.suggestedCategory}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. A single directly accessible Tier-A newsroom, authority, attributed institutional report or attributed official developer release is sufficient for a factual report. Use two independent sources for analysis, recommendations, forecasts, portal claims or disputed claims. If the required evidence is not accessible, skip. Then output the article JSON.`,
       },
     ],
   });
@@ -328,10 +331,14 @@ export async function draftFromCluster(
       new URL(evidence.finalUrl ?? evidence.url).hostname.replace(/^www\./, ""),
     ),
   );
-  if (fetchedDomains.size < 2) {
+  const evidencePolicy = determineEvidencePolicy(
+    article,
+    fetchedEvidence.map((evidence) => evidence.finalUrl ?? evidence.url),
+  );
+  if (fetchedDomains.size < evidencePolicy.requiredPublisherCount) {
     return {
       ok: false,
-      reason: `only ${fetchedDomains.size} independently fetched publisher domain(s); need at least 2`,
+      reason: `only ${fetchedDomains.size} fetched publisher domain(s); need ${evidencePolicy.requiredPublisherCount} for ${evidencePolicy.lane}`,
     };
   }
 
