@@ -113,8 +113,22 @@ async function kvEval(
 }
 
 function hydrateDraft(draft: NewsDraft): NewsDraft {
+  // Redis Lua's cjson encoder serialises an empty object as [] because an
+  // empty Lua table has no object/array identity. `distribution` is created as
+  // {}, then every atomic Lua mutation can round-trip it back as []. Restore
+  // that one known empty-object field at the storage boundary; non-empty or
+  // otherwise malformed values remain untouched and still fail integrity.
+  const article = {
+    ...draft.article,
+    distribution:
+      Array.isArray(draft.article.distribution) &&
+      draft.article.distribution.length === 0
+        ? {}
+        : draft.article.distribution,
+  } as NewsDraft["article"];
   return {
     ...draft,
+    article,
     recordVersion:
       Number.isSafeInteger(draft.recordVersion) && draft.recordVersion > 0
         ? draft.recordVersion
@@ -127,7 +141,7 @@ function hydrateDraft(draft: NewsDraft): NewsDraft {
       typeof draft.contentHash === "string" &&
       /^[a-f0-9]{64}$/.test(draft.contentHash)
         ? draft.contentHash
-        : draftContentHash(draft.article, draft.provenance),
+        : draftContentHash(article, draft.provenance),
     verifiedSources: draft.verifiedSources ?? [],
   };
 }
