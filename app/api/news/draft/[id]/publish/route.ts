@@ -130,6 +130,44 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    if (automated) {
+      const fetchedEvidenceUrls = new Set(
+        (draft.provenance.fetchedEvidence ?? []).map((record) => record.url),
+      );
+      const evidenceBoundCitations = draft.article.citations.filter(
+        (citation) => fetchedEvidenceUrls.has(citation.url),
+      );
+      if (evidenceBoundCitations.length !== draft.article.citations.length) {
+        const revisedArticle = {
+          ...draft.article,
+          citations: evidenceBoundCitations,
+        };
+        const revised = await updateReviewedDraft(
+          id,
+          { article: revisedArticle },
+          {
+            revision: draft.revision,
+            recordVersion: draft.recordVersion,
+            contentHash: draft.contentHash,
+          },
+        );
+        if (!revised) return privateJson({ error: "Draft not found." }, 404);
+
+        const revisedAssessment = assessDraft(revised);
+        if (revisedAssessment.verdict !== "auto-approve") {
+          return privateJson(
+            {
+              error:
+                "Publication is held after removing citations without independently fetched evidence.",
+              reasons: revisedAssessment.reasons,
+            },
+            422,
+          );
+        }
+        draft = revised;
+      }
+    }
+
     const articleResult = validateDraftArticleShape(draft.article);
     if (!articleResult.ok) {
       return privateJson({ error: articleResult.error }, 422);
