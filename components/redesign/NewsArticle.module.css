@@ -7,7 +7,7 @@
 
 .header {
   position: relative;
-  min-height: 80svh;
+  min-height: min(760px, 72svh);
   padding: clamp(3rem, 6vw, 6rem) clamp(1.25rem, 8vw, 10rem) clamp(4rem, 8vw, 8rem);
   background: #090b10;
   color: #f0f0ec;
@@ -31,7 +31,7 @@
 
 .back {
   display: inline-block;
-  margin-bottom: clamp(5rem, 11vw, 11rem);
+  margin-bottom: clamp(3.5rem, 7vw, 7rem);
   color: rgba(240, 240, 236, 0.7);
   font-size: 0.67rem;
   font-weight: 620;
@@ -120,7 +120,7 @@
 .hero {
   position: relative;
   width: 100%;
-  height: clamp(32rem, 63vw, 76rem);
+  height: clamp(28rem, 52vw, 58rem);
   margin: 0;
   overflow: hidden;
   background: #151820;
@@ -153,7 +153,7 @@
 
 .heroFallback {
   display: grid;
-  min-height: clamp(30rem, 58vw, 66rem);
+  min-height: clamp(28rem, 42vw, 46rem);
   grid-template-columns: 0.42fr 1fr 0.58fr;
   gap: 2rem;
   align-content: end;
@@ -197,17 +197,21 @@
 
 .articleGrid {
   display: grid;
-  width: min(92vw, 1500px);
-  grid-template-columns: minmax(15rem, 0.52fr) minmax(0, 1fr) minmax(10rem, 0.28fr);
+  width: min(88vw, 1120px);
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, 0.28fr);
   gap: clamp(2.5rem, 6vw, 7rem);
   margin-inline: auto;
-  padding-block: clamp(6rem, 11vw, 12rem);
+  padding-block: clamp(5rem, 9vw, 9rem);
 }
 
 .tldr {
-  align-self: start;
+  width: min(92vw, 1500px);
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.28fr) minmax(0, 1fr);
+  gap: clamp(2rem, 6vw, 7rem);
+  margin-inline: auto;
   border-top: 2px solid #4050c8;
-  padding-top: 1.1rem;
+  padding-block: clamp(2rem, 4vw, 3.5rem);
 }
 
 .tldr > p,
@@ -222,7 +226,8 @@
 
 .tldr ol {
   display: grid;
-  gap: 1.4rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 2.5rem);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -397,7 +402,19 @@
 .sources,
 .relations,
 .faq {
-  padding: clamp(6rem, 11vw, 11rem) clamp(1.25rem, 8vw, 10rem);
+  padding: clamp(5rem, 8vw, 8rem) clamp(1.25rem, 8vw, 10rem);
+}
+
+.context {
+  background: #f0f0ec;
+}
+
+.context .faq {
+  padding-top: 0;
+}
+
+.finalLayer {
+  background: #090b10;
 }
 
 .sources {
@@ -757,7 +774,7 @@
 
 @media (max-width: 980px) {
   .articleGrid {
-    grid-template-columns: 15rem minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sourceRail {
@@ -786,7 +803,7 @@
   }
 
   .header h1 {
-    font-size: clamp(3.2rem, 14vw, 5.4rem);
+    font-size: clamp(2.8rem, 11vw, 4.6rem);
   }
 
   .byline {
@@ -816,7 +833,11 @@
   }
 
   .tldr {
-    position: static;
+    grid-template-columns: 1fr;
+  }
+
+  .tldr ol {
+    grid-template-columns: 1fr;
   }
 
   .disclosure {

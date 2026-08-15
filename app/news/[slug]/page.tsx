@@ -3,12 +3,11 @@ import { notFound } from "next/navigation";
 
 import NewsArticle from "@/components/redesign/NewsArticle";
 import { getNewsBySlug, NEWS_ARTICLES } from "@/content/news";
+import { resolveArticleRelations } from "@/lib/article-relations";
 import { SITE } from "@/lib/constants";
 import {
   displayMarkets,
   hasVerifiedEditorialImage,
-  relatedAreasForArticle,
-  relatedDevelopersForArticle,
   relatedVerticalsForArticle,
   supportedImageAlt,
 } from "@/lib/news-editorial";
@@ -22,7 +21,6 @@ import {
   rajPersonSchema,
 } from "@/lib/schema";
 import { VERTICALS } from "@/lib/verticals";
-import { PUBLIC_AREAS, PUBLIC_DEVELOPERS } from "@/lib/public-content";
 
 export const dynamicParams = false;
 export const dynamic = "force-static";
@@ -128,11 +126,9 @@ export default async function NewsArticlePage({
   const index = live.findIndex((item) => item.slug === slug);
   const newer = index > 0 ? live[index - 1] : null;
   const older = index >= 0 && index < live.length - 1 ? live[index + 1] : null;
-  const relatedAreas = relatedAreasForArticle(article, PUBLIC_AREAS).slice(0, 6);
-  const relatedDevelopers = relatedDevelopersForArticle(
-    article,
-    PUBLIC_DEVELOPERS,
-  ).slice(0, 6);
+  const explicitRelations = resolveArticleRelations(article.slug);
+  const relatedAreas = explicitRelations.areas.slice(0, 4);
+  const relatedDevelopers = explicitRelations.developers.slice(0, 4);
   const relatedVerticals = relatedVerticalsForArticle(
     article,
     VERTICALS,

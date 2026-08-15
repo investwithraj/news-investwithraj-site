@@ -35,6 +35,12 @@ function recordedArticleMedia(
   };
 }
 
+export function resolveArticleEditorialMedia(
+  article: NewsArticle,
+): ArticleDisplayMedia | null {
+  return recordedArticleMedia(article);
+}
+
 function contextualMedia(
   media: VerifiedMedia,
   label: ArticleDisplayMedia["label"],

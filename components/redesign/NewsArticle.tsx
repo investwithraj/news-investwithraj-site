@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import type { AreaPage } from "@/content/areas/types";
 import type { NewsArticle as NewsArticleType } from "@/content/news/types";
-import { resolveArticleDisplayMedia } from "@/lib/article-display-media";
-import type { DeveloperProfile } from "@/lib/developers";
+import type {
+  ResolvedArticleArea,
+  ResolvedArticleDeveloper,
+} from "@/lib/article-relations";
+import { resolveArticleEditorialMedia } from "@/lib/article-display-media";
 import {
   categoryLabel,
   consequenceExcerpt,
@@ -31,8 +33,8 @@ type Props = {
   article: NewsArticleType;
   newer: NewsArticleType | null;
   older: NewsArticleType | null;
-  relatedAreas: AreaPage[];
-  relatedDevelopers: DeveloperProfile[];
+  relatedAreas: readonly ResolvedArticleArea[];
+  relatedDevelopers: readonly ResolvedArticleDeveloper[];
   relatedVerticals: Vertical[];
 };
 
@@ -50,7 +52,7 @@ export default function NewsArticle({
   const consequence = consequenceExcerpt(article);
   const cta = decisionCta(article);
   const markets = displayMarkets(article);
-  const displayMedia = resolveArticleDisplayMedia(article);
+  const displayMedia = resolveArticleEditorialMedia(article);
   const pageUrl = `https://news.investwithraj.com/news/${article.slug}`;
   const linkedInShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
     pageUrl,
@@ -62,7 +64,8 @@ export default function NewsArticle({
   return (
     <main id="main" className={styles.page}>
       <article>
-        <header className={styles.header}>
+        <div className={styles.identity} data-news-layer="identity">
+          <header className={styles.header}>
           <div className={styles.headerGrid} aria-hidden="true" />
           <Link href="/news" className={styles.back}>
             ← Chronological archive
@@ -95,49 +98,55 @@ export default function NewsArticle({
               </span>
             </span>
           </div>
-        </header>
+          </header>
 
-        {displayMedia ? (
-          <figure className={styles.hero}>
-            <Image
-              src={displayMedia.src}
-              alt={displayMedia.alt}
-              fill
-              priority
-              sizes="100vw"
-            />
-            <span className={styles.heroShade} aria-hidden="true" />
-            <figcaption>
-              {displayMedia.label} · {displayMedia.credit}
-            </figcaption>
-          </figure>
-        ) : (
-          <div
-            className={styles.heroFallback}
-            role="img"
-            aria-label={`${categoryLabel(article.category)} report for ${markets.join(", ")}`}
-          >
-            <span>IWR market intelligence</span>
-            <strong>The brief.</strong>
-            <p>{article.subtitle}</p>
-            <small>
-              {categoryLabel(article.category)} · {article.displayDate}
-            </small>
-          </div>
-        )}
+          {displayMedia ? (
+            <figure className={styles.hero}>
+              <Image
+                src={displayMedia.src}
+                alt={displayMedia.alt}
+                fill
+                priority
+                sizes="100vw"
+              />
+              <span className={styles.heroShade} aria-hidden="true" />
+              <figcaption>
+                {displayMedia.label} · {displayMedia.credit}
+              </figcaption>
+            </figure>
+          ) : (
+            <div
+              className={styles.heroFallback}
+              role="img"
+              aria-label={`${categoryLabel(article.category)} report for ${markets.join(", ")}`}
+            >
+              <span>IWR market intelligence</span>
+              <strong>The brief.</strong>
+              <p>{article.subtitle}</p>
+              <small>
+                {categoryLabel(article.category)} · {article.displayDate}
+              </small>
+            </div>
+          )}
+        </div>
 
-        <div className={styles.articleGrid}>
-          <aside className={styles.tldr} aria-labelledby="signal-title">
-            <p id="signal-title">The signal</p>
-            <ol>
-              {article.tldr.map((item, index) => (
-                <li key={item}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <p>{item}</p>
-                </li>
-              ))}
-            </ol>
-          </aside>
+        <section
+          className={styles.tldr}
+          aria-labelledby="signal-title"
+          data-news-layer="signal"
+        >
+          <p id="signal-title">The signal</p>
+          <ol>
+            {article.tldr.map((item, index) => (
+              <li key={item}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <p>{item}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <div className={styles.articleGrid} data-news-layer="analysis">
 
           <div className={styles.body}>
             {paragraphs.map((paragraph, index) => (
@@ -192,7 +201,11 @@ export default function NewsArticle({
           </aside>
         </div>
 
-        <section className={styles.sources} aria-labelledby="sources-title">
+        <section
+          className={styles.sources}
+          aria-labelledby="sources-title"
+          data-news-layer="evidence"
+        >
           <header>
             <p>Evidence</p>
             <h2 id="sources-title">Sources &amp; provenance.</h2>
@@ -230,96 +243,107 @@ export default function NewsArticle({
           ) : null}
         </section>
 
-        {(relatedAreas.length ||
-          relatedDevelopers.length ||
-          relatedVerticals.length) ? (
-          <section
-            className={styles.relations}
-            aria-labelledby="related-entities-title"
+        <section className={styles.context} data-news-layer="context">
+          {(relatedAreas.length ||
+            relatedDevelopers.length ||
+            relatedVerticals.length) ? (
+            <div
+              className={styles.relations}
+              aria-labelledby="related-entities-title"
+            >
+              <header>
+                <p>Entity paths</p>
+                <h2 id="related-entities-title">Follow the subject.</h2>
+                <p>
+                  Continue into the relevant place, developer and market desk
+                  behind this report.
+                </p>
+              </header>
+              <div className={styles.relationGrid}>
+                {relatedAreas.length ? (
+                  <section>
+                    <h3>Area dossiers</h3>
+                    {relatedAreas.flatMap((area) =>
+                      area.advisoryLinks.map((link) => (
+                        <a
+                          href={link.href}
+                          key={`${area.slug}-${link.href}`}
+                        >
+                          <span>{link.eyebrow}</span>
+                          <strong>{link.label}</strong>
+                          <i aria-hidden="true">↗</i>
+                        </a>
+                      )),
+                    )}
+                  </section>
+                ) : null}
+                {relatedDevelopers.length ? (
+                  <section>
+                    <h3>Developer dossiers</h3>
+                    {relatedDevelopers.map((developer) => (
+                      <a
+                        href={developer.advisoryLink.href}
+                        key={developer.slug}
+                      >
+                        <span>{developer.advisoryLink.eyebrow}</span>
+                        <strong>{developer.advisoryLink.label}</strong>
+                        <i aria-hidden="true">↗</i>
+                      </a>
+                    ))}
+                  </section>
+                ) : null}
+                {relatedVerticals.length ? (
+                  <section>
+                    <h3>Related desks</h3>
+                    {relatedVerticals.map((vertical) => (
+                      <Link href={`/v/${vertical.slug}`} key={vertical.slug}>
+                        <span>Editorial desk</span>
+                        <strong>{vertical.name}</strong>
+                        <i aria-hidden="true">↗</i>
+                      </Link>
+                    ))}
+                  </section>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {article.faq.length ? (
+            <div className={styles.faq} aria-labelledby="faq-title">
+              <header>
+                <p>Quick clarity</p>
+                <h2 id="faq-title">Questions this report answers.</h2>
+              </header>
+              <div>
+                {article.faq.map((item, index) => (
+                  <details key={item.q}>
+                    <summary>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      {item.q}
+                      <i aria-hidden="true">+</i>
+                    </summary>
+                    <p>{item.a}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        <footer className={styles.finalLayer} data-news-layer="next-action">
+          <nav
+            className={styles.share}
+            aria-label="Share or follow this reporting"
           >
-            <header>
-              <p>Entity paths</p>
-              <h2 id="related-entities-title">Follow the entities.</h2>
-              <p>
-                Continue through the places, developers and market desks
-                connected to this report.
-              </p>
-            </header>
-            <div className={styles.relationGrid}>
-              {relatedAreas.length ? (
-                <section>
-                  <h3>Areas mentioned</h3>
-                  {relatedAreas.map((area) => (
-                    <Link href={`/areas/${area.slug}`} key={area.slug}>
-                      <span>{area.emirate}</span>
-                      <strong>{area.name}</strong>
-                      <i aria-hidden="true">↗</i>
-                    </Link>
-                  ))}
-                </section>
-              ) : null}
-              {relatedDevelopers.length ? (
-                <section>
-                  <h3>Developers mentioned</h3>
-                  {relatedDevelopers.map((developer) => (
-                    <Link
-                      href={`/developer/${developer.slug}`}
-                      key={developer.slug}
-                    >
-                      <span>Developer record</span>
-                      <strong>{developer.name}</strong>
-                      <i aria-hidden="true">↗</i>
-                    </Link>
-                  ))}
-                </section>
-              ) : null}
-              {relatedVerticals.length ? (
-                <section>
-                  <h3>Related desks</h3>
-                  {relatedVerticals.map((vertical) => (
-                    <Link href={`/v/${vertical.slug}`} key={vertical.slug}>
-                      <span>Taxonomy match</span>
-                      <strong>{vertical.name}</strong>
-                      <i aria-hidden="true">↗</i>
-                    </Link>
-                  ))}
-                </section>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
+            <span>Keep the reporting moving</span>
+            <a href={linkedInShare} target="_blank" rel="noopener noreferrer">
+              Share on LinkedIn ↗
+            </a>
+            <a href={emailShare}>Share by email ↗</a>
+            <a href="/rss.xml">Follow by RSS ↗</a>
+          </nav>
 
-        <nav className={styles.share} aria-label="Share or follow this reporting">
-          <span>Keep the reporting moving</span>
-          <a href={linkedInShare} target="_blank" rel="noopener noreferrer">
-            Share on LinkedIn ↗
-          </a>
-          <a href={emailShare}>Share by email ↗</a>
-          <a href="/rss.xml">Follow by RSS ↗</a>
-        </nav>
-
-        {article.faq.length ? (
-          <section className={styles.faq} aria-labelledby="faq-title">
-            <header>
-              <p>Quick clarity</p>
-              <h2 id="faq-title">Questions this report answers.</h2>
-            </header>
-            <div>
-              {article.faq.map((item, index) => (
-                <details key={item.q}>
-                  <summary>
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    {item.q}
-                    <i aria-hidden="true">+</i>
-                  </summary>
-                  <p>{item.a}</p>
-                </details>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className={styles.action}>
+          <section className={styles.action}>
           <p>Make it specific</p>
           <h2>{cta.heading}</h2>
           <div>
@@ -332,28 +356,29 @@ export default function NewsArticle({
               {cta.label} <span aria-hidden="true">↗</span>
             </a>
           </div>
-        </section>
+          </section>
 
-        {older || newer ? (
-          <nav className={styles.more} aria-label="More from the desk">
-            {older ? (
-              <Link href={`/news/${older.slug}`}>
-                <span>Previous report</span>
-                <strong>{older.title}</strong>
-              </Link>
-            ) : (
-              <span />
-            )}
-            {newer ? (
-              <Link href={`/news/${newer.slug}`}>
-                <span>Next report</span>
-                <strong>{newer.title}</strong>
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
-        ) : null}
+          {older || newer ? (
+            <nav className={styles.more} aria-label="More from the desk">
+              {older ? (
+                <Link href={`/news/${older.slug}`}>
+                  <span>Previous report</span>
+                  <strong>{older.title}</strong>
+                </Link>
+              ) : (
+                <span />
+              )}
+              {newer ? (
+                <Link href={`/news/${newer.slug}`}>
+                  <span>Next report</span>
+                  <strong>{newer.title}</strong>
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          ) : null}
+        </footer>
       </article>
     </main>
   );
