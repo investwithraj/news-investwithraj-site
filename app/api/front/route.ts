@@ -77,6 +77,7 @@ export async function GET() {
 
   return NextResponse.json(
     {
+      schemaVersion: "front-v1",
       available: items.length > 0,
       state: items.length > 0 ? "available" : "withheld",
       reason:

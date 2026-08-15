@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:front-contract": "tsx scripts/test-front-contract.ts",
     "audit:media": "node scripts/audit-batch-9-media.mjs && node scripts/audit-media-quality.mjs",
     "test:intelligence": "tsx scripts/test-intelligence-registry.ts",
     "audit:p0-p5": "node scripts/audit-p0-p5-public-trust.mjs",
