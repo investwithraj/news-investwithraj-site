@@ -18,6 +18,7 @@
     "check:source-health": "tsx scripts/check-source-health.ts",
     "test:auto-publish": "tsx scripts/test-auto-publish.ts",
     "test:draft-response": "tsx scripts/test-draft-response.ts",
+    "test:newsroom-pipeline-recovery": "tsx scripts/test-newsroom-pipeline-recovery.ts",
     "test:public-content": "tsx scripts/test-public-content-gate.ts",
     "test:order98:storage": "tsx scripts/test-queue-concurrency.ts && tsx scripts/test-publication-concurrency.ts"
   },
