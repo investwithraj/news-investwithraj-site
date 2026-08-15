@@ -67,6 +67,30 @@ export default function NewsArchive({
       ),
     [items],
   );
+  const areas = useMemo(
+    () =>
+      [
+        ...new Map(
+          items.flatMap((item) =>
+            item.areas.map((area) => [area.slug, area.name] as const),
+          ),
+        ),
+      ].sort((a, b) => a[1].localeCompare(b[1])),
+    [items],
+  );
+  const developers = useMemo(
+    () =>
+      [
+        ...new Map(
+          items.flatMap((item) =>
+            item.developers.map(
+              (developer) => [developer.slug, developer.name] as const,
+            ),
+          ),
+        ),
+      ].sort((a, b) => a[1].localeCompare(b[1])),
+    [items],
+  );
 
   const query = searchParams.get("q")?.trim() ?? "";
   const category = normaliseArchiveChoice(
@@ -78,6 +102,14 @@ export default function NewsArchive({
     searchParams.get("desk"),
     desks.map((item) => item.slug),
   );
+  const area = normaliseArchiveChoice(
+    searchParams.get("area"),
+    areas.map(([slug]) => slug),
+  );
+  const developer = normaliseArchiveChoice(
+    searchParams.get("developer"),
+    developers.map(([slug]) => slug),
+  );
   const requestedPage = Number(searchParams.get("page") ?? "1");
   const selectedDesk = desks.find((item) => item.slug === desk) ?? null;
 
@@ -88,8 +120,10 @@ export default function NewsArchive({
         category,
         market,
         desk,
+        area,
+        developer,
       }),
-    [category, desk, items, market, query],
+    [area, category, desk, developer, items, market, query],
   );
 
   const pageCount = Math.max(
@@ -156,7 +190,8 @@ export default function NewsArchive({
             </h1>
             <p className={styles.dek}>
               Browse source-linked UAE and Gulf property reporting by market,
-              report type or one of five editorial desks.
+              report type, related area or developer, or one of five
+              editorial desks.
             </p>
             <div className={styles.policyLinks}>
               <a href="/rss.xml">RSS feed ↗</a>
@@ -267,6 +302,38 @@ export default function NewsArchive({
               ))}
             </select>
           </label>
+          <label>
+            <span>Area</span>
+            <select
+              value={area}
+              onChange={(event) =>
+                replaceParams({ area: event.target.value, page: null })
+              }
+            >
+              <option value="all">All related areas</option>
+              {areas.map(([value, label]) => (
+                <option value={value} key={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Developer</span>
+            <select
+              value={developer}
+              onChange={(event) =>
+                replaceParams({ developer: event.target.value, page: null })
+              }
+            >
+              <option value="all">All related developers</option>
+              {developers.map(([value, label]) => (
+                <option value={value} key={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button type="submit">Apply search</button>
         </form>
 
@@ -316,6 +383,23 @@ export default function NewsArchive({
                     {item.desks.length ? (
                       <p className={styles.rowDesks}>
                         {item.desks.map((item) => item.name).join(" · ")}
+                      </p>
+                    ) : null}
+                    {item.areas.length || item.developers.length ? (
+                      <p className={styles.rowRelations}>
+                        {item.areas.length
+                          ? `Area · ${item.areas
+                              .map((area) => area.name)
+                              .join(" / ")}`
+                          : null}
+                        {item.areas.length && item.developers.length
+                          ? " · "
+                          : null}
+                        {item.developers.length
+                          ? `Developer · ${item.developers
+                              .map((developer) => developer.name)
+                              .join(" / ")}`
+                          : null}
                       </p>
                     ) : null}
                     <Link

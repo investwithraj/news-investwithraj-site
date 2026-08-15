@@ -7,6 +7,8 @@ export const NEWS_ARCHIVE_FILTER_KEYS = [
   "market",
   "category",
   "desk",
+  "area",
+  "developer",
   "page",
 ] as const;
 
@@ -22,6 +24,11 @@ export type NewsArchiveAdvisoryLink = Readonly<{
   eyebrow: string;
 }>;
 
+export type NewsArchiveEntity = Readonly<{
+  slug: string;
+  name: string;
+}>;
+
 export type NewsArchiveItem = Readonly<{
   slug: string;
   title: string;
@@ -32,6 +39,8 @@ export type NewsArchiveItem = Readonly<{
   categoryLabel: string;
   markets: string[];
   desks: ReadonlyArray<Pick<NewsArchiveDesk, "slug" | "name">>;
+  areas: readonly NewsArchiveEntity[];
+  developers: readonly NewsArchiveEntity[];
   evidenceLabel: string;
   evidenceLimited: boolean;
   media: ArticleDisplayMedia | null;
@@ -47,6 +56,8 @@ export type NewsArchiveFilters = Readonly<{
   market: string;
   category: string;
   desk: string;
+  area: string;
+  developer: string;
 }>;
 
 export type NewsArchiveFreshness = Readonly<{
@@ -81,6 +92,8 @@ export function filterNewsArchiveItems(
         item.categoryLabel,
         ...item.markets,
         ...item.desks.map((desk) => desk.name),
+        ...item.areas.map((area) => area.name),
+        ...item.developers.map((developer) => developer.name),
       ]
         .join(" ")
         .toLocaleLowerCase("en")
@@ -92,8 +105,23 @@ export function filterNewsArchiveItems(
     const matchesDesk =
       filters.desk === "all" ||
       item.desks.some((desk) => desk.slug === filters.desk);
+    const matchesArea =
+      filters.area === "all" ||
+      item.areas.some((area) => area.slug === filters.area);
+    const matchesDeveloper =
+      filters.developer === "all" ||
+      item.developers.some(
+        (developer) => developer.slug === filters.developer,
+      );
 
-    return matchesQuery && matchesMarket && matchesCategory && matchesDesk;
+    return (
+      matchesQuery &&
+      matchesMarket &&
+      matchesCategory &&
+      matchesDesk &&
+      matchesArea &&
+      matchesDeveloper
+    );
   });
 }
 

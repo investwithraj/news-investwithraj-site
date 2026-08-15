@@ -5,12 +5,20 @@ import { resolve } from "node:path";
 import { NEWS_ARTICLES } from "@/content/news";
 import { planDistinctArticleMedia } from "@/lib/article-display-media";
 import {
+  ARTICLE_RELATION_RECORDS,
+  getArticleRelationRecord,
+  resolveArticleRelations,
+  validateArticleRelationRecords,
+  type ArticleRelationRecord,
+} from "@/lib/article-relations";
+import {
   archivePageNumber,
   filterNewsArchiveItems,
   NEWS_ARCHIVE_FILTER_KEYS,
   NEWS_ARCHIVE_PAGE_SIZE,
   newsArchiveFreshness,
   normaliseArchiveChoice,
+  type NewsArchiveFilters,
 } from "@/lib/news-archive";
 import {
   NEWS_ARCHIVE_DESKS,
@@ -27,10 +35,24 @@ const EXPECTED_DESKS = [
   "sovereign-plays",
   "beyond-the-deal",
 ] as const;
+const ALL_FILTERS: NewsArchiveFilters = {
+  query: "",
+  market: "all",
+  category: "all",
+  desk: "all",
+  area: "all",
+  developer: "all",
+};
 const HOUR_MS = 3_600_000;
 
 const items = projectNewsArchiveItems(NEWS_ARTICLES);
-const bySlug = new Map(PUBLISHED_NEWS_ARTICLES.map((article) => [article.slug, article]));
+const bySlug = new Map(
+  PUBLISHED_NEWS_ARTICLES.map((article) => [article.slug, article]),
+);
+const relationSlugs = ARTICLE_RELATION_RECORDS.map(
+  (record) => record.articleSlug,
+);
+const publishedSlugs = PUBLISHED_NEWS_ARTICLES.map((article) => article.slug);
 
 assert.deepEqual(
   NEWS_ARCHIVE_DESKS.map((desk) => desk.slug),
@@ -39,8 +61,8 @@ assert.deepEqual(
 );
 assert.deepEqual(
   NEWS_ARCHIVE_FILTER_KEYS,
-  ["q", "market", "category", "desk", "page"],
-  "Only typed article facets and the approved desk model may become filters.",
+  ["q", "market", "category", "desk", "area", "developer", "page"],
+  "Only typed article facets and approved editorial relations may filter.",
 );
 assert.equal(
   items.length,
@@ -48,8 +70,9 @@ assert.equal(
   "The archive projection must use the complete published boundary.",
 );
 assert.ok(
-  items.every((item, index) =>
-    index === 0 || items[index - 1].publishedAt >= item.publishedAt,
+  items.every(
+    (item, index) =>
+      index === 0 || items[index - 1].publishedAt >= item.publishedAt,
   ),
   "Archive items must remain newest-first.",
 );
@@ -58,15 +81,99 @@ assert.ok(
   "Research records must not enter the archive projection.",
 );
 
+assert.equal(
+  new Set(relationSlugs).size,
+  ARTICLE_RELATION_RECORDS.length,
+  "Published articles must not have duplicate relation records.",
+);
+assert.deepEqual(
+  [...relationSlugs].sort(),
+  [...publishedSlugs].sort(),
+  "Every published slug must have exactly one explicit relation record.",
+);
+assert.ok(
+  ARTICLE_RELATION_RECORDS.every(
+    (record) =>
+      Array.isArray(record.areaSlugs) &&
+      Array.isArray(record.developerSlugs),
+  ),
+  "Empty relation arrays are required classifications, not missing data.",
+);
+validateArticleRelationRecords(ARTICLE_RELATION_RECORDS);
+
+assert.throws(
+  () => getArticleRelationRecord("not-a-published-article"),
+  /Unknown published article relation/,
+);
+assert.throws(
+  () =>
+    validateArticleRelationRecords([
+      {
+        articleSlug: "not-a-published-article",
+        areaSlugs: [],
+        developerSlugs: [],
+      },
+      ...ARTICLE_RELATION_RECORDS,
+    ]),
+  /Unknown published article relation/,
+);
+assert.throws(
+  () =>
+    validateArticleRelationRecords([
+      ...ARTICLE_RELATION_RECORDS,
+      ARTICLE_RELATION_RECORDS[0],
+    ]),
+  /Duplicate article relation/,
+);
+assert.throws(
+  () => validateArticleRelationRecords(ARTICLE_RELATION_RECORDS.slice(1)),
+  /Missing explicit article relations/,
+);
+
+function replaceFirstRelation(
+  replacement: Partial<ArticleRelationRecord>,
+): ArticleRelationRecord[] {
+  return ARTICLE_RELATION_RECORDS.map((record, index) =>
+    index === 0 ? { ...record, ...replacement } : record,
+  );
+}
+
+assert.throws(
+  () =>
+    validateArticleRelationRecords(
+      replaceFirstRelation({ areaSlugs: ["not-an-area"] }),
+    ),
+  /Unknown advisory area relation/,
+);
+assert.throws(
+  () =>
+    validateArticleRelationRecords(
+      replaceFirstRelation({ areaSlugs: ["business-bay"] }),
+    ),
+  /Area relation has no canonical advisory destination/,
+);
+assert.throws(
+  () =>
+    validateArticleRelationRecords(
+      replaceFirstRelation({ developerSlugs: ["not-a-developer"] }),
+    ),
+  /Unknown advisory developer relation/,
+);
+assert.throws(
+  () =>
+    validateArticleRelationRecords(
+      replaceFirstRelation({ developerSlugs: ["damac"] }),
+    ),
+  /Developer relation has no canonical advisory destination/,
+);
+
 for (const vertical of VERTICALS) {
   const expected = getVerticalArticles(
     vertical,
     PUBLISHED_NEWS_ARTICLES,
   ).map((article) => article.slug);
   const actual = filterNewsArchiveItems(items, {
-    query: "",
-    market: "all",
-    category: "all",
+    ...ALL_FILTERS,
     desk: vertical.slug,
   }).map((item) => item.slug);
 
@@ -78,26 +185,101 @@ for (const vertical of VERTICALS) {
   );
 }
 
-const target = items.find((item) => item.desks.length > 0);
-assert.ok(target, "A published desk article is required for combined-filter tests.");
+const relatedAreaSlugs = [
+  ...new Set(ARTICLE_RELATION_RECORDS.flatMap((record) => record.areaSlugs)),
+];
+const relatedDeveloperSlugs = [
+  ...new Set(
+    ARTICLE_RELATION_RECORDS.flatMap((record) => record.developerSlugs),
+  ),
+];
+
+for (const areaSlug of relatedAreaSlugs) {
+  const expected = ARTICLE_RELATION_RECORDS.filter((record) =>
+    (record.areaSlugs as readonly string[]).includes(areaSlug),
+  )
+    .map((record) => record.articleSlug)
+    .sort();
+  const actual = filterNewsArchiveItems(items, {
+    ...ALL_FILTERS,
+    area: areaSlug,
+  })
+    .map((item) => item.slug)
+    .sort();
+
+  assert.deepEqual(
+    actual,
+    expected,
+    `${areaSlug} filter count must equal the explicit relation registry.`,
+  );
+}
+
+for (const developerSlug of relatedDeveloperSlugs) {
+  const expected = ARTICLE_RELATION_RECORDS.filter((record) =>
+    (record.developerSlugs as readonly string[]).includes(developerSlug),
+  )
+    .map((record) => record.articleSlug)
+    .sort();
+  const actual = filterNewsArchiveItems(items, {
+    ...ALL_FILTERS,
+    developer: developerSlug,
+  })
+    .map((item) => item.slug)
+    .sort();
+
+  assert.deepEqual(
+    actual,
+    expected,
+    `${developerSlug} filter count must equal the explicit relation registry.`,
+  );
+}
+
+const target = items.find(
+  (item) =>
+    item.desks.length > 0 &&
+    item.areas.length > 0 &&
+    item.developers.length > 0,
+);
+assert.ok(target, "A fully related article is required for intersection tests.");
 const combined = filterNewsArchiveItems(items, {
   query: `  ${target.title.toLocaleUpperCase("en")}  `,
   market: target.markets[0],
   category: target.category,
   desk: target.desks[0].slug,
+  area: target.areas[0].slug,
+  developer: target.developers[0].slug,
 });
 assert.ok(
   combined.some((item) => item.slug === target.slug),
-  "Query matching must be trimmed, case-insensitive and intersect other facets.",
+  "Query matching must be trimmed, case-insensitive and intersect all facets.",
 );
 assert.ok(
   combined.every(
     (item) =>
       item.markets.includes(target.markets[0]) &&
       item.category === target.category &&
-      item.desks.some((desk) => desk.slug === target.desks[0].slug),
+      item.desks.some((desk) => desk.slug === target.desks[0].slug) &&
+      item.areas.some((area) => area.slug === target.areas[0].slug) &&
+      item.developers.some(
+        (developer) => developer.slug === target.developers[0].slug,
+      ),
   ),
   "Combined filters must use intersection semantics.",
+);
+
+assert.deepEqual(
+  getArticleRelationRecord(
+    "2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-",
+  ).developerSlugs,
+  [],
+  "Nakheel must not be related merely because body text mentions it.",
+);
+assert.deepEqual(
+  getArticleRelationRecord(
+    "2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+  ).areaSlugs,
+  [],
+  "Contextual Hudayriyat imagery must not create an area relation.",
 );
 
 assert.equal(normaliseArchiveChoice(null, EXPECTED_DESKS), "all");
@@ -152,6 +334,14 @@ for (const item of items) {
   const evidence = evidenceSummary(article);
   const cta = decisionCta(article);
   const plannedMedia = mediaPlan.get(item.slug);
+  const relations = resolveArticleRelations(item.slug);
+  const relationLinks = [
+    ...relations.areas.flatMap((area) => area.advisoryLinks),
+    ...relations.developers.map((developer) => developer.advisoryLink),
+  ];
+  const expectedLinks = [
+    ...new Map(relationLinks.map((link) => [link.href, link])).values(),
+  ].slice(0, 2);
 
   assert.equal(item.evidenceLabel, evidence.label);
   assert.equal(item.evidenceLimited, evidence.limited);
@@ -161,12 +351,23 @@ for (const item of items) {
     plannedMedia?.label === "Report image" ? plannedMedia : null,
     "Archive media must pass the exact approved report-image gate.",
   );
+  assert.deepEqual(
+    item.areas,
+    relations.areas.map(({ slug, name }) => ({ slug, name })),
+  );
+  assert.deepEqual(
+    item.developers,
+    relations.developers.map(({ slug, name }) => ({ slug, name })),
+  );
+  assert.deepEqual(
+    item.advisoryLinks,
+    expectedLinks,
+    "Dossier links must come from the same explicit relation record as filters.",
+  );
   assert.ok(
     item.media === null || item.media.label === "Report image",
     "Context-only area/developer assets cannot be presented as report imagery.",
   );
-  assert.equal("areaSlugs" in item, false);
-  assert.equal("developerSlugs" in item, false);
 
   for (const link of item.advisoryLinks) {
     const url = new URL(link.href);
@@ -179,6 +380,14 @@ for (const item of items) {
 const pageSource = readFileSync(resolve("app/news/page.tsx"), "utf8");
 const componentSource = readFileSync(
   resolve("components/redesign/NewsArchive.tsx"),
+  "utf8",
+);
+const projectionSource = readFileSync(
+  resolve("lib/news-archive-projection.ts"),
+  "utf8",
+);
+const relationsSource = readFileSync(
+  resolve("lib/article-relations.ts"),
   "utf8",
 );
 assert.ok(
@@ -195,10 +404,30 @@ assert.equal(
   "force-static must not blank client useSearchParams in Next 16.",
 );
 assert.ok(componentSource.includes('searchParams.get("desk")'));
-assert.equal(componentSource.includes('searchParams.get("area")'), false);
-assert.equal(componentSource.includes('searchParams.get("developer")'), false);
+assert.ok(componentSource.includes('searchParams.get("area")'));
+assert.ok(componentSource.includes('searchParams.get("developer")'));
 assert.ok(componentSource.includes('data-cta-source="news-archive"'));
 
+for (const forbidden of [
+  "relatedAreasForArticle",
+  "relatedDevelopersForArticle",
+  "articleMentionsArea",
+  "articleMentionsDeveloper",
+  "PUBLIC_AREAS",
+  "PUBLIC_DEVELOPERS",
+]) {
+  assert.equal(
+    projectionSource.includes(forbidden),
+    false,
+    `Archive projection must not use inferred relation helper ${forbidden}.`,
+  );
+  assert.equal(
+    relationsSource.includes(forbidden),
+    false,
+    `Explicit relation registry must not use inferred helper ${forbidden}.`,
+  );
+}
+
 console.log(
-  `News archive contract passed for ${items.length} reports and ${NEWS_ARCHIVE_DESKS.length} desks.`,
+  `News archive contract passed for ${items.length} reports, ${NEWS_ARCHIVE_DESKS.length} desks, ${relatedAreaSlugs.length} areas and ${relatedDeveloperSlugs.length} developers.`,
 );

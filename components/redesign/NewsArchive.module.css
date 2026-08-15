@@ -200,8 +200,8 @@
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(16rem, 1fr) minmax(10rem, 0.35fr)
-    minmax(10rem, 0.35fr) auto;
+  grid-template-columns: minmax(15rem, 1fr) repeat(4, minmax(8rem, 0.42fr))
+    auto;
   gap: 1px;
   margin-bottom: 4rem;
   background: rgba(240, 240, 236, 0.18);
@@ -365,6 +365,15 @@
 .rowDesks {
   margin: 0;
   color: #d8c089;
+  font-size: 0.58rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rowRelations {
+  margin: -0.25rem 0 0;
+  color: #b8c0ff;
   font-size: 0.58rem;
   font-weight: 650;
   letter-spacing: 0.08em;
