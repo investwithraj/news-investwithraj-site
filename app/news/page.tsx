@@ -1,24 +1,29 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { Suspense } from "react";
 
-import NewsArchive, {
-  type NewsArchiveItem,
-} from "@/components/redesign/NewsArchive";
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
+import NewsArchive from "@/components/redesign/NewsArchive";
 import { SITE } from "@/lib/constants";
+import { newsArchiveFreshness } from "@/lib/news-archive";
 import {
-  categoryLabel,
-  displayMarkets,
-  evidenceSummary,
-} from "@/lib/news-editorial";
+  NEWS_ARCHIVE_DESKS,
+  projectNewsArchiveItems,
+} from "@/lib/news-archive-projection";
+import { PUBLISHED_NEWS_ARTICLES } from "@/lib/public-content";
 import {
   asGraph,
   breadcrumbSchema,
   collectionPageSchemas,
 } from "@/lib/schema";
 
-export const dynamic = "force-static";
 export const revalidate = 3600;
+
+const currentArchiveFreshness = unstable_cache(
+  async (newestPublishedAt: string | null) =>
+    newsArchiveFreshness(newestPublishedAt, Date.now()),
+  ["news-archive-freshness"],
+  { revalidate },
+);
 
 const PAGE_URL = `${SITE.url}/news`;
 const DESCRIPTION =
@@ -33,25 +38,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function NewsIndex() {
-  const live = sortNewsArticles(NEWS_ARTICLES).filter(
-    (article) => article.status !== "research",
+export default async function NewsIndex() {
+  const live = PUBLISHED_NEWS_ARTICLES;
+  const items = projectNewsArchiveItems(live);
+  const freshness = await currentArchiveFreshness(
+    live[0]?.publishedAt ?? null,
   );
-  const items: NewsArchiveItem[] = live.map((article) => {
-    const evidence = evidenceSummary(article);
-    return {
-      slug: article.slug,
-      title: article.title,
-      subtitle: article.subtitle,
-      publishedAt: article.publishedAt,
-      displayDate: article.displayDate,
-      category: article.category,
-      categoryLabel: categoryLabel(article.category),
-      markets: displayMarkets(article),
-      evidenceLabel: evidence.label,
-      evidenceLimited: evidence.limited,
-    };
-  });
   const [collection, itemList] = collectionPageSchemas({
     url: PAGE_URL,
     name: "Invest With Raj news archive",
@@ -93,7 +85,11 @@ export default function NewsIndex() {
           </main>
         }
       >
-        <NewsArchive items={items} />
+        <NewsArchive
+          items={items}
+          desks={NEWS_ARCHIVE_DESKS}
+          freshness={freshness}
+        />
       </Suspense>
     </>
   );
