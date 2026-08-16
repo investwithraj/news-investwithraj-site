@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 
 import {
   assessDraft,
+  extractFigures,
+  findUnsupportedFigures,
   runAutoApprove,
 } from "../lib/news-review/auto-approve.js";
 import type {
@@ -213,6 +215,33 @@ async function main() {
     );
     assert.equal(assessDraft(tldrRecommendationDraft).verdict, "manual");
 
+    const disputedOneSourceDraft = {
+      ...reutersDraft,
+      id: "single-source-disputed-market-claim",
+      article: {
+        ...reutersDraft.article,
+        body:
+          "Reuters reported that the market-wide AED 10 million claim remains disputed.",
+      },
+    } as NewsDraft;
+    const disputedOneSourceAssessment = assessDraft(disputedOneSourceDraft);
+    assert.equal(disputedOneSourceAssessment.requiredPublisherCount, 2);
+    assert.equal(disputedOneSourceAssessment.verdict, "manual");
+
+    const disputedTwoSourceDraft = {
+      ...draft,
+      id: "two-source-disputed-market-claim",
+      article: {
+        ...draft.article,
+        body:
+          "Reuters reported that the market-wide AED 10 million claim remains disputed.",
+      },
+    } as NewsDraft;
+    const disputedTwoSourceAssessment = assessDraft(disputedTwoSourceDraft);
+    assert.equal(disputedTwoSourceAssessment.requiredPublisherCount, 2);
+    assert.equal(disputedTwoSourceAssessment.fetchedEvidenceCount, 2);
+    assert.equal(disputedTwoSourceAssessment.verdict, "auto-approve");
+
     const corroboratedAnalysisDraft = {
       ...draft,
       id: "two-source-analysis",
@@ -254,6 +283,26 @@ async function main() {
       assessDraft(samePublisherDraft).verdict,
       "manual",
       "two URLs from one publisher must not satisfy independent corroboration",
+    );
+
+    const crossPublisherRedirectDraft = {
+      ...reutersDraft,
+      id: "cross-publisher-redirect",
+      provenance: {
+        ...reutersDraft.provenance,
+        fetchedEvidence: [
+          evidenceRecord(reutersDraft.article.citations[0].url, evidence, {
+            finalUrl: sourceB,
+          }),
+        ],
+      },
+    } as NewsDraft;
+    const redirectAssessment = assessDraft(crossPublisherRedirectDraft);
+    assert.equal(redirectAssessment.verdict, "manual");
+    assert.ok(
+      redirectAssessment.reasons.some((reason) =>
+        /publisher identity changed/.test(reason),
+      ),
     );
 
     const legacyUndatedDraft = {
@@ -327,6 +376,68 @@ async function main() {
       "auto-approve",
       `freshness must use the stored staging clock, not the later publication-run clock: ${heldBacklogAssessment.reasons.join("; ")}`,
     );
+
+    const materialCounts =
+      "The plan covers 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares for delivery in 2029.";
+    const materialFigures = extractFigures(materialCounts);
+    for (const figure of [
+      "7 towers",
+      "phase 2",
+      "12 floors",
+      "3 bedrooms",
+      "5 km",
+      "40 hectares",
+      "2029",
+    ]) {
+      assert.ok(materialFigures.includes(figure), `${figure} must be extracted`);
+    }
+    assert.deepEqual(
+      extractFigures(
+        "Dated 16 August 2026, Section 2 and pages 5-7 contain editorial navigation only.",
+      ),
+      [],
+      "ordinary calendar dates and section/page labels must not become claims",
+    );
+    assert.deepEqual(findUnsupportedFigures(materialCounts, materialCounts), []);
+    assert.deepEqual(
+      findUnsupportedFigures("The value was AED 10 million.", [
+        "One source mentioned AED 10",
+        "Another source used the word million without that value.",
+      ]),
+      ["aed 10 million"],
+      "numeric tokens split across publishers must not combine into support",
+    );
+
+    const supportedCountsDraft = {
+      ...reutersDraft,
+      id: "supported-material-counts",
+      article: {
+        ...reutersDraft.article,
+        body: `Reuters reported AED 10 million. ${materialCounts}`,
+      },
+      provenance: {
+        ...reutersDraft.provenance,
+        fetchedEvidence: [
+          evidenceRecord(
+            reutersDraft.article.citations[0].url,
+            `Reuters reported AED 10 million. ${materialCounts} The release provides direct project detail.`,
+          ),
+        ],
+      },
+    } as NewsDraft;
+    assert.equal(assessDraft(supportedCountsDraft).verdict, "auto-approve");
+
+    const unsupportedCountsDraft = {
+      ...supportedCountsDraft,
+      id: "unsupported-material-counts",
+      article: {
+        ...supportedCountsDraft.article,
+        body: supportedCountsDraft.article.body.replace("7 towers", "8 towers"),
+      },
+    } as NewsDraft;
+    const unsupportedCountsAssessment = assessDraft(unsupportedCountsDraft);
+    assert.equal(unsupportedCountsAssessment.verdict, "manual");
+    assert.ok(unsupportedCountsAssessment.amberFigures.includes("8 towers"));
 
     const crossFieldFiguresDraft = {
       ...draft,

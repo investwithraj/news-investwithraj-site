@@ -9,6 +9,7 @@ import type {
 } from "@/lib/news-review/types";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 import {
+  approvedEvidencePublisherDomain,
   assessDraft,
   assessStoredEvidenceFreshness,
 } from "@/lib/news-review/auto-approve";
@@ -489,13 +490,16 @@ export function validateProvenanceShape(
           evidence.freshnessCheckedAt,
           evidence.freshnessMaxAgeHours,
         ].some((field) => field !== undefined);
+        const typedEvidence = evidence as unknown as NonNullable<
+          NewsDraftProvenance["fetchedEvidence"]
+        >[number];
         return (
           hasFreshnessMetadata &&
-          !assessStoredEvidenceFreshness(
-            evidence as unknown as NonNullable<
-              NewsDraftProvenance["fetchedEvidence"]
-            >[number],
-          ).ok
+          (!assessStoredEvidenceFreshness(typedEvidence).ok ||
+            approvedEvidencePublisherDomain(
+              typedEvidence.url,
+              typedEvidence.finalUrl,
+            ) === null)
         );
       }))
   ) {

@@ -241,6 +241,71 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     "a future-dated source cannot mint an evidence ledger",
   );
 
+  const redirectedEvidence = {
+    article: fixture.article,
+    provenance: {
+      ...fixture.provenance,
+      fetchedEvidence: [
+        {
+          ...freshEvidence,
+          finalUrl: NATIONAL_URL,
+        },
+      ],
+    },
+  };
+  assert.equal(
+    approvalFor(redirectedEvidence),
+    null,
+    "a cross-publisher redirect cannot mint evidence for the cited publisher",
+  );
+
+  const countEvidenceText =
+    "Reuters reported AED 10 million across 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares scheduled for delivery in 2029.";
+  const supportedCounts = {
+    article: {
+      ...fixture.article,
+      title: "7 towers confirmed in the latest project update",
+      subtitle: "Phase 2 contains 12 floors in the directly reported plan.",
+      tldr: [
+        "The plan includes 3 bedrooms.",
+        "The corridor extends 5 km.",
+        "Delivery is scheduled for 2029.",
+      ] as [string, string, string],
+      faq: [
+        {
+          q: "How much land is covered?",
+          a: "The directly reported plan covers 40 hectares.",
+        },
+      ],
+    },
+    provenance: {
+      ...fixture.provenance,
+      fetchedEvidence: [
+        {
+          ...freshEvidence,
+          text: countEvidenceText,
+          contentHash: undefined,
+        },
+      ],
+    },
+  };
+  assert.ok(
+    approvalFor(supportedCounts),
+    "exactly supported count, phase, unit and year claims must mint a ledger",
+  );
+  const unsupportedCount = {
+    ...supportedCounts,
+    article: {
+      ...supportedCounts.article,
+      title: supportedCounts.article.title.replace("7 towers", "8 towers"),
+    },
+  };
+  assert.equal(
+    approvalFor(unsupportedCount),
+    null,
+    "an unsupported material count outside the body must block the ledger",
+  );
+
   const unsupportedAcrossFields = {
     article: {
       ...fixture.article,
@@ -401,6 +466,134 @@ async function analysisRequiresTwoDomains(): Promise<{
     twoSources: twoSourceFixture,
     samePublisher: samePublisherFixture,
   };
+}
+
+async function disputedMarketClaimsRequireTwoDomains(): Promise<void> {
+  const disputedBody = bodyWithFigure().replace(
+    "establishing a structural mandate and a clear catalyst for this precinct",
+    "while the market-wide claim remains disputed, despite the structural mandate and catalyst for this precinct",
+  );
+  const oneSource = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+    now: NOW,
+    dependencies: {
+      research: (async () => ({
+        ok: true,
+        text: draftJson({ body: disputedBody }),
+      })) satisfies ResearchCall,
+      repair: (async () => ({ ok: false, error: "must fail before repair" })) satisfies RepairCall,
+      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+    },
+  });
+  assert.equal(oneSource.ok, false);
+  assert.match(oneSource.reason ?? "", /need 2 for corroborated-analysis/);
+
+  const twoSources = await draftFromCluster(
+    cluster([REUTERS_URL, NATIONAL_URL]),
+    WHITELIST,
+    {
+      now: NOW,
+      dependencies: {
+        research: (async () => ({
+          ok: true,
+          text: draftJson({
+            body: disputedBody,
+            urls: [REUTERS_URL, NATIONAL_URL],
+          }),
+        })) satisfies ResearchCall,
+        repair: (async () => ({ ok: false, error: "repair should not run" })) satisfies RepairCall,
+        fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      },
+    },
+  );
+  assert.equal(twoSources.ok, true, twoSources.reason);
+  const twoSourceFixture = {
+    article: twoSources.article!,
+    provenance: twoSources.provenance!,
+  };
+  assert.ok(
+    approvalFor(twoSourceFixture),
+    "two independent publishers must support a disputed market-wide ledger",
+  );
+
+  const oneSourceFixture = {
+    article: {
+      ...twoSourceFixture.article,
+      slug: "2026-08-16-one-source-disputed-market-claim",
+      citations: [twoSourceFixture.article.citations[0]],
+      heroImage: {
+        ...twoSourceFixture.article.heroImage,
+        src: "/news/2026-08-16-one-source-disputed-market-claim/cover.jpg" as const,
+      },
+    },
+    provenance: {
+      ...twoSourceFixture.provenance,
+      clusterId: "one-source-disputed-market-claim",
+      fetchedEvidence: [twoSourceFixture.provenance.fetchedEvidence![0]],
+    },
+  };
+  assert.equal(
+    approvalFor(oneSourceFixture),
+    null,
+    "edited or legacy one-source disputed claims must remain manual",
+  );
+}
+
+async function crossPublisherRedirectIsHeld(): Promise<void> {
+  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+    now: NOW,
+    dependencies: {
+      research: (async () => ({
+        ok: true,
+        text: draftJson({ body: bodyWithFigure() }),
+      })) satisfies ResearchCall,
+      repair: (async () => ({ ok: false, error: "repair must not run" })) satisfies RepairCall,
+      fetchArticle: (async (url) => ({
+        ...fetched(url),
+        finalUrl: NATIONAL_URL,
+      })) satisfies FetchCall,
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.reason ?? "", /only 0 fresh, directly fetched/);
+  assert.ok(
+    result.diagnostics?.some((entry) =>
+      /publisher identity mismatch/.test(entry),
+    ),
+  );
+}
+
+async function fetchCompletionClockIsStored(): Promise<void> {
+  const draftClock = new Date("2026-08-15T22:00:00.000Z");
+  const sourcePublished = "2026-08-15T22:05:00.000Z";
+  const fetchCompleted = new Date("2026-08-15T22:10:00.000Z");
+  const clockValues = [draftClock, fetchCompleted];
+  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+    dependencies: {
+      clock: () => {
+        const value = clockValues.shift();
+        if (!value) throw new Error("clock read more than twice");
+        return value;
+      },
+      research: (async () => ({
+        ok: true,
+        text: draftJson({ body: bodyWithFigure() }),
+      })) satisfies ResearchCall,
+      repair: (async () => ({ ok: false, error: "repair should not run" })) satisfies RepairCall,
+      fetchArticle: (async (url) =>
+        fetched(url, sourcePublished)) satisfies FetchCall,
+    },
+  });
+  assert.equal(result.ok, true, result.reason);
+  assert.equal(result.article?.publishedAt, draftClock.toISOString());
+  assert.equal(
+    result.provenance?.fetchedEvidence?.[0]?.fetchedAt,
+    fetchCompleted.toISOString(),
+  );
+  assert.equal(
+    result.provenance?.fetchedEvidence?.[0]?.freshnessCheckedAt,
+    fetchCompleted.toISOString(),
+  );
+  assert.equal(clockValues.length, 0);
 }
 
 async function storageUsesSameEvidencePolicy(
@@ -716,6 +909,9 @@ async function main(): Promise<void> {
   await protectedFetchDiagnostics();
   const tierA = await singleSourceTierA();
   const analysis = await analysisRequiresTwoDomains();
+  await disputedMarketClaimsRequireTwoDomains();
+  await crossPublisherRedirectIsHeld();
+  await fetchCompletionClockIsStored();
   await storageUsesSameEvidencePolicy(tierA, analysis);
   await staleAndUnknownDatesHold();
   await unsupportedFiguresNeverPass();

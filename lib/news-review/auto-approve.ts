@@ -40,10 +40,17 @@ export interface EvidencePolicy {
   reason: string;
 }
 
-const ANALYTICAL_CLAIM_RE =
+const INVESTMENT_OR_FORECAST_CLAIM_RE =
   /\b(?:recommend(?:s|ed|ation)?|should\s+(?:buy|sell|avoid)|buy\s+call|sell\s+call|undervalued|overvalued|outperform|underperform|guaranteed|risk[- ]free|forecast(?:s|ed)?|projected\s+return|will\s+(?:rise|fall|increase|decline)\s+by)\b/i;
+const DISPUTED_OR_MARKET_WIDE_CLAIM_RE =
+  /\b(?:disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?|deni(?:ed|es|al)|alleg(?:ed|es|ation|ations)|market-wide|across\s+the\s+(?:property|real\s+estate|housing)\s+market|market\s+(?:will|is\s+set\s+to|is\s+expected\s+to))\b/i;
 const ATTRIBUTION_RE =
   /\b(?:according to|said|says|announced|reported|confirmed|stated|published|disclosed)\b/i;
+
+export interface EvidenceRiskClassification {
+  requiresCorroboration: boolean;
+  reason: string | null;
+}
 
 export function articleEvidenceText(article: DraftArticle): string {
   const tldr = Array.isArray(article.tldr) ? article.tldr : [];
@@ -57,17 +64,52 @@ export function articleEvidenceText(article: DraftArticle): string {
   ].join("\n");
 }
 
+/** One complete claim-risk classifier for drafting, stored-draft assessment,
+ * ledger minting and publication recomputation. */
+export function classifyEvidenceRisk(
+  article: DraftArticle,
+): EvidenceRiskClassification {
+  const text = articleEvidenceText(article);
+  if (article.semaform?.howIdTradeIt || INVESTMENT_OR_FORECAST_CLAIM_RE.test(text)) {
+    return {
+      requiresCorroboration: true,
+      reason: "investment conclusions and forecasts require corroboration",
+    };
+  }
+  if (DISPUTED_OR_MARKET_WIDE_CLAIM_RE.test(text)) {
+    return {
+      requiresCorroboration: true,
+      reason: "disputed or market-wide claims require independent corroboration",
+    };
+  }
+  return { requiresCorroboration: false, reason: null };
+}
+
 /** Canonical publisher identity, based on the approved registry anchor rather
  * than the raw hostname. `graphics.reuters.com` and `www.reuters.com` are one
  * publisher and can never satisfy two-source corroboration. */
 export function approvedPublisherDomain(url: string): string | null {
   const source = findSourceByUrl(url);
-  if (!source) return null;
+  if (!source || source.citable === false) return null;
   try {
     return new URL(source.url).hostname.toLowerCase().replace(/^www\./, "");
   } catch {
     return null;
   }
+}
+
+/** Direct evidence may follow redirects only within the same approved parent
+ * publisher. A cross-publisher redirect changes attribution and is manual. */
+export function approvedEvidencePublisherDomain(
+  citedUrl: string,
+  finalUrl: string | null | undefined,
+): string | null {
+  if (!finalUrl) return null;
+  const citedPublisher = approvedPublisherDomain(citedUrl);
+  const finalPublisher = approvedPublisherDomain(finalUrl);
+  return citedPublisher && citedPublisher === finalPublisher
+    ? citedPublisher
+    : null;
 }
 
 type StoredEvidence = NonNullable<
@@ -203,11 +245,12 @@ export function determineEvidencePolicy(
   evidenceUrls: string[],
 ): EvidencePolicy {
   const body = articleEvidenceText(article);
-  if (ANALYTICAL_CLAIM_RE.test(body) || article.semaform?.howIdTradeIt) {
+  const risk = classifyEvidenceRisk(article);
+  if (risk.requiresCorroboration) {
     return {
       lane: "corroborated-analysis",
       requiredPublisherCount: 2,
-      reason: "investment conclusions and forecasts require corroboration",
+      reason: risk.reason ?? "high-risk claims require corroboration",
     };
   }
 
@@ -268,7 +311,7 @@ export interface AutoApproveAssessment {
   evidenceLane: EvidenceLane;
   requiredPublisherCount: 1 | 2;
   figureCount: number;
-  /** Figures present in the body but NOT found in cited-source text. */
+  /** Figures present in publishable fields but absent from fetched evidence. */
   amberFigures: string[];
   /** Human-readable reasons a draft was held for manual review (empty = approve). */
   reasons: string[];
@@ -291,26 +334,59 @@ const CUR = String.raw`(?:AED|USD|US\$|\$|€|£|Dhs|Dh)`;
 // A comma only counts as a thousands separator (comma + exactly 3 digits), so a
 // year followed by a prose comma ("2026,") is NOT read as a comma-number.
 const NUM = String.raw`(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)`;
-// Units incl. spelled-out forms ("per cent", "per annum") and bare m/k.
-const UNIT = String.raw`(?:%|per\s?cent|percent|bps|pp|p\.a\.|per\s+annum|bn|billion|million|trillion|tn|sq\.?\s?ft|sqft|psf)`;
+// Financial, measured and claim-bearing count units. The finite noun list
+// catches material statements such as "7 towers" without treating every list
+// or section number as a sourced statistic.
+const UNIT = String.raw`(?:%|per\s?cent|percent|bps|pp|p\.a\.|per\s+annum|bn|billion|million|trillion|tn|sq\.?\s?ft|sqft|sq\.?\s?m|sqm|psf|km|kilomet(?:re|er)s?|met(?:re|er)s?|hectares?|acres?|towers?|buildings?|homes?|units?|apartments?|villas?|residences?|floors?|storeys?|stories|levels?|bedrooms?|rooms?|keys?|plots?|years?|months?|days?)`;
 
 // currency? number range? unit?  — capture groups decide "meaningful".
 const FIGURE_RE = new RegExp(
   `(${CUR})?\\s?(${NUM})((?:\\s*[-–]\\s*${NUM})?)\\s*(${UNIT}|[mk](?![a-z]))?`,
   "gi",
 );
+const LABELLED_COUNT_RE =
+  /\b(?:phase|stage|plot|unit|tower|building)\s+(?:no\.?\s*)?\d+(?:\.\d+)?\b/gi;
+const YEAR_RE = /\b(?:19|20)\d{2}\b/g;
+const MONTH =
+  String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`;
+const DATE_BEFORE_YEAR_RE = new RegExp(
+  String.raw`(?:\b\d{1,2}\s+${MONTH}\s*|\b${MONTH}(?:\s+\d{1,2},?)?\s*)$`,
+  "i",
+);
+const DATE_AFTER_YEAR_RE = new RegExp(String.raw`^\s+${MONTH}\b`, "i");
 
 // A cheap independent detector of "this body has statistics" — used as a guard
 // against the figure parser silently missing something (see check 5).
 const STAT_SIGNAL_RE = new RegExp(
-  `${CUR}\\s?\\d|\\d[\\d,]*(?:\\.\\d+)?\\s*${UNIT}|\\d{1,3}(?:,\\d{3})+`,
+  `${CUR}\\s?\\d|\\d[\\d,]*(?:\\.\\d+)?\\s*${UNIT}|\\b(?:phase|stage|plot|unit|tower|building)\\s+(?:no\\.?\\s*)?\\d|\\d{1,3}(?:,\\d{3})+`,
   "i",
 );
 
-/** Distinct meaningful figures (normalised) found in a body of prose. A bare
- *  integer with no currency / unit / range / comma / decimal (a year, a small
- *  count) is NOT a figure-needing-sourcing and is skipped. */
-export function extractFigures(body: string): string[] {
+function withoutUrls(value: string): string {
+  return value.replace(/https?:\/\/[^\s)\]]+/gi, " ");
+}
+
+function yearIsOrdinaryCalendarDate(
+  text: string,
+  index: number,
+): boolean {
+  const before = text.slice(Math.max(0, index - 32), index);
+  const after = text.slice(index + 4, index + 36);
+  return (
+    /\d{1,2}[/-]\d{1,2}[/-]$/.test(before) ||
+    /^[/-]\d{1,2}[/-]\d{1,2}\b/.test(after) ||
+    DATE_BEFORE_YEAR_RE.test(before) ||
+    DATE_AFTER_YEAR_RE.test(after) ||
+    /(?:19|20)\d{2}\s*[-\u2013\u2014]\s*$/.test(before) ||
+    /^\s*[-\u2013\u2014]\s*(?:19|20)\d{2}\b/.test(after)
+  );
+}
+
+/** Distinct claim-bearing figures found in publishable prose. Calendar dates
+ * and ordinary section labels are excluded, while standalone claim years,
+ * phases, measured values and finite property counts remain evidence-bound. */
+export function extractFigures(value: string): string[] {
+  const body = withoutUrls(value);
   const out = new Set<string>();
   for (const m of body.matchAll(FIGURE_RE)) {
     const [full, cur, num, range, unit] = m;
@@ -321,6 +397,21 @@ export function extractFigures(body: string): string[] {
       num.includes(",") ||
       num.includes(".");
     if (!meaningful) continue;
+    const index = m.index ?? 0;
+    const before = body.slice(Math.max(0, index - 24), index);
+    const after = body.slice(index + full.length, index + full.length + 16);
+    if (
+      !cur &&
+      !unit &&
+      Boolean(range?.trim()) &&
+      (/(?:section|article|chapter|clause|paragraph|page)s?\s*$/i.test(before) ||
+        (/^(?:19|20)\d{2}\s*-\s*\d{1,2}$/.test(full.trim()) &&
+          /^-\d{1,2}\b/.test(after)) ||
+        (/^\d{1,2}\s*-\s*\d{1,2}$/.test(full.trim()) &&
+          /^-(?:19|20)\d{2}\b/.test(after)))
+    ) {
+      continue;
+    }
     // A bare range of two 4-digit years ("2023–2024") is a date span, not a
     // statistic needing a source — skip it.
     if (!cur && !unit && /^(?:19|20)\d{2}\s*[-–]\s*(?:19|20)\d{2}$/.test(full.trim())) {
@@ -329,20 +420,35 @@ export function extractFigures(body: string): string[] {
     const s = norm(full);
     if (s) out.add(s);
   }
+  for (const match of body.matchAll(LABELLED_COUNT_RE)) {
+    const figure = norm(match[0]);
+    if (figure) out.add(figure);
+  }
+  for (const match of body.matchAll(YEAR_RE)) {
+    const index = match.index ?? 0;
+    if (!yearIsOrdinaryCalendarDate(body, index)) out.add(match[0]);
+  }
   return [...out];
 }
 
-export function bodyHasStatSignal(body: string): boolean {
-  return STAT_SIGNAL_RE.test(body);
+export function bodyHasStatSignal(value: string): boolean {
+  return STAT_SIGNAL_RE.test(withoutUrls(value));
 }
 
 export function findUnsupportedFigures(
   body: string,
-  evidenceText: string,
+  evidenceText: string | string[],
 ): string[] {
-  const source = normNumericEvidence(evidenceText);
+  const evidenceTexts = Array.isArray(evidenceText)
+    ? evidenceText
+    : [evidenceText];
+  const sourceFigures = new Set(
+    evidenceTexts.flatMap((text) =>
+      extractFigures(text).map(normNumericEvidence),
+    ),
+  );
   return extractFigures(body).filter(
-    (figure) => !source.includes(normNumericEvidence(figure)),
+    (figure) => !sourceFigures.has(normNumericEvidence(figure)),
   );
 }
 
@@ -364,18 +470,28 @@ export function assessDraft(
 
   const citationUrls = new Set(article.citations.map((citation) => citation.url));
   const storedEvidence = provenance.fetchedEvidence ?? [];
-  const freshness = storedEvidence.map((evidence) => ({
+  const evidenceChecks = storedEvidence.map((evidence) => ({
     evidence,
-    assessment: assessStoredEvidenceFreshness(evidence),
+    freshness: assessStoredEvidenceFreshness(evidence),
+    publisherDomain: approvedEvidencePublisherDomain(
+      evidence.url,
+      evidence.finalUrl,
+    ),
   }));
-  for (const { evidence, assessment } of freshness) {
-    if (assessment.ok) continue;
-    reasons.push(
-      `evidence freshness failed for ${(evidence.finalUrl ?? evidence.url).slice(0, 240)}: ${assessment.detail}`,
-    );
+  for (const { evidence, freshness, publisherDomain } of evidenceChecks) {
+    if (!freshness.ok) {
+      reasons.push(
+        `evidence freshness failed for ${(evidence.finalUrl ?? evidence.url).slice(0, 240)}: ${freshness.detail}`,
+      );
+    }
+    if (!publisherDomain) {
+      reasons.push(
+        `evidence publisher identity changed or final URL is missing: ${evidence.url.slice(0, 180)} -> ${(evidence.finalUrl ?? "missing").slice(0, 180)}`,
+      );
+    }
   }
-  const fetchedEvidence = freshness
-    .filter(({ assessment }) => assessment.ok)
+  const fetchedEvidence = evidenceChecks
+    .filter(({ freshness, publisherDomain }) => freshness.ok && publisherDomain)
     .map(({ evidence }) => evidence)
     .filter(
       (evidence) =>
@@ -407,7 +523,7 @@ export function assessDraft(
   const distinctEvidenceDomains = new Set(
     fetchedEvidence
       .map((evidence) =>
-        approvedPublisherDomain(evidence.finalUrl ?? evidence.url),
+        approvedEvidencePublisherDomain(evidence.url, evidence.finalUrl),
       )
       .filter((domain): domain is string => Boolean(domain)),
   );
@@ -417,19 +533,17 @@ export function assessDraft(
       `only ${fetchedEvidenceCount} cited publisher domain(s) have fetched evidence text (need >= ${policy.requiredPublisherCount} for ${policy.lane})`,
     );
   }
-  const sourceText = normNumericEvidence(
-    fetchedEvidence.map((evidence) => evidence.text).join(" "),
-  );
+  const sourceTexts = fetchedEvidence.map((evidence) => evidence.text);
   const claimText = articleEvidenceText(article);
   const figures = extractFigures(claimText);
   let amberFigures: string[];
-  if (!sourceText) {
+  if (sourceTexts.length === 0 || sourceTexts.every((text) => !text.trim())) {
     amberFigures = figures;
     reasons.push(
       "no independently fetched source text on the draft — model citation markup cannot verify figures",
     );
   } else {
-    amberFigures = findUnsupportedFigures(claimText, sourceText);
+    amberFigures = findUnsupportedFigures(claimText, sourceTexts);
     if (amberFigures.length > 0) {
       reasons.push(
         `${amberFigures.length} unsourced figure(s): ${amberFigures

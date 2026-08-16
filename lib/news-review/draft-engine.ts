@@ -22,37 +22,20 @@ import type { Cluster } from "@/lib/pipeline/types";
 import type { DraftArticle, NewsDraftProvenance } from "./types";
 import {
   articleEvidenceText,
+  approvedEvidencePublisherDomain,
+  approvedPublisherDomain,
   determineEvidencePolicy,
   extractFigures,
   findUnsupportedFigures,
   MAX_AUTO_NEWS_SOURCE_AGE_HOURS,
-  type EvidencePolicy,
 } from "./auto-approve";
+import { urlOnApprovedHost } from "@/lib/sources/safe-fetch";
 import type { NewsCategory } from "@/content/news/types";
 
 const VALID_CATEGORIES: NewsCategory[] = [
   "market-pulse", "launch", "regulatory", "macro",
   "developer-corporate", "infrastructure", "policy",
 ];
-
-const HIGH_RISK_NEWS_RE =
-  /\b(?:disputed|contested|denied|alleged|market-wide|across the (?:property|real estate|housing) market|market (?:will|is set to|is expected to))\b/i;
-
-function draftEvidencePolicy(
-  article: DraftArticle,
-  evidenceUrls: string[],
-): EvidencePolicy {
-  const base = determineEvidencePolicy(article, evidenceUrls);
-  const text = `${article.title}\n${article.subtitle}\n${article.body}`;
-  if (base.requiredPublisherCount === 2 || !HIGH_RISK_NEWS_RE.test(text)) {
-    return base;
-  }
-  return {
-    lane: "corroborated-analysis",
-    requiredPublisherCount: 2,
-    reason: "disputed or market-wide analysis requires independent corroboration",
-  };
-}
 
 export const DRAFT_SYSTEM_PROMPT = `You are the newsroom drafter for news.investwithraj.com — the editorial voice of Raj Tomar, a Dubai property advisor writing for investors and home buyers.
 
@@ -161,6 +144,8 @@ export interface DraftOpts {
     research?: ResearchCall;
     repair?: RepairCall;
     fetchArticle?: ArticleFetch;
+    /** Test seam for proving the immutable clock is read after direct fetch. */
+    clock?: () => Date;
   };
 }
 
@@ -263,21 +248,6 @@ export function buildProvenance(cluster: Cluster): NewsDraftProvenance {
   };
 }
 
-function approvedPublisherDomain(
-  url: string,
-  whitelist: string[],
-): string | null {
-  try {
-    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
-    return whitelist
-      .map((domain) => domain.toLowerCase().replace(/^www\./, ""))
-      .filter((domain) => host === domain || host.endsWith(`.${domain}`))
-      .sort((left, right) => right.length - left.length)[0] ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function buildCitations(
   claudeCites: DraftJson["citations"],
   cluster: Cluster,
@@ -298,7 +268,8 @@ function buildCitations(
       return (
         parsed.protocol === "https:" &&
         exactResource &&
-        approvedPublisherDomain(u, whitelist) !== null
+        urlOnApprovedHost(u, whitelist) &&
+        approvedPublisherDomain(u) !== null
       );
     } catch {
       return false;
@@ -311,7 +282,7 @@ function buildCitations(
     const canonicalUrl = parsed.toString();
     if (seen.has(canonicalUrl)) return;
     const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-    const publisherDomain = approvedPublisherDomain(canonicalUrl, whitelist);
+    const publisherDomain = approvedPublisherDomain(canonicalUrl);
     if (!publisherDomain || seenHosts.has(publisherDomain)) return;
     seen.add(canonicalUrl);
     seenHosts.add(publisherDomain);
@@ -340,10 +311,18 @@ export async function draftFromCluster(
   whitelist: string[],
   opts: DraftOpts = {},
 ): Promise<DraftAttempt> {
-  const clock = opts.now && Number.isFinite(opts.now.getTime())
-    ? new Date(opts.now.getTime())
-    : new Date();
-  const now = clock.toISOString();
+  const pinnedClockMilliseconds =
+    opts.now && Number.isFinite(opts.now.getTime())
+      ? opts.now.getTime()
+      : null;
+  const clockNow = (): Date => {
+    const candidate = pinnedClockMilliseconds === null
+      ? (opts.dependencies?.clock?.() ?? new Date())
+      : new Date(pinnedClockMilliseconds);
+    return Number.isFinite(candidate.getTime())
+      ? new Date(candidate.getTime())
+      : new Date();
+  };
   const requestedMaxAgeHours = opts.maxSourceAgeHours;
   const maxSourceAgeHours = Number.isFinite(requestedMaxAgeHours)
     ? Math.max(
@@ -447,6 +426,9 @@ export async function draftFromCluster(
     .replace(/&nbsp;/gi, " ")
     .trim();
 
+  // Publication metadata is captured after research completes. Direct-source
+  // freshness uses a later per-fetch completion clock below.
+  const now = clockNow().toISOString();
   const citations = buildCitations(parsed.citations, cluster, whitelist, now);
   if (citations.length === 0) {
     return {
@@ -511,10 +493,15 @@ export async function draftFromCluster(
           diagnostic: { code: "fetch-error", message },
         };
       }
+      const checkedAt = clockNow();
       const freshness = assessPublicationFreshness(
         fetched.publishedAt,
-        clock,
+        checkedAt,
         maxSourceAgeHours,
+      );
+      const publisherDomain = approvedEvidencePublisherDomain(
+        citation.url,
+        fetched.finalUrl,
       );
       let publisher = citation.url;
       try {
@@ -523,15 +510,22 @@ export async function draftFromCluster(
         // Keep the exact URL in the diagnostic when parsing fails.
       }
       diagnostics.push(
-        `${publisher}: ${fetched.diagnostic.code} (${fetched.diagnostic.message}); ${freshness.detail}; date source ${fetched.publicationDateSource ?? "missing"}`,
+        `${publisher}: ${fetched.diagnostic.code} (${fetched.diagnostic.message}); ${freshness.detail}; date source ${fetched.publicationDateSource ?? "missing"}; publisher identity ${publisherDomain ?? "mismatch or missing final URL"}`,
       );
-      return { citation, fetched, freshness };
+      return {
+        citation,
+        fetched,
+        freshness,
+        publisherDomain,
+        checkedAt: checkedAt.toISOString(),
+      };
     }),
   );
   const evidenceRows = citedTexts.filter(
-    ({ fetched, freshness }) =>
+    ({ fetched, freshness, publisherDomain }) =>
       fetched.text.trim().length >= 80 &&
       freshness.ok &&
+      publisherDomain !== null &&
       fetched.publishedAt !== null &&
       fetched.publicationDateSource !== null,
   );
@@ -539,27 +533,24 @@ export async function draftFromCluster(
     ...article,
     citations: evidenceRows.map(({ citation }) => citation),
   };
-  const fetchedEvidence = evidenceRows.map(({ citation, fetched }) => {
+  const fetchedEvidence = evidenceRows.map(({ citation, fetched, checkedAt }) => {
     const text = fetched.text.slice(0, 9_000);
     return {
       url: citation.url,
       finalUrl: fetched.finalUrl ?? undefined,
       text,
-      fetchedAt: now,
+      fetchedAt: checkedAt,
       contentHash: createHash("sha256").update(text).digest("hex"),
       sourcePublishedAt: fetched.publishedAt ?? undefined,
       sourceDateSource: fetched.publicationDateSource ?? undefined,
-      freshnessCheckedAt: now,
+      freshnessCheckedAt: checkedAt,
       freshnessMaxAgeHours: maxSourceAgeHours,
     };
   });
   const fetchedDomains = new Set(
     fetchedEvidence
       .map((evidence) =>
-        approvedPublisherDomain(
-          evidence.finalUrl ?? evidence.url,
-          whitelist,
-        ),
+        approvedEvidencePublisherDomain(evidence.url, evidence.finalUrl),
       )
       .filter((domain): domain is string => Boolean(domain)),
   );
@@ -567,9 +558,12 @@ export async function draftFromCluster(
     (evidence) => evidence.finalUrl ?? evidence.url,
   );
   const directlyFetchedUrls = citedTexts
-    .filter(({ fetched }) => fetched.text.trim().length >= 80)
+    .filter(
+      ({ fetched, publisherDomain }) =>
+        fetched.text.trim().length >= 80 && publisherDomain !== null,
+    )
     .map(({ citation, fetched }) => fetched.finalUrl ?? citation.url);
-  const initialEvidencePolicy = draftEvidencePolicy(
+  const initialEvidencePolicy = determineEvidencePolicy(
     article,
     directlyFetchedUrls,
   );
@@ -590,9 +584,10 @@ export async function draftFromCluster(
         `[SOURCE ${index + 1}: ${evidence.finalUrl ?? evidence.url}]\n${evidence.text}`,
     )
     .join("\n\n---\n\n");
+  const evidenceTexts = fetchedEvidence.map((evidence) => evidence.text);
   let unsupportedFigures = findUnsupportedFigures(
     articleEvidenceText(article),
-    evidencePacket,
+    evidenceTexts,
   );
   const preflightValidation = validateDraft(
     article as unknown as ValidatorInput,
@@ -605,7 +600,9 @@ export async function draftFromCluster(
   // voice gates and remove unsupported figures, but it receives no search
   // snippets or outside context — only the directly fetched evidence packet.
   if (blockingFailures.length > 0 || unsupportedFigures.length > 0) {
-    const supportedFigures = extractFigures(evidencePacket);
+    const supportedFigures = [
+      ...new Set(evidenceTexts.flatMap((text) => extractFigures(text))),
+    ];
     const repair = await repairCall({
       model: opts.model,
       maxTokens: Math.min(4_600, Math.max(1_200, opts.maxTokens ?? 4_600)),
@@ -647,7 +644,7 @@ export async function draftFromCluster(
     };
     unsupportedFigures = findUnsupportedFigures(
       articleEvidenceText(article),
-      evidencePacket,
+      evidenceTexts,
     );
     if (unsupportedFigures.length > 0) {
       return {
@@ -658,7 +655,7 @@ export async function draftFromCluster(
     }
   }
 
-  const finalEvidencePolicy = draftEvidencePolicy(article, evidenceUrls);
+  const finalEvidencePolicy = determineEvidencePolicy(article, evidenceUrls);
   if (fetchedDomains.size < finalEvidencePolicy.requiredPublisherCount) {
     return {
       ok: false,
