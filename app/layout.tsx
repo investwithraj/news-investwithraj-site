@@ -52,8 +52,13 @@ export const metadata: Metadata = {
     "Raj Tomar",
     "Beyond the Deal newsletter",
   ],
-  authors: [{ name: "Raj Tomar", url: SITE.rootUrl }],
-  creator: "Raj Tomar",
+  authors: [
+    {
+      name: "Invest With Raj News Desk",
+      url: `${SITE.url}/about/editorial-standards`,
+    },
+  ],
+  creator: "Invest With Raj News Desk",
   publisher: "Invest With Raj",
   category: "Real Estate News",
   referrer: "origin-when-cross-origin",
