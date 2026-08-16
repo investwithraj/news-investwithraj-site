@@ -18,8 +18,8 @@ import {
   getActiveChannels,
 } from "@/lib/distribute";
 import { buildVariants } from "@/lib/distribute/content-adapter";
-import { NEWS_ARTICLES } from "@/content/news";
 import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
+import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 import {
   authorizeServerMutation,
   privateJson,
@@ -87,8 +87,13 @@ export async function POST(request: NextRequest) {
 
   // Resolve slugs to articles
   const articles = slugs
-    .map((slug) => NEWS_ARTICLES.find((a) => a.slug === slug))
-    .filter((a): a is (typeof NEWS_ARTICLES)[number] => a !== undefined);
+    .map((slug) =>
+      INDEXABLE_NEWS_ARTICLES.find((article) => article.slug === slug),
+    )
+    .filter(
+      (article): article is (typeof INDEXABLE_NEWS_ARTICLES)[number] =>
+        article !== undefined,
+    );
 
   const missing = slugs.filter((s) => !articles.find((a) => a.slug === s));
 

@@ -21,6 +21,25 @@ export type NewsroomLifecycleEntry = Readonly<{
   destination: string;
 }>;
 
+/**
+ * One server-only release switch for the complete URL consolidation.
+ *
+ * The value is deliberately exact and fail-closed: only `1` activates the
+ * approved redirect/removal cutover. Unset, `0`, `true` and every other value
+ * preserve the current public routes. This is release configuration, not a
+ * secret, and must never be exposed as a NEXT_PUBLIC variable.
+ */
+export const NEWSROOM_LIFECYCLE_CUTOVER_ENV =
+  "NEWSROOM_LIFECYCLE_CUTOVER" as const;
+
+type LifecycleEnvironment = Readonly<Record<string, string | undefined>>;
+
+export function isNewsroomLifecycleCutoverEnabled(
+  environment: LifecycleEnvironment = process.env,
+): boolean {
+  return environment[NEWSROOM_LIFECYCLE_CUTOVER_ENV] === "1";
+}
+
 export const PRIMARY_NEWSROOM_LIFECYCLE = {
   "/": { disposition: "IMPROVE", destination: "/" },
   "/news": { disposition: "KEEP", destination: "/news" },
@@ -449,6 +468,25 @@ export function isIndexEligibleArticleSlug(slug: string): boolean {
   return isIndexEligiblePath(`/news/${slug}`);
 }
 
+/**
+ * The approved public content set, independent of release activation.
+ * Used by API/OG/distribution surfaces that must never project REMOVE,
+ * PRIVATE, research or redirect-source records.
+ */
+export function isApprovedPublicLifecyclePath(pathname: string): boolean {
+  const lifecycle = getNewsroomLifecycle(pathname);
+  return Boolean(
+    lifecycle &&
+      (isIndexEligibleDisposition(lifecycle.disposition) ||
+        lifecycle.disposition === "NOINDEX" ||
+        isHeldRedirectPath(pathname)),
+  );
+}
+
+export function isApprovedPublicLifecycleArticleSlug(slug: string): boolean {
+  return isApprovedPublicLifecyclePath(`/news/${slug}`);
+}
+
 export function isPublicNoindexPath(pathname: string): boolean {
   return (
     getNewsroomLifecycle(pathname)?.disposition === "NOINDEX" ||
@@ -465,10 +503,26 @@ export function isRenderableArticleSlug(slug: string): boolean {
   const disposition = getNewsArticleLifecycle(slug)?.disposition;
   return Boolean(
     disposition &&
-      (isIndexEligibleDisposition(disposition) ||
-        disposition === "NOINDEX" ||
-        isHeldRedirectPath(pathname)),
+      (isNewsroomLifecycleCutoverEnabled()
+        ? isApprovedPublicLifecyclePath(pathname)
+        : disposition !== "PRIVATE"),
   );
+}
+
+/** A route remains at its current URL until the explicit cutover is enabled. */
+export function isRenderableLifecyclePath(pathname: string): boolean {
+  const lifecycle = getNewsroomLifecycle(pathname);
+  if (!lifecycle || lifecycle.disposition === "PRIVATE") return false;
+  return isNewsroomLifecycleCutoverEnabled()
+    ? isApprovedPublicLifecyclePath(pathname)
+    : true;
+}
+
+/** Current public pages remain indexable before cutover; the matrix wins after it. */
+export function isReleasedIndexEligiblePath(pathname: string): boolean {
+  return isNewsroomLifecycleCutoverEnabled()
+    ? isIndexEligiblePath(pathname)
+    : isRenderableLifecyclePath(pathname);
 }
 
 export const NEWSROOM_EXACT_REDIRECTS = Object.entries(NEWSROOM_LIFECYCLE)
@@ -483,6 +537,30 @@ export const NEWSROOM_EXACT_REDIRECTS = Object.entries(NEWSROOM_LIFECYCLE)
     statusCode: 301 as const,
   }));
 
+export function getReleasedNewsroomRedirects(
+  environment: LifecycleEnvironment = process.env,
+): typeof NEWSROOM_EXACT_REDIRECTS {
+  return isNewsroomLifecycleCutoverEnabled(environment)
+    ? NEWSROOM_EXACT_REDIRECTS
+    : [];
+}
+
+/**
+ * Relative lifecycle destinations are made absolute before they enter the
+ * framework redirect table. A request on a future www.news host therefore
+ * lands on the canonical host and final path in the same hop.
+ */
+export function canonicalNewsroomRedirectDestination(
+  destination: string,
+): string {
+  return new URL(destination, "https://news.investwithraj.com").toString();
+}
+
 export const NEWSROOM_REMOVE_PATHS = Object.entries(NEWSROOM_LIFECYCLE)
   .filter(([, lifecycle]) => lifecycle.disposition === "REMOVE")
   .map(([pathname]) => pathname);
+
+/** The six routes whose public response actually changes at this cutover. */
+export const NEWSROOM_RELEASE_REMOVAL_CANDIDATES = NEWSROOM_REMOVE_PATHS.filter(
+  (pathname) => pathname === "/pulse" || pathname.startsWith("/news/"),
+);

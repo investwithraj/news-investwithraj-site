@@ -7,7 +7,7 @@ import { resolveArticleRelations } from "@/lib/article-relations";
 import { SITE } from "@/lib/constants";
 import {
   getNewsArticleLifecycle,
-  isIndexEligibleDisposition,
+  isReleasedIndexEligiblePath,
   isRenderableArticleSlug,
 } from "@/lib/news-lifecycle";
 import {
@@ -16,7 +16,7 @@ import {
   relatedVerticalsForArticle,
   supportedImageAlt,
 } from "@/lib/news-editorial";
-import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
+import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
 import {
   asGraph,
   BREADCRUMB_PRESETS,
@@ -24,7 +24,6 @@ import {
   faqPageSchema,
   newsArticleSchema,
   newsImageObjectSchema,
-  rajPersonSchema,
 } from "@/lib/schema";
 import { VERTICALS } from "@/lib/verticals";
 
@@ -71,7 +70,7 @@ export async function generateMetadata({
     title: article.title,
     description: article.metaDescription || article.subtitle,
     robots: {
-      index: isIndexEligibleDisposition(lifecycle.disposition),
+      index: isReleasedIndexEligiblePath(`/news/${slug}`),
       follow: true,
     },
     alternates: {
@@ -85,7 +84,6 @@ export async function generateMetadata({
       description: article.metaDescription || article.subtitle,
       publishedTime: article.publishedAt,
       modifiedTime: article.modifiedAt,
-      authors: [`${SITE.rootUrl}#raj`],
       tags: [article.category, ...displayMarkets(article)],
       ...(hasImage
         ? {
@@ -125,7 +123,9 @@ export default async function NewsArticlePage({
   }
 
   const articleUrl = `${SITE.url}/news/${article.slug}`;
-  const indexEligible = isIndexEligibleDisposition(lifecycle.disposition);
+  const indexEligible = isReleasedIndexEligiblePath(
+    `/news/${article.slug}`,
+  );
   const hasImage = hasVerifiedEditorialImage(article);
   const imageUrl = article.heroImage.src.startsWith("http")
     ? article.heroImage.src
@@ -140,7 +140,6 @@ export default async function NewsArticlePage({
             title: article.title,
           }),
         ),
-        rajPersonSchema,
         hasImage
           ? newsImageObjectSchema({
               pageUrl: articleUrl,
@@ -151,7 +150,7 @@ export default async function NewsArticlePage({
       )
     : null;
 
-  const live = INDEXABLE_NEWS_ARTICLES;
+  const live = getPublicDiscoveryNewsArticles();
   const index = live.findIndex((item) => item.slug === slug);
   const newer = index > 0 ? live[index - 1] : null;
   const older = index >= 0 && index < live.length - 1 ? live[index + 1] : null;

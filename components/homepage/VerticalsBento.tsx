@@ -1,5 +1,5 @@
 // Bento grid of Raj's 5 verticals. Each card = one vertical with its glyph,
-// gradient, tagline, cadence, and link into the dedicated /v/[slug] page.
+// gradient, tagline, cadence, and link into the matching archive desk filter.
 //
 // Layout: 12-column bento. DLD Pulse (lead) spans 6, Beyond the Deal spans 6
 // in the top row. Bottom row: 3 cards × 4 cols each. Mobile collapses to stack.
@@ -76,7 +76,7 @@ function BentoCard({
 
   return (
     <Link
-      href={`/v/${vertical.slug}`}
+      href={`/news?desk=${vertical.slug}`}
       data-magnetic
       data-cursor-label="OPEN DESK"
       className={`group relative overflow-hidden border ${span} ${heightClass} flex flex-col justify-between p-7 md:p-9 transition-transform duration-500 hover:-translate-y-1`}

@@ -126,8 +126,8 @@ export default function EditorialStandardsPage() {
         <div className={styles.policyRegister}>
           <span>Applies to</span>
           <strong>News · analysis · area and developer records · AI briefs</strong>
-          <span>Accountable editor</span>
-          <strong>Raj Tomar</strong>
+          <span>Publishing identity</span>
+          <strong>Invest With Raj News Desk</strong>
         </div>
 
         <div className={styles.policyList}>

@@ -6,7 +6,10 @@ import {
   articleMentionsArea,
   articleMentionsDeveloper,
 } from "@/lib/news-editorial";
-import { isIndexEligibleArticleSlug } from "@/lib/news-lifecycle";
+import {
+  isIndexEligibleArticleSlug,
+  isNewsroomLifecycleCutoverEnabled,
+} from "@/lib/news-lifecycle";
 
 /**
  * The single publication boundary for registry-backed public pages.
@@ -31,6 +34,23 @@ export const INDEXABLE_NEWS_ARTICLES: NewsArticle[] =
   PUBLISHED_NEWS_ARTICLES.filter((article) =>
     isIndexEligibleArticleSlug(article.slug),
   );
+
+/**
+ * Public discovery is release-aware. Before explicit cutover, all existing
+ * live records keep their current discoverability. Once the single lifecycle
+ * flag is enabled, only the approved KEEP + IMPROVE projection is emitted.
+ */
+export function getPublicDiscoveryNewsArticles(): NewsArticle[] {
+  return isNewsroomLifecycleCutoverEnabled()
+    ? INDEXABLE_NEWS_ARTICLES
+    : PUBLISHED_NEWS_ARTICLES;
+}
+
+export function isPublicDiscoveryNewsArticleSlug(slug: string): boolean {
+  return getPublicDiscoveryNewsArticles().some(
+    (article) => article.slug === slug,
+  );
+}
 
 export type PublicAreaRecord = {
   area: AreaPage;

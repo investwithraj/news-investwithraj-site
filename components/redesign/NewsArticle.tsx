@@ -7,6 +7,7 @@ import type {
   ResolvedArticleDeveloper,
 } from "@/lib/article-relations";
 import { resolveArticleEditorialMedia } from "@/lib/article-display-media";
+import { EDITORIAL } from "@/lib/constants";
 import {
   categoryLabel,
   consequenceExcerpt,
@@ -79,9 +80,9 @@ export default function NewsArticle({
           <h1>{article.title}</h1>
           <p className={styles.subtitle}>{article.subtitle}</p>
           <div className={styles.byline}>
-            <Link href="/about" className={styles.author}>
-              <b>Raj Tomar</b>
-              <span>Dubai-based property advisor and author</span>
+            <Link href={EDITORIAL.bylineUrl} className={styles.author}>
+              <b>{EDITORIAL.articleByline}</b>
+              <span>{EDITORIAL.articleRole}</span>
             </Link>
             <span className={styles.dates}>
               <span>
@@ -166,7 +167,7 @@ export default function NewsArticle({
 
             {article.semaform?.theTake ? (
               <section className={styles.take}>
-                <span>Raj&apos;s read</span>
+                <span>News Desk analysis</span>
                 <h2>The consequence behind the headline.</h2>
                 <p>{article.semaform.theTake}</p>
               </section>
@@ -193,7 +194,7 @@ export default function NewsArticle({
             <span>{evidence.label}</span>
             <small>{evidence.detail}</small>
             <nav aria-label="Editorial information">
-              <Link href="/about">Author profile ↗</Link>
+              <Link href="/about">About the publication ↗</Link>
               <Link href="/about/editorial-standards">
                 Editorial standards ↗
               </Link>
@@ -296,7 +297,10 @@ export default function NewsArticle({
                   <section>
                     <h3>Related desks</h3>
                     {relatedVerticals.map((vertical) => (
-                      <Link href={`/v/${vertical.slug}`} key={vertical.slug}>
+                      <Link
+                        href={`/news?desk=${vertical.slug}`}
+                        key={vertical.slug}
+                      >
                         <span>Editorial desk</span>
                         <strong>{vertical.name}</strong>
                         <i aria-hidden="true">↗</i>

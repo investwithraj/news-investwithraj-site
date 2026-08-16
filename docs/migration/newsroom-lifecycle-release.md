@@ -1,0 +1,57 @@
+# Newsroom lifecycle release contract
+
+The disposition authority remains news-url-disposition.csv. This release
+contract does not change any row or editorial decision.
+
+## Single activation switch
+
+NEWSROOM_LIFECYCLE_CUTOVER=1 is the only value that activates the URL
+consolidation. The variable is server-side release configuration, not a secret
+and not a NEXT_PUBLIC value.
+
+- Unset, 0, true, whitespace and every other value mean **off**.
+- Off preserves the current public route response and the exact 79-URL
+  pre-cutover sitemap.
+- On activates exactly 31 approved one-hop redirects and the six new removal
+  gates: five article URLs plus /pulse. These routes intentionally use the
+  existing application 404 contract; no separate 410 implementation exists.
+- On emits the exact 31 KEEP + IMPROVE URLs in sitemap discovery.
+- /wallet remains outside that six-route release because it already returned
+  the unreleased-product 404 before this lifecycle work.
+- The three held redirects remain readable/noindex and never activate from
+  this flag.
+- PRIVATE and research records remain unavailable in both states.
+
+The flag is evaluated at build/release time. Changing an environment value is
+not a production cutover until a separately approved deployment is created.
+
+## Outbound safety is not release-dependent
+
+OG article rendering, the automated brief source packet, digest previews,
+distribution previews and slug-driven outreach drafts always use the approved
+public lifecycle projection. A disabled cutover therefore cannot cause a
+REMOVE, PRIVATE, research or redirect-source record to be re-syndicated.
+
+## Canonical-host rule
+
+Every activated local lifecycle destination is converted to an absolute
+https://news.investwithraj.com/... URL before it enters Next.js redirect
+configuration. If www.news.investwithraj.com DNS is enabled later, an exact
+retired URL reaches its final canonical destination in one hop instead of
+first canonicalising the host.
+
+## Pinned advisory evidence
+
+advisory-redirect-evidence-2026-08-16.csv is the minimal immutable snapshot
+needed to validate external redirect destinations. It was copied from the
+advisory repository's live-production-delta-2026-08-16.csv, captured at
+2026-08-15T23:03:02.717Z. The snapshot contains only the 17 approved external
+redirect targets and the held Wynn target. Refreshing it requires a new dated
+artifact; do not silently edit historical observations.
+
+Source provenance: advisory commit
+3efac6cbf8f7c1c082397ae54e80083977a5e6d9 (`docs: record live production
+migration delta`), source CSV SHA-256
+0C3DF6DA4B3483247603AE3B9EB047A4D2C584F7084AD8632C4DF7B51536E5C2.
+The lifecycle test reads only the pinned newsroom snapshot and never a sibling
+worktree.

@@ -18,12 +18,19 @@ import {
 import {
   getAllPublicAreaSlugs,
   getPublicAreaRecord,
+  isPublicDiscoveryNewsArticleSlug,
   PUBLIC_DEVELOPERS,
 } from "@/lib/public-content";
 import {
-  isIndexEligibleArticleSlug,
-  isPublicNoindexPath,
+  isReleasedIndexEligiblePath,
+  isRenderableLifecyclePath,
 } from "@/lib/news-lifecycle";
+import {
+  asGraph,
+  BREADCRUMB_PRESETS,
+  breadcrumbSchema,
+  collectionPageSchemas,
+} from "@/lib/schema";
 import { getVerifiedAreaMedia } from "@/lib/verified-media";
 
 import styles from "../AreaPages.module.css";
@@ -34,7 +41,7 @@ export const revalidate = 86400;
 
 export function generateStaticParams() {
   return getAllPublicAreaSlugs()
-    .filter((slug) => isPublicNoindexPath(`/areas/${slug}`))
+    .filter((slug) => isRenderableLifecyclePath(`/areas/${slug}`))
     .map((slug) => ({ slug }));
 }
 
@@ -45,7 +52,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const record = getPublicAreaRecord(slug);
-  if (!record || !isPublicNoindexPath(`/areas/${slug}`)) {
+  if (!record || !isRenderableLifecyclePath(`/areas/${slug}`)) {
     return {
       title: "Area not found",
       robots: { index: false, follow: false },
@@ -53,7 +60,7 @@ export async function generateMetadata({
   }
   const { area } = record;
   const reports = record.reports.filter((article) =>
-    isIndexEligibleArticleSlug(article.slug),
+    isPublicDiscoveryNewsArticleSlug(article.slug),
   );
   const media = getVerifiedAreaMedia(slug);
 
@@ -61,7 +68,10 @@ export async function generateMetadata({
     title: `${area.name} property news and market intelligence`,
     description: `${reports.length} source-linked reports about ${area.name}, ${area.emirate}, with the latest market developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/areas/${slug}` },
-    robots: { index: false, follow: true },
+    robots: {
+      index: isReleasedIndexEligiblePath(`/areas/${slug}`),
+      follow: true,
+    },
     openGraph: {
       type: "website",
       title: `${area.name} property intelligence`,
@@ -90,10 +100,10 @@ export default async function AreaPage({
 }) {
   const { slug } = await params;
   const record = getPublicAreaRecord(slug);
-  if (!record || !isPublicNoindexPath(`/areas/${slug}`)) notFound();
+  if (!record || !isRenderableLifecyclePath(`/areas/${slug}`)) notFound();
   const { area } = record;
   const relatedNews = record.reports.filter((article) =>
-    isIndexEligibleArticleSlug(article.slug),
+    isPublicDiscoveryNewsArticleSlug(article.slug),
   );
   const sharedArea = canonicalArea(slug);
   if (sharedArea && (sharedArea.name !== area.name || sharedArea.emirate !== area.emirate)) {
@@ -115,8 +125,55 @@ export default async function AreaPage({
       article.citations.map((citation) => citation.url),
     ),
   ).size;
+  const pageUrl = `${SITE.url}/areas/${area.slug}`;
+  const indexEligible = isReleasedIndexEligiblePath(`/areas/${area.slug}`);
+  const [collection, itemList] = collectionPageSchemas({
+    url: pageUrl,
+    name: `${area.name} reporting index`,
+    description: `Source-linked reports that explicitly mention ${area.name}.`,
+    dateModified: area.modifiedAt,
+    itemListOrder: "descending",
+    items: relatedNews.map((article) => ({
+      name: article.title,
+      url: `${SITE.url}/news/${article.slug}`,
+      description: article.subtitle,
+    })),
+  });
+  const graph = indexEligible
+    ? asGraph(
+        {
+          "@context": "https://schema.org",
+          "@type": "Place",
+          "@id": `${pageUrl}#place`,
+          name: area.name,
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: area.coords.lat,
+            longitude: area.coords.lng,
+          },
+          address: {
+            "@type": "PostalAddress",
+            addressRegion: area.emirate,
+            addressCountry: "AE",
+          },
+        },
+        collection,
+        itemList,
+        breadcrumbSchema(
+          BREADCRUMB_PRESETS.area({ slug: area.slug, name: area.name }),
+        ),
+      )
+    : null;
   return (
     <>
+      {graph ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+          }}
+        />
+      ) : null}
       <main id="main" className={styles.page}>
         <header className={styles.detailHero}>
           <Link href="/news" className={styles.back}>

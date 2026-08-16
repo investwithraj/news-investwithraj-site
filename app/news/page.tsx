@@ -9,7 +9,7 @@ import {
   NEWS_ARCHIVE_DESKS,
   projectNewsArchiveItems,
 } from "@/lib/news-archive-projection";
-import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
+import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
 import {
   asGraph,
   breadcrumbSchema,
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NewsIndex() {
-  const live = INDEXABLE_NEWS_ARTICLES;
+  const live = getPublicDiscoveryNewsArticles();
   const items = projectNewsArchiveItems(live);
   const freshness = await currentArchiveFreshness(
     live[0]?.publishedAt ?? null,

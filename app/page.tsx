@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import NewsHome from "@/components/redesign/NewsHome";
-import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
+import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
 
 export const metadata: Metadata = {
   title: "UAE Real Estate Intelligence | Invest With Raj",
@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return <NewsHome articles={INDEXABLE_NEWS_ARTICLES} />;
+  return <NewsHome articles={getPublicDiscoveryNewsArticles()} />;
 }

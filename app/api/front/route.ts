@@ -11,7 +11,7 @@ import {
   hasVerifiedEditorialImage,
   selectDistinctArticles,
 } from "@/lib/news-editorial";
-import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
+import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
 
 export const revalidate = 1800;
 
@@ -36,7 +36,10 @@ export function OPTIONS() {
 }
 
 export async function GET() {
-  const items = selectDistinctArticles(INDEXABLE_NEWS_ARTICLES, 6).map((a) => {
+  const items = selectDistinctArticles(
+    getPublicDiscoveryNewsArticles(),
+    6,
+  ).map((a) => {
     const evidence = evidenceSummary(a);
     const hasCover = hasVerifiedEditorialImage(a);
     return {

@@ -6,8 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { NEWS_ARTICLES } from "@/content/news";
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
+import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 import {
   generateDraftsForArticle,
   selectTopDrafts,
@@ -82,6 +82,11 @@ function parseQueuePartial(value: unknown): QueuePartial | null {
       ? undefined
       : cleanText(item.sourceArticleSlug, 180);
   const responseToUrl = cleanOptionalUrl(item.responseToUrl);
+  const sourceIsPublic =
+    !sourceArticleSlug ||
+    INDEXABLE_NEWS_ARTICLES.some(
+      (article) => article.slug === sourceArticleSlug,
+    );
 
   if (
     !channel ||
@@ -89,6 +94,7 @@ function parseQueuePartial(value: unknown): QueuePartial | null {
     !draftText ||
     !rationale ||
     sourceArticleSlug === null ||
+    !sourceIsPublic ||
     responseToUrl === null
   ) {
     return null;
@@ -215,9 +221,11 @@ export async function POST(request: NextRequest) {
       }
 
       const articles = slugs
-        .map((slug) => NEWS_ARTICLES.find((article) => article.slug === slug))
+        .map((slug) =>
+          INDEXABLE_NEWS_ARTICLES.find((article) => article.slug === slug),
+        )
         .filter(
-          (article): article is (typeof NEWS_ARTICLES)[number] =>
+          (article): article is (typeof INDEXABLE_NEWS_ARTICLES)[number] =>
             article !== undefined,
         );
       const drafts = articles.flatMap((article) =>

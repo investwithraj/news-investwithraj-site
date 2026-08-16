@@ -27,6 +27,13 @@ export const CONTACT = {
   linkedinNewsletterName: "Beyond the Deal on LinkedIn",
 } as const;
 
+/** Public article identity until an individual signed-byline attestation exists. */
+export const EDITORIAL = {
+  articleByline: "Invest With Raj News Desk",
+  articleRole: "Source-cited UAE property reporting",
+  bylineUrl: `${SITE.url}/about/editorial-standards`,
+} as const;
+
 /** Lead-back CTA URLs — every news article footer points here, UTM-tagged. */
 export function rootCtaUrl(opts: {
   campaign?: string;

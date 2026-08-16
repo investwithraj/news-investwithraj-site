@@ -156,7 +156,7 @@ export default function NewsFooter() {
             </Link>
             <p>
               Independent UAE property reporting, analysis and decision
-              intelligence from Raj Tomar.
+              intelligence from the Invest With Raj News Desk.
             </p>
             <a
               href="mailto:office@investwithraj.com"

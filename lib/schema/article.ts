@@ -28,7 +28,7 @@ export function newsArticleSchema(article: NewsArticle): Record<string, unknown>
     ...(hasImage ? { image: { "@id": `${url}#primaryimage` } } : {}),
     datePublished: article.publishedAt,
     dateModified: article.modifiedAt,
-    author: rajPersonRef,
+    author: newsOrgRef,
     publisher: newsOrgRef,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     articleSection: article.category,

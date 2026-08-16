@@ -10,6 +10,8 @@
     "test:front-contract": "tsx scripts/test-front-contract.ts",
     "test:news-archive": "tsx scripts/test-news-archive.ts",
     "test:news-article-template": "tsx scripts/test-news-article-template.ts",
+    "test:newsroom-lifecycle": "tsx scripts/test-newsroom-lifecycle.ts",
+    "test:lifecycle-public-apis": "tsx scripts/test-lifecycle-public-apis.ts",
     "audit:media": "node scripts/audit-batch-9-media.mjs && node scripts/audit-media-quality.mjs",
     "test:intelligence": "tsx scripts/test-intelligence-registry.ts",
     "audit:p0-p5": "node scripts/audit-p0-p5-public-trust.mjs",

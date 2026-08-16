@@ -16,12 +16,18 @@ import {
 import {
   getAllPublicDeveloperSlugs,
   getPublicDeveloperRecord,
+  isPublicDiscoveryNewsArticleSlug,
   PUBLIC_AREAS,
 } from "@/lib/public-content";
 import {
-  isIndexEligibleArticleSlug,
-  isPublicNoindexPath,
+  isReleasedIndexEligiblePath,
+  isRenderableLifecyclePath,
 } from "@/lib/news-lifecycle";
+import {
+  asGraph,
+  breadcrumbSchema,
+  collectionPageSchemas,
+} from "@/lib/schema";
 import { getVerifiedDeveloperMedia } from "@/lib/verified-media";
 
 import styles from "../../developers/DeveloperPages.module.css";
@@ -31,7 +37,7 @@ export const dynamic = "force-static";
 
 export function generateStaticParams() {
   return getAllPublicDeveloperSlugs()
-    .filter((slug) => isPublicNoindexPath(`/developer/${slug}`))
+    .filter((slug) => isRenderableLifecyclePath(`/developer/${slug}`))
     .map((slug) => ({ slug }));
 }
 
@@ -42,7 +48,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const record = getPublicDeveloperRecord(slug);
-  if (!record || !isPublicNoindexPath(`/developer/${slug}`)) {
+  if (!record || !isRenderableLifecyclePath(`/developer/${slug}`)) {
     return {
       title: "Developer not found",
       robots: { index: false, follow: false },
@@ -50,7 +56,7 @@ export async function generateMetadata({
   }
   const { developer } = record;
   const reports = record.reports.filter((article) =>
-    isIndexEligibleArticleSlug(article.slug),
+    isPublicDiscoveryNewsArticleSlug(article.slug),
   );
   const media = getVerifiedDeveloperMedia(slug);
 
@@ -58,7 +64,10 @@ export async function generateMetadata({
     title: `${developer.name} — developer reporting index`,
     description: `${reports.length} source-linked reports that explicitly mention ${developer.name}, with the latest UAE property developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/developer/${slug}` },
-    robots: { index: false, follow: true },
+    robots: {
+      index: isReleasedIndexEligiblePath(`/developer/${slug}`),
+      follow: true,
+    },
     openGraph: {
       type: "website",
       title: `${developer.name} reporting index`,
@@ -87,10 +96,10 @@ export default async function DeveloperPage({
 }) {
   const { slug } = await params;
   const record = getPublicDeveloperRecord(slug);
-  if (!record || !isPublicNoindexPath(`/developer/${slug}`)) notFound();
+  if (!record || !isRenderableLifecyclePath(`/developer/${slug}`)) notFound();
   const { developer } = record;
   const relatedNews = record.reports.filter((article) =>
-    isIndexEligibleArticleSlug(article.slug),
+    isPublicDiscoveryNewsArticleSlug(article.slug),
   );
   const media = getVerifiedDeveloperMedia(developer.slug);
 
@@ -101,8 +110,49 @@ export default async function DeveloperPage({
     developer.slug,
     developer.name,
   );
+  const pageUrl = `${SITE.url}/developer/${developer.slug}`;
+  const indexEligible = isReleasedIndexEligiblePath(
+    `/developer/${developer.slug}`,
+  );
+  const [collection, itemList] = collectionPageSchemas({
+    url: pageUrl,
+    name: `${developer.name} reporting index`,
+    description: `Source-linked reports that explicitly mention ${developer.name}.`,
+    dateModified: relatedNews[0]?.modifiedAt,
+    itemListOrder: "descending",
+    items: relatedNews.map((article) => ({
+      name: article.title,
+      url: `${SITE.url}/news/${article.slug}`,
+      description: article.subtitle,
+    })),
+  });
+  const graph = indexEligible
+    ? asGraph(
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "@id": `${pageUrl}#entity`,
+          name: developer.name,
+          url: pageUrl,
+        },
+        collection,
+        itemList,
+        breadcrumbSchema([
+          { name: "Developers", url: `${SITE.url}/developers` },
+          { name: developer.name, url: pageUrl },
+        ]),
+      )
+    : null;
   return (
     <>
+      {graph ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+          }}
+        />
+      ) : null}
       <main id="main" className={styles.page}>
         <header className={styles.detailHero}>
           <Link

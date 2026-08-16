@@ -116,7 +116,7 @@ export function AuthorBrand() {
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">↗</span>
               </a>
               <Link
-                href="/v/dld-pulse"
+                href="/news?desk=dld-pulse"
                 className="btn-ghost group"
                 data-cursor-label="EXPLORE"
                 data-magnetic

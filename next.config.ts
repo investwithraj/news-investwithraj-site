@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
-import { NEWSROOM_EXACT_REDIRECTS } from "./lib/news-lifecycle";
+import {
+  canonicalNewsroomRedirectDestination,
+  getReleasedNewsroomRedirects,
+} from "./lib/news-lifecycle";
 
 const nextConfig: NextConfig = {
   // ── Performance ───────────────────────────────────────────────────────
@@ -102,10 +105,18 @@ const nextConfig: NextConfig = {
   // (served at "/" directly — no redirect hop). Legacy version URLs 301 to root
   // so any indexed /v17 or /v16 links survive.
   async redirects() {
+    const lifecycleRedirects = getReleasedNewsroomRedirects().map(
+      ({ destination, ...redirect }) => ({
+        ...redirect,
+        destination: canonicalNewsroomRedirectDestination(destination),
+      }),
+    );
+
     return [
-      // Keep exact lifecycle rules first so a retired www URL can reach its
-      // final destination in one hop once the currently absent DNS is added.
-      ...NEWSROOM_EXACT_REDIRECTS,
+      // Disabled by default. When the one release flag is explicitly enabled,
+      // absolute destinations keep retired www URLs to one hop if the
+      // currently absent DNS is added later.
+      ...lifecycleRedirects,
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.news.investwithraj.com" }],

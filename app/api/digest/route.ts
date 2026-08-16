@@ -14,9 +14,9 @@
 //     Returns endpoint self-doc + Listmonk configuration status
 
 import { NextRequest } from "next/server";
-import { NEWS_ARTICLES } from "@/content/news";
 import { buildDigestDraft } from "@/lib/distribute/digest-builder";
 import { isListmonkConfigured } from "@/lib/distribute/listmonk";
+import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 import {
   authorizeServerMutation,
   privateJson,
@@ -66,10 +66,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Filter articles by publish time
-  const articles = NEWS_ARTICLES
+  const articles = INDEXABLE_NEWS_ARTICLES
     .filter(
       (a) =>
-        a.status !== "research" &&
         new Date(a.publishedAt).getTime() >= since.getTime(),
     )
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));

@@ -283,10 +283,33 @@ assert.deepEqual(
 );
 
 assert.equal(normaliseArchiveChoice(null, EXPECTED_DESKS), "all");
-assert.equal(normaliseArchiveChoice("unknown", EXPECTED_DESKS), "all");
+assert.equal(
+  normaliseArchiveChoice("unknown", EXPECTED_DESKS),
+  "unknown",
+  "Unsupported filters must remain visible and produce an honest zero-state.",
+);
 assert.equal(
   normaliseArchiveChoice("dld-pulse", EXPECTED_DESKS),
   "dld-pulse",
+);
+assert.equal(
+  filterNewsArchiveItems(items, {
+    ...ALL_FILTERS,
+    area: normaliseArchiveChoice("unsupported-area", relatedAreaSlugs),
+  }).length,
+  0,
+  "An unsupported area query must not silently widen to all reports.",
+);
+assert.equal(
+  filterNewsArchiveItems(items, {
+    ...ALL_FILTERS,
+    developer: normaliseArchiveChoice(
+      "unsupported-developer",
+      relatedDeveloperSlugs,
+    ),
+  }).length,
+  0,
+  "An unsupported developer query must not silently widen to all reports.",
 );
 
 assert.equal(archivePageNumber(Number.NaN, 30), 1);
@@ -390,6 +413,14 @@ const relationsSource = readFileSync(
   resolve("lib/article-relations.ts"),
   "utf8",
 );
+const terminalPageSource = readFileSync(
+  resolve("app/terminal/page.tsx"),
+  "utf8",
+);
+const terminalShellSource = readFileSync(
+  resolve("components/terminal/TerminalShell.tsx"),
+  "utf8",
+);
 assert.ok(
   pageSource.includes('const PAGE_URL = `${SITE.url}/news`;'),
   "The canonical archive URL must stay rooted at /news.",
@@ -407,6 +438,14 @@ assert.ok(componentSource.includes('searchParams.get("desk")'));
 assert.ok(componentSource.includes('searchParams.get("area")'));
 assert.ok(componentSource.includes('searchParams.get("developer")'));
 assert.ok(componentSource.includes('data-cta-source="news-archive"'));
+assert.ok(
+  terminalPageSource.includes("projectNewsArchiveItems(publicArticles)"),
+  "Terminal area shortcuts must be derived from the same archive projection.",
+);
+assert.ok(
+  terminalShellSource.includes('href={`/news?area=${area.slug}`}'),
+  "Terminal area shortcuts must target the typed archive filter.",
+);
 
 for (const forbidden of [
   "relatedAreasForArticle",

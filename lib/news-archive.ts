@@ -74,7 +74,9 @@ export function normaliseArchiveChoice(
   value: string | null,
   supported: readonly string[],
 ): string {
-  return value && supported.includes(value) ? value : "all";
+  const normalised = value?.trim().slice(0, 120) ?? "";
+  if (!normalised) return "all";
+  return supported.find((choice) => choice === normalised) ?? normalised;
 }
 
 export function filterNewsArchiveItems(

@@ -8,6 +8,7 @@ import {
 import { buildVoiceExcerpt, issueVoiceGrant } from "@/lib/ai/voice-grant";
 import { NEWS_ARTICLES, type NewsArticle } from "@/content/news";
 import { SITE } from "@/lib/constants";
+import { isApprovedPublicLifecycleArticleSlug } from "@/lib/news-lifecycle";
 import { readJsonBody } from "@/lib/security/mutation";
 
 export const runtime = "nodejs";
@@ -16,6 +17,21 @@ export const dynamic = "force-dynamic";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const MAX_SOURCES = 8;
+const NOINDEX_HEADER = "noindex, nofollow, noarchive";
+
+function privateHeaders(extra: Record<string, string> = {}) {
+  return {
+    "Cache-Control": "private, no-store",
+    "X-Robots-Tag": NOINDEX_HEADER,
+    ...extra,
+  };
+}
+
+function withPrivateHeaders<T extends Response>(response: T): T {
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("X-Robots-Tag", NOINDEX_HEADER);
+  return response;
+}
 
 const SYSTEM_PROMPT = `You are the automated first desk for Invest With Raj Intelligence.
 
@@ -128,6 +144,7 @@ function buildSourcePacket(topic: string): SourcePacket | null {
   const eligible = NEWS_ARTICLES.filter(
     (article) =>
       article.status !== "research" &&
+      isApprovedPublicLifecycleArticleSlug(article.slug) &&
       article.citations.some((citation) => safeExternalUrl(citation.url)),
   )
     .map((article) => ({ article, score: scoreArticle(article, terms) }))
@@ -138,8 +155,9 @@ function buildSourcePacket(topic: string): SourcePacket | null {
     );
 
   const strongestScore = eligible[0]?.score ?? 0;
+  if (terms.length === 0 || strongestScore === 0) return null;
   const selected = eligible
-    .filter((entry) => strongestScore === 0 || entry.score > 0)
+    .filter((entry) => entry.score > 0)
     .slice(0, 4)
     .map((entry) => entry.article);
 
@@ -214,7 +232,7 @@ function briefIsSourceBounded(brief: string, sourceCount: number): boolean {
 function unavailable(message = "The automated brief is temporarily offline.") {
   return NextResponse.json(
     { ok: false, message },
-    { status: 503, headers: { "Cache-Control": "no-store" } },
+    { status: 503, headers: privateHeaders() },
   );
 }
 
@@ -222,7 +240,7 @@ export async function POST(request: NextRequest) {
   if (!isFirstPartyMutation(request)) {
     return NextResponse.json(
       { ok: false, message: "Forbidden" },
-      { status: 403, headers: { "Cache-Control": "no-store" } },
+      { status: 403, headers: privateHeaders() },
     );
   }
 
@@ -249,7 +267,7 @@ export async function POST(request: NextRequest) {
       {
         status: 429,
         headers: {
-          "Cache-Control": "no-store",
+          ...privateHeaders(),
           "Retry-After": String(retryAfter),
           "X-RateLimit-Limit": "5",
           "X-RateLimit-Remaining": "0",
@@ -280,7 +298,7 @@ export async function POST(request: NextRequest) {
       {
         status: 429,
         headers: {
-          "Cache-Control": "no-store",
+          ...privateHeaders(),
           "Retry-After": String(retryAfter),
         },
       },
@@ -290,14 +308,14 @@ export async function POST(request: NextRequest) {
   const parsed = await readJsonBody<{ topic?: unknown }>(request, {
     maxBytes: 2_048,
   });
-  if (!parsed.ok) return parsed.response;
+  if (!parsed.ok) return withPrivateHeaders(parsed.response);
   const body = parsed.value;
 
   const topic = typeof body.topic === "string" ? body.topic.trim() : "";
   if (topic.length < 4 || topic.length > 500) {
     return NextResponse.json(
       { ok: false, error: "Topic must be between 4 and 500 characters." },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: privateHeaders() },
     );
   }
 
@@ -309,7 +327,7 @@ export async function POST(request: NextRequest) {
         message:
           "The published source registry cannot support a bounded brief on that topic. Ask Raj’s office for a human review.",
       },
-      { status: 422, headers: { "Cache-Control": "no-store" } },
+      { status: 422, headers: privateHeaders() },
     );
   }
 
@@ -334,7 +352,7 @@ export async function POST(request: NextRequest) {
         message:
           "The automated desk could not produce a source-bounded response. No fallback answer was substituted.",
       },
-      { status: 502, headers: { "Cache-Control": "no-store" } },
+      { status: 502, headers: privateHeaders() },
     );
   }
 
@@ -346,7 +364,7 @@ export async function POST(request: NextRequest) {
         message:
           "The generated draft did not pass the source-boundary check and has been withheld.",
       },
-      { status: 502, headers: { "Cache-Control": "no-store" } },
+      { status: 502, headers: privateHeaders() },
     );
   }
 
@@ -371,7 +389,7 @@ export async function POST(request: NextRequest) {
     },
     {
       headers: {
-        "Cache-Control": "private, no-store",
+        ...privateHeaders(),
         "X-RateLimit-Limit": "5",
         "X-RateLimit-Remaining": String(remaining),
         "X-RateLimit-Reset": String(hourly.resetAt),
@@ -393,6 +411,6 @@ export function GET() {
         "The server supplies and returns the complete source boundary; drafts that cite outside it are withheld.",
       humanFallback: "office@investwithraj.com",
     },
-    { headers: { "Cache-Control": "no-store" } },
+    { headers: privateHeaders() },
   );
 }

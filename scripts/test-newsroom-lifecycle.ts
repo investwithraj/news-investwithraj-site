@@ -1,32 +1,39 @@
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { GET as getFront } from "@/app/api/front/route";
 import { GET as getLlms } from "@/app/llms.txt/route";
 import { GET as getNewsSitemap } from "@/app/news-sitemap.xml/route";
-import PulsePage from "@/app/pulse/page";
 import { GET as getRss } from "@/app/rss.xml/route";
 import sitemap from "@/app/sitemap";
 import { NEWS_ARTICLES } from "@/content/news";
 import { SITE } from "@/lib/constants";
 import {
   AUXILIARY_NEWSROOM_LIFECYCLE,
+  canonicalNewsroomRedirectDestination,
+  getReleasedNewsroomRedirects,
   getNewsArticleLifecycle,
   getNewsroomLifecycle,
+  isNewsroomLifecycleCutoverEnabled,
   isIndexEligibleArticleSlug,
   isIndexEligibleDisposition,
   isIndexEligiblePath,
   isPublicNoindexPath,
+  isReleasedIndexEligiblePath,
   isRenderableArticleSlug,
+  isRenderableLifecyclePath,
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_HELD_REDIRECTS,
+  NEWSROOM_LIFECYCLE_CUTOVER_ENV,
+  NEWSROOM_RELEASE_REMOVAL_CANDIDATES,
   PRIMARY_NEWSROOM_LIFECYCLE,
   type NewsroomDisposition,
 } from "@/lib/news-lifecycle";
 import { projectNewsArchiveItems } from "@/lib/news-archive-projection";
 import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
 import {
+  getPublicDiscoveryNewsArticles,
   INDEXABLE_NEWS_ARTICLES,
   PUBLISHED_NEWS_ARTICLES,
 } from "@/lib/public-content";
@@ -46,18 +53,9 @@ const root = process.cwd();
 const read = (relativePath: string) =>
   readFileSync(resolve(root, relativePath), "utf8");
 const rows = parseCsv(read("docs/migration/news-url-disposition.csv"));
-const pinnedProductionEvidencePath = [
-  resolve(root, "docs/migration/live-production-delta-2026-08-16.csv"),
-  resolve(
-    root,
-    "..",
-    "iwr-simplification-v1",
-    "docs/migration/live-production-delta-2026-08-16.csv",
-  ),
-].find((candidate) => existsSync(candidate));
-assert.ok(
-  pinnedProductionEvidencePath,
-  "Pinned 2026-08-16 live-production evidence is required for redirect approval.",
+const pinnedProductionEvidencePath = resolve(
+  root,
+  "docs/migration/advisory-redirect-evidence-2026-08-16.csv",
 );
 const pinnedProductionRows = parseCsv(
   readFileSync(pinnedProductionEvidencePath, "utf8"),
@@ -84,6 +82,56 @@ const KNOWN_DISPOSITIONS = new Set<NewsroomDisposition>([
   "REMOVE",
   "PRIVATE",
 ]);
+
+const originalCutover = process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV];
+delete process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV];
+
+assert.equal(isNewsroomLifecycleCutoverEnabled(), false);
+assert.equal(
+  isNewsroomLifecycleCutoverEnabled({
+    [NEWSROOM_LIFECYCLE_CUTOVER_ENV]: "true",
+  }),
+  false,
+  "Only the exact value 1 may activate cutover.",
+);
+assert.equal(
+  getReleasedNewsroomRedirects().length,
+  0,
+  "Default release state must not activate lifecycle redirects.",
+);
+assert.equal(getPublicDiscoveryNewsArticles().length, 41);
+const currentPublicSitemapPaths = sitemap()
+  .map((entry) => new URL(entry.url).pathname)
+  .sort();
+assert.equal(
+  currentPublicSitemapPaths.length,
+  79,
+  "Flag-off discovery must preserve the complete pre-cutover sitemap.",
+);
+assert.deepEqual(
+  currentPublicSitemapPaths,
+  [...primaryByUrl.keys()].sort(),
+  "Flag-off discovery drifted from the authoritative pre-cutover URL set.",
+);
+assert.equal(
+  isRenderableArticleSlug(
+    "2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
+  ),
+  true,
+  "A previously public REMOVE candidate must stay readable before cutover.",
+);
+assert.equal(isRenderableLifecyclePath("/areas/palm-jumeirah"), true);
+assert.equal(isReleasedIndexEligiblePath("/areas/palm-jumeirah"), true);
+assert.match(
+  read("app/pulse/page.tsx"),
+  /if \(isNewsroomLifecycleCutoverEnabled\(\)\) notFound\(\)/,
+);
+
+process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
+assert.equal(isNewsroomLifecycleCutoverEnabled(), true);
+assert.equal(getReleasedNewsroomRedirects().length, 31);
+assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
+assert.equal(getPublicDiscoveryNewsArticles().length, 26);
 
 assert.equal(rows.length, 130, "The authoritative CSV row count changed.");
 assert.equal(primaryRows.length, 79, "The primary sitemap baseline changed.");
@@ -226,14 +274,22 @@ for (const row of removeArticleRows) {
     `${slug} source record was deleted instead of route-gated.`,
   );
 }
-assert.throws(
-  () => PulsePage(),
-  (error: unknown) =>
-    error instanceof Error && error.message.includes("NEXT_HTTP_ERROR_FALLBACK;404"),
-  "/pulse must return the deliberate architecture-supported 404.",
+assert.ok(
+  NEWSROOM_RELEASE_REMOVAL_CANDIDATES.includes("/pulse"),
+  "/pulse must share the one lifecycle release boundary.",
 );
 
 async function main() {
+process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "0";
+const currentPublicRedirects = await configuredRedirects();
+assert.ok(
+  NEWSROOM_EXACT_REDIRECTS.every(
+    ({ source }) =>
+      !currentPublicRedirects.some((redirect) => redirect.source === source),
+  ),
+  "Flag-off configuration must not contain any lifecycle redirect source.",
+);
+process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
 const redirects = await configuredRedirects();
 const lifecycleRedirectRows = rows.filter(
   (row) =>
@@ -244,6 +300,9 @@ const lifecycleRedirectRows = rows.filter(
 );
 const redirectBySource = new Map(
   NEWSROOM_EXACT_REDIRECTS.map((redirect) => [redirect.source, redirect]),
+);
+const configuredRedirectBySource = new Map(
+  redirects.map((redirect) => [redirect.source, redirect]),
 );
 
 assert.equal(lifecycleRedirectRows.length, 34);
@@ -267,6 +326,12 @@ for (const row of lifecycleRedirectRows) {
   assert.equal(redirect.destination, row.destination);
   assert.equal(redirect.statusCode, 301);
   assertRedirectDestination(redirect.source, redirect.destination);
+  const configured = configuredRedirectBySource.get(row.current_url);
+  assert.ok(configured, `Released redirect missing for ${row.current_url}.`);
+  assert.equal(
+    configured.destination,
+    canonicalNewsroomRedirectDestination(row.destination),
+  );
 }
 
 const exactSources = new Set(NEWSROOM_EXACT_REDIRECTS.map(({ source }) => source));
@@ -275,6 +340,14 @@ for (const { source, destination } of NEWSROOM_EXACT_REDIRECTS) {
   assert.ok(
     destinationUrl.origin !== SITE.url || !exactSources.has(destinationUrl.pathname),
     `${source} redirects through another retired newsroom URL.`,
+  );
+}
+for (const redirect of redirects.filter((candidate) =>
+  exactSources.has(candidate.source),
+)) {
+  assert.ok(
+    redirect.destination.startsWith("https://"),
+    `${redirect.source} must use an absolute final destination for www one-hop safety.`,
   );
 }
 
@@ -311,6 +384,12 @@ assertDuplicateResolution();
 assertHeldRoutes();
 assertNoRetiredPublicHrefs();
 assertApprovedCoverPreserved();
+
+if (originalCutover === undefined) {
+  delete process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV];
+} else {
+  process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = originalCutover;
+}
 
 console.log(
   "Newsroom lifecycle PASS: 79 authoritative primary URLs -> 31 indexable; " +
@@ -387,20 +466,26 @@ function assertPublicNoindexMetadataGates() {
 
   assert.match(
     articleRoute,
-    /index:\s*isIndexEligibleDisposition\(lifecycle\.disposition\),\s*\n\s*follow:\s*true/,
+    /index:\s*isReleasedIndexEligiblePath\(`\/news\/\$\{slug\}`\),\s*\n\s*follow:\s*true/,
   );
-  assert.match(areaRoute, /robots:\s*\{\s*index:\s*false,\s*follow:\s*true\s*\}/);
+  assert.match(
+    areaRoute,
+    /index:\s*isReleasedIndexEligiblePath\(`\/areas\/\$\{slug\}`\)/,
+  );
   assert.match(
     developerRoute,
-    /robots:\s*\{\s*index:\s*false,\s*follow:\s*true\s*\}/,
+    /index:\s*isReleasedIndexEligiblePath\(`\/developer\/\$\{slug\}`\)/,
   );
   assert.match(
     terminalRoute,
-    /robots:\s*\{\s*index:\s*false,\s*follow:\s*true\s*\}/,
+    /index:\s*isReleasedIndexEligiblePath\("\/terminal"\)/,
   );
-  assert.doesNotMatch(areaRoute, /application\/ld\+json/);
-  assert.doesNotMatch(developerRoute, /application\/ld\+json/);
-  assert.doesNotMatch(terminalRoute, /application\/ld\+json/);
+  assert.match(areaRoute, /const graph = indexEligible/);
+  assert.match(developerRoute, /const graph = indexEligible/);
+  assert.match(
+    terminalRoute,
+    /isReleasedIndexEligiblePath\("\/terminal"\) \? <JsonLd \/>/,
+  );
   assert.match(articleRoute, /const graph = indexEligible/);
   assert.match(articleRoute, /!isRenderableArticleSlug\(slug\)/);
   assert.match(articleRoute, /notFound\(\)/);
@@ -645,13 +730,23 @@ function assertNoRetiredPublicHrefs() {
     "app/areas/[slug]/page.tsx",
     "app/developer/[slug]/page.tsx",
     "app/terminal/page.tsx",
+    "app/spatial/page.tsx",
   ];
   const sourceFiles = [
     ...listTsxFiles("components/redesign"),
     ...listTsxFiles("components/terminal"),
+    "components/homepage/AuthorBrand.tsx",
+    "components/homepage/VerticalsBento.tsx",
     ...effectivePageFiles,
   ];
-  const retiredRoots = ["/pulse", "/areas", "/developers", "/map", "/spatial"];
+  const retiredRoots = [
+    "/pulse",
+    "/areas",
+    "/developers",
+    "/map",
+    "/spatial",
+    "/v",
+  ];
 
   for (const relativePath of sourceFiles) {
     const source = read(relativePath);

@@ -112,6 +112,16 @@ export default function NewsArchive({
   );
   const requestedPage = Number(searchParams.get("page") ?? "1");
   const selectedDesk = desks.find((item) => item.slug === desk) ?? null;
+  const unsupportedCategory =
+    category !== "all" && !categories.some(([value]) => value === category);
+  const unsupportedMarket = market !== "all" && !markets.includes(market);
+  const unsupportedDesk =
+    desk !== "all" && !desks.some((item) => item.slug === desk);
+  const unsupportedArea =
+    area !== "all" && !areas.some(([slug]) => slug === area);
+  const unsupportedDeveloper =
+    developer !== "all" &&
+    !developers.some(([slug]) => slug === developer);
 
   const filtered = useMemo(
     () =>
@@ -240,6 +250,11 @@ export default function NewsArchive({
             >
               All reporting
             </button>
+            {unsupportedDesk ? (
+              <button type="button" aria-pressed disabled>
+                Unavailable desk · {desk}
+              </button>
+            ) : null}
             {desks.map((item) => (
               <button
                 type="button"
@@ -279,6 +294,9 @@ export default function NewsArchive({
               }
             >
               <option value="all">All markets</option>
+              {unsupportedMarket ? (
+                <option value={market}>Unavailable market · {market}</option>
+              ) : null}
               {markets.map((item) => (
                 <option value={item} key={item}>
                   {item}
@@ -295,6 +313,11 @@ export default function NewsArchive({
               }
             >
               <option value="all">All report types</option>
+              {unsupportedCategory ? (
+                <option value={category}>
+                  Unavailable report type · {category}
+                </option>
+              ) : null}
               {categories.map(([value, label]) => (
                 <option value={value} key={value}>
                   {label}
@@ -311,6 +334,9 @@ export default function NewsArchive({
               }
             >
               <option value="all">All related areas</option>
+              {unsupportedArea ? (
+                <option value={area}>Unavailable area · {area}</option>
+              ) : null}
               {areas.map(([value, label]) => (
                 <option value={value} key={value}>
                   {label}
@@ -327,6 +353,11 @@ export default function NewsArchive({
               }
             >
               <option value="all">All related developers</option>
+              {unsupportedDeveloper ? (
+                <option value={developer}>
+                  Unavailable developer · {developer}
+                </option>
+              ) : null}
               {developers.map(([value, label]) => (
                 <option value={value} key={value}>
                   {label}

@@ -4,7 +4,8 @@
 import { ImageResponse } from "next/og";
 import { NextRequest, NextResponse } from "next/server";
 import { getNewsBySlug } from "@/content/news";
-import { SITE } from "@/lib/constants";
+import { EDITORIAL, SITE } from "@/lib/constants";
+import { isApprovedPublicLifecycleArticleSlug } from "@/lib/news-lifecycle";
 import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
 
 export const runtime = "nodejs";
@@ -12,13 +13,21 @@ export const dynamic = "force-dynamic";
 
 const CACHE_CONTROL =
   "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
+const X_ROBOTS_TAG = "noindex, nofollow, noarchive";
+
+function errorHeaders() {
+  return {
+    "Cache-Control": "no-store",
+    "X-Robots-Tag": X_ROBOTS_TAG,
+  };
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   if ([...searchParams.keys()].some((key) => key !== "slug")) {
     return NextResponse.json(
       { error: "Only the canonical article slug is accepted." },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: errorHeaders() },
     );
   }
 
@@ -26,15 +35,20 @@ export async function GET(request: NextRequest) {
   if (slug && !/^[a-z0-9-]{1,180}$/.test(slug)) {
     return NextResponse.json(
       { error: "Invalid article slug." },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: errorHeaders() },
     );
   }
 
   const article = slug ? getNewsBySlug(slug) : null;
-  if (slug && !article) {
+  if (
+    slug &&
+    (!article ||
+      article.status === "research" ||
+      !isApprovedPublicLifecycleArticleSlug(slug))
+  ) {
     return NextResponse.json(
       { error: "Article not found." },
-      { status: 404, headers: { "Cache-Control": "no-store" } },
+      { status: 404, headers: errorHeaders() },
     );
   }
 
@@ -178,10 +192,10 @@ export async function GET(request: NextRequest) {
             gap: 16,
           }}
         >
-          <span>By Raj Tomar</span>
+          <span>{EDITORIAL.articleByline}</span>
           <span style={{ opacity: 0.5 }}>·</span>
           <span style={{ color: PAPER, opacity: 0.7 }}>
-            property advisor
+            {EDITORIAL.articleRole}
           </span>
         </div>
 
@@ -209,6 +223,7 @@ export async function GET(request: NextRequest) {
       headers: {
         "Cache-Control": CACHE_CONTROL,
         "X-Content-Type-Options": "nosniff",
+        "X-Robots-Tag": X_ROBOTS_TAG,
       },
     },
   );

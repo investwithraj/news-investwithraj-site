@@ -82,7 +82,7 @@ export default function SpatialPage() {
             {desks.map((desk, index) => (
               <Link
                 key={desk.slug}
-                href={`/v/${desk.slug}`}
+                href={`/news?desk=${desk.slug}`}
                 className={styles.deskCard}
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
@@ -116,8 +116,8 @@ export default function SpatialPage() {
               guides. It is a geographic index—not a boundary map, price layer
               or simulated market heatmap.
             </p>
-            <Link href="/map">
-              Open the area atlas
+            <Link href="/news">
+              Browse area reporting
               <span aria-hidden>→</span>
             </Link>
           </div>
@@ -209,7 +209,7 @@ function JsonLd() {
           "@type": "ListItem",
           position: index + 1,
           name: vertical.name,
-          url: `${SITE.url}/v/${vertical.slug}`,
+          url: `${SITE.url}/news?desk=${vertical.slug}`,
         })),
       },
       {
