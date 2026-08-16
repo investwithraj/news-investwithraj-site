@@ -267,6 +267,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       draft.contentHash,
       draft.verifiedSources ?? [],
       draft.provenance,
+      draft.article,
       draft.evidenceApproval.approvedAt,
       draft.evidenceApproval.reviewer,
     );

@@ -4,12 +4,40 @@ import {
   assessDraft,
   runAutoApprove,
 } from "../lib/news-review/auto-approve.js";
-import type { NewsDraft } from "../lib/news-review/types.js";
+import type {
+  NewsDraft,
+  NewsDraftProvenance,
+} from "../lib/news-review/types.js";
 
-const sourceA = "https://example.com/source-a";
-const sourceB = "https://example.org/source-b";
+const sourceA = "https://www.reuters.com/world/middle-east/source-a";
+const sourceB =
+  "https://www.thenationalnews.com/business/property/source-b/";
+const sourcePublishedAt = "2026-08-11T08:00:00.000Z";
+const freshnessCheckedAt = "2026-08-12T10:00:00.000Z";
 const evidence =
   "The verified transaction value was AED 10 million according to the official record.";
+
+type EvidenceRecord = NonNullable<
+  NewsDraftProvenance["fetchedEvidence"]
+>[number];
+
+function evidenceRecord(
+  url: string,
+  text = evidence,
+  overrides: Partial<EvidenceRecord> = {},
+): EvidenceRecord {
+  return {
+    url,
+    finalUrl: url,
+    text,
+    fetchedAt: freshnessCheckedAt,
+    sourcePublishedAt,
+    sourceDateSource: "meta",
+    freshnessCheckedAt,
+    freshnessMaxAgeHours: 168,
+    ...overrides,
+  };
+}
 
 const draft = {
   id: "auto-publish-regression",
@@ -32,8 +60,8 @@ const draft = {
   },
   provenance: {
     fetchedEvidence: [
-      { url: sourceA, text: evidence },
-      { url: sourceB, text: evidence },
+      evidenceRecord(sourceA),
+      evidenceRecord(sourceB),
     ],
   },
 } as unknown as NewsDraft;
@@ -110,7 +138,7 @@ async function main() {
       },
       provenance: {
         ...draft.provenance,
-        fetchedEvidence: [{ url: input.url, text: evidence }],
+        fetchedEvidence: [evidenceRecord(input.url)],
       },
     }) as NewsDraft;
 
@@ -166,21 +194,59 @@ async function main() {
       "investment recommendations must still require two publishers",
     );
 
+    const tldrRecommendationDraft = {
+      ...reutersDraft,
+      id: "single-source-tldr-recommendation",
+      article: {
+        ...reutersDraft.article,
+        tldr: [
+          "We recommend investors buy.",
+          "The update is directly attributed.",
+          "The evidence is fresh.",
+        ],
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(tldrRecommendationDraft).requiredPublisherCount,
+      2,
+      "recommendations outside the body must still use the risky lane",
+    );
+    assert.equal(assessDraft(tldrRecommendationDraft).verdict, "manual");
+
+    const corroboratedAnalysisDraft = {
+      ...draft,
+      id: "two-source-analysis",
+      article: {
+        ...draft.article,
+        body:
+          "We recommend investors buy after the verified transaction value reached AED 10 million.",
+      },
+    } as NewsDraft;
+    const corroboratedAssessment = assessDraft(corroboratedAnalysisDraft);
+    assert.equal(corroboratedAssessment.requiredPublisherCount, 2);
+    assert.equal(corroboratedAssessment.fetchedEvidenceCount, 2);
+    assert.equal(corroboratedAssessment.verdict, "auto-approve");
+
     const samePublisherDraft = {
       ...draft,
       id: "auto-publish-same-publisher",
       article: {
         ...draft.article,
+        body:
+          "We recommend investors buy after the verified transaction value reached AED 10 million.",
         citations: [
-          { source: "Source A", url: sourceA },
-          { source: "Source A", url: "https://example.com/source-b" },
+          { source: "Reuters", url: sourceA },
+          {
+            source: "Reuters Graphics",
+            url: "https://graphics.reuters.com/property/source-b",
+          },
         ],
       },
       provenance: {
         ...draft.provenance,
         fetchedEvidence: [
-          { url: sourceA, text: evidence },
-          { url: "https://example.com/source-b", text: evidence },
+          evidenceRecord(sourceA),
+          evidenceRecord("https://graphics.reuters.com/property/source-b"),
         ],
       },
     } as NewsDraft;
@@ -189,6 +255,103 @@ async function main() {
       "manual",
       "two URLs from one publisher must not satisfy independent corroboration",
     );
+
+    const legacyUndatedDraft = {
+      ...reutersDraft,
+      id: "legacy-undated-evidence",
+      provenance: {
+        ...reutersDraft.provenance,
+        fetchedEvidence: [
+          {
+            url: reutersDraft.article.citations[0].url,
+            text: evidence,
+            fetchedAt: freshnessCheckedAt,
+          },
+        ],
+      },
+    } as NewsDraft;
+    const legacyAssessment = assessDraft(legacyUndatedDraft);
+    assert.equal(legacyAssessment.verdict, "manual");
+    assert.ok(
+      legacyAssessment.reasons.some((reason) =>
+        /publication timestamp\/date-source missing/.test(reason),
+      ),
+    );
+
+    const freshnessVariant = (
+      id: string,
+      overrides: Partial<EvidenceRecord>,
+    ): NewsDraft => ({
+      ...reutersDraft,
+      id,
+      provenance: {
+        ...reutersDraft.provenance,
+        fetchedEvidence: [
+          evidenceRecord(
+            reutersDraft.article.citations[0].url,
+            evidence,
+            overrides,
+          ),
+        ],
+      },
+    });
+    const staleEvidenceDraft = freshnessVariant("stale-source-date", {
+      sourcePublishedAt: "2025-11-15T08:00:00.000Z",
+      freshnessCheckedAt: "2026-08-12T10:00:00.000Z",
+    });
+    const futureEvidenceDraft = freshnessVariant("future-source-date", {
+      sourcePublishedAt: "2026-08-13T10:00:00.000Z",
+      freshnessCheckedAt: "2026-08-12T10:00:00.000Z",
+    });
+    assert.equal(assessDraft(staleEvidenceDraft).verdict, "manual");
+    assert.ok(
+      assessDraft(staleEvidenceDraft).reasons.some((reason) =>
+        /old at staging/.test(reason),
+      ),
+    );
+    assert.equal(assessDraft(futureEvidenceDraft).verdict, "manual");
+    assert.ok(
+      assessDraft(futureEvidenceDraft).reasons.some((reason) =>
+        /after the staging check/.test(reason),
+      ),
+    );
+
+    const heldBacklogStillFresh = freshnessVariant("held-backlog-fresh", {
+      sourcePublishedAt: "2026-08-01T08:00:00.000Z",
+      fetchedAt: "2026-08-02T08:00:00.000Z",
+      freshnessCheckedAt: "2026-08-02T08:00:00.000Z",
+    });
+    const heldBacklogAssessment = assessDraft(heldBacklogStillFresh);
+    assert.equal(
+      heldBacklogAssessment.verdict,
+      "auto-approve",
+      `freshness must use the stored staging clock, not the later publication-run clock: ${heldBacklogAssessment.reasons.join("; ")}`,
+    );
+
+    const crossFieldFiguresDraft = {
+      ...draft,
+      id: "cross-field-figures",
+      article: {
+        ...draft.article,
+        title: "AED 11 million headline",
+        subtitle: "The subtitle claims AED 12 million.",
+        tldr: [
+          "The TLDR claims AED 13 million.",
+          "Verified direct evidence",
+          "Publication gate check",
+        ],
+        faq: [
+          {
+            q: "Was the value AED 14 million?",
+            a: "No further supported value was supplied.",
+          },
+        ],
+      },
+    } as NewsDraft;
+    const crossFieldAssessment = assessDraft(crossFieldFiguresDraft);
+    assert.equal(crossFieldAssessment.verdict, "manual");
+    assert.equal(crossFieldAssessment.figureCount, 5);
+    assert.equal(crossFieldAssessment.amberFigures.length, 4);
 
     const typographyVariantDraft = {
       ...draft,
@@ -200,16 +363,14 @@ async function main() {
       provenance: {
         ...draft.provenance,
         fetchedEvidence: [
-          {
-            url: sourceA,
-            text:
-              "The official release states that contracts total AED 3.5 billion and cover 8000 homes across the verified development programme.",
-          },
-          {
-            url: sourceB,
-            text:
-              "Independent reporting says the awards represent 30% of the programme and confirms the same construction mandate in its full report.",
-          },
+          evidenceRecord(
+            sourceA,
+            "The official release states that contracts total AED 3.5 billion and cover 8000 homes across the verified development programme.",
+          ),
+          evidenceRecord(
+            sourceB,
+            "Independent reporting says the awards represent 30% of the programme and confirms the same construction mandate in its full report.",
+          ),
         ],
       },
     } as NewsDraft;

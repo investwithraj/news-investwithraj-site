@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   assessPublicationFreshness,
@@ -12,8 +15,16 @@ import {
   type FetchedArticleText,
 } from "../lib/sources/extract.js";
 import type { Cluster } from "../lib/pipeline/types.js";
+import {
+  draftContentHash,
+  evidenceApprovalFor,
+} from "../lib/news-review/integrity.js";
+import type {
+  DraftArticle,
+  NewsDraftProvenance,
+} from "../lib/news-review/types.js";
 
-const NOW = new Date("2026-08-16T12:00:00.000Z");
+const NOW = new Date("2026-08-15T22:00:00.000Z");
 const FRESH_DATE = "2026-08-15T08:00:00.000Z";
 const REUTERS_URL =
   "https://www.reuters.com/world/middle-east/dubai-property-test-source";
@@ -102,7 +113,32 @@ type ResearchCall = NonNullable<NonNullable<DraftOpts["dependencies"]>["research
 type RepairCall = NonNullable<NonNullable<DraftOpts["dependencies"]>["repair"]>;
 type FetchCall = NonNullable<NonNullable<DraftOpts["dependencies"]>["fetchArticle"]>;
 
-async function singleSourceTierA(): Promise<void> {
+interface ReadyFixture {
+  article: DraftArticle;
+  provenance: NewsDraftProvenance;
+}
+
+function approvalFor(
+  fixture: ReadyFixture,
+  reviewer: "raj-review-session" | "deterministic-auto-publisher" =
+    "deterministic-auto-publisher",
+) {
+  const verifiedSources = fixture.article.citations.map(
+    (citation) => citation.url,
+  );
+  const contentHash = draftContentHash(fixture.article, fixture.provenance);
+  return evidenceApprovalFor(
+    1,
+    contentHash,
+    verifiedSources,
+    fixture.provenance,
+    fixture.article,
+    NOW.toISOString(),
+    reviewer,
+  );
+}
+
+async function singleSourceTierA(): Promise<ReadyFixture> {
   let researchCalls = 0;
   let repairCalls = 0;
   const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
@@ -122,11 +158,121 @@ async function singleSourceTierA(): Promise<void> {
   assert.equal(result.ok, true, result.reason);
   assert.equal(result.article?.citations.length, 1);
   assert.equal(result.provenance?.fetchedEvidence?.length, 1);
+  assert.equal(
+    result.provenance?.fetchedEvidence?.[0]?.sourcePublishedAt,
+    FRESH_DATE,
+  );
+  assert.equal(
+    result.provenance?.fetchedEvidence?.[0]?.sourceDateSource,
+    "meta",
+  );
+  assert.equal(
+    result.provenance?.fetchedEvidence?.[0]?.freshnessCheckedAt,
+    NOW.toISOString(),
+  );
+  assert.equal(
+    result.provenance?.fetchedEvidence?.[0]?.freshnessMaxAgeHours,
+    168,
+  );
   assert.equal(researchCalls, 1);
   assert.equal(repairCalls, 0);
+
+  const fixture = {
+    article: result.article!,
+    provenance: result.provenance!,
+  };
+  assert.ok(
+    approvalFor(fixture),
+    "one fresh Tier-A publisher must mint a content-bound evidence ledger",
+  );
+
+  const [freshEvidence] = fixture.provenance.fetchedEvidence!;
+  const legacyEvidence = { ...freshEvidence };
+  delete legacyEvidence.sourcePublishedAt;
+  delete legacyEvidence.sourceDateSource;
+  delete legacyEvidence.freshnessCheckedAt;
+  delete legacyEvidence.freshnessMaxAgeHours;
+  const legacy = {
+    article: fixture.article,
+    provenance: {
+      ...fixture.provenance,
+      fetchedEvidence: [legacyEvidence],
+    },
+  };
+  assert.equal(
+    approvalFor(legacy),
+    null,
+    "legacy evidence without immutable source-date metadata must remain manual",
+  );
+
+  const stale = {
+    article: fixture.article,
+    provenance: {
+      ...fixture.provenance,
+      fetchedEvidence: [
+        {
+          ...freshEvidence,
+          sourcePublishedAt: "2025-11-15T08:00:00.000Z",
+        },
+      ],
+    },
+  };
+  assert.equal(
+    approvalFor(stale),
+    null,
+    "an old source cannot mint a ledger from a resurfaced story",
+  );
+
+  const future = {
+    article: fixture.article,
+    provenance: {
+      ...fixture.provenance,
+      fetchedEvidence: [
+        {
+          ...freshEvidence,
+          sourcePublishedAt: "2026-08-16T08:00:00.000Z",
+        },
+      ],
+    },
+  };
+  assert.equal(
+    approvalFor(future),
+    null,
+    "a future-dated source cannot mint an evidence ledger",
+  );
+
+  const unsupportedAcrossFields = {
+    article: {
+      ...fixture.article,
+      title: "AED 11 million headline claim",
+      subtitle: "The subtitle claims AED 12 million.",
+      tldr: [
+        "The TLDR claims AED 13 million.",
+        fixture.article.tldr[1],
+        fixture.article.tldr[2],
+      ] as [string, string, string],
+      faq: [
+        {
+          q: "Was the value AED 14 million?",
+          a: "The direct source does not support that value.",
+        },
+      ],
+    },
+    provenance: fixture.provenance,
+  };
+  assert.equal(
+    approvalFor(unsupportedAcrossFields),
+    null,
+    "unsupported figures outside the body must block the ledger",
+  );
+  return fixture;
 }
 
-async function analysisRequiresTwoDomains(): Promise<void> {
+async function analysisRequiresTwoDomains(): Promise<{
+  oneSource: ReadyFixture;
+  twoSources: ReadyFixture;
+  samePublisher: ReadyFixture;
+}> {
   const analyticalBody = bodyWithFigure("AED 10 million", true);
   const oneSource = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
     now: NOW,
@@ -184,6 +330,156 @@ async function analysisRequiresTwoDomains(): Promise<void> {
   );
   assert.equal(twoSources.ok, true, twoSources.reason);
   assert.equal(twoSources.provenance?.fetchedEvidence?.length, 2);
+
+  const twoSourceFixture = {
+    article: twoSources.article!,
+    provenance: twoSources.provenance!,
+  };
+  assert.ok(
+    approvalFor(twoSourceFixture),
+    "two independent approved publishers must mint an analytical ledger",
+  );
+
+  const oneSourceFixture = {
+    article: {
+      ...twoSourceFixture.article,
+      slug: "2026-08-16-one-source-analysis",
+      citations: [twoSourceFixture.article.citations[0]],
+      heroImage: {
+        ...twoSourceFixture.article.heroImage,
+        src: "/news/2026-08-16-one-source-analysis/cover.jpg" as const,
+      },
+    },
+    provenance: {
+      ...twoSourceFixture.provenance,
+      clusterId: "one-source-analysis",
+      fetchedEvidence: [twoSourceFixture.provenance.fetchedEvidence![0]],
+    },
+  };
+  assert.equal(
+    approvalFor(oneSourceFixture),
+    null,
+    "one publisher cannot mint an analytical/disputed ledger",
+  );
+
+  const secondCitation = twoSourceFixture.article.citations[1];
+  const secondEvidence = twoSourceFixture.provenance.fetchedEvidence![1];
+  const samePublisherFixture = {
+    article: {
+      ...twoSourceFixture.article,
+      slug: "2026-08-16-same-publisher-analysis",
+      citations: [
+        twoSourceFixture.article.citations[0],
+        { ...secondCitation, source: "Reuters Graphics", url: samePublisherUrl },
+      ],
+      heroImage: {
+        ...twoSourceFixture.article.heroImage,
+        src: "/news/2026-08-16-same-publisher-analysis/cover.jpg" as const,
+      },
+    },
+    provenance: {
+      ...twoSourceFixture.provenance,
+      clusterId: "same-publisher-analysis",
+      fetchedEvidence: [
+        twoSourceFixture.provenance.fetchedEvidence![0],
+        {
+          ...secondEvidence,
+          url: samePublisherUrl,
+          finalUrl: samePublisherUrl,
+        },
+      ],
+    },
+  };
+  assert.equal(
+    approvalFor(samePublisherFixture),
+    null,
+    "Reuters subdomains cannot masquerade as independent publishers",
+  );
+
+  return {
+    oneSource: oneSourceFixture,
+    twoSources: twoSourceFixture,
+    samePublisher: samePublisherFixture,
+  };
+}
+
+async function storageUsesSameEvidencePolicy(
+  tierA: ReadyFixture,
+  analysis: { oneSource: ReadyFixture; twoSources: ReadyFixture },
+): Promise<void> {
+  const originalDirectory = process.cwd();
+  const testDirectory = await fs.mkdtemp(
+    path.join(os.tmpdir(), "iwr-evidence-ledger-"),
+  );
+  const originalKvUrl = process.env.KV_REST_API_URL;
+  const originalKvToken = process.env.KV_REST_API_TOKEN;
+  process.env.KV_REST_API_URL = "";
+  process.env.KV_REST_API_TOKEN = "";
+
+  try {
+    process.chdir(testDirectory);
+    const storage = await import("../lib/news-review/storage.js");
+    let fixtureNumber = 0;
+
+    const stageAndVerify = async (
+      fixture: ReadyFixture,
+      reviewer: "raj-review-session" | "deterministic-auto-publisher",
+    ) => {
+      fixtureNumber += 1;
+      const slug = `${fixture.article.slug}-storage-${fixtureNumber}`;
+      const staged = await storage.addDraft({
+        ...fixture,
+        article: {
+          ...fixture.article,
+          slug,
+          heroImage: { ...fixture.article.heroImage, src: `/news/${slug}/cover.jpg` },
+        },
+      });
+      return storage.updateReviewedDraft(
+        staged.id,
+        {
+          verifiedSources: staged.article.citations.map(
+            (citation) => citation.url,
+          ),
+        },
+        {
+          revision: staged.revision,
+          recordVersion: staged.recordVersion,
+          contentHash: staged.contentHash,
+        },
+        { evidenceReviewer: reviewer },
+      );
+    };
+
+    const manualTierA = await stageAndVerify(tierA, "raj-review-session");
+    assert.equal(manualTierA?.evidenceApproval?.reviewer, "raj-review-session");
+
+    const automatedAnalysis = await stageAndVerify(
+      analysis.twoSources,
+      "deterministic-auto-publisher",
+    );
+    assert.equal(
+      automatedAnalysis?.evidenceApproval?.reviewer,
+      "deterministic-auto-publisher",
+    );
+
+    const heldAnalysis = await stageAndVerify(
+      analysis.oneSource,
+      "raj-review-session",
+    );
+    assert.equal(
+      heldAnalysis?.evidenceApproval,
+      undefined,
+      "manual storage review must not mint approval for a one-publisher analysis",
+    );
+  } finally {
+    process.chdir(originalDirectory);
+    if (originalKvUrl === undefined) delete process.env.KV_REST_API_URL;
+    else process.env.KV_REST_API_URL = originalKvUrl;
+    if (originalKvToken === undefined) delete process.env.KV_REST_API_TOKEN;
+    else process.env.KV_REST_API_TOKEN = originalKvToken;
+    await fs.rm(testDirectory, { recursive: true, force: true });
+  }
 }
 
 async function staleAndUnknownDatesHold(): Promise<void> {
@@ -418,8 +714,9 @@ async function protectedFetchDiagnostics(): Promise<void> {
 async function main(): Promise<void> {
   publicationDateExtraction();
   await protectedFetchDiagnostics();
-  await singleSourceTierA();
-  await analysisRequiresTwoDomains();
+  const tierA = await singleSourceTierA();
+  const analysis = await analysisRequiresTwoDomains();
+  await storageUsesSameEvidencePolicy(tierA, analysis);
   await staleAndUnknownDatesHold();
   await unsupportedFiguresNeverPass();
   await repairFixesMechanicalGates();

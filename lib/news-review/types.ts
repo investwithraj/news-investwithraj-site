@@ -48,6 +48,15 @@ export interface NewsDraftProvenance {
     text: string;
     fetchedAt: string;
     contentHash?: string;
+    /** Explicit timestamp extracted from the publisher page, never a feed
+     * snippet or model-supplied date. Optional only for legacy-record reads;
+     * missing metadata fails the immutable publication gate. */
+    sourcePublishedAt?: string;
+    sourceDateSource?: "meta" | "json-ld" | "time";
+    /** Original staging clock and bounded age window. Auto-approval recomputes
+     * freshness against this clock, not the later publication-run clock. */
+    freshnessCheckedAt?: string;
+    freshnessMaxAgeHours?: number;
   }[];
 }
 

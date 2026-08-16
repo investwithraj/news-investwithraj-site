@@ -625,6 +625,7 @@ export async function v2UpdateDraft(
         next.contentHash,
         patch.verifiedSources,
         next.provenance,
+        next.article,
       ) ?? undefined;
   }
   await compareAndSet(current, next);

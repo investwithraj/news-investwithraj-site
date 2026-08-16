@@ -8,6 +8,14 @@ import type {
   NewsDraftProvenance,
 } from "@/lib/news-review/types";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
+import {
+  assessDraft,
+  assessStoredEvidenceFreshness,
+} from "@/lib/news-review/auto-approve";
+import {
+  validateDraft,
+  type DraftArticle as ValidatorInput,
+} from "@/lib/voice/validator";
 
 export const MAX_NEWS_SLUG_LENGTH = 80;
 export const CANONICAL_NEWS_SLUG =
@@ -465,9 +473,29 @@ export function validateProvenanceShape(
         const expectedHash = createHash("sha256")
           .update(evidence.text)
           .digest("hex");
-        return (
+        if (
           evidence.contentHash !== undefined &&
           evidence.contentHash !== expectedHash
+        ) {
+          return true;
+        }
+
+        // Legacy records remain readable so they can be surfaced for manual
+        // review. Once any immutable date field is present, however, the full
+        // staging-time freshness record must be internally consistent.
+        const hasFreshnessMetadata = [
+          evidence.sourcePublishedAt,
+          evidence.sourceDateSource,
+          evidence.freshnessCheckedAt,
+          evidence.freshnessMaxAgeHours,
+        ].some((field) => field !== undefined);
+        return (
+          hasFreshnessMetadata &&
+          !assessStoredEvidenceFreshness(
+            evidence as unknown as NonNullable<
+              NewsDraftProvenance["fetchedEvidence"]
+            >[number],
+          ).ok
         );
       }))
   ) {
@@ -510,23 +538,73 @@ export function evidenceApprovalFor(
   contentHash: string,
   verifiedSources: string[],
   provenance: NewsDraftProvenance,
+  article: DraftArticle,
   now = new Date().toISOString(),
   reviewer: EvidenceApproval["reviewer"] = "raj-review-session",
 ): EvidenceApproval | null {
+  const articleResult = validateDraftArticleShape(article);
+  if (
+    !articleResult.ok ||
+    !Array.isArray(verifiedSources) ||
+    verifiedSources.some((url) => typeof url !== "string") ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    !/^[a-f0-9]{64}$/.test(contentHash) ||
+    draftContentHash(article, provenance) !== contentHash ||
+    !validIso(now) ||
+    (reviewer !== "raj-review-session" &&
+      reviewer !== "deterministic-auto-publisher")
+  ) {
+    return null;
+  }
+
+  const boundArticle = articleResult.article;
+  const articleCitationUrls = boundArticle.citations.map(
+    (citation) => citation.url,
+  );
   const citedUrls = [...new Set(verifiedSources)].sort();
-  const evidence = (provenance.fetchedEvidence ?? [])
-    .filter((item) => citedUrls.includes(item.url))
-    .map((item) => ({
+  const expectedUrls = [...new Set(articleCitationUrls)].sort();
+  if (
+    verifiedSources.length !== citedUrls.length ||
+    articleCitationUrls.length !== expectedUrls.length ||
+    citedUrls.length !== expectedUrls.length ||
+    citedUrls.some((url, index) => url !== expectedUrls[index])
+  ) {
+    return null;
+  }
+
+  const provenanceResult = validateProvenanceShape(
+    provenance,
+    articleCitationUrls,
+  );
+  if (!provenanceResult.ok) return null;
+
+  // Recompute the voice result from the content-bound article rather than
+  // trusting mutable stored metrics, then reuse the exact publication policy.
+  const validator = validateDraft(boundArticle as unknown as ValidatorInput);
+  const assessment = assessDraft({
+    id: "evidence-approval",
+    article: boundArticle,
+    validator,
+    provenance: provenanceResult.provenance,
+  });
+  if (assessment.verdict !== "auto-approve") return null;
+
+  const evidenceRecords = provenanceResult.provenance.fetchedEvidence ?? [];
+  const evidence = citedUrls.map((url) => {
+    const matches = evidenceRecords.filter((item) => item.url === url);
+    if (matches.length !== 1) return null;
+    const item = matches[0];
+    return {
       url: item.url,
       contentHash:
         item.contentHash ??
         createHash("sha256").update(item.text).digest("hex"),
-    }))
-    .sort((left, right) => left.url.localeCompare(right.url));
+    };
+  });
   if (
-    citedUrls.length < 2 ||
-    evidence.length < 2 ||
-    new Set(evidence.map((item) => item.url)).size !== citedUrls.length
+    citedUrls.length < assessment.requiredPublisherCount ||
+    evidence.some((item) => item === null)
   ) {
     return null;
   }
@@ -534,7 +612,7 @@ export function evidenceApprovalFor(
     revision,
     contentHash,
     sourceUrls: citedUrls,
-    evidenceHashes: evidence,
+    evidenceHashes: evidence as { url: string; contentHash: string }[],
     reviewer,
     approvedAt: now,
   };

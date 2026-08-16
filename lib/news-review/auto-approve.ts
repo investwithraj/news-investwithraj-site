@@ -3,17 +3,21 @@
 //
 // A draft is AUTO-APPROVABLE iff ALL of:
 //   1. the 8-gate voice validator passes              (draft.validator.ok)
-//   2. it carries >= MIN_WHITELIST_CITATIONS citations, ALL from the
-//      verified-source whitelist                       (validator.metrics)
-//   3. at least two cited URLs have independently fetched source text
-//   4. EVERY figure in the body appears in that fetched source text
-//   5. SAFETY GUARD: if the body clearly contains statistics the figure parser
-//      did NOT capture, the draft is held (a parser blind spot must never become
-//      a silent approval).
+//   2. every evidence record proves it was explicitly dated and fresh at the
+//      immutable direct-fetch/staging clock
+//   3. risk-based publisher count passes (one Tier-A factual source; otherwise
+//      two independent approved parent publishers)
+//   4. EVERY figure in title/subtitle/TLDR/body/FAQ appears in fetched text
+//   5. SAFETY GUARD: a statistical signal the figure parser did not capture
+//      holds the draft rather than permitting a vacuous pass.
 // Anything that fails any check → "manual". Deliberately conservative: a figure
 // we cannot match is a reason to hold the draft.
 
-import type { DraftArticle, NewsDraft } from "./types";
+import type {
+  DraftArticle,
+  NewsDraft,
+  NewsDraftProvenance,
+} from "./types";
 import {
   findSourceByUrl,
   isOfficialDeveloperUrl,
@@ -21,6 +25,7 @@ import {
 } from "@/lib/sources/registry";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
+export const MAX_AUTO_NEWS_SOURCE_AGE_HOURS = 7 * 24;
 
 export type EvidenceLane =
   | "official-update"
@@ -40,6 +45,151 @@ const ANALYTICAL_CLAIM_RE =
 const ATTRIBUTION_RE =
   /\b(?:according to|said|says|announced|reported|confirmed|stated|published|disclosed)\b/i;
 
+export function articleEvidenceText(article: DraftArticle): string {
+  const tldr = Array.isArray(article.tldr) ? article.tldr : [];
+  const faq = Array.isArray(article.faq) ? article.faq : [];
+  return [
+    article.title,
+    article.subtitle ?? "",
+    ...tldr,
+    article.body,
+    ...faq.flatMap((entry) => [entry?.q ?? "", entry?.a ?? ""]),
+  ].join("\n");
+}
+
+/** Canonical publisher identity, based on the approved registry anchor rather
+ * than the raw hostname. `graphics.reuters.com` and `www.reuters.com` are one
+ * publisher and can never satisfy two-source corroboration. */
+export function approvedPublisherDomain(url: string): string | null {
+  const source = findSourceByUrl(url);
+  if (!source) return null;
+  try {
+    return new URL(source.url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+type StoredEvidence = NonNullable<
+  NewsDraftProvenance["fetchedEvidence"]
+>[number];
+
+export interface StoredEvidenceFreshness {
+  ok: boolean;
+  status:
+    | "fresh"
+    | "missing-date"
+    | "invalid-date"
+    | "missing-check"
+    | "invalid-check"
+    | "invalid-window"
+    | "stale"
+    | "future";
+  detail: string;
+}
+
+function exactIsoMilliseconds(value: unknown): number | null {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)
+  ) {
+    return null;
+  }
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return null;
+  return new Date(milliseconds).toISOString() === value
+    ? milliseconds
+    : null;
+}
+
+/** Recompute the immutable staging-time freshness decision. Current publish
+ * time is intentionally absent so a held-but-valid backlog does not age out. */
+export function assessStoredEvidenceFreshness(
+  evidence: StoredEvidence,
+): StoredEvidenceFreshness {
+  if (!evidence.sourcePublishedAt || !evidence.sourceDateSource) {
+    return {
+      ok: false,
+      status: "missing-date",
+      detail: "explicit source publication timestamp/date-source missing",
+    };
+  }
+  if (!(["meta", "json-ld", "time"] as const).includes(evidence.sourceDateSource)) {
+    return {
+      ok: false,
+      status: "invalid-date",
+      detail: "source publication date provenance is invalid",
+    };
+  }
+  const sourceMilliseconds = exactIsoMilliseconds(evidence.sourcePublishedAt);
+  if (sourceMilliseconds === null) {
+    return {
+      ok: false,
+      status: "invalid-date",
+      detail: "source publication timestamp is not an exact ISO instant",
+    };
+  }
+  if (!evidence.freshnessCheckedAt) {
+    return {
+      ok: false,
+      status: "missing-check",
+      detail: "original freshness-check timestamp missing",
+    };
+  }
+  const checkedMilliseconds = exactIsoMilliseconds(evidence.freshnessCheckedAt);
+  if (checkedMilliseconds === null) {
+    return {
+      ok: false,
+      status: "invalid-check",
+      detail: "original freshness-check timestamp is invalid",
+    };
+  }
+  const fetchedMilliseconds = exactIsoMilliseconds(evidence.fetchedAt);
+  if (
+    fetchedMilliseconds === null ||
+    fetchedMilliseconds !== checkedMilliseconds
+  ) {
+    return {
+      ok: false,
+      status: "invalid-check",
+      detail: "freshness-check timestamp does not match the direct-fetch timestamp",
+    };
+  }
+  const maxAgeHours = evidence.freshnessMaxAgeHours;
+  if (
+    typeof maxAgeHours !== "number" ||
+    !Number.isFinite(maxAgeHours) ||
+    maxAgeHours < 1 ||
+    maxAgeHours > MAX_AUTO_NEWS_SOURCE_AGE_HOURS
+  ) {
+    return {
+      ok: false,
+      status: "invalid-window",
+      detail: "freshness window missing or outside the immutable 1-168h bound",
+    };
+  }
+  const ageHours = (checkedMilliseconds - sourceMilliseconds) / 3_600_000;
+  if (ageHours < 0) {
+    return {
+      ok: false,
+      status: "future",
+      detail: `source timestamp is ${Math.abs(ageHours).toFixed(1)}h after the staging check`,
+    };
+  }
+  if (ageHours > maxAgeHours) {
+    return {
+      ok: false,
+      status: "stale",
+      detail: `source was ${ageHours.toFixed(1)}h old at staging (maximum ${maxAgeHours}h)`,
+    };
+  }
+  return {
+    ok: true,
+    status: "fresh",
+    detail: `source was ${ageHours.toFixed(1)}h old at staging`,
+  };
+}
+
 function evidenceTiers(urls: string[]): SourceTier[] {
   return urls
     .map((url) => findSourceByUrl(url)?.tier)
@@ -52,7 +202,7 @@ export function determineEvidencePolicy(
   article: DraftArticle,
   evidenceUrls: string[],
 ): EvidencePolicy {
-  const body = `${article.title}\n${article.subtitle}\n${article.body}`;
+  const body = articleEvidenceText(article);
   if (ANALYTICAL_CLAIM_RE.test(body) || article.semaform?.howIdTradeIt) {
     return {
       lane: "corroborated-analysis",
@@ -196,7 +346,9 @@ export function findUnsupportedFigures(
   );
 }
 
-export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
+export function assessDraft(
+  draft: Pick<NewsDraft, "id" | "article" | "validator" | "provenance">,
+): AutoApproveAssessment {
   const reasons: string[] = [];
   const { article, validator, provenance } = draft;
 
@@ -211,10 +363,24 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
   }
 
   const citationUrls = new Set(article.citations.map((citation) => citation.url));
-  const fetchedEvidence = (provenance.fetchedEvidence ?? []).filter(
-    (evidence) =>
-      citationUrls.has(evidence.url) && norm(evidence.text).length >= 80,
-  );
+  const storedEvidence = provenance.fetchedEvidence ?? [];
+  const freshness = storedEvidence.map((evidence) => ({
+    evidence,
+    assessment: assessStoredEvidenceFreshness(evidence),
+  }));
+  for (const { evidence, assessment } of freshness) {
+    if (assessment.ok) continue;
+    reasons.push(
+      `evidence freshness failed for ${(evidence.finalUrl ?? evidence.url).slice(0, 240)}: ${assessment.detail}`,
+    );
+  }
+  const fetchedEvidence = freshness
+    .filter(({ assessment }) => assessment.ok)
+    .map(({ evidence }) => evidence)
+    .filter(
+      (evidence) =>
+        citationUrls.has(evidence.url) && norm(evidence.text).length >= 80,
+    );
   const policy = determineEvidencePolicy(
     article,
     fetchedEvidence.map((evidence) => evidence.finalUrl ?? evidence.url),
@@ -239,16 +405,11 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
   // 3 + 4 · every figure must trace to text fetched from the cited URL.
   // provenance.citedText is deliberately ignored because it is model output.
   const distinctEvidenceDomains = new Set(
-    fetchedEvidence.map((evidence) => {
-      try {
-        return new URL(evidence.finalUrl ?? evidence.url).hostname.replace(
-          /^www\./,
-          "",
-        );
-      } catch {
-        return "";
-      }
-    }).filter(Boolean),
+    fetchedEvidence
+      .map((evidence) =>
+        approvedPublisherDomain(evidence.finalUrl ?? evidence.url),
+      )
+      .filter((domain): domain is string => Boolean(domain)),
   );
   const fetchedEvidenceCount = distinctEvidenceDomains.size;
   if (fetchedEvidenceCount < policy.requiredPublisherCount) {
@@ -259,7 +420,8 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
   const sourceText = normNumericEvidence(
     fetchedEvidence.map((evidence) => evidence.text).join(" "),
   );
-  const figures = extractFigures(article.body);
+  const claimText = articleEvidenceText(article);
+  const figures = extractFigures(claimText);
   let amberFigures: string[];
   if (!sourceText) {
     amberFigures = figures;
@@ -267,7 +429,7 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
       "no independently fetched source text on the draft — model citation markup cannot verify figures",
     );
   } else {
-    amberFigures = findUnsupportedFigures(article.body, sourceText);
+    amberFigures = findUnsupportedFigures(claimText, sourceText);
     if (amberFigures.length > 0) {
       reasons.push(
         `${amberFigures.length} unsourced figure(s): ${amberFigures
@@ -277,11 +439,11 @@ export function assessDraft(draft: NewsDraft): AutoApproveAssessment {
     }
   }
 
-  // 5 · safety guard against a parser blind spot — if the body clearly has
+  // 5 · safety guard across every publishable field. If text clearly has
   // statistics but the parser found none, never approve on a vacuous pass.
-  if (figures.length === 0 && bodyHasStatSignal(article.body)) {
+  if (figures.length === 0 && bodyHasStatSignal(claimText)) {
     reasons.push(
-      "body contains statistics the figure parser did not capture — holding for manual safety",
+      "article fields contain statistics the figure parser did not capture — holding for manual safety",
     );
   }
 

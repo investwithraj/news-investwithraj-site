@@ -21,9 +21,11 @@ import { rootCtaUrl } from "@/lib/constants";
 import type { Cluster } from "@/lib/pipeline/types";
 import type { DraftArticle, NewsDraftProvenance } from "./types";
 import {
+  articleEvidenceText,
   determineEvidencePolicy,
   extractFigures,
   findUnsupportedFigures,
+  MAX_AUTO_NEWS_SOURCE_AGE_HOURS,
   type EvidencePolicy,
 } from "./auto-approve";
 import type { NewsCategory } from "@/content/news/types";
@@ -50,16 +52,6 @@ function draftEvidencePolicy(
     requiredPublisherCount: 2,
     reason: "disputed or market-wide analysis requires independent corroboration",
   };
-}
-
-function numericClaimText(article: DraftArticle): string {
-  return [
-    article.title,
-    article.subtitle,
-    ...article.tldr,
-    article.body,
-    ...article.faq.flatMap((entry) => [entry.q, entry.a]),
-  ].join("\n");
 }
 
 export const DRAFT_SYSTEM_PROMPT = `You are the newsroom drafter for news.investwithraj.com — the editorial voice of Raj Tomar, a Dubai property advisor writing for investors and home buyers.
@@ -172,8 +164,7 @@ export interface DraftOpts {
   };
 }
 
-export const DEFAULT_MAX_SOURCE_AGE_HOURS = 7 * 24;
-const MAX_FUTURE_SOURCE_SKEW_HOURS = 24;
+export const DEFAULT_MAX_SOURCE_AGE_HOURS = MAX_AUTO_NEWS_SOURCE_AGE_HOURS;
 
 export interface PublicationFreshness {
   ok: boolean;
@@ -211,7 +202,7 @@ export function assessPublicationFreshness(
     ? Math.max(1, Math.min(DEFAULT_MAX_SOURCE_AGE_HOURS, maxAgeHours))
     : DEFAULT_MAX_SOURCE_AGE_HOURS;
   const ageHours = (nowMilliseconds - publishedMilliseconds) / 3_600_000;
-  if (ageHours < -MAX_FUTURE_SOURCE_SKEW_HOURS) {
+  if (ageHours < 0) {
     return {
       ok: false,
       status: "future",
@@ -353,13 +344,13 @@ export async function draftFromCluster(
     ? new Date(opts.now.getTime())
     : new Date();
   const now = clock.toISOString();
-  const maxSourceAgeHours = Math.max(
-    1,
-    Math.min(
-      DEFAULT_MAX_SOURCE_AGE_HOURS,
-      opts.maxSourceAgeHours ?? DEFAULT_MAX_SOURCE_AGE_HOURS,
-    ),
-  );
+  const requestedMaxAgeHours = opts.maxSourceAgeHours;
+  const maxSourceAgeHours = Number.isFinite(requestedMaxAgeHours)
+    ? Math.max(
+        1,
+        Math.min(DEFAULT_MAX_SOURCE_AGE_HOURS, requestedMaxAgeHours as number),
+      )
+    : DEFAULT_MAX_SOURCE_AGE_HOURS;
   const researchCall = opts.dependencies?.research ?? callClaudeResearch;
   const repairCall = opts.dependencies?.repair ?? callClaude;
   const articleFetch = opts.dependencies?.fetchArticle ?? fetchArticleText;
@@ -532,14 +523,17 @@ export async function draftFromCluster(
         // Keep the exact URL in the diagnostic when parsing fails.
       }
       diagnostics.push(
-        `${publisher}: ${fetched.diagnostic.code} (${fetched.diagnostic.message}); ${freshness.detail}`,
+        `${publisher}: ${fetched.diagnostic.code} (${fetched.diagnostic.message}); ${freshness.detail}; date source ${fetched.publicationDateSource ?? "missing"}`,
       );
       return { citation, fetched, freshness };
     }),
   );
   const evidenceRows = citedTexts.filter(
     ({ fetched, freshness }) =>
-      fetched.text.trim().length >= 80 && freshness.ok,
+      fetched.text.trim().length >= 80 &&
+      freshness.ok &&
+      fetched.publishedAt !== null &&
+      fetched.publicationDateSource !== null,
   );
   article = {
     ...article,
@@ -553,6 +547,10 @@ export async function draftFromCluster(
       text,
       fetchedAt: now,
       contentHash: createHash("sha256").update(text).digest("hex"),
+      sourcePublishedAt: fetched.publishedAt ?? undefined,
+      sourceDateSource: fetched.publicationDateSource ?? undefined,
+      freshnessCheckedAt: now,
+      freshnessMaxAgeHours: maxSourceAgeHours,
     };
   });
   const fetchedDomains = new Set(
@@ -593,7 +591,7 @@ export async function draftFromCluster(
     )
     .join("\n\n---\n\n");
   let unsupportedFigures = findUnsupportedFigures(
-    numericClaimText(article),
+    articleEvidenceText(article),
     evidencePacket,
   );
   const preflightValidation = validateDraft(
@@ -648,7 +646,7 @@ export async function draftFromCluster(
       faq: Array.isArray(repaired.faq) ? repaired.faq.slice(0, 5) : [],
     };
     unsupportedFigures = findUnsupportedFigures(
-      numericClaimText(article),
+      articleEvidenceText(article),
       evidencePacket,
     );
     if (unsupportedFigures.length > 0) {

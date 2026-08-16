@@ -730,6 +730,7 @@ export async function updateReviewedDraft(
         next.contentHash,
         patch.verifiedSources,
         next.provenance,
+        next.article,
         new Date().toISOString(),
         options.evidenceReviewer ?? "raj-review-session",
       ) ?? undefined;
