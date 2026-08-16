@@ -91,7 +91,6 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     site: "@investwithraj",
-    creator: "@rajtomar_dxb",
     title: SITE.name,
     description: SITE.description,
   },

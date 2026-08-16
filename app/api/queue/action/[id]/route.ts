@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
+import { validateQueueLifecycleFields } from "@/lib/queue/lifecycle";
 import {
   deleteItem,
   getItem,
@@ -113,6 +114,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     switch (action) {
       case "approve":
+        if (!validateQueueLifecycleFields(item).ok) {
+          return privateJson(
+            {
+              error:
+                "Queue copy may reference only approved public newsroom articles.",
+            },
+            400,
+          );
+        }
         patch.status = "approved";
         break;
       case "skip":
@@ -138,10 +148,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             400,
           );
         }
+        const draftText = body.draftText.trim();
+        const editNote =
+          typeof body.editNote === "string"
+            ? body.editNote.trim()
+            : item.editNote;
+        if (
+          !validateQueueLifecycleFields({
+            ...item,
+            draftText,
+            editNote,
+          }).ok
+        ) {
+          return privateJson(
+            {
+              error:
+                "Queue copy may reference only approved public newsroom articles.",
+            },
+            400,
+          );
+        }
         patch.status = "edited";
-        patch.draftText = body.draftText.trim();
+        patch.draftText = draftText;
         if (typeof body.editNote === "string") {
-          patch.editNote = body.editNote.trim();
+          patch.editNote = editNote;
         }
         break;
       }
@@ -157,6 +187,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         if (postedUrl === null) {
           return privateJson(
             { error: "postedUrl must be a valid HTTP(S) URL." },
+            400,
+          );
+        }
+        if (
+          !validateQueueLifecycleFields({
+            ...item,
+            postedUrl: postedUrl ?? item.postedUrl,
+          }).ok
+        ) {
+          return privateJson(
+            {
+              error:
+                "Queue URLs may reference only approved public newsroom articles.",
+            },
             400,
           );
         }

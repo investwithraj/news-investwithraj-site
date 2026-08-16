@@ -135,6 +135,7 @@ const apiSources = {
   digest: read("app/api/digest/route.ts"),
   distribute: read("app/api/distribute/route.ts"),
   queue: read("app/api/queue/add/route.ts"),
+  queueAction: read("app/api/queue/action/[id]/route.ts"),
   og: read("app/api/og/route.tsx"),
 };
 assert.match(apiSources.brief, /isApprovedPublicLifecycleArticleSlug/);
@@ -144,7 +145,8 @@ assert.doesNotMatch(apiSources.distribute, /import \{ NEWS_ARTICLES \}/);
 assert.doesNotMatch(apiSources.queue, /import \{ NEWS_ARTICLES \}/);
 assert.match(apiSources.digest, /INDEXABLE_NEWS_ARTICLES/);
 assert.match(apiSources.distribute, /INDEXABLE_NEWS_ARTICLES/);
-assert.match(apiSources.queue, /sourceIsPublic/);
+assert.match(apiSources.queue, /validateQueueLifecycleFields/);
+assert.match(apiSources.queueAction, /validateQueueLifecycleFields/);
 assert.match(apiSources.og, /isApprovedPublicLifecycleArticleSlug/);
 
 const removed = NEWS_ARTICLES.find((article) => article.slug === removedSlug);
@@ -163,6 +165,7 @@ assert.deepEqual(schema.author, { "@id": NEWS_ORG_ID });
 const articleComponent = read("components/redesign/NewsArticle.tsx");
 const articleRoute = read("app/news/[slug]/page.tsx");
 const editorialStandards = read("app/about/editorial-standards/page.tsx");
+const layout = read("app/layout.tsx");
 assert.match(articleComponent, /EDITORIAL\.articleByline/);
 assert.match(articleComponent, /News Desk analysis/);
 assert.match(articleComponent, /About the publication/);
@@ -173,7 +176,12 @@ assert.doesNotMatch(
 assert.doesNotMatch(articleRoute, /#raj/);
 assert.match(editorialStandards, /Publishing identity/);
 assert.match(editorialStandards, /Invest With Raj News Desk/);
+assert.match(editorialStandards, /News Desk interpretation/);
+assert.doesNotMatch(editorialStandards, /Raj's interpretation/);
 assert.doesNotMatch(editorialStandards, /Accountable editor/);
+assert.match(layout, /creator: "Invest With Raj News Desk"/);
+assert.match(layout, /name: "Invest With Raj News Desk"/);
+assert.doesNotMatch(layout, /creator: "@rajtomar_dxb"/);
 
 const rss = await getRss().text();
 assert.ok(rss.includes("(" + EDITORIAL.articleByline + ")"));

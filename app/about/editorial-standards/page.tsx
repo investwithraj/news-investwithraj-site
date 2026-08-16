@@ -69,7 +69,7 @@ const standards = [
     number: "03",
     title: "Interpretation is labelled",
     body:
-      "Reported fact and Raj's interpretation do different jobs. Fact describes what the available record establishes. Interpretation explains a possible consequence for a buyer or investor. Forecasts are framed as scenarios, risks or watchpoints—never as guaranteed returns, prices or outcomes.",
+      "Reported fact and News Desk interpretation do different jobs. Fact describes what the available record establishes. Interpretation explains a possible consequence for a buyer or investor. Forecasts are framed as scenarios, risks or watchpoints—never as guaranteed returns, prices or outcomes.",
   },
   {
     id: "corrections",

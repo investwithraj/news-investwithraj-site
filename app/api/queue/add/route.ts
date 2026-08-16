@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
+import { validateQueueLifecycleFields } from "@/lib/queue/lifecycle";
 import {
   generateDraftsForArticle,
   selectTopDrafts,
@@ -82,11 +83,6 @@ function parseQueuePartial(value: unknown): QueuePartial | null {
       ? undefined
       : cleanText(item.sourceArticleSlug, 180);
   const responseToUrl = cleanOptionalUrl(item.responseToUrl);
-  const sourceIsPublic =
-    !sourceArticleSlug ||
-    INDEXABLE_NEWS_ARTICLES.some(
-      (article) => article.slug === sourceArticleSlug,
-    );
 
   if (
     !channel ||
@@ -94,11 +90,19 @@ function parseQueuePartial(value: unknown): QueuePartial | null {
     !draftText ||
     !rationale ||
     sourceArticleSlug === null ||
-    !sourceIsPublic ||
     responseToUrl === null
   ) {
     return null;
   }
+
+  const lifecycle = validateQueueLifecycleFields({
+    target,
+    draftText,
+    rationale,
+    sourceArticleSlug,
+    responseToUrl,
+  });
+  if (!lifecycle.ok) return null;
 
   return {
     channel,
@@ -168,7 +172,7 @@ export async function POST(request: NextRequest) {
         return privateJson(
           {
             error:
-              "Every item requires a supported channel and bounded target, draftText and rationale. Optional URLs must be HTTP(S).",
+              "Every item requires a supported channel, bounded copy and HTTP(S) optional URLs, and may reference only approved public newsroom articles.",
           },
           400,
         );
