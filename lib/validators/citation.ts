@@ -1,7 +1,8 @@
-// Citation gate — Block 15 validator #1.
-// Every auto-drafted article must cite one government/national/institutional
-// source OR at least two lower-tier verified sources. Articles failing this gate are
-// rejected; Claude is re-prompted with the failure reason.
+// Pre-stage citation gate — Block 15 validator #1.
+// One government/national/institutional source can support a draft entering
+// MANUAL review; it never grants automated publication. The immutable
+// auto-publication gate separately requires two independent approved canonical
+// publishers for every article.
 //
 // This validator is also reusable for human-edited articles in the
 // /internal/dashboard editorial queue.
@@ -34,9 +35,9 @@ export interface CitationResult {
 }
 
 /**
- * Validate a citation array against the whitelist. A single primary or
- * institutional source may satisfy the gate; regional press and industry
- * portals require corroboration from a second verified source.
+ * Validate a citation array for drafting/manual staging. A single primary or
+ * institutional source may satisfy this preliminary gate; automated
+ * publication always applies the separate two-canonical-publisher policy.
  *
  * Edge cases handled:
  *  - Empty citations array → fail
@@ -99,7 +100,7 @@ export function validateCitations(citations: CitationInput[]): CitationResult {
 
   if (!hasPrimaryOrInstitutionalSource && !hasCorroboration) {
     result.reason =
-      "A single regional/industry citation is not sufficient for publication. " +
+      "A single regional/industry citation is not sufficient for manual staging. " +
       "Add a government, national-press or institutional-research source, " +
       "or corroborate the claim with a second verified source.";
     return result;

@@ -19,6 +19,13 @@ async function main() {
     const draftId = "order98-publication";
     const slug = "order-98-publication-regression";
     const now = new Date().toISOString();
+    const sourcePublishedAt = now;
+    const sourceText =
+      "The verified transaction value was AED 10 million. Independent reporting provides enough directly fetched context for the isolated publication concurrency fixture.";
+    const sourceUrls = [
+      "https://www.reuters.com/world/middle-east/order-98-fixture",
+      "https://www.thenationalnews.com/business/property/order-98-fixture/",
+    ];
     const draft = {
       id: draftId,
       createdAt: now,
@@ -38,7 +45,20 @@ async function main() {
         tldr: ["Fixture", "Fixture", "Fixture"],
         body: "Isolated publication storage fixture.",
         faq: [],
-        citations: [],
+        citations: [
+          {
+            source: "Reuters",
+            url: sourceUrls[0],
+            accessedAt: now,
+            tier: "national-press",
+          },
+          {
+            source: "The National — Business",
+            url: sourceUrls[1],
+            accessedAt: now,
+            tier: "national-press",
+          },
+        ],
         heroImage: {
           src: `/news/${slug}/cover.webp`,
           alt: "Fixture",
@@ -68,9 +88,26 @@ async function main() {
           freshness: 25,
           rajAngle: 25,
         },
-        sources: [],
+        sources: sourceUrls.map((url, index) => ({
+          name: index === 0 ? "Reuters" : "The National — Business",
+          tier: "national-press",
+          url,
+          publishedAt: sourcePublishedAt,
+          summary: "Independent approved publisher fixture.",
+        })),
+        fetchedEvidence: sourceUrls.map((url, index) => ({
+          url,
+          finalUrl: url,
+          text: sourceText,
+          fetchedAt: now,
+          contentHash: String(index + 1).repeat(64),
+          sourcePublishedAt,
+          sourceDateSource: "meta",
+          freshnessCheckedAt: now,
+          freshnessMaxAgeHours: 168,
+        })),
       },
-      verifiedSources: [],
+      verifiedSources: sourceUrls,
       revision: 1,
       recordVersion: 1,
       contentHash,
@@ -79,8 +116,11 @@ async function main() {
         hash: "evidence-ledger",
         revision: 1,
         contentHash,
-        sourceUrls: [],
-        evidenceHashes: [],
+        sourceUrls,
+        evidenceHashes: sourceUrls.map((url, index) => ({
+          url,
+          contentHash: String(index + 1).repeat(64),
+        })),
         reviewer: "raj-review-session",
         approvedAt: now,
       },
@@ -110,11 +150,19 @@ async function main() {
       id: `${draftId}-legacy-policy`,
       evidenceApproval: legacyEvidenceApproval,
     };
+    const previousPolicyDraft = {
+      ...draft,
+      id: `${draftId}-previous-policy`,
+      evidenceApproval: {
+        ...draft.evidenceApproval,
+        policyVersion: 2 as typeof CURRENT_EVIDENCE_POLICY_VERSION,
+      },
+    };
     const runsDirectory = path.join(testDirectory, "pipeline-runs");
     await fs.mkdir(runsDirectory, { recursive: true });
     await fs.writeFile(
       path.join(runsDirectory, "news-drafts.json"),
-      JSON.stringify([draft, legacyDraft]),
+      JSON.stringify([draft, legacyDraft, previousPolicyDraft]),
       "utf8",
     );
 
@@ -129,6 +177,11 @@ async function main() {
       storage.claimDraftPublication(legacyDraft.id, expected),
       /approval ledger changed/,
       "a serialized pre-version approval must not create a publication claim",
+    );
+    await assert.rejects(
+      storage.claimDraftPublication(previousPolicyDraft.id, expected),
+      /approval ledger changed/,
+      "a serialized v2 approval must not create a v3 publication claim",
     );
     const claims = await Promise.allSettled([
       storage.claimDraftPublication(draftId, expected),

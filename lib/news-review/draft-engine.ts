@@ -46,7 +46,7 @@ You are given a story lead (a cluster of headlines + snippets). RESEARCH it with
 ABSOLUTE RULES (a draft that breaks these is rejected):
 - Synthetic imagery is forbidden. The drafting system does not select, generate, or approve media; a human reviewer must attach a rights-cleared real UHD cover.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
-- Use the lightest defensible evidence lane. One directly accessible approved government/regulator or official developer source is sufficient only when every public claim sentence explicitly names that same first-party publisher and describes that entity's own act, release or update. National/international reporting, institutional findings, investment recommendations, forecasts, market or macro conclusions, portal claims, disputed claims and any unattributed material sentence require two independently accessible approved publisher domains. Cite exact article or release URLs, never homepages, search pages or aggregator redirects.
+- One directly accessible approved publisher can support a draft for MANUAL review. Automated publication always requires two independently accessible approved canonical publisher domains, including government, regulator and official-developer announcements. Cite exact article or release URLs, never homepages, search pages or aggregator redirects.
 - If, after searching, you cannot verify enough for a defensible 650+ word article, return {"skip": true, "reason": "..."} and nothing else.
 - UK English. Em-dashes — like this — are signature; use several.
 - The FIRST paragraph must contain a specific, sourced number.
@@ -355,7 +355,7 @@ export async function draftFromCluster(
     messages: [
       {
         role: "user",
-        content: `STORY LEAD: ${cluster.topic}\nSuggested category: ${cluster.suggestedCategory}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. One government/regulator or official-developer source is sufficient only for that publisher's own act or announcement, and every public claim sentence must name it locally. National-newsroom reporting, institutional findings, market or macro claims, analysis, recommendations, forecasts, portal claims, disputes and any unattributed material sentence require two independent approved publishers. If the required evidence is not accessible, skip. Then output the article JSON.`,
+        content: `STORY LEAD: ${cluster.topic}\nSuggested category: ${cluster.suggestedCategory}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. One directly accessible approved publisher can support a draft for MANUAL review. Automated publication always requires two independent approved canonical publisher domains, including first-party government, regulator and official-developer announcements. If even one usable source is not accessible, skip. Then output the article JSON.`,
       },
     ],
   } satisfies Parameters<ResearchCall>[0];
@@ -570,15 +570,20 @@ export async function draftFromCluster(
     article,
     directlyFetchedUrls,
   );
-  if (fetchedDomains.size < initialEvidencePolicy.requiredPublisherCount) {
+  if (fetchedDomains.size === 0) {
     return {
       ok: false,
       reason:
-        `only ${fetchedDomains.size} fresh, directly fetched publisher domain(s); ` +
-        `need ${initialEvidencePolicy.requiredPublisherCount} for ${initialEvidencePolicy.lane}` +
+        "no fresh, directly fetched approved publisher evidence is available" +
         diagnosticSuffix(),
       diagnostics,
     };
+  }
+  if (fetchedDomains.size < initialEvidencePolicy.requiredPublisherCount) {
+    diagnostics.push(
+      `manual review only: ${fetchedDomains.size} fresh publisher domain(s); ` +
+        `auto-publication requires ${initialEvidencePolicy.requiredPublisherCount}`,
+    );
   }
 
   const evidencePacket = fetchedEvidence
@@ -669,14 +674,10 @@ export async function draftFromCluster(
 
   const finalEvidencePolicy = determineEvidencePolicy(article, evidenceUrls);
   if (fetchedDomains.size < finalEvidencePolicy.requiredPublisherCount) {
-    return {
-      ok: false,
-      reason:
-        `final draft requires ${finalEvidencePolicy.requiredPublisherCount} publisher domains ` +
-        `for ${finalEvidencePolicy.lane}; only ${fetchedDomains.size} verified` +
-        diagnosticSuffix(),
-      diagnostics,
-    };
+    diagnostics.push(
+      `final draft is manual review only: ${fetchedDomains.size} verified publisher domain(s); ` +
+        `auto-publication requires ${finalEvidencePolicy.requiredPublisherCount}`,
+    );
   }
 
   // The final article — repaired or untouched — must still satisfy every

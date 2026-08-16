@@ -5,9 +5,9 @@
 //   1. the 8-gate voice validator passes              (draft.validator.ok)
 //   2. every evidence record proves it was explicitly dated and fresh at the
 //      immutable direct-fetch/staging clock
-//   3. risk-based publisher count passes (one tightly attributed first-party
-//      own update; otherwise two independent approved parent publishers)
-//   4. EVERY figure in title/subtitle/TLDR/body/FAQ appears in fetched text
+//   3. two independent approved canonical parent publishers are present
+//   4. EVERY figure in reader-visible model-controlled text appears in fetched
+//      evidence as the same contextual numeric tuple
 //   5. SAFETY GUARD: a statistical signal the figure parser did not capture
 //      holds the draft rather than permitting a vacuous pass.
 // Anything that fails any check → "manual". Deliberately conservative: a figure
@@ -18,25 +18,16 @@ import type {
   NewsDraft,
   NewsDraftProvenance,
 } from "./types";
-import {
-  findSourceByUrl,
-  isOfficialDeveloperUrl,
-  type VerifiedSource,
-} from "@/lib/sources/registry";
+import { findSourceByUrl, type VerifiedSource } from "@/lib/sources/registry";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
 export const MAX_AUTO_NEWS_SOURCE_AGE_HOURS = 7 * 24;
 
-export type EvidenceLane =
-  | "official-update"
-  | "fast-news"
-  | "research-release"
-  | "developer-announcement"
-  | "corroborated-analysis";
+export type EvidenceLane = "corroborated-analysis";
 
 export interface EvidencePolicy {
   lane: EvidenceLane;
-  requiredPublisherCount: 1 | 2;
+  requiredPublisherCount: 2;
   reason: string;
 }
 
@@ -46,10 +37,6 @@ const DISPUTED_OR_MARKET_WIDE_CLAIM_RE =
   /\b(?:disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?|challeng(?:e[ds]?|ing)|critics?\s+(?:challeng(?:e[ds]?|ing)|disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?)|deni(?:ed|es|al)|alleg(?:ed|es|ation|ations)|market-wide|across\s+the\s+(?:property|real\s+estate|housing)\s+market|(?:property|real\s+estate|housing)\s+market\s+(?:grew|rose|fell|declined|increased|decreased)|market\s+(?:will|is\s+set\s+to|is\s+expected\s+to))\b/i;
 const AMBIGUOUS_MARKET_OR_THIRD_PARTY_RE =
   /\b(?:market|macro(?:economic)?|econom(?:y|ic|ics)|sector|industry|analysts?|critics?|commentators?|brokers?|consultants?|investors?|buyers?|sellers?|demand|supply|absorption|prices?|rents?|yields?|valuations?|values?)\b[\s\S]{0,80}\b(?:grew|growth|rose|risen|rise|rising|fell|fallen|falling|declin(?:e|ed|ing)|increas(?:e|ed|ing)|decreas(?:e|ed|ing)|strengthen(?:ed|ing)?|weaken(?:ed|ing)?|climb(?:ed|ing)?|drop(?:ped|ping)?|surge(?:d|ing)?|slow(?:ed|ing)?|accelerat(?:e|ed|ing)|expect(?:s|ed|ing)?|predict(?:s|ed|ing)?|forecast(?:s|ed|ing)?)\b/i;
-const OWN_UPDATE_VERB =
-  String.raw`(?:announc(?:e[ds]?|ing)|adopt(?:s|ed|ing)?|appoint(?:s|ed|ing)?|approv(?:e[ds]?|ing)|complet(?:e[ds]?|ing)|confirm(?:s|ed|ing)?|disclos(?:e[ds]?|ing)|file(?:s|d|ing)|introduc(?:e[ds]?|ing)|issu(?:e[ds]?|ing)|launch(?:e[ds]?|ing)|open(?:s|ed|ing)?|publish(?:es|ed|ing)?|record(?:s|ed|ing)?|releas(?:e[ds]?|ing)|report(?:s|ed|ing)?|said|says|sign(?:s|ed|ing)?|stat(?:e[ds]?|ing))`;
-const DIRECT_FIRST_PARTY_ACT_VERB =
-  String.raw`(?:adopt(?:s|ed|ing)?|appoint(?:s|ed|ing)?|complet(?:e[ds]?|ing)|disclos(?:e[ds]?|ing)|file(?:s|d|ing)|introduc(?:e[ds]?|ing)|issu(?:e[ds]?|ing)|launch(?:e[ds]?|ing)|open(?:s|ed|ing)?|publish(?:es|ed|ing)?|releas(?:e[ds]?|ing)|sign(?:s|ed|ing)?)`;
 
 export interface EvidenceRiskClassification {
   requiresCorroboration: boolean;
@@ -309,171 +296,21 @@ export function assessStoredEvidenceFreshness(
   };
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function sourceAttributionAliases(source: VerifiedSource): string[] {
-  const parentheticalTrimmed = source.name.replace(/\s*\([^)]*\)\s*/g, " ").trim();
-  const suffixTrimmed = parentheticalTrimmed
-    .replace(
-      /\s+(?:dubai|mena|uae|properties|property|group|pjsc|llc)$/i,
-      "",
-    )
-    .trim();
-  const words = parentheticalTrimmed.match(/[A-Za-z0-9]+/g) ?? [];
-  const acronym = words
-    .filter((word) => !/^(?:the|of|and)$/i.test(word))
-    .map((word) => (/^[A-Z0-9]{2,}$/.test(word) ? word : word[0]))
-    .join("");
-  const firstTwo = words.slice(0, 2).join(" ");
-  let hostLabel = "";
-  try {
-    hostLabel = new URL(source.url).hostname
-      .replace(/^www\./, "")
-      .split(".")[0]
-      .replace(/[-_]+/g, " ");
-  } catch {
-    // Registry URLs are static, but an invalid entry must never widen policy.
-  }
-  return [
-    source.name,
-    parentheticalTrimmed,
-    suffixTrimmed,
-    acronym,
-    firstTwo,
-    hostLabel,
-  ]
-    .map((value) => value.trim())
-    .filter((value) => value.length >= 2)
-    .filter((value, index, all) => all.indexOf(value) === index);
-}
-
-function claimUnits(value: string): string[] {
-  const out: string[] = [];
-  const abbreviation =
-    /\b(?:mr|mrs|ms|dr|prof|st|no|vs|etc|e\.g|i\.e|a\.m|p\.m|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\.$/i;
-  for (const line of value.split(/\r?\n/)) {
-    let start = 0;
-    for (let index = 0; index < line.length; index += 1) {
-      const punctuation = line[index];
-      if (punctuation !== "." && punctuation !== "!" && punctuation !== "?") {
-        continue;
-      }
-      const next = line[index + 1];
-      if (next !== undefined && !/\s/.test(next)) continue;
-      if (
-        punctuation === "." &&
-        abbreviation.test(line.slice(start, index + 1).trimEnd())
-      ) {
-        continue;
-      }
-      const sentence = line.slice(start, index + 1).trim();
-      if (sentence) out.push(sentence);
-      while (index + 1 < line.length && /\s/.test(line[index + 1])) {
-        index += 1;
-      }
-      start = index + 1;
-    }
-    const remainder = line.slice(start).trim();
-    if (remainder) out.push(remainder);
-  }
-  return out;
-}
-
-function articleAttributesOnlyOwnUpdates(
-  article: DraftArticle,
-  source: VerifiedSource,
-): boolean {
-  const aliasPatterns = sourceAttributionAliases(source).map((alias) =>
-    escapeRegExp(alias).replace(/\s+/g, String.raw`\s+`),
-  );
-  if (aliasPatterns.length === 0) return false;
-  const alias = `(?:${aliasPatterns.join("|")})`;
-  const aliasMention = new RegExp(String.raw`\b${alias}\b`, "i");
-  const subjectAct = (verb: string) => new RegExp(
-    String.raw`\b${alias}(?:['\u2019]s)?(?:\s+[A-Za-z][A-Za-z'\u2019-]*){0,6}\s+${verb}\b`,
-    "i",
-  );
-  const directAct = subjectAct(DIRECT_FIRST_PARTY_ACT_VERB);
-  const attributedAct = subjectAct(OWN_UPDATE_VERB);
-  const possessiveOwnMaterial = new RegExp(
-    String.raw`(?:\b(?:its|their)\s+(?:own\s+)?[A-Za-z]|\b${alias}['\u2019]s\s+own\b)`,
-    "i",
-  );
-  const questionAboutSourceAct = new RegExp(
-    String.raw`\b(?:what|when|where|how|why)\b[^.!?]{0,80}\b${alias}\b[^.!?]{0,40}\b${OWN_UPDATE_VERB}\b`,
-    "i",
-  );
-  const units = articleEvidenceSegments(article).flatMap((segment) =>
-    claimUnits(segment.text),
-  );
-  return (
-    units.length > 0 &&
-    units.every(
-      (unit) =>
-        aliasMention.test(unit) &&
-        (directAct.test(unit) ||
-          (attributedAct.test(unit) && possessiveOwnMaterial.test(unit)) ||
-          questionAboutSourceAct.test(unit)),
-    )
-  );
-}
-
-/** Choose the lightest defensible evidence rule for the article. The policy is
- * deliberately about claim risk, not a blanket source count. */
+/** Auto-publication has one deliberately conservative invariant: every article
+ * requires two independent approved canonical publishers. Risk classification
+ * remains diagnostic only; it can never lower the source threshold. */
 export function determineEvidencePolicy(
   article: DraftArticle,
   evidenceUrls: string[],
 ): EvidencePolicy {
+  void evidenceUrls;
   const risk = classifyEvidenceRisk(article);
-  if (risk.requiresCorroboration) {
-    return {
-      lane: "corroborated-analysis",
-      requiredPublisherCount: 2,
-      reason: risk.reason ?? "high-risk claims require corroboration",
-    };
-  }
-
-  const publisherDomains = new Set(
-    evidenceUrls
-      .map(approvedPublisherDomain)
-      .filter((domain): domain is string => Boolean(domain)),
-  );
-  const source = evidenceUrls
-    .map((url) => findSourceByUrl(url))
-    .find((candidate): candidate is VerifiedSource => Boolean(candidate));
-  const tightlyAttributedOwnUpdate =
-    publisherDomains.size === 1 &&
-    source !== undefined &&
-    articleAttributesOnlyOwnUpdates(article, source);
-
-  if (tightlyAttributedOwnUpdate && source?.tier === "government") {
-    return {
-      lane: "official-update",
-      requiredPublisherCount: 1,
-      reason:
-        "one explicitly attributed government or regulator source is authoritative for its own update",
-    };
-  }
-  if (
-    tightlyAttributedOwnUpdate &&
-    evidenceUrls.every(isOfficialDeveloperUrl) &&
-    (article.category === "launch" || article.category === "developer-corporate") &&
-    publisherDomains.size === 1
-  ) {
-    return {
-      lane: "developer-announcement",
-      requiredPublisherCount: 1,
-      reason:
-        "one explicitly attributed first-party developer source is sufficient for its own announcement",
-    };
-  }
   return {
     lane: "corroborated-analysis",
     requiredPublisherCount: DEFAULT_CORROBORATION_SOURCES,
-    reason:
-      "national-press, market-wide, portal or otherwise ambiguous reporting requires independent corroboration",
+    reason: risk.reason
+      ? `${risk.reason}; every auto-published article requires two independent approved canonical publishers`
+      : "every auto-published article requires two independent approved canonical publishers",
   };
 }
 
@@ -488,7 +325,7 @@ export interface AutoApproveAssessment {
   allCitationsWhitelisted: boolean;
   fetchedEvidenceCount: number;
   evidenceLane: EvidenceLane;
-  requiredPublisherCount: 1 | 2;
+  requiredPublisherCount: 2;
   figureCount: number;
   /** Figures present in publishable fields but absent from fetched evidence. */
   amberFigures: string[];
@@ -498,10 +335,18 @@ export interface AutoApproveAssessment {
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 
+const NUMERIC_DASH_RE = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212\uFE58\uFE63\uFF0D]/g;
+
+/** Dash normalisation is intentionally one character for one character so the
+ * parser can retain exact character coverage and surface any unmatched digit. */
+function normalizeNumericDashes(value: string): string {
+  return value.replace(NUMERIC_DASH_RE, "-");
+}
+
 /** Preserve the value and unit while normalising publisher typography such as
  * AED3.5 vs AED 3.5, 8,000 vs 8000, and 30 per cent vs 30%. */
 export function normNumericEvidence(value: string): string {
-  return norm(value)
+  return norm(normalizeNumericDashes(value))
     .replace(/\b(?:dhs?|aed)\b/g, "aed")
     .replace(/\b(?:usd|us\$)\b/g, "usd")
     .replace(/\b(?:per\s*cent|percent)\b/g, "%")
@@ -510,16 +355,15 @@ export function normNumericEvidence(value: string): string {
     .replace(/\b(?:square\s+(?:feet|foot)|sq\.?\s*ft|sqft)\b/g, "sqft")
     .replace(/\b(?:millions?|mn)\b/g, "million")
     .replace(/\b(?:billions?|bn)\b/g, "billion")
-    .replace(/(?<=\d)\s+to\s+(?=[+\-\u2212]?(?:\d|\.\d))/g, "-")
+    .replace(/\s+to\s+/g, "-")
     .replace(/(?<=\d),(?=\d{3}\b)/g, "")
-    .replace(/\s+/g, "")
-    .replace(/[\u2013\u2014\u2212]/g, "-");
+    .replace(/\s+/g, "");
 }
 
 const CUR = String.raw`(?:AED|USD|US\$|\$|\u20ac|\u00a3|Dhs?|Dh)`;
 const UNSIGNED_NUM =
   String.raw`(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)`;
-const SIGNED_NUM = String.raw`(?:[+\-\u2212][ \t]*)?${UNSIGNED_NUM}`;
+const SIGNED_NUM = String.raw`(?:[+\-][ \t]*)?${UNSIGNED_NUM}`;
 const MONTH =
   String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`;
 const SCALE = String.raw`(?:hundred|thousand|millions?|billions?|trillions?|mn|bn|tn|k)`;
@@ -538,8 +382,8 @@ const EXCLUDED_DIGIT_PATTERNS = [
     "gi",
   ),
   new RegExp(String.raw`\b${MONTH}\s+(?:19|20)\d{2}\b`, "gi"),
-  /\b(?:sections?|articles?|chapters?|clauses?|paragraphs?|pages?|figures?|tables?|appendices|appendix|parts?|schedules?|steps?|items?)\s+(?:no\.?[ \t]*)?\d+(?:\.\d+)*(?:(?:[ \t]*(?:[-\u2013\u2014]|to|through|of|,|and)[ \t]*)\d+(?:\.\d+)*)*\b/gi,
-  /\b(?:p{1,2}|fig|tbl)\.?[ \t]+\d+(?:\.\d+)*(?:(?:[ \t]*(?:[-\u2013\u2014]|to|through)[ \t]*)\d+(?:\.\d+)*)*\b/gi,
+  /\b(?:sections?|articles?|chapters?|clauses?|paragraphs?|pages?|figures?|tables?|appendices|appendix|parts?|schedules?|steps?|items?)\s+(?:no\.?[ \t]*)?\d+(?:\.\d+)*(?:(?:[ \t]*(?:-|to|through|of|,|and)[ \t]*)\d+(?:\.\d+)*)*\b/gi,
+  /\b(?:p{1,2}|fig|tbl)\.?[ \t]+\d+(?:\.\d+)*(?:(?:[ \t]*(?:-|to|through)[ \t]*)\d+(?:\.\d+)*)*\b/gi,
   /\b\d{1,2}:\d{2}(?:[ \t]*(?:a\.?m\.?|p\.?m\.?|UTC|GMT|GST))\b/gi,
   /\[\d+(?:\s*[-,]\s*\d+)*\]/g,
   /(?:^|\n)\s*(?:\(\d+\)|\d+[.)])(?=\s)/g,
@@ -547,7 +391,7 @@ const EXCLUDED_DIGIT_PATTERNS = [
 
 const PERIOD_POINT = String.raw`(?:[HQ][1-4](?:[ \t]+(?:19|20)\d{2})?)`;
 const PERIOD_SPAN_RE = new RegExp(
-  String.raw`\b${PERIOD_POINT}(?:[ \t]*(?:\/|&|,|[-\u2013\u2014]|\band\b|\bto\b)[ \t]*${PERIOD_POINT})*${HEAD_PHRASE}`,
+  String.raw`\b${PERIOD_POINT}(?:[ \t]*(?:\/|&|,|-|\band\b|\bto\b)[ \t]*${PERIOD_POINT})*${HEAD_PHRASE}`,
   "gi",
 );
 const LABELLED_DIGIT_RE = new RegExp(
@@ -556,11 +400,15 @@ const LABELLED_DIGIT_RE = new RegExp(
 );
 const RATIO_OR_FRACTION =
   String.raw`${SIGNED_NUM}[ \t]*(?::|\/|\bin\b)[ \t]*${UNSIGNED_NUM}`;
-const RANGE =
-  String.raw`${SIGNED_NUM}[ \t]*(?:[-\u2013\u2014]|\bto\b)[ \t]*${SIGNED_NUM}`;
-const VALUE_CORE = String.raw`(?:${RATIO_OR_FRACTION}|${RANGE}|${SIGNED_NUM})`;
+const VALUE_CORE = String.raw`(?:${RATIO_OR_FRACTION}|${SIGNED_NUM})`;
+const CURRENCY_PREFIX = String.raw`(?:[+\-][ \t]*(?=${CUR}[ \t]*))?(?:${CUR}[ \t]*)?`;
+const VALUE_ENDPOINT = String.raw`${CURRENCY_PREFIX}${SIGNED_NUM}(?:[ \t]*${SCALE})?(?:[ \t]*${UNIT})?`;
+const FULL_RANGE_RE = new RegExp(
+  String.raw`(?<![A-Za-z0-9.])${VALUE_ENDPOINT}(?:-|[ \t]+\bto\b[ \t]+)${VALUE_ENDPOINT}${HEAD_PHRASE}(?![A-Za-z0-9])`,
+  "gi",
+);
 const GENERAL_DIGIT_SPAN_RE = new RegExp(
-  String.raw`(?<![A-Za-z0-9.])(?:[+\-\u2212][ \t]*(?=${CUR}[ \t]*))?(?:${CUR}[ \t]*)?${VALUE_CORE}(?:[ \t]*${SCALE})?(?:[ \t]*${UNIT})?(?:-${HEAD_WORD})?${HEAD_PHRASE}(?![A-Za-z0-9])`,
+  String.raw`(?<![A-Za-z0-9.])${CURRENCY_PREFIX}${VALUE_CORE}(?:[ \t]*${SCALE})?(?:[ \t]*${UNIT})?(?:-${HEAD_WORD})?${HEAD_PHRASE}(?![A-Za-z0-9])`,
   "gi",
 );
 
@@ -571,28 +419,81 @@ function maskPattern(value: string, pattern: RegExp): string {
 function claimBearingNumericText(value: string): string {
   return EXCLUDED_DIGIT_PATTERNS.reduce(
     (text, pattern) => maskPattern(text, pattern),
-    value,
+    normalizeNumericDashes(value),
   );
+}
+
+type NumericSpanKind = "period" | "label" | "range" | "value";
+
+interface NumericSpan {
+  start: number;
+  end: number;
+  kind: NumericSpanKind;
+  figure: string;
+  canonical: string;
+}
+
+interface NumericAnalysis {
+  normalizedSource: string;
+  spans: NumericSpan[];
+  uncoveredDigitIndices: number[];
+}
+
+const NUMERIC_SPAN_PATTERNS: ReadonlyArray<{
+  kind: NumericSpanKind;
+  pattern: RegExp;
+}> = [
+  { kind: "period", pattern: PERIOD_SPAN_RE },
+  { kind: "label", pattern: LABELLED_DIGIT_RE },
+  { kind: "range", pattern: FULL_RANGE_RE },
+  { kind: "value", pattern: GENERAL_DIGIT_SPAN_RE },
+];
+
+function analyzeNumericSpans(value: string): NumericAnalysis {
+  const normalizedSource = normalizeNumericDashes(value);
+  const parseText = claimBearingNumericText(normalizedSource);
+  const covered = new Uint8Array(parseText.length);
+  const spans: NumericSpan[] = [];
+
+  for (const { kind, pattern } of NUMERIC_SPAN_PATTERNS) {
+    pattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(parseText)) !== null) {
+      const start = match.index;
+      const end = start + match[0].length;
+      if (!/\d/.test(match[0]) || covered.slice(start, end).some(Boolean)) {
+        continue;
+      }
+      covered.fill(1, start, end);
+      const figure = norm(match[0]);
+      spans.push({
+        start,
+        end,
+        kind,
+        figure,
+        canonical: normNumericEvidence(match[0]),
+      });
+    }
+  }
+
+  const uncoveredDigitIndices: number[] = [];
+  for (const match of parseText.matchAll(/\d/g)) {
+    const index = match.index ?? 0;
+    if (!covered[index]) uncoveredDigitIndices.push(index);
+  }
+  spans.sort((left, right) => left.start - right.start || left.end - right.end);
+  return { normalizedSource, spans, uncoveredDigitIndices };
+}
+
+function numericTupleKey(span: NumericSpan): string {
+  return `${span.kind}\u0000${span.canonical}`;
 }
 
 /** Every remaining digit-bearing span is evidence-bound after explicit safe
  * exclusions for URLs, ordinary calendar dates and navigation labels. Ordered
  * matching preserves periods, ratios, ranges, signs and noun/unit context. */
 export function extractFigures(value: string): string[] {
-  let unclaimed = claimBearingNumericText(value);
-  const out = new Set<string>();
-  for (const pattern of [
-    PERIOD_SPAN_RE,
-    LABELLED_DIGIT_RE,
-    GENERAL_DIGIT_SPAN_RE,
-  ]) {
-    unclaimed = unclaimed.replace(pattern, (match) => {
-      const figure = norm(match);
-      if (figure) out.add(figure);
-      return " ".repeat(match.length);
-    });
-  }
-  return [...out];
+  return [...new Set(analyzeNumericSpans(value).spans.map((span) => span.figure))];
 }
 
 export function bodyHasStatSignal(value: string): boolean {
@@ -607,17 +508,11 @@ export function findUnconsumedDigitContexts(
   const values = Array.isArray(value) ? value : [value];
   const out = new Set<string>();
   for (const item of values) {
-    let unclaimed = claimBearingNumericText(item);
-    for (const pattern of [
-      PERIOD_SPAN_RE,
-      LABELLED_DIGIT_RE,
-      GENERAL_DIGIT_SPAN_RE,
-    ]) {
-      unclaimed = maskPattern(unclaimed, pattern);
-    }
-    for (const match of unclaimed.matchAll(/\d/g)) {
-      const index = match.index ?? 0;
-      const context = norm(item.slice(Math.max(0, index - 24), index + 25));
+    const analysis = analyzeNumericSpans(item);
+    for (const index of analysis.uncoveredDigitIndices) {
+      const context = norm(
+        analysis.normalizedSource.slice(Math.max(0, index - 24), index + 25),
+      );
       if (context) out.add(context);
     }
   }
@@ -634,14 +529,15 @@ export function findUnsupportedFigures(
     : [evidenceText];
   const sourceFigures = new Set(
     evidenceTexts.flatMap((text) =>
-      extractFigures(text).map(normNumericEvidence),
+      analyzeNumericSpans(text).spans.map(numericTupleKey),
     ),
   );
   return [
     ...new Set(
       claimTexts
-        .flatMap((text) => extractFigures(text))
-        .filter((figure) => !sourceFigures.has(normNumericEvidence(figure))),
+        .flatMap((text) => analyzeNumericSpans(text).spans)
+        .filter((span) => !sourceFigures.has(numericTupleKey(span)))
+        .map((span) => span.figure),
     ),
   ];
 }
@@ -696,7 +592,7 @@ export function assessDraft(
     fetchedEvidence.map((evidence) => evidence.finalUrl ?? evidence.url),
   );
 
-  // 2 · citations — all whitelisted, with the count selected by claim risk
+  // 2 · citations — all whitelisted, from two canonical publishers
   const citationCount = validator.metrics.citationCount;
   const whitelistCount = validator.metrics.citationsFromWhitelist;
   const allCitationsWhitelisted =
@@ -853,7 +749,7 @@ export async function runAutoApprove(opts: {
   log(
     `auto-approve: ${activeDrafts.length} active draft(s) · ${approve.length} pass · ${held.length} held · ` +
       `mode ${opts.publish ? `PUBLISH (${publishOrder}, limit ${publishLimit})` : "REVIEW ONLY"} ` +
-      `(risk-based evidence policy)`,
+      `(universal two-publisher evidence policy)`,
   );
   for (const a of approve) {
     log(`  ok  ${a.slug}  (${a.evidenceLane} · ${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);

@@ -8,7 +8,10 @@ import {
   draftFromCluster,
   type DraftOpts,
 } from "../lib/news-review/draft-engine.js";
-import { articleEvidenceText } from "../lib/news-review/auto-approve.js";
+import {
+  articleEvidenceText,
+  assessDraft,
+} from "../lib/news-review/auto-approve.js";
 import {
   extractMainText,
   extractPublicationDate,
@@ -21,6 +24,8 @@ import {
   evidenceApprovalFor,
   reassessEvidenceApproval,
   reassessPublicationEvidence,
+  validateDraftArticleShape,
+  validateProvenanceShape,
 } from "../lib/news-review/integrity.js";
 import {
   CURRENT_EVIDENCE_POLICY_VERSION,
@@ -32,6 +37,7 @@ import {
   sourceNameForCitation,
   sourceTierForCitation,
 } from "../lib/news-editorial.js";
+import { validateDraft } from "../lib/voice/validator.js";
 
 const NOW = new Date("2026-08-15T22:00:00.000Z");
 const FRESH_DATE = "2026-08-15T08:00:00.000Z";
@@ -207,6 +213,10 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     },
   });
   assert.equal(result.ok, true, result.reason);
+  assert.ok(
+    result.diagnostics?.some((entry) => /manual review only/.test(entry)),
+    "one-source drafting must continue with a clear manual-only diagnostic",
+  );
   assert.equal(result.article?.citations.length, 1);
   assert.equal(
     result.article?.citations[0]?.source,
@@ -242,13 +252,10 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     article: result.article!,
     provenance: result.provenance!,
   };
-  assert.ok(
-    approvalFor(fixture),
-    "one fresh, explicitly attributed official publisher must mint a content-bound evidence ledger",
-  );
   assert.equal(
-    approvalFor(fixture)?.policyVersion,
-    CURRENT_EVIDENCE_POLICY_VERSION,
+    approvalFor(fixture),
+    null,
+    "one fresh official publisher may stage a draft but must never mint an auto-publication ledger",
   );
 
   const [freshEvidence] = fixture.provenance.fetchedEvidence!;
@@ -326,9 +333,16 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
 
   const countEvidenceText =
     "Dubai Land Department confirmed AED 10 million across 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares. Dubai Land Department scheduled delivery in 2029.";
+  const secondCitation = {
+    source: "The National — Business",
+    url: NATIONAL_URL,
+    accessedAt: NOW.toISOString(),
+    tier: "national-press" as const,
+  };
   const supportedCounts = {
     article: {
       ...fixture.article,
+      citations: [...fixture.article.citations, secondCitation],
       title: "Dubai Land Department publishes its plan for 7 towers",
       subtitle:
         "Dubai Land Department confirmed Phase 2 with 12 floors in its own plan.",
@@ -346,18 +360,51 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     },
     provenance: {
       ...fixture.provenance,
+      sources: [
+        ...fixture.provenance.sources,
+        {
+          name: secondCitation.source,
+          url: secondCitation.url,
+          publishedAt: FRESH_DATE,
+          tier: secondCitation.tier,
+          summary: "Independent direct reporting supporting the verified figures.",
+        },
+      ],
       fetchedEvidence: [
         {
           ...freshEvidence,
           text: countEvidenceText,
           contentHash: undefined,
         },
+        {
+          ...freshEvidence,
+          url: NATIONAL_URL,
+          finalUrl: NATIONAL_URL,
+          text: countEvidenceText,
+          contentHash: undefined,
+        },
       ],
     },
   };
+  const supportedCountsArticle = validateDraftArticleShape(
+    supportedCounts.article,
+  );
+  const supportedCountsProvenance = validateProvenanceShape(
+    supportedCounts.provenance,
+    supportedCounts.article.citations.map(({ url }) => url),
+  );
+  const supportedCountsAssessment = supportedCountsArticle.ok &&
+      supportedCountsProvenance.ok
+    ? assessDraft({
+        id: "supported-counts",
+        article: supportedCountsArticle.article,
+        validator: validateDraft(supportedCountsArticle.article),
+        provenance: supportedCountsProvenance.provenance,
+      })
+    : null;
   assert.ok(
     approvalFor(supportedCounts),
-    "exactly supported count, phase, unit and year claims must mint a ledger",
+    `exactly supported count, phase, unit and year claims must mint a ledger: ${JSON.stringify({ article: supportedCountsArticle, provenance: supportedCountsProvenance, assessment: supportedCountsAssessment })}`,
   );
   const unsupportedCount = {
     ...supportedCounts,
@@ -374,13 +421,13 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
 
   const unsupportedAcrossFields = {
     article: {
-      ...fixture.article,
+      ...supportedCounts.article,
       title: "AED 11 million headline claim",
       subtitle: "The subtitle claims AED 12 million.",
       tldr: [
         "The TLDR claims AED 13 million.",
-        fixture.article.tldr[1],
-        fixture.article.tldr[2],
+        supportedCounts.article.tldr[1],
+        supportedCounts.article.tldr[2],
       ] as [string, string, string],
       faq: [
         {
@@ -389,7 +436,7 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
         },
       ],
     },
-    provenance: fixture.provenance,
+    provenance: supportedCounts.provenance,
   };
   assert.equal(
     approvalFor(unsupportedAcrossFields),
@@ -418,6 +465,22 @@ async function conservativeRiskClaimsRequireCorroboration(
       "lowercase-third-party-sentence",
       "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
     ],
+    [
+      "dld-reports-emaar-launch",
+      "DLD reported that Emaar launched its own project.",
+    ],
+    [
+      "dld-questioned-figures",
+      "DLD said its own figures were questioned.",
+    ],
+    [
+      "dld-forecast-double",
+      "DLD said its own registrations are expected to double next year.",
+    ],
+    [
+      "macro-inflation",
+      "Dubai inflation increased across the wider economy.",
+    ],
   ] as const) {
     const body = `${officialBodyWithFigure()}\n\n${claim}`;
     const oneSource = await draftFromCluster(
@@ -432,15 +495,18 @@ async function conservativeRiskClaimsRequireCorroboration(
           })) satisfies ResearchCall,
           repair: (async () => ({
             ok: false,
-            error: "risk policy must hold before repair",
+            error: "universal two-publisher policy must hold before repair",
           })) satisfies RepairCall,
           fetchArticle: (async (url) =>
             fetched(url, FRESH_DATE, body)) satisfies FetchCall,
         },
       },
     );
-    assert.equal(oneSource.ok, false, `${id} must be held during drafting`);
-    assert.match(oneSource.reason ?? "", /need 2 for corroborated-analysis/);
+    assert.equal(oneSource.ok, true, `${id}: ${oneSource.reason}`);
+    assert.ok(
+      oneSource.diagnostics?.some((entry) => /manual review only/.test(entry)),
+      `${id} must be staged with an explicit manual-only diagnostic`,
+    );
 
     const onePublisherLedger = {
       article: { ...officialFixture.article, body },
@@ -507,8 +573,10 @@ async function analysisRequiresTwoDomains(): Promise<{
       fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
     },
   });
-  assert.equal(oneSource.ok, false);
-  assert.match(oneSource.reason ?? "", /need 2 for corroborated-analysis/);
+  assert.equal(oneSource.ok, true, oneSource.reason);
+  assert.ok(
+    oneSource.diagnostics?.some((entry) => /manual review only/.test(entry)),
+  );
 
   const samePublisherUrl = "https://graphics.reuters.com/property/test-source";
   const samePublisher = await draftFromCluster(
@@ -529,8 +597,10 @@ async function analysisRequiresTwoDomains(): Promise<{
       },
     },
   );
-  assert.equal(samePublisher.ok, false);
-  assert.match(samePublisher.reason ?? "", /only 1 fresh, directly fetched/);
+  assert.equal(samePublisher.ok, true, samePublisher.reason);
+  assert.ok(
+    samePublisher.diagnostics?.some((entry) => /manual review only/.test(entry)),
+  );
 
   const twoSources = await draftFromCluster(
     cluster([REUTERS_URL, NATIONAL_URL]),
@@ -753,7 +823,7 @@ function evidencePolicyVersionsFailClosed(fixture: ReadyFixture): void {
       ...approvedDraft,
       evidenceApproval: {
         ...approval,
-        policyVersion: 1 as typeof CURRENT_EVIDENCE_POLICY_VERSION,
+        policyVersion: 2 as typeof CURRENT_EVIDENCE_POLICY_VERSION,
       },
     }),
     null,
@@ -783,7 +853,7 @@ function evidencePolicyVersionsFailClosed(fixture: ReadyFixture): void {
       publication: {
         ...publication,
         evidencePolicyVersion:
-          1 as typeof CURRENT_EVIDENCE_POLICY_VERSION,
+          2 as typeof CURRENT_EVIDENCE_POLICY_VERSION,
       },
     }),
     null,
@@ -817,8 +887,10 @@ async function disputedMarketClaimsRequireTwoDomains(): Promise<void> {
       fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
     },
   });
-  assert.equal(oneSource.ok, false);
-  assert.match(oneSource.reason ?? "", /need 2 for corroborated-analysis/);
+  assert.equal(oneSource.ok, true, oneSource.reason);
+  assert.ok(
+    oneSource.diagnostics?.some((entry) => /manual review only/.test(entry)),
+  );
 
   const twoSources = await draftFromCluster(
     cluster([REUTERS_URL, NATIONAL_URL]),
@@ -890,7 +962,7 @@ async function crossPublisherRedirectIsHeld(): Promise<void> {
     },
   });
   assert.equal(result.ok, false);
-  assert.match(result.reason ?? "", /only 0 fresh, directly fetched/);
+  assert.match(result.reason ?? "", /no fresh, directly fetched/);
   assert.ok(
     result.diagnostics?.some((entry) =>
       /publisher identity mismatch/.test(entry),
@@ -984,7 +1056,11 @@ async function storageUsesSameEvidencePolicy(
     };
 
     const manualTierA = await stageAndVerify(tierA, "raj-review-session");
-    assert.equal(manualTierA?.evidenceApproval?.reviewer, "raj-review-session");
+    assert.equal(
+      manualTierA?.evidenceApproval,
+      undefined,
+      "manual review must not mint an approval from one publisher",
+    );
 
     const automatedAnalysis = await stageAndVerify(
       analysis.twoSources,
@@ -1038,7 +1114,7 @@ async function staleAndUnknownDatesHold(): Promise<void> {
       },
     });
     assert.equal(result.ok, false, `${label} source must be held`);
-    assert.match(result.reason ?? "", /only 0 fresh, directly fetched/);
+    assert.match(result.reason ?? "", /no fresh, directly fetched/);
     assert.ok(result.diagnostics?.some((entry) => diagnostic.test(entry)));
     assert.equal(repairCalls, 0);
   }
@@ -1178,7 +1254,7 @@ async function snippetsNeverBecomeEvidence(): Promise<void> {
     },
   });
   assert.equal(result.ok, false);
-  assert.match(result.reason ?? "", /only 0 fresh, directly fetched/);
+  assert.match(result.reason ?? "", /no fresh, directly fetched/);
   assert.ok(result.diagnostics?.some((entry) => /403/.test(entry)));
   assert.equal(repairCalls, 0);
 }
@@ -1256,7 +1332,7 @@ async function main(): Promise<void> {
   await conservativeRiskClaimsRequireCorroboration(tierA);
   const analysis = await analysisRequiresTwoDomains();
   renderedFieldsAreEvidenceBound(tierA, analysis.twoSources);
-  evidencePolicyVersionsFailClosed(tierA);
+  evidencePolicyVersionsFailClosed(analysis.twoSources);
   await disputedMarketClaimsRequireTwoDomains();
   await crossPublisherRedirectIsHeld();
   await fetchCompletionClockIsStored();
@@ -1267,7 +1343,7 @@ async function main(): Promise<void> {
   await generationRetryIsCapped();
   await snippetsNeverBecomeEvidence();
   console.log(
-    "Newsroom recovery regression passed: fresh evidence lanes, repair/retry caps, figure safety and publication dates are enforced.",
+    "Newsroom recovery regression passed: universal two-publisher approval, manual staging, repair/retry caps, figure safety and publication dates are enforced.",
   );
 }
 

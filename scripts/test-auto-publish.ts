@@ -165,8 +165,12 @@ async function main() {
     });
     officialDraft.article.title =
       "Dubai Land Department confirms its own regulatory update";
-    assert.equal(assessDraft(officialDraft).evidenceLane, "official-update");
-    assert.equal(assessDraft(officialDraft).verdict, "auto-approve");
+    assert.equal(
+      assessDraft(officialDraft).evidenceLane,
+      "corroborated-analysis",
+    );
+    assert.equal(assessDraft(officialDraft).requiredPublisherCount, 2);
+    assert.equal(assessDraft(officialDraft).verdict, "manual");
 
     for (const [id, claim] of [
       ["broad-market-growth", "The UAE property market grew 12% last year."],
@@ -183,6 +187,22 @@ async function main() {
       [
         "lowercase-third-party-sentence",
         "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
+      ],
+      [
+        "dld-reports-emaar-launch",
+        "DLD reported that Emaar launched its own project.",
+      ],
+      [
+        "dld-questioned-figures",
+        "DLD said its own figures were questioned.",
+      ],
+      [
+        "dld-forecast-double",
+        "DLD said its own registrations are expected to double next year.",
+      ],
+      [
+        "macro-inflation",
+        "Dubai inflation increased across the wider economy.",
       ],
     ] as const) {
       const riskyOwnUpdate = {
@@ -217,9 +237,10 @@ async function main() {
     developerDraft.article.title = "Aldar announces its own project update";
     assert.equal(
       assessDraft(developerDraft).evidenceLane,
-      "developer-announcement",
+      "corroborated-analysis",
     );
-    assert.equal(assessDraft(developerDraft).verdict, "auto-approve");
+    assert.equal(assessDraft(developerDraft).requiredPublisherCount, 2);
+    assert.equal(assessDraft(developerDraft).verdict, "manual");
 
     const institutionalDraft = oneSourceDraft({
       id: "single-institutional-release",
@@ -271,7 +292,7 @@ async function main() {
     assert.equal(
       assessDraft(tldrRecommendationDraft).requiredPublisherCount,
       2,
-      "recommendations outside the body must still use the risky lane",
+      "recommendations outside the body must still require two publishers",
     );
     assert.equal(assessDraft(tldrRecommendationDraft).verdict, "manual");
 
@@ -439,11 +460,20 @@ async function main() {
       ),
     );
 
-    const heldBacklogStillFresh = freshnessVariant("held-backlog-fresh", {
-      sourcePublishedAt: "2026-08-01T08:00:00.000Z",
-      fetchedAt: "2026-08-02T08:00:00.000Z",
-      freshnessCheckedAt: "2026-08-02T08:00:00.000Z",
-    });
+    const heldBacklogStillFresh = {
+      ...draft,
+      id: "held-backlog-fresh",
+      provenance: {
+        ...draft.provenance,
+        fetchedEvidence: [sourceA, sourceB].map((url) =>
+          evidenceRecord(url, evidence, {
+            sourcePublishedAt: "2026-08-01T08:00:00.000Z",
+            fetchedAt: "2026-08-02T08:00:00.000Z",
+            freshnessCheckedAt: "2026-08-02T08:00:00.000Z",
+          }),
+        ),
+      },
+    } as NewsDraft;
     const heldBacklogAssessment = assessDraft(heldBacklogStillFresh);
     assert.equal(
       heldBacklogAssessment.verdict,
@@ -549,6 +579,34 @@ async function main() {
       [],
       "ordinary dates and navigation ranges must remain explicit safe exclusions",
     );
+    assert.deepEqual(
+      extractFigures("The movement was 5%-7%."),
+      ["5%-7%"],
+      "a decorated range must be one evidence tuple",
+    );
+    assert.deepEqual(
+      findUnsupportedFigures("The movement was 5%-7%.", "It moved 5% and later 7%."),
+      ["5%-7%"],
+      "separate endpoints must not satisfy a range claim",
+    );
+    assert.deepEqual(
+      findUnsupportedFigures("The movement was 5%-7%.", "The movement was 5%-7%."),
+      [],
+    );
+    assert.deepEqual(extractFigures("The plan covers 405‑unit."), ["405-unit"]);
+    assert.deepEqual(
+      findUnsupportedFigures("The plan covers 405‑unit.", "The plan covers 405."),
+      ["405-unit"],
+    );
+    assert.deepEqual(
+      findUnsupportedFigures("The plan covers 405‑unit.", "The plan covers 405-school."),
+      ["405-unit"],
+    );
+    assert.deepEqual(
+      findUnsupportedFigures("The plan covers 405‑unit.", "The plan covers 405-unit."),
+      [],
+      "Unicode and ASCII dash variants must bind to the same contextual tuple",
+    );
 
     const residualDigitDraft = {
       ...draft,
@@ -568,21 +626,20 @@ async function main() {
       "a supported amount must not conceal an unconsumed digit-bearing label",
     );
 
+    const supportedCountsText =
+      `The verified transaction value was AED 10 million and the plan covers ${materialCounts.replace("The plan covers ", "")}`;
     const supportedCountsDraft = {
-      ...officialDraft,
+      ...draft,
       id: "supported-material-counts",
       article: {
-        ...officialDraft.article,
-        body: `Dubai Land Department confirmed AED 10 million and announced that its plan covers ${materialCounts.replace("The plan covers ", "")}`,
+        ...draft.article,
+        body: supportedCountsText,
       },
       provenance: {
-        ...officialDraft.provenance,
-        fetchedEvidence: [
-          evidenceRecord(
-            officialDraft.article.citations[0].url,
-            `Dubai Land Department confirmed AED 10 million and announced that its plan covers ${materialCounts.replace("The plan covers ", "")}`,
-          ),
-        ],
+        ...draft.provenance,
+        fetchedEvidence: [sourceA, sourceB].map((url) =>
+          evidenceRecord(url, supportedCountsText),
+        ),
       },
     } as NewsDraft;
     assert.equal(assessDraft(supportedCountsDraft).verdict, "auto-approve");
@@ -687,7 +744,7 @@ async function main() {
       "backlog lane must publish the strongest still-timely draft first",
     );
     console.log(
-      "Auto-publish regression passed: four risk lanes plus newest and timely-backlog selection are enforced.",
+      "Auto-publish regression passed: universal two-publisher, contextual-range and timely-backlog gates are enforced.",
     );
   } finally {
     globalThis.fetch = originalFetch;

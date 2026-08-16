@@ -1,12 +1,13 @@
 // Validator orchestrator — Block 15 master gate.
 //
-// Runs all editorial gates on an auto-drafted (or human-edited) article
-// before allowing the commit / publish. Each failure is returned as a
-// structured retry-feedback object so the Claude copywriter can re-prompt
-// with specific corrections.
+// Runs pre-stage editorial gates on an auto-drafted (or human-edited) article.
+// Passing these gates can enter the manual review queue; automated publication
+// separately requires two independent approved canonical publishers and the
+// immutable evidence ledger. Each failure is returned as structured retry
+// feedback so the copywriter can correct it.
 //
 // Gates (run in order, all must pass):
-//   1. Citation gate (one high-authority source or two verified sources)
+//   1. Pre-stage citation eligibility (one high-authority or two verified)
 //   2. Voice gate (banned/approved lexicon, headline length, body length,
 //      paragraph 1 contains number, TL;DR has 3 entries)
 //
