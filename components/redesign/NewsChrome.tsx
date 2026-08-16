@@ -18,10 +18,8 @@ const WHATSAPP_URL =
 const primary = [
   { label: "Latest", href: "/" },
   { label: "News", href: "/news" },
-  { label: "Market pulse", href: "/pulse" },
-  { label: "Areas", href: "/areas" },
-  { label: "Developers", href: "/developers" },
-  { label: "Map", href: "/map" },
+  { label: "DLD pulse", href: "/news?desk=dld-pulse" },
+  { label: "About", href: "/about" },
 ] as const;
 
 const menuGroups = [
@@ -30,16 +28,18 @@ const menuGroups = [
     links: [
       { label: "Latest intelligence", href: "/" },
       { label: "All news", href: "/news" },
-      { label: "Market pulse", href: "/pulse" },
+      { label: "DLD pulse reports", href: "/news?desk=dld-pulse" },
     ],
   },
   {
     title: "Markets",
     links: [
-      { label: "Area intelligence", href: "/areas" },
-      { label: "Developer intelligence", href: "/developers" },
-      { label: "Live market map", href: "/map" },
-      { label: "Spatial view", href: "/spatial" },
+      { label: "Browse archive filters", href: "/news" },
+      {
+        label: "Developer dossiers",
+        href: "https://investwithraj.com/developers",
+        external: true,
+      },
     ],
   },
   {

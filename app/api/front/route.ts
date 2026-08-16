@@ -5,13 +5,13 @@
 // cover eligibility is evaluated per item. A current text story must never
 // disappear because an older story happens to have approved media.
 import { NextResponse } from "next/server";
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 import {
   displayMarkets,
   evidenceSummary,
   hasVerifiedEditorialImage,
   selectDistinctArticles,
 } from "@/lib/news-editorial";
+import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 
 export const revalidate = 1800;
 
@@ -27,6 +27,7 @@ function headers() {
     "Cache-Control": "s-maxage=1800, stale-while-revalidate=3600",
     Vary: "Origin",
     "X-Content-Type-Options": "nosniff",
+    "X-Robots-Tag": "noindex, nofollow, noarchive",
   };
 }
 
@@ -35,10 +36,7 @@ export function OPTIONS() {
 }
 
 export async function GET() {
-  const live = sortNewsArticles(NEWS_ARTICLES).filter(
-    (article) => article.status !== "research",
-  );
-  const items = selectDistinctArticles(live, 6).map((a) => {
+  const items = selectDistinctArticles(INDEXABLE_NEWS_ARTICLES, 6).map((a) => {
     const evidence = evidenceSummary(a);
     const hasCover = hasVerifiedEditorialImage(a);
     return {

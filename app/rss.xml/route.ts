@@ -1,14 +1,14 @@
 // /rss.xml — canonical, read-only RSS 2.0 feed for reviewed live news.
 
 import { SITE, CONTACT } from "@/lib/constants";
-import { getLatestNews } from "@/content/news";
 import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
+import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 
 export const dynamic = "force-static";
 export const revalidate = 3600; // hourly
 
 export function GET(): Response {
-  const newsArticles = getLatestNews(30);
+  const newsArticles = INDEXABLE_NEWS_ARTICLES.slice(0, 30);
 
   type Entry = {
     title: string;

@@ -608,8 +608,10 @@ function DeskPane() {
       </p>
       <div className={styles.shortcutList}>
         <Link href="/ask">Ask the automated desk</Link>
-        <Link href="/map">Open the area atlas</Link>
-        <Link href="/developers">Review developers</Link>
+        <Link href="/news">Browse the report archive</Link>
+        <a href="https://investwithraj.com/developers">
+          Review developer dossiers
+        </a>
         <a
           href={rootCtaUrl({
             campaign: "intelligence-terminal",
@@ -630,13 +632,13 @@ function AreasPane({ areas }: { areas: Props["areas"] }) {
   return (
     <div className={styles.areaList}>
       {areas.slice(0, 12).map((area) => (
-        <Link key={area.slug} href={`/areas/${area.slug}`}>
+        <Link key={area.slug} href={`/news?area=${area.slug}`}>
           <span>{area.name}</span>
           <small>{area.emirate}</small>
         </Link>
       ))}
-      <Link className={styles.textLink} href="/areas">
-        View all area guides
+      <Link className={styles.textLink} href="/news">
+        View all archive filters
       </Link>
     </div>
   );

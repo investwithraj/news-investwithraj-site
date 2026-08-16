@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { NEWSROOM_EXACT_REDIRECTS } from "./lib/news-lifecycle";
 
 const nextConfig: NextConfig = {
   // ── Performance ───────────────────────────────────────────────────────
@@ -96,6 +97,9 @@ const nextConfig: NextConfig = {
   // so any indexed /v17 or /v16 links survive.
   async redirects() {
     return [
+      // Keep exact lifecycle rules first so a retired www URL can reach its
+      // final destination in one hop once the currently absent DNS is added.
+      ...NEWSROOM_EXACT_REDIRECTS,
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.news.investwithraj.com" }],
@@ -104,7 +108,6 @@ const nextConfig: NextConfig = {
       },
       { source: "/v17", destination: "/", permanent: true },
       { source: "/v16", destination: "/", permanent: true },
-      { source: "/v16/:path*", destination: "/", permanent: true },
     ];
   },
 

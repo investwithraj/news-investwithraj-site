@@ -4,6 +4,7 @@
 
 import { SITE } from "@/lib/constants";
 import { getNewsForGoogleNewsSitemap } from "@/content/news";
+import { isIndexEligibleArticleSlug } from "@/lib/news-lifecycle";
 
 export const dynamic = "force-static";
 export const revalidate = 3600; // hourly — must always be fresh per spec
@@ -14,6 +15,7 @@ const PUBLICATION_LANG = "en";
 export function GET(): Response {
   const now = Date.now();
   const articles = getNewsForGoogleNewsSitemap()
+    .filter((article) => isIndexEligibleArticleSlug(article.slug))
     .filter((article) => {
       const published = new Date(article.publishedAt).getTime();
       return Number.isFinite(published) && published <= now;

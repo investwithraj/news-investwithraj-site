@@ -211,28 +211,28 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
       </section>
 
       <section className={styles.doors} aria-label="Explore the intelligence">
-        <Link href="/areas">
+        <Link href="/news">
           <span>01</span>
-          <strong>Areas</strong>
-          <p>Source-linked reporting organised by covered market.</p>
+          <strong>Area filters</strong>
+          <p>Filter source-linked reporting by its related market.</p>
           <i>Open ↗</i>
         </Link>
-        <Link href="/developers">
+        <Link href="https://investwithraj.com/developers">
           <span>02</span>
-          <strong>Developers</strong>
-          <p>Published reporting organised by developer.</p>
+          <strong>Developer dossiers</strong>
+          <p>Continue to the canonical advisory developer directory.</p>
           <i>Open ↗</i>
         </Link>
-        <Link href="/map">
+        <Link href="/news">
           <span>03</span>
-          <strong>Live map</strong>
-          <p>Move from the headline to the geography behind it.</p>
+          <strong>News archive</strong>
+          <p>Browse every canonical report in chronological order.</p>
           <i>Open ↗</i>
         </Link>
-        <Link href="/pulse">
+        <Link href="/news?desk=dld-pulse">
           <span>04</span>
-          <strong>Market pulse</strong>
-          <p>The live numbers and the direction underneath them.</p>
+          <strong>DLD pulse reports</strong>
+          <p>Cited Dubai transaction, price and volume reporting.</p>
           <i>Open ↗</i>
         </Link>
       </section>

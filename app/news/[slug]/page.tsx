@@ -6,11 +6,17 @@ import { getNewsBySlug, NEWS_ARTICLES } from "@/content/news";
 import { resolveArticleRelations } from "@/lib/article-relations";
 import { SITE } from "@/lib/constants";
 import {
+  getNewsArticleLifecycle,
+  isIndexEligibleDisposition,
+  isRenderableArticleSlug,
+} from "@/lib/news-lifecycle";
+import {
   displayMarkets,
   hasVerifiedEditorialImage,
   relatedVerticalsForArticle,
   supportedImageAlt,
 } from "@/lib/news-editorial";
+import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 import {
   asGraph,
   BREADCRUMB_PRESETS,
@@ -27,7 +33,11 @@ export const dynamic = "force-static";
 
 export function generateStaticParams() {
   return NEWS_ARTICLES
-    .filter((article) => article.status !== "research")
+    .filter(
+      (article) =>
+        article.status !== "research" &&
+        isRenderableArticleSlug(article.slug),
+    )
     .map((article) => ({ slug: article.slug }));
 }
 
@@ -38,7 +48,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const article = getNewsBySlug(slug);
-  if (!article || article.status === "research") {
+  const lifecycle = getNewsArticleLifecycle(slug);
+  if (
+    !article ||
+    article.status === "research" ||
+    !lifecycle ||
+    !isRenderableArticleSlug(slug)
+  ) {
     return {
       title: "Article not found",
       robots: { index: false, follow: false },
@@ -54,6 +70,10 @@ export async function generateMetadata({
   return {
     title: article.title,
     description: article.metaDescription || article.subtitle,
+    robots: {
+      index: isIndexEligibleDisposition(lifecycle.disposition),
+      follow: true,
+    },
     alternates: {
       canonical: url,
       types: { "application/rss+xml": `${SITE.url}/rss.xml` },
@@ -94,35 +114,44 @@ export default async function NewsArticlePage({
 }) {
   const { slug } = await params;
   const article = getNewsBySlug(slug);
-  if (!article || article.status === "research") notFound();
+  const lifecycle = getNewsArticleLifecycle(slug);
+  if (
+    !article ||
+    article.status === "research" ||
+    !lifecycle ||
+    !isRenderableArticleSlug(slug)
+  ) {
+    notFound();
+  }
 
   const articleUrl = `${SITE.url}/news/${article.slug}`;
+  const indexEligible = isIndexEligibleDisposition(lifecycle.disposition);
   const hasImage = hasVerifiedEditorialImage(article);
   const imageUrl = article.heroImage.src.startsWith("http")
     ? article.heroImage.src
     : `${SITE.url}${article.heroImage.src}`;
-  const graph = asGraph(
-    newsArticleSchema(article),
-    article.faq.length > 0 ? faqPageSchema(article.faq) : null,
-    breadcrumbSchema(
-      BREADCRUMB_PRESETS.news({
-        slug: article.slug,
-        title: article.title,
-      }),
-    ),
-    rajPersonSchema,
-    hasImage
-      ? newsImageObjectSchema({
-          pageUrl: articleUrl,
-          imageUrl,
-          caption: article.heroImage.credit,
-        })
-      : null,
-  );
+  const graph = indexEligible
+    ? asGraph(
+        newsArticleSchema(article),
+        article.faq.length > 0 ? faqPageSchema(article.faq) : null,
+        breadcrumbSchema(
+          BREADCRUMB_PRESETS.news({
+            slug: article.slug,
+            title: article.title,
+          }),
+        ),
+        rajPersonSchema,
+        hasImage
+          ? newsImageObjectSchema({
+              pageUrl: articleUrl,
+              imageUrl,
+              caption: article.heroImage.credit,
+            })
+          : null,
+      )
+    : null;
 
-  const live = [...NEWS_ARTICLES]
-    .filter((item) => item.status !== "research")
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  const live = INDEXABLE_NEWS_ARTICLES;
   const index = live.findIndex((item) => item.slug === slug);
   const newer = index > 0 ? live[index - 1] : null;
   const older = index >= 0 && index < live.length - 1 ? live[index + 1] : null;
@@ -142,12 +171,14 @@ export default async function NewsArticlePage({
           content={article.publicationContentHash}
         />
       ) : null}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
-        }}
-      />
+      {graph ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
+          }}
+        />
+      ) : null}
       <NewsArticle
         article={article}
         newer={newer}

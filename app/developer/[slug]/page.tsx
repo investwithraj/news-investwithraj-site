@@ -19,10 +19,9 @@ import {
   PUBLIC_AREAS,
 } from "@/lib/public-content";
 import {
-  asGraph,
-  breadcrumbSchema,
-  collectionPageSchemas,
-} from "@/lib/schema";
+  isIndexEligibleArticleSlug,
+  isPublicNoindexPath,
+} from "@/lib/news-lifecycle";
 import { getVerifiedDeveloperMedia } from "@/lib/verified-media";
 
 import styles from "../../developers/DeveloperPages.module.css";
@@ -31,7 +30,9 @@ export const dynamicParams = false;
 export const dynamic = "force-static";
 
 export function generateStaticParams() {
-  return getAllPublicDeveloperSlugs().map((slug) => ({ slug }));
+  return getAllPublicDeveloperSlugs()
+    .filter((slug) => isPublicNoindexPath(`/developer/${slug}`))
+    .map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -41,15 +42,23 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const record = getPublicDeveloperRecord(slug);
-  if (!record) return { title: "Developer not found" };
-  const { developer, reports } = record;
+  if (!record || !isPublicNoindexPath(`/developer/${slug}`)) {
+    return {
+      title: "Developer not found",
+      robots: { index: false, follow: false },
+    };
+  }
+  const { developer } = record;
+  const reports = record.reports.filter((article) =>
+    isIndexEligibleArticleSlug(article.slug),
+  );
   const media = getVerifiedDeveloperMedia(slug);
 
   return {
     title: `${developer.name} — developer reporting index`,
     description: `${reports.length} source-linked reports that explicitly mention ${developer.name}, with the latest UAE property developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/developer/${slug}` },
-    robots: { index: true, follow: true },
+    robots: { index: false, follow: true },
     openGraph: {
       type: "website",
       title: `${developer.name} reporting index`,
@@ -78,8 +87,11 @@ export default async function DeveloperPage({
 }) {
   const { slug } = await params;
   const record = getPublicDeveloperRecord(slug);
-  if (!record) notFound();
-  const { developer, reports: relatedNews } = record;
+  if (!record || !isPublicNoindexPath(`/developer/${slug}`)) notFound();
+  const { developer } = record;
+  const relatedNews = record.reports.filter((article) =>
+    isIndexEligibleArticleSlug(article.slug),
+  );
   const media = getVerifiedDeveloperMedia(developer.slug);
 
   const connectedAreas = PUBLIC_AREAS.filter((area) =>
@@ -89,47 +101,15 @@ export default async function DeveloperPage({
     developer.slug,
     developer.name,
   );
-  const pageUrl = `${SITE.url}/developer/${developer.slug}`;
-  const [collection, itemList] = collectionPageSchemas({
-    url: pageUrl,
-    name: `${developer.name} reporting index`,
-    description: `Source-linked reports that explicitly mention ${developer.name}.`,
-    dateModified: relatedNews[0]?.modifiedAt,
-    itemListOrder: "descending",
-    items: relatedNews.map((article) => ({
-      name: article.title,
-      url: `${SITE.url}/news/${article.slug}`,
-      description: article.subtitle,
-    })),
-  });
-  const graph = asGraph(
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "@id": `${pageUrl}#entity`,
-      name: developer.name,
-      url: pageUrl,
-    },
-    collection,
-    itemList,
-    breadcrumbSchema([
-      { name: "Developers", url: `${SITE.url}/developers` },
-      { name: developer.name, url: pageUrl },
-    ]),
-  );
-
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
-        }}
-      />
       <main id="main" className={styles.page}>
         <header className={styles.detailHero}>
-          <Link href="/developers" className={styles.back}>
-            ← Developer reporting index
+          <Link
+            href="https://investwithraj.com/developers"
+            className={styles.back}
+          >
+            ← Advisory developer directory
           </Link>
           <div className={styles.detailHead}>
             <div>
@@ -146,7 +126,11 @@ export default async function DeveloperPage({
             <div className={styles.profileMark}>
               <span>Published coverage</span>
               <strong>{relatedNews.length} explicit reports</strong>
-              <small>Latest {relatedNews[0].displayDate}</small>
+              <small>
+                {relatedNews[0]
+                  ? `Latest ${relatedNews[0].displayDate}`
+                  : "No current report"}
+              </small>
             </div>
           </div>
         </header>
@@ -190,7 +174,9 @@ export default async function DeveloperPage({
           <div>
             <span>Latest reporting</span>
             <strong>
-              {formatEditorialDate(relatedNews[0].publishedAt)}
+              {relatedNews[0]
+                ? formatEditorialDate(relatedNews[0].publishedAt)
+                : "No current report"}
             </strong>
           </div>
           <div>
@@ -225,7 +211,7 @@ export default async function DeveloperPage({
           </header>
           <div className={styles.connectionList}>
             {connectedAreas.map((area) => (
-              <Link href={`/areas/${area.slug}`} key={area.slug}>
+              <Link href={`/news?area=${area.slug}`} key={area.slug}>
                 <span>
                   {area.emirate} · {area.kind.replaceAll("-", " ")}
                 </span>

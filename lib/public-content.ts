@@ -6,6 +6,7 @@ import {
   articleMentionsArea,
   articleMentionsDeveloper,
 } from "@/lib/news-editorial";
+import { isIndexEligibleArticleSlug } from "@/lib/news-lifecycle";
 
 /**
  * The single publication boundary for registry-backed public pages.
@@ -19,6 +20,17 @@ import {
 export const PUBLISHED_NEWS_ARTICLES: NewsArticle[] = sortNewsArticles(
   NEWS_ARTICLES,
 ).filter((article) => article.status !== "research");
+
+/**
+ * Canonical public discovery boundary for the lifecycle preview.
+ *
+ * Published records remain available above for editorial/internal integrity;
+ * only KEEP and IMPROVE records may enter navigation, schema or feeds.
+ */
+export const INDEXABLE_NEWS_ARTICLES: NewsArticle[] =
+  PUBLISHED_NEWS_ARTICLES.filter((article) =>
+    isIndexEligibleArticleSlug(article.slug),
+  );
 
 export type PublicAreaRecord = {
   area: AreaPage;

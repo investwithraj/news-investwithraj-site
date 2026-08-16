@@ -18,16 +18,18 @@ const groups = [
     links: [
       { label: "Latest", href: "/" },
       { label: "All news", href: "/news" },
-      { label: "Market pulse", href: "/pulse" },
+      { label: "DLD pulse reports", href: "/news?desk=dld-pulse" },
     ],
   },
   {
     title: "Market intelligence",
     links: [
-      { label: "Areas", href: "/areas" },
-      { label: "Developers", href: "/developers" },
-      { label: "Live map", href: "/map" },
-      { label: "Spatial view", href: "/spatial" },
+      { label: "Archive filters", href: "/news" },
+      {
+        label: "Developer dossiers",
+        href: "https://investwithraj.com/developers",
+        external: true,
+      },
     ],
   },
   {

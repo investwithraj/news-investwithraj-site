@@ -21,11 +21,9 @@ import {
   PUBLIC_DEVELOPERS,
 } from "@/lib/public-content";
 import {
-  asGraph,
-  BREADCRUMB_PRESETS,
-  breadcrumbSchema,
-  collectionPageSchemas,
-} from "@/lib/schema";
+  isIndexEligibleArticleSlug,
+  isPublicNoindexPath,
+} from "@/lib/news-lifecycle";
 import { getVerifiedAreaMedia } from "@/lib/verified-media";
 
 import styles from "../AreaPages.module.css";
@@ -35,7 +33,9 @@ export const dynamic = "force-static";
 export const revalidate = 86400;
 
 export function generateStaticParams() {
-  return getAllPublicAreaSlugs().map((slug) => ({ slug }));
+  return getAllPublicAreaSlugs()
+    .filter((slug) => isPublicNoindexPath(`/areas/${slug}`))
+    .map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -45,15 +45,23 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const record = getPublicAreaRecord(slug);
-  if (!record) return { title: "Area not found" };
-  const { area, reports } = record;
+  if (!record || !isPublicNoindexPath(`/areas/${slug}`)) {
+    return {
+      title: "Area not found",
+      robots: { index: false, follow: false },
+    };
+  }
+  const { area } = record;
+  const reports = record.reports.filter((article) =>
+    isIndexEligibleArticleSlug(article.slug),
+  );
   const media = getVerifiedAreaMedia(slug);
 
   return {
     title: `${area.name} property news and market intelligence`,
     description: `${reports.length} source-linked reports about ${area.name}, ${area.emirate}, with the latest market developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/areas/${slug}` },
-    robots: { index: true, follow: true },
+    robots: { index: false, follow: true },
     openGraph: {
       type: "website",
       title: `${area.name} property intelligence`,
@@ -82,8 +90,11 @@ export default async function AreaPage({
 }) {
   const { slug } = await params;
   const record = getPublicAreaRecord(slug);
-  if (!record) notFound();
-  const { area, reports: relatedNews } = record;
+  if (!record || !isPublicNoindexPath(`/areas/${slug}`)) notFound();
+  const { area } = record;
+  const relatedNews = record.reports.filter((article) =>
+    isIndexEligibleArticleSlug(article.slug),
+  );
   const sharedArea = canonicalArea(slug);
   if (sharedArea && (sharedArea.name !== area.name || sharedArea.emirate !== area.emirate)) {
     throw new Error(`Area registry mismatch for ${slug}`);
@@ -104,54 +115,12 @@ export default async function AreaPage({
       article.citations.map((citation) => citation.url),
     ),
   ).size;
-  const pageUrl = `${SITE.url}/areas/${area.slug}`;
-  const [collection, itemList] = collectionPageSchemas({
-    url: pageUrl,
-    name: `${area.name} reporting index`,
-    description: `Source-linked reports that explicitly mention ${area.name}.`,
-    dateModified: area.modifiedAt,
-    itemListOrder: "descending",
-    items: relatedNews.map((article) => ({
-      name: article.title,
-      url: `${SITE.url}/news/${article.slug}`,
-      description: article.subtitle,
-    })),
-  });
-  const graph = asGraph(
-    {
-      "@context": "https://schema.org",
-      "@type": "Place",
-      "@id": `${pageUrl}#place`,
-      name: area.name,
-      geo: {
-        "@type": "GeoCoordinates",
-        latitude: area.coords.lat,
-        longitude: area.coords.lng,
-      },
-      address: {
-        "@type": "PostalAddress",
-        addressRegion: area.emirate,
-        addressCountry: "AE",
-      },
-    },
-    collection,
-    itemList,
-    breadcrumbSchema(
-      BREADCRUMB_PRESETS.area({ slug: area.slug, name: area.name }),
-    ),
-  );
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
-        }}
-      />
       <main id="main" className={styles.page}>
         <header className={styles.detailHero}>
-          <Link href="/areas" className={styles.back}>
-            ← Area research index
+          <Link href="/news" className={styles.back}>
+            ← News archive
           </Link>
           <div className={styles.detailHead}>
             <div>
@@ -223,7 +192,11 @@ export default async function AreaPage({
           </div>
           <div>
             <span>Latest report</span>
-            <strong>{formatEditorialDate(relatedNews[0].publishedAt)}</strong>
+            <strong>
+              {relatedNews[0]
+                ? formatEditorialDate(relatedNews[0].publishedAt)
+                : "No current report"}
+            </strong>
           </div>
           <div>
             <span>Sources available</span>
@@ -268,7 +241,7 @@ export default async function AreaPage({
           <div className={styles.developerList}>
             {developers.map((developer) => (
               <Link
-                href={`/developer/${developer.slug}`}
+                href={`/news?developer=${developer.slug}`}
                 key={developer.slug}
               >
                 <span>Developer reporting</span>

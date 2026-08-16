@@ -5,15 +5,16 @@ export const revalidate = 86400;
 
 export function GET(): Response {
   const body = `# ${SITE.name}
-> Source-cited UAE property reporting and market analysis by Raj Tomar.
+> Source-cited UAE property reporting from the IWR News Desk.
 
 This publication covers material changes in Dubai, Abu Dhabi and Ras Al Khaimah property: transactions, regulation, infrastructure, launches, developers and community-level market signals. It is the time-sensitive intelligence arm of Invest With Raj. The main domain owns the advisory practice and call-booking journey.
 
 ## Discovery
 - Home -> ${SITE.url}/: Latest reporting and market desks.
 - News archive -> ${SITE.url}/news: Published source-cited articles.
-- Area coverage -> ${SITE.url}/areas: Community-specific reporting.
-- Developer coverage -> ${SITE.url}/developers: Developer-specific reporting.
+- Area filters -> ${SITE.url}/news?area={area-slug}: Related published reporting.
+- Developer filters -> ${SITE.url}/news?developer={developer-slug}: Related published reporting.
+- Desk filters -> ${SITE.url}/news?desk={desk-slug}: One of five editorial desk views.
 - About the publication -> ${SITE.url}/about
 - Editorial standards and corrections -> ${SITE.url}/about/editorial-standards
 - Sitemap -> ${SITE.url}/sitemap.xml

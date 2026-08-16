@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import NewsHome from "@/components/redesign/NewsHome";
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
+import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 
 export const metadata: Metadata = {
   title: "UAE Real Estate Intelligence | Invest With Raj",
@@ -12,9 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  const live = sortNewsArticles(NEWS_ARTICLES).filter(
-    (article) => article.status !== "research",
-  );
-
-  return <NewsHome articles={live} />;
+  return <NewsHome articles={INDEXABLE_NEWS_ARTICLES} />;
 }
