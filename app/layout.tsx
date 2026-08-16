@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { IWR_ICON_URL } from "@/lib/brand-icon";
 import { SITE } from "@/lib/constants";
 import { ConsentRoot } from "@/components/consent/ConsentRoot";
 import NewsChrome from "@/components/redesign/NewsChrome";
@@ -90,7 +91,8 @@ export const metadata: Metadata = {
     description: SITE.description,
   },
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    icon: [{ url: IWR_ICON_URL, type: "image/svg+xml", sizes: "any" }],
+    shortcut: [{ url: IWR_ICON_URL, type: "image/svg+xml", sizes: "any" }],
   },
   appleWebApp: {
     capable: true,

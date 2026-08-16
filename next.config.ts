@@ -71,7 +71,7 @@ const nextConfig: NextConfig = {
       },
       {
         // Static assets — long-cache aggressively
-        source: "/(.*)\\.(jpg|jpeg|png|webp|avif|svg|ico|woff2)",
+        source: "/(.*)\\.(jpg|jpeg|png|webp|avif|svg|woff2)",
         headers: [
           {
             key: "Cache-Control",
@@ -90,6 +90,12 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
+  },
+
+  // The reserved /favicon.ico file convention cannot host a route handler.
+  // Rewrite it internally so the handler can return a cache-controlled 307.
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/api/favicon" }];
   },
 
   // ── v1.1 cutover (June 2026): the immersive Terminal is the news ROOT home
