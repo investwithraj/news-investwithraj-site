@@ -129,20 +129,44 @@ async function main() {
         {
           postedUrl: `https://www.news.investwithraj.com/news/${RESEARCH_SLUG}`,
         },
+        {
+          draftText: `Normalized path: https://news.investwithraj.com/x/../news/${REMOVED_SLUG}`,
+        },
+        {
+          draftText: `Encoded host: https://news%2Einvestwithraj.com/news/${REMOVED_SLUG}`,
+        },
+        {
+          draftText: String.raw`Backslash path: https://news.investwithraj.com\news\${REMOVED_SLUG}`,
+        },
+        {
+          responseToUrl: `https://news.investwithraj.com./news/${REMOVED_SLUG}`,
+        },
+        {
+          draftText: `Encoded path: https://news.investwithraj.com/%6eews/${REMOVED_SLUG}`,
+        },
+        {
+          draftText: `Single slash: https:/%6eews.investwithraj.com/news/${REMOVED_SLUG}`,
+        },
+        {
+          draftText: String.raw`Single backslash: https:\%6eews.investwithraj.com/news/${REMOVED_SLUG}`,
+        },
+        { draftText: `Punctuation—/news/${REMOVED_SLUG}` },
+        { rationale: `Punctuation;/news/${REMOVED_SLUG}` },
+        { editNote: `Punctuation!/news/${REMOVED_SLUG}` },
       ];
       for (const fields of rejectedFields) {
         assert.equal(
           validateQueueLifecycleFields(fields).ok,
           false,
-          `${mode}: a non-public newsroom reference escaped ${Object.keys(fields)[0]}.`,
+          `${mode}: a non-public newsroom reference escaped ${JSON.stringify(fields)}.`,
         );
       }
 
       const allowed = validateQueueLifecycleFields({
-        target: `https://example.com/news/${REMOVED_SLUG}`,
-        draftText: `Approved: /news/${APPROVED_SLUG}`,
+        target: `https://example.com/?next=/news/${REMOVED_SLUG}`,
+        draftText: `Approved: /news/${APPROVED_SLUG}. External bare URL: example.com/?next=/news/${REMOVED_SLUG}`,
         rationale: `Canonical: https://news.investwithraj.com/news/${APPROVED_SLUG}`,
-        responseToUrl: `https://example.org/news/${RESEARCH_SLUG}`,
+        responseToUrl: `https://example.org/news.investwithraj.com/news/${RESEARCH_SLUG}`,
         editNote: `WWW: https://www.news.investwithraj.com:443/news/${APPROVED_SLUG}`,
       });
       assert.equal(allowed.ok, true, `${mode}: approved/external URLs were blocked.`);
@@ -171,6 +195,30 @@ async function main() {
         {
           ...baseItem,
           responseToUrl: `https://news.investwithraj.com/news/${RESEARCH_SLUG}`,
+        },
+        {
+          ...baseItem,
+          draftText: `Copy https://news.investwithraj.com/x/../news/${REMOVED_SLUG}`,
+        },
+        {
+          ...baseItem,
+          draftText: `Copy https://news%2Einvestwithraj.com/news/${REMOVED_SLUG}`,
+        },
+        {
+          ...baseItem,
+          draftText: String.raw`Copy https://news.investwithraj.com\news\${REMOVED_SLUG}`,
+        },
+        {
+          ...baseItem,
+          responseToUrl: `https://news.investwithraj.com./news/${REMOVED_SLUG}`,
+        },
+        {
+          ...baseItem,
+          draftText: `Copy https:/%6eews.investwithraj.com/news/${REMOVED_SLUG}`,
+        },
+        {
+          ...baseItem,
+          rationale: `Copy—/news/${REMOVED_SLUG}`,
         },
       ];
 
@@ -292,6 +340,28 @@ async function main() {
         400,
         `${mode}: a legacy non-public URL advanced to approved.`,
       );
+
+      const skipLegacy = await actOnQueueItem(
+        queueRequest(`/api/queue/action/${legacyBad[0].id}`, {
+          action: "skip",
+          expectedRecordVersion: 1,
+        }),
+        { params: Promise.resolve({ id: legacyBad[0].id }) },
+      );
+      assert.equal(skipLegacy.status, 200);
+      const postponeLegacy = await actOnQueueItem(
+        queueRequest(`/api/queue/action/${legacyBad[0].id}`, {
+          action: "postpone",
+          expectedRecordVersion: 2,
+        }),
+        { params: Promise.resolve({ id: legacyBad[0].id }) },
+      );
+      assert.equal(
+        postponeLegacy.status,
+        400,
+        `${mode}: postpone reactivated a legacy non-public queue item.`,
+      );
+      assert.equal((await queue.getItem(legacyBad[0].id))?.status, "skipped");
     }
 
     console.log(

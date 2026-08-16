@@ -176,6 +176,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         break;
       }
       case "postpone":
+        if (!validateQueueLifecycleFields(item).ok) {
+          return privateJson(
+            {
+              error:
+                "Queue copy may reference only approved public newsroom articles.",
+            },
+            400,
+          );
+        }
         patch.expiresAt = calculateExpiresAt(
           item.channel as QueueChannel,
           new Date(),

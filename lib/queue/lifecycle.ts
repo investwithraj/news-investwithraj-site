@@ -43,28 +43,48 @@ function inspectQueueNewsroomArticleReferences(value: string): {
   slugs: string[];
   malformed: boolean;
 } {
-  const candidates: string[] = [];
-  const hostedPattern =
-    /(^|[^\p{L}\p{N}_.-])((?:(?:https?:)?\/\/)?(?:www\.)?news\.investwithraj\.com(?::\d{1,5})?\/news\/[^\s<>"'`)\]}]+)/gimu;
-  const relativePattern =
-    /(^|[\s("'`=\[{},>:])(\/news\/[^\s<>"'`)\]}]+)/gimu;
-
-  for (const match of value.matchAll(hostedPattern)) {
-    if (match[2]) candidates.push(match[2]);
+  const candidates: Array<{
+    value: string;
+    kind: "absolute" | "bare-host" | "relative";
+  }> = [];
+  const absoluteRanges: Array<{ start: number; end: number }> = [];
+  const absolutePattern = /(?:https?:[\\/]+|\/\/)[^\s<>"'`)\]}]+/gimu;
+  for (const match of value.matchAll(absolutePattern)) {
+    if (match.index === undefined) continue;
+    candidates.push({ value: match[0], kind: "absolute" });
+    absoluteRanges.push({
+      start: match.index,
+      end: match.index + match[0].length,
+    });
   }
-  for (const match of value.matchAll(relativePattern)) {
-    if (match[2]) candidates.push(match[2]);
+
+  const residual = value.split("");
+  for (const range of absoluteRanges) {
+    residual.fill(" ", range.start, range.end);
+  }
+  const absoluteUnclaimed = residual.join("");
+  const bareHostPattern =
+    /(^|[^\p{L}\p{N}_.%-])((?:(?:[a-z0-9-]|%[0-9a-f]{2})+(?:\.|%2e))+(?:(?:[a-z]|%[0-9a-f]{2})){2,63}\.?(?::\d{1,5})?[\\/][^\s<>"'`)\]}]+)/gimu;
+  for (const match of absoluteUnclaimed.matchAll(bareHostPattern)) {
+    if (!match[2] || match.index === undefined) continue;
+    const start = match.index + match[0].length - match[2].length;
+    candidates.push({ value: match[2], kind: "bare-host" });
+    residual.fill(" ", start, start + match[2].length);
+  }
+
+  const unclaimed = residual.join("");
+  const relativePattern =
+    /(^|[^\p{L}\p{N}_.%/\\-])([\\/][^\s<>"'`)\]}]+)/gimu;
+  for (const match of unclaimed.matchAll(relativePattern)) {
+    if (match[2]) candidates.push({ value: match[2], kind: "relative" });
   }
 
   const slugs = new Set<string>();
   let malformed = false;
   for (const candidate of candidates) {
-    const slug = articleSlugFromCandidate(candidate);
-    if (slug) {
-      slugs.add(slug);
-    } else {
-      malformed = true;
-    }
+    const result = inspectCandidate(candidate.value, candidate.kind);
+    if (result.slug) slugs.add(result.slug);
+    malformed ||= result.malformed;
   }
   return { slugs: [...slugs], malformed };
 }
@@ -111,32 +131,82 @@ export function validateQueueLifecycleFields(
   };
 }
 
-function articleSlugFromCandidate(candidate: string): string | null {
+function inspectCandidate(
+  candidate: string,
+  kind: "absolute" | "bare-host" | "relative",
+): { slug?: string; malformed: boolean } {
+  const trimmed = candidate.replace(/[.,;:!?]+$/g, "");
+  const normalizedSlashes = trimmed.replaceAll("\\", "/");
   try {
-    const trimmed = candidate.replace(/[.,;:!?]+$/g, "");
-    const absolute = trimmed.startsWith("/news/")
-      ? new URL(trimmed, NEWSROOM_ORIGIN)
-      : new URL(
-          trimmed.startsWith("//")
-            ? `https:${trimmed}`
-            : /^https?:\/\//i.test(trimmed)
-              ? trimmed
-              : `https://${trimmed}`,
-        );
-    if (!NEWSROOM_HOSTS.has(absolute.hostname.toLowerCase())) {
-      return null;
+    const urlInput =
+      kind === "relative"
+        ? normalizedSlashes
+        : normalizedSlashes.startsWith("//")
+          ? `https:${normalizedSlashes}`
+          : /^https?:\//i.test(normalizedSlashes)
+            ? normalizedSlashes
+            : `https://${normalizedSlashes}`;
+    const absolute =
+      kind === "relative"
+        ? new URL(urlInput, NEWSROOM_ORIGIN)
+        : new URL(urlInput);
+    const hostname = absolute.hostname.toLowerCase().replace(/\.$/, "");
+    if (!NEWSROOM_HOSTS.has(hostname)) {
+      return { malformed: false };
     }
-    const [root, collection, slug] = absolute.pathname.split("/");
-    if (
-      root !== "" ||
-      collection !== "news" ||
-      !slug ||
-      !ARTICLE_SLUG.test(slug)
-    ) {
-      return null;
+
+    const pathname = normalizePathname(decodeURIComponent(absolute.pathname));
+    const [, collection, slug] = pathname.split("/");
+    if (collection?.toLowerCase() !== "news") {
+      return { malformed: false };
     }
-    return slug;
+    if (collection !== "news" || !slug || !ARTICLE_SLUG.test(slug)) {
+      return { malformed: true };
+    }
+    return { slug, malformed: false };
   } catch {
-    return null;
+    return {
+      malformed:
+        kind === "relative"
+          ? looksLikeNewsArticlePath(trimmed)
+          : looksLikeNewsroomHost(trimmed),
+    };
   }
+}
+
+function normalizePathname(pathname: string): string {
+  const segments: string[] = [];
+  for (const segment of pathname.replaceAll("\\", "/").split("/")) {
+    if (!segment || segment === ".") continue;
+    if (segment === "..") {
+      segments.pop();
+    } else {
+      segments.push(segment);
+    }
+  }
+  return `/${segments.join("/")}`;
+}
+
+function approximatelyDecode(value: string): string {
+  return value.replace(/%([0-9a-f]{2})/gi, (_match, hex: string) =>
+    String.fromCharCode(Number.parseInt(hex, 16)),
+  );
+}
+
+function looksLikeNewsroomHost(value: string): boolean {
+  const normalized = approximatelyDecode(value)
+    .toLowerCase()
+    .replaceAll("\\", "/");
+  return [...NEWSROOM_HOSTS].some(
+    (hostname) =>
+      normalized.includes(`${hostname}/`) ||
+      normalized.includes(`${hostname}./`),
+  );
+}
+
+function looksLikeNewsArticlePath(value: string): boolean {
+  const normalized = normalizePathname(
+    approximatelyDecode(value).toLowerCase(),
+  );
+  return normalized === "/news" || normalized.startsWith("/news/");
 }
