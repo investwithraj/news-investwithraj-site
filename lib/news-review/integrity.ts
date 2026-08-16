@@ -12,6 +12,7 @@ import { CURRENT_EVIDENCE_POLICY_VERSION } from "@/lib/news-review/types";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 import {
   approvedEvidencePublisherDomain,
+  approvedPublisherIdentity,
   assessDraft,
   assessStoredEvidenceFreshness,
 } from "@/lib/news-review/auto-approve";
@@ -82,6 +83,26 @@ function validIso(value: unknown): value is string {
     return false;
   }
   return Number.isFinite(Date.parse(value));
+}
+
+function validCanonicalCitation(value: unknown): boolean {
+  if (
+    !isRecord(value) ||
+    Object.keys(value).some(
+      (key) => !new Set(["source", "url", "accessedAt", "tier"]).has(key),
+    ) ||
+    !boundedString(value.source, 1, 200) ||
+    !validHttpsUrl(value.url) ||
+    !validIso(value.accessedAt)
+  ) {
+    return false;
+  }
+  const publisher = approvedPublisherIdentity(value.url);
+  return (
+    publisher !== null &&
+    value.source === publisher.name &&
+    value.tier === publisher.tier
+  );
 }
 
 function realCalendarDate(value: string): boolean {
@@ -328,17 +349,7 @@ export function validateDraftArticleShape(
     !Array.isArray(value.citations) ||
     value.citations.length < 1 ||
     value.citations.length > 12 ||
-    value.citations.some(
-      (citation) =>
-        !isRecord(citation) ||
-        Object.keys(citation).some(
-          (key) =>
-            !new Set(["source", "url", "accessedAt", "tier"]).has(key),
-        ) ||
-        !boundedString(citation.source, 1, 200) ||
-        !validHttpsUrl(citation.url) ||
-        !validIso(citation.accessedAt),
-    )
+    value.citations.some((citation) => !validCanonicalCitation(citation))
   ) {
     return { ok: false, error: "article.citations is invalid." };
   }

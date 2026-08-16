@@ -161,8 +161,10 @@ async function main() {
       url: "https://dubailand.gov.ae/en/news/example-release",
       source: "Dubai Land Department",
       category: "regulatory",
-      body: "Dubai Land Department confirmed a verified transaction value of AED 10 million.",
+      body: "Dubai Land Department confirmed its own verified transaction value of AED 10 million.",
     });
+    officialDraft.article.title =
+      "Dubai Land Department confirms its own regulatory update";
     assert.equal(assessDraft(officialDraft).evidenceLane, "official-update");
     assert.equal(assessDraft(officialDraft).verdict, "auto-approve");
 
@@ -170,6 +172,18 @@ async function main() {
       ["broad-market-growth", "The UAE property market grew 12% last year."],
       ["analyst-forecast", "Analysts expect prices to rise by 12%."],
       ["challenged-claim", "Critics challenged the developer claim."],
+      [
+        "institutional-forecast",
+        "Knight Frank published its own report. It expects prices to climb 12% next year.",
+      ],
+      [
+        "unattributed-market-movement",
+        "Dubai Land Department confirmed its annual report. Demand strengthened across Dubai and prices climbed.",
+      ],
+      [
+        "lowercase-third-party-sentence",
+        "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
+      ],
     ] as const) {
       const riskyOwnUpdate = {
         ...officialDraft,
@@ -198,8 +212,9 @@ async function main() {
       url: "https://www.aldar.com/en/news-and-media/example-launch",
       source: "Aldar Properties",
       category: "launch",
-      body: "Aldar announced that the verified transaction value was AED 10 million.",
+      body: "Aldar announced its own verified transaction value of AED 10 million.",
     });
+    developerDraft.article.title = "Aldar announces its own project update";
     assert.equal(
       assessDraft(developerDraft).evidenceLane,
       "developer-announcement",
@@ -216,9 +231,13 @@ async function main() {
     });
     assert.equal(
       assessDraft(institutionalDraft).evidenceLane,
-      "research-release",
+      "corroborated-analysis",
     );
-    assert.equal(assessDraft(institutionalDraft).verdict, "auto-approve");
+    assert.equal(
+      assessDraft(institutionalDraft).verdict,
+      "manual",
+      "institutional findings always require an independent publisher",
+    );
 
     const recommendationDraft = oneSourceDraft({
       id: "single-source-recommendation",
@@ -277,6 +296,13 @@ async function main() {
         body:
           "Reuters reported that the market-wide AED 10 million claim remains disputed.",
       },
+      provenance: {
+        ...draft.provenance,
+        fetchedEvidence: [
+          evidenceRecord(sourceA, `${"Reuters reported that the market-wide AED 10 million claim remains disputed."} The full report supplies direct context.`),
+          evidenceRecord(sourceB, `${"Reuters reported that the market-wide AED 10 million claim remains disputed."} Independent reporting supplies direct context.`),
+        ],
+      },
     } as NewsDraft;
     const disputedTwoSourceAssessment = assessDraft(disputedTwoSourceDraft);
     assert.equal(disputedTwoSourceAssessment.requiredPublisherCount, 2);
@@ -290,6 +316,13 @@ async function main() {
         ...draft.article,
         body:
           "We recommend investors buy after the verified transaction value reached AED 10 million.",
+      },
+      provenance: {
+        ...draft.provenance,
+        fetchedEvidence: [
+          evidenceRecord(sourceA, "We recommend investors buy after the verified transaction value reached AED 10 million. The full report supplies direct context."),
+          evidenceRecord(sourceB, "We recommend investors buy after the verified transaction value reached AED 10 million. Independent reporting supplies direct context."),
+        ],
       },
     } as NewsDraft;
     const corroboratedAssessment = assessDraft(corroboratedAnalysisDraft);
@@ -426,7 +459,7 @@ async function main() {
       "phase 2",
       "12 floors",
       "3 bedrooms",
-      "5 km",
+      "5 km corridor",
       "40 hectares",
       "2029",
     ]) {
@@ -441,7 +474,7 @@ async function main() {
     );
     assert.deepEqual(findUnsupportedFigures(materialCounts, materialCounts), []);
     const adversarialDigitSpans =
-      "7-tower 405-unit 3-bedroom 7 transactions 10 basis points 10 square metres H1/H2/Q1 2026 3:1 1 in 4 10 to 12% -5%";
+      "7-tower 405-unit 3-bedroom 7 transactions 10 basis points 10 square metres H1/H2/Q1 2026 3:1 1 in 4 10 to 12% -5% 125bp + 5% - .5% .75% - AED .25 million AED 10-12 million AED 3/4 million 3/4 votes 7 new ultra luxury waterfront residential towers 7 new ultra luxury waterfront residential schools 2026-2027 plan Q1 2026-Q2 2027";
     const adversarialFigures = extractFigures(adversarialDigitSpans);
     for (const figure of [
       "7-tower",
@@ -455,6 +488,18 @@ async function main() {
       "1 in 4",
       "10 to 12%",
       "-5%",
+      "125bp",
+      "+ 5%",
+      "- .5%",
+      ".75%",
+      "- aed .25 million",
+      "aed 10-12 million",
+      "aed 3/4 million",
+      "3/4 votes",
+      "7 new ultra luxury waterfront residential towers",
+      "7 new ultra luxury waterfront residential schools",
+      "2026-2027 plan",
+      "q1 2026-q2 2027",
     ]) {
       assert.ok(
         adversarialFigures.includes(figure),
@@ -481,20 +526,61 @@ async function main() {
       ["aed 10 million"],
       "numeric tokens split across publishers must not combine into support",
     );
+    for (const [claim, wrongEvidence] of [
+      ["AED 10-12 million", "USD 10-12 million"],
+      ["AED 3/4 million", "3/4 votes"],
+      ["7 new towers", "7 new schools"],
+    ] as const) {
+      assert.deepEqual(
+        findUnsupportedFigures(claim, wrongEvidence),
+        [claim.toLowerCase()],
+        `${claim} must retain enough context to reject ${wrongEvidence}`,
+      );
+      assert.deepEqual(
+        findUnsupportedFigures(claim, claim),
+        [],
+        `${claim} must pass when the exact contextual figure is in evidence`,
+      );
+    }
+    assert.deepEqual(
+      extractFigures(
+        "Published 16 Aug. 2026 and August 16; see Sections 2-4 and pages 5 to 7.",
+      ),
+      [],
+      "ordinary dates and navigation ranges must remain explicit safe exclusions",
+    );
+
+    const residualDigitDraft = {
+      ...draft,
+      id: "unconsumed-digit-with-supported-figure",
+      article: {
+        ...draft.article,
+        body:
+          "The verified transaction value was AED 10 million, while the unclassified label X7 remains visible.",
+      },
+    } as NewsDraft;
+    const residualDigitAssessment = assessDraft(residualDigitDraft);
+    assert.equal(residualDigitAssessment.verdict, "manual");
+    assert.ok(
+      residualDigitAssessment.reasons.some((reason) =>
+        /digit-bearing span/.test(reason),
+      ),
+      "a supported amount must not conceal an unconsumed digit-bearing label",
+    );
 
     const supportedCountsDraft = {
       ...officialDraft,
       id: "supported-material-counts",
       article: {
         ...officialDraft.article,
-        body: `Dubai Land Department confirmed AED 10 million. ${materialCounts}`,
+        body: `Dubai Land Department confirmed AED 10 million and announced that its plan covers ${materialCounts.replace("The plan covers ", "")}`,
       },
       provenance: {
         ...officialDraft.provenance,
         fetchedEvidence: [
           evidenceRecord(
             officialDraft.article.citations[0].url,
-            `Dubai Land Department confirmed AED 10 million. ${materialCounts} The release provides direct project detail.`,
+            `Dubai Land Department confirmed AED 10 million and announced that its plan covers ${materialCounts.replace("The plan covers ", "")}`,
           ),
         ],
       },

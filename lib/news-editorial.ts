@@ -123,7 +123,20 @@ export function readingMinutes(article: NewsArticle): number {
 }
 
 export function sourceTierForCitation(citation: Citation): SourceTier | null {
-  return citation.tier ?? findSourceByUrl(citation.url)?.tier ?? null;
+  const source = findSourceByUrl(citation.url);
+  return source && source.citable !== false ? source.tier : null;
+}
+
+/** Reader-visible publisher identity comes from the verified URL registry,
+ * never from a stored/model-supplied citation label. */
+export function sourceNameForCitation(citation: Citation): string {
+  const source = findSourceByUrl(citation.url);
+  if (source && source.citable !== false) return source.name;
+  try {
+    return new URL(citation.url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "Source";
+  }
 }
 
 export function evidenceSummary(article: NewsArticle): EvidenceSummary {

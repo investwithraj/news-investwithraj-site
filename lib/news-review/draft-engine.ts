@@ -21,11 +21,13 @@ import { rootCtaUrl } from "@/lib/constants";
 import type { Cluster } from "@/lib/pipeline/types";
 import type { DraftArticle, NewsDraftProvenance } from "./types";
 import {
-  articleEvidenceText,
+  articleEvidenceSegments,
   approvedEvidencePublisherDomain,
   approvedPublisherDomain,
+  approvedPublisherIdentity,
   determineEvidencePolicy,
   extractFigures,
+  findUnconsumedDigitContexts,
   findUnsupportedFigures,
   MAX_AUTO_NEWS_SOURCE_AGE_HOURS,
 } from "./auto-approve";
@@ -44,7 +46,7 @@ You are given a story lead (a cluster of headlines + snippets). RESEARCH it with
 ABSOLUTE RULES (a draft that breaks these is rejected):
 - Synthetic imagery is forbidden. The drafting system does not select, generate, or approve media; a human reviewer must attach a rights-cleared real UHD cover.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
-- Use the lightest defensible evidence lane. One directly accessible approved government/regulator source, national or international newsroom, attributed institutional report, or attributed official developer release is sufficient for a factual update about that source's own reporting. Investment recommendations, forecasts, market-wide conclusions, portal claims and disputed claims require two independently accessible approved publisher domains. Cite exact article or release URLs, never homepages, search pages or aggregator redirects.
+- Use the lightest defensible evidence lane. One directly accessible approved government/regulator or official developer source is sufficient only when every public claim sentence explicitly names that same first-party publisher and describes that entity's own act, release or update. National/international reporting, institutional findings, investment recommendations, forecasts, market or macro conclusions, portal claims, disputed claims and any unattributed material sentence require two independently accessible approved publisher domains. Cite exact article or release URLs, never homepages, search pages or aggregator redirects.
 - If, after searching, you cannot verify enough for a defensible 650+ word article, return {"skip": true, "reason": "..."} and nothing else.
 - UK English. Em-dashes — like this — are signature; use several.
 - The FIRST paragraph must contain a specific, sourced number.
@@ -253,8 +255,8 @@ function buildCitations(
   cluster: Cluster,
   whitelist: string[],
   now: string,
-): { source: string; url: string; accessedAt: string }[] {
-  const out: { source: string; url: string; accessedAt: string }[] = [];
+): DraftArticle["citations"] {
+  const out: DraftArticle["citations"] = [];
   const seen = new Set<string>();
   const seenHosts = new Set<string>();
   const isWhitelisted = (u: string) => {
@@ -275,21 +277,22 @@ function buildCitations(
       return false;
     }
   };
-  const add = (source: string | undefined, url: string) => {
+  const add = (_source: string | undefined, url: string) => {
     if (!isWhitelisted(url)) return;
     const parsed = new URL(url);
     parsed.hash = "";
     const canonicalUrl = parsed.toString();
     if (seen.has(canonicalUrl)) return;
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
     const publisherDomain = approvedPublisherDomain(canonicalUrl);
-    if (!publisherDomain || seenHosts.has(publisherDomain)) return;
+    const publisher = approvedPublisherIdentity(canonicalUrl);
+    if (!publisherDomain || !publisher || seenHosts.has(publisherDomain)) return;
     seen.add(canonicalUrl);
     seenHosts.add(publisherDomain);
     out.push({
-      source: source?.trim() || host,
+      source: publisher.name,
       url: canonicalUrl,
       accessedAt: now,
+      tier: publisher.tier,
     });
   };
   for (const citation of claudeCites ?? []) {
@@ -352,7 +355,7 @@ export async function draftFromCluster(
     messages: [
       {
         role: "user",
-        content: `STORY LEAD: ${cluster.topic}\nSuggested category: ${cluster.suggestedCategory}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. A single directly accessible Tier-A newsroom, authority, attributed institutional report or attributed official developer release is sufficient for a factual report. Use two independent sources for analysis, recommendations, forecasts, portal claims or disputed claims. If the required evidence is not accessible, skip. Then output the article JSON.`,
+        content: `STORY LEAD: ${cluster.topic}\nSuggested category: ${cluster.suggestedCategory}\nMarkets: ${cluster.suggestedMarkets.join(", ")}\n\nAPPROVED SOURCE DOMAINS:\n${whitelist.join(", ")}\n\nHEADLINES + SNIPPETS:\n\n${lead}\n\nResearch this story with web search. One government/regulator or official-developer source is sufficient only for that publisher's own act or announcement, and every public claim sentence must name it locally. National-newsroom reporting, institutional findings, market or macro claims, analysis, recommendations, forecasts, portal claims, disputes and any unattributed material sentence require two independent approved publishers. If the required evidence is not accessible, skip. Then output the article JSON.`,
       },
     ],
   } satisfies Parameters<ResearchCall>[0];
@@ -585,10 +588,11 @@ export async function draftFromCluster(
     )
     .join("\n\n---\n\n");
   const evidenceTexts = fetchedEvidence.map((evidence) => evidence.text);
-  let unsupportedFigures = findUnsupportedFigures(
-    articleEvidenceText(article),
-    evidenceTexts,
+  let claimTexts = articleEvidenceSegments(article).map(
+    (segment) => segment.text,
   );
+  let unsupportedFigures = findUnsupportedFigures(claimTexts, evidenceTexts);
+  let unconsumedDigitContexts = findUnconsumedDigitContexts(claimTexts);
   const preflightValidation = validateDraft(
     article as unknown as ValidatorInput,
   );
@@ -599,7 +603,11 @@ export async function draftFromCluster(
   // One repair call is the entire retry budget. It can correct mechanical
   // voice gates and remove unsupported figures, but it receives no search
   // snippets or outside context — only the directly fetched evidence packet.
-  if (blockingFailures.length > 0 || unsupportedFigures.length > 0) {
+  if (
+    blockingFailures.length > 0 ||
+    unsupportedFigures.length > 0 ||
+    unconsumedDigitContexts.length > 0
+  ) {
     const supportedFigures = [
       ...new Set(evidenceTexts.flatMap((text) => extractFigures(text))),
     ];
@@ -611,7 +619,7 @@ export async function draftFromCluster(
       messages: [
         {
           role: "user",
-          content: `EXACT TITLE:\n${article.title}\n\nVALIDATOR FAILURES TO CORRECT:\n${blockingFailures.map((failure) => `${failure.name}: ${failure.detail}`).join("\n") || "none"}\n\nUNSUPPORTED FIGURES TO REMOVE:\n${unsupportedFigures.join(", ") || "none"}\n\nEXPLICIT SUPPORTED FIGURES (the only numerical expressions permitted):\n${supportedFigures.join(", ") || "none"}\n\nCURRENT DRAFT:\n${JSON.stringify({
+          content: `EXACT TITLE:\n${article.title}\n\nVALIDATOR FAILURES TO CORRECT:\n${blockingFailures.map((failure) => `${failure.name}: ${failure.detail}`).join("\n") || "none"}\n\nUNSUPPORTED FIGURES TO REMOVE:\n${unsupportedFigures.join(", ") || "none"}\n\nUNPARSED DIGIT-BEARING SPANS TO REMOVE OR COPY EXACTLY FROM EVIDENCE:\n${unconsumedDigitContexts.join(" | ") || "none"}\n\nEXPLICIT SUPPORTED FIGURES (the only numerical expressions permitted):\n${supportedFigures.join(", ") || "none"}\n\nCURRENT DRAFT:\n${JSON.stringify({
             subtitle: article.subtitle,
             tldr: article.tldr,
             body: article.body,
@@ -642,14 +650,18 @@ export async function draftFromCluster(
       ],
       faq: Array.isArray(repaired.faq) ? repaired.faq.slice(0, 5) : [],
     };
-    unsupportedFigures = findUnsupportedFigures(
-      articleEvidenceText(article),
-      evidenceTexts,
+    claimTexts = articleEvidenceSegments(article).map(
+      (segment) => segment.text,
     );
-    if (unsupportedFigures.length > 0) {
+    unsupportedFigures = findUnsupportedFigures(claimTexts, evidenceTexts);
+    unconsumedDigitContexts = findUnconsumedDigitContexts(claimTexts);
+    if (unsupportedFigures.length > 0 || unconsumedDigitContexts.length > 0) {
       return {
         ok: false,
-        reason: `evidence-only repair retained ${unsupportedFigures.length} unsupported figure(s): ${unsupportedFigures.slice(0, 8).join(", ")}`,
+        reason:
+          `evidence-only repair retained ${unsupportedFigures.length} unsupported figure(s)` +
+          `${unsupportedFigures.length > 0 ? `: ${unsupportedFigures.slice(0, 8).join(", ")}` : ""}` +
+          `${unconsumedDigitContexts.length > 0 ? `; ${unconsumedDigitContexts.length} unparsed digit span(s): ${unconsumedDigitContexts.slice(0, 4).join(" | ")}` : ""}`,
         diagnostics,
       };
     }

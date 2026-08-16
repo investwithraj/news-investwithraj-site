@@ -9,6 +9,7 @@ import {
   displayMarkets,
   hasVerifiedEditorialImage,
   readingMinutes,
+  sourceNameForCitation,
 } from "@/lib/news-editorial";
 import { rajPersonRef } from "./person";
 import { newsOrgRef } from "./organization";
@@ -43,7 +44,7 @@ export function newsArticleSchema(article: NewsArticle): Record<string, unknown>
       : {}),
     citation: article.citations.map((c) => ({
       "@type": "CreativeWork",
-      name: c.source,
+      name: sourceNameForCitation(c),
       url: c.url,
     })),
   };

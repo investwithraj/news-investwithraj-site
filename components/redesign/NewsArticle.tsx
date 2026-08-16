@@ -16,6 +16,7 @@ import {
   evidenceSummary,
   formatEditorialDate,
   readingMinutes,
+  sourceNameForCitation,
   sourceTierForCitation,
 } from "@/lib/news-editorial";
 import type { Vertical } from "@/lib/verticals";
@@ -221,7 +222,7 @@ export default function NewsArticle({
                 <li key={`${citation.url}-${index}`}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <div>
-                    <strong>{citation.source}</strong>
+                    <strong>{sourceNameForCitation(citation)}</strong>
                     <small>
                       {tier ? TIER_LABELS[tier] : "Tier not classified"} ·
                       Accessed{" "}

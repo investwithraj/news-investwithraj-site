@@ -7,6 +7,7 @@ import {
   PUBLIC_AREAS,
 } from "@/lib/public-content";
 import { projectNewsArchiveItems } from "@/lib/news-archive-projection";
+import { sourceNameForCitation } from "@/lib/news-editorial";
 import { TerminalShell } from "@/components/terminal/TerminalShell";
 
 export const dynamic = "force-static";
@@ -47,7 +48,7 @@ export default function TerminalPage() {
       markets: article.market,
       sourceCount: article.citations.length,
       sourceLabels: [
-        ...new Set(article.citations.map((citation) => citation.source)),
+        ...new Set(article.citations.map(sourceNameForCitation)),
       ].slice(0, 3),
     }));
 

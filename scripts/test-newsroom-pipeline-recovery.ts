@@ -28,6 +28,10 @@ import {
   type DraftArticle,
   type NewsDraftProvenance,
 } from "../lib/news-review/types.js";
+import {
+  sourceNameForCitation,
+  sourceTierForCitation,
+} from "../lib/news-editorial.js";
 
 const NOW = new Date("2026-08-15T22:00:00.000Z");
 const FRESH_DATE = "2026-08-15T08:00:00.000Z";
@@ -91,11 +95,11 @@ function bodyWithFigure(
 }
 
 function officialBodyWithFigure(figure = "AED 10 million"): string {
-  return bodyWithFigure(
-    figure,
-    false,
-    "Dubai Land Department confirmed",
-  );
+  const first =
+    `Dubai Land Department confirmed ${figure} in its own service update, establishing a structural mandate and a clear catalyst for the precinct.`;
+  const sentence =
+    "Dubai Land Department stated that its own release describes the mandate, absorption pattern, precinct context and secondary market mechanics in measured terms for readers assessing the underlying thesis.";
+  return `${first}\n\n${Array.from({ length: 34 }, () => sentence).join(" ")}`;
 }
 
 function draftJson(input: {
@@ -103,16 +107,30 @@ function draftJson(input: {
   urls?: string[];
   title?: string;
 }): string {
+  const urls = input.urls ?? [REUTERS_URL];
+  const officialOnly = urls.length === 1 && urls[0] === OFFICIAL_URL;
   return JSON.stringify({
     skip: false,
-    title: input.title ?? "Verified UAE property update",
-    subtitle: "A factual update based on directly fetched reporting.",
-    tldr: ["Verified update", "Fresh direct source", "Evidence held to source text"],
+    title:
+      input.title ??
+      (officialOnly
+        ? "Dubai Land Department confirms its own service update"
+        : "Verified UAE property update"),
+    subtitle: officialOnly
+      ? "Dubai Land Department confirms its own directly published service announcement."
+      : "A factual update based on directly fetched reporting.",
+    tldr: officialOnly
+      ? [
+          "Dubai Land Department confirmed its own service update.",
+          "Dubai Land Department published its own direct release.",
+          "Dubai Land Department stated its own implementation terms.",
+        ]
+      : ["Verified update", "Fresh direct source", "Evidence held to source text"],
     body: input.body,
     faq: [],
-    citations: (input.urls ?? [REUTERS_URL]).map((url, index) => ({
+    citations: urls.map((url, index) => ({
       source: url === OFFICIAL_URL
-        ? "Dubai Land Department"
+        ? "Model-controlled publisher 77"
         : index === 0
           ? "Reuters"
           : "The National",
@@ -176,11 +194,7 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
         return {
           ok: true,
           text: draftJson({
-            body: bodyWithFigure(
-              "AED 10 million",
-              false,
-              "Dubai Land Department confirmed",
-            ),
+            body: officialBodyWithFigure(),
             urls: [OFFICIAL_URL],
           }),
         };
@@ -194,6 +208,16 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
   });
   assert.equal(result.ok, true, result.reason);
   assert.equal(result.article?.citations.length, 1);
+  assert.equal(
+    result.article?.citations[0]?.source,
+    "Dubai Land Department",
+    "model-controlled citation labels must be replaced by the registry name",
+  );
+  assert.equal(
+    result.article?.citations[0]?.tier,
+    "government",
+    "public citation tier must be derived from the same registry record",
+  );
   assert.equal(result.provenance?.fetchedEvidence?.length, 1);
   assert.equal(
     result.provenance?.fetchedEvidence?.[0]?.sourcePublishedAt,
@@ -301,21 +325,22 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
   );
 
   const countEvidenceText =
-    "Dubai Land Department confirmed AED 10 million across 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares scheduled for delivery in 2029.";
+    "Dubai Land Department confirmed AED 10 million across 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares. Dubai Land Department scheduled delivery in 2029.";
   const supportedCounts = {
     article: {
       ...fixture.article,
-      title: "7 towers confirmed in the latest project update",
-      subtitle: "Phase 2 contains 12 floors in the directly reported plan.",
+      title: "Dubai Land Department publishes its plan for 7 towers",
+      subtitle:
+        "Dubai Land Department confirmed Phase 2 with 12 floors in its own plan.",
       tldr: [
-        "The plan includes 3 bedrooms.",
-        "The corridor extends 5 km.",
-        "Delivery is scheduled for 2029.",
+        "Dubai Land Department confirmed 3 bedrooms in its own plan.",
+        "Dubai Land Department confirmed a 5 km corridor in its own plan.",
+        "Dubai Land Department confirmed delivery in 2029 in its own plan.",
       ] as [string, string, string],
       faq: [
         {
-          q: "How much land is covered?",
-          a: "The directly reported plan covers 40 hectares.",
+          q: "What did Dubai Land Department announce?",
+          a: "Dubai Land Department confirmed 40 hectares in its own plan.",
         },
       ],
     },
@@ -381,6 +406,18 @@ async function conservativeRiskClaimsRequireCorroboration(
     ["broad-market-growth", "The UAE property market grew 12% last year."],
     ["analyst-price-forecast", "Analysts expect prices to rise by 12%."],
     ["challenged-developer-claim", "Critics challenged the developer claim."],
+    [
+      "institutional-report-forecast",
+      "Knight Frank published its own report. It expects prices to climb 12% next year.",
+    ],
+    [
+      "unattributed-official-market-movement",
+      "Dubai Land Department confirmed its annual report. Demand strengthened across Dubai and prices climbed.",
+    ],
+    [
+      "lowercase-third-party-sentence",
+      "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
+    ],
   ] as const) {
     const body = `${officialBodyWithFigure()}\n\n${claim}`;
     const oneSource = await draftFromCluster(
@@ -595,6 +632,10 @@ function renderedFieldsAreEvidenceBound(
   const article = {
     ...corroborated.article,
     metaDescription: "Metadata reports 81 transactions.",
+    heroImage: {
+      ...corroborated.article.heroImage,
+      alt: "Hero framing reports 90 transactions.",
+    },
     semaform: {
       theTake: "The take reports 82 transactions.",
       viewsFrom: [
@@ -616,6 +657,7 @@ function renderedFieldsAreEvidenceBound(
   const publicText = articleEvidenceText(article);
   for (const expected of [
     article.metaDescription,
+    article.heroImage.alt,
     article.semaform.theTake,
     article.semaform.viewsFrom[0].source,
     article.semaform.viewsFrom[0].role,
@@ -632,6 +674,33 @@ function renderedFieldsAreEvidenceBound(
     approvalFor({ article, provenance: corroborated.provenance }),
     null,
     "unsupported digits in metadata and rendered Semaform must block the ledger",
+  );
+
+  const modelLabelTamper = {
+    article: {
+      ...official.article,
+      citations: official.article.citations.map((citation) => ({
+        ...citation,
+        source: "Model-controlled publisher 91",
+        tier: "national-press" as const,
+      })),
+    },
+    provenance: official.provenance,
+  };
+  assert.equal(
+    approvalFor(modelLabelTamper),
+    null,
+    "edited citation labels and tiers must fail instead of reaching renderer or schema",
+  );
+  assert.equal(
+    sourceNameForCitation(modelLabelTamper.article.citations[0]),
+    "Dubai Land Department",
+    "public projections must ignore a stored/model-controlled publisher label",
+  );
+  assert.equal(
+    sourceTierForCitation(modelLabelTamper.article.citations[0]),
+    "government",
+    "public projections must ignore a stored/model-controlled publisher tier",
   );
 
   const forecast = "Analysts expect prices to rise by 12%.";
@@ -809,11 +878,7 @@ async function crossPublisherRedirectIsHeld(): Promise<void> {
       research: (async () => ({
         ok: true,
         text: draftJson({
-          body: bodyWithFigure(
-            "AED 10 million",
-            false,
-            "Dubai Land Department confirmed",
-          ),
+          body: officialBodyWithFigure(),
           urls: [OFFICIAL_URL],
         }),
       })) satisfies ResearchCall,
@@ -848,11 +913,7 @@ async function fetchCompletionClockIsStored(): Promise<void> {
       research: (async () => ({
         ok: true,
         text: draftJson({
-          body: bodyWithFigure(
-            "AED 10 million",
-            false,
-            "Dubai Land Department confirmed",
-          ),
+          body: officialBodyWithFigure(),
           urls: [OFFICIAL_URL],
         }),
       })) satisfies ResearchCall,
