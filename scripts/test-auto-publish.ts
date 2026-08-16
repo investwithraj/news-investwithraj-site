@@ -152,9 +152,9 @@ async function main() {
       body: "Reuters reported that the verified transaction value was AED 10 million.",
     });
     const reutersAssessment = assessDraft(reutersDraft);
-    assert.equal(reutersAssessment.verdict, "auto-approve");
-    assert.equal(reutersAssessment.evidenceLane, "fast-news");
-    assert.equal(reutersAssessment.requiredPublisherCount, 1);
+    assert.equal(reutersAssessment.verdict, "manual");
+    assert.equal(reutersAssessment.evidenceLane, "corroborated-analysis");
+    assert.equal(reutersAssessment.requiredPublisherCount, 2);
 
     const officialDraft = oneSourceDraft({
       id: "single-government",
@@ -165,6 +165,33 @@ async function main() {
     });
     assert.equal(assessDraft(officialDraft).evidenceLane, "official-update");
     assert.equal(assessDraft(officialDraft).verdict, "auto-approve");
+
+    for (const [id, claim] of [
+      ["broad-market-growth", "The UAE property market grew 12% last year."],
+      ["analyst-forecast", "Analysts expect prices to rise by 12%."],
+      ["challenged-claim", "Critics challenged the developer claim."],
+    ] as const) {
+      const riskyOwnUpdate = {
+        ...officialDraft,
+        id,
+        article: {
+          ...officialDraft.article,
+          body: `Dubai Land Department confirmed AED 10 million. ${claim}`,
+        },
+        provenance: {
+          ...officialDraft.provenance,
+          fetchedEvidence: [
+            evidenceRecord(
+              officialDraft.article.citations[0].url,
+              `Dubai Land Department confirmed AED 10 million. ${claim}`,
+            ),
+          ],
+        },
+      } as NewsDraft;
+      const assessment = assessDraft(riskyOwnUpdate);
+      assert.equal(assessment.requiredPublisherCount, 2, id);
+      assert.equal(assessment.verdict, "manual", id);
+    }
 
     const developerDraft = oneSourceDraft({
       id: "single-developer",
@@ -178,6 +205,20 @@ async function main() {
       "developer-announcement",
     );
     assert.equal(assessDraft(developerDraft).verdict, "auto-approve");
+
+    const institutionalDraft = oneSourceDraft({
+      id: "single-institutional-release",
+      url: "https://www.knightfrank.com/research/article/example-release",
+      source: "Knight Frank",
+      category: "market-pulse",
+      body:
+        "Knight Frank published its own report with a verified transaction value of AED 10 million.",
+    });
+    assert.equal(
+      assessDraft(institutionalDraft).evidenceLane,
+      "research-release",
+    );
+    assert.equal(assessDraft(institutionalDraft).verdict, "auto-approve");
 
     const recommendationDraft = oneSourceDraft({
       id: "single-source-recommendation",
@@ -331,13 +372,13 @@ async function main() {
       id: string,
       overrides: Partial<EvidenceRecord>,
     ): NewsDraft => ({
-      ...reutersDraft,
+      ...officialDraft,
       id,
       provenance: {
-        ...reutersDraft.provenance,
+        ...officialDraft.provenance,
         fetchedEvidence: [
           evidenceRecord(
-            reutersDraft.article.citations[0].url,
+            officialDraft.article.citations[0].url,
             evidence,
             overrides,
           ),
@@ -399,6 +440,39 @@ async function main() {
       "ordinary calendar dates and section/page labels must not become claims",
     );
     assert.deepEqual(findUnsupportedFigures(materialCounts, materialCounts), []);
+    const adversarialDigitSpans =
+      "7-tower 405-unit 3-bedroom 7 transactions 10 basis points 10 square metres H1/H2/Q1 2026 3:1 1 in 4 10 to 12% -5%";
+    const adversarialFigures = extractFigures(adversarialDigitSpans);
+    for (const figure of [
+      "7-tower",
+      "405-unit",
+      "3-bedroom",
+      "7 transactions",
+      "10 basis points",
+      "10 square metres",
+      "h1/h2/q1 2026",
+      "3:1",
+      "1 in 4",
+      "10 to 12%",
+      "-5%",
+    ]) {
+      assert.ok(
+        adversarialFigures.includes(figure),
+        `${figure} must remain one evidence-bound digit span`,
+      );
+    }
+    assert.deepEqual(
+      findUnsupportedFigures(adversarialDigitSpans, adversarialDigitSpans),
+      [],
+    );
+    assert.deepEqual(
+      findUnsupportedFigures(
+        `${adversarialDigitSpans} 8 transactions`,
+        adversarialDigitSpans,
+      ),
+      ["8 transactions"],
+      "one supported figure must never hide another unsupported digit span",
+    );
     assert.deepEqual(
       findUnsupportedFigures("The value was AED 10 million.", [
         "One source mentioned AED 10",
@@ -409,18 +483,18 @@ async function main() {
     );
 
     const supportedCountsDraft = {
-      ...reutersDraft,
+      ...officialDraft,
       id: "supported-material-counts",
       article: {
-        ...reutersDraft.article,
-        body: `Reuters reported AED 10 million. ${materialCounts}`,
+        ...officialDraft.article,
+        body: `Dubai Land Department confirmed AED 10 million. ${materialCounts}`,
       },
       provenance: {
-        ...reutersDraft.provenance,
+        ...officialDraft.provenance,
         fetchedEvidence: [
           evidenceRecord(
-            reutersDraft.article.citations[0].url,
-            `Reuters reported AED 10 million. ${materialCounts} The release provides direct project detail.`,
+            officialDraft.article.citations[0].url,
+            `Dubai Land Department confirmed AED 10 million. ${materialCounts} The release provides direct project detail.`,
           ),
         ],
       },

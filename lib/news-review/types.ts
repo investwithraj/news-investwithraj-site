@@ -9,6 +9,11 @@
 import type { NewsArticle } from "@/content/news/types";
 import type { ValidationResult } from "@/lib/voice/validator";
 
+/** Increment whenever publication evidence policy becomes stricter. Stored
+ * approvals, publication claims and receipts without this exact version are
+ * intentionally manual-only. */
+export const CURRENT_EVIDENCE_POLICY_VERSION = 2 as const;
+
 /** The article content under review — the full NewsArticle shape minus the
  *  publication-state flag (status is set to "live" only at publish time). */
 export type DraftArticle = Omit<NewsArticle, "status">;
@@ -61,6 +66,7 @@ export interface NewsDraftProvenance {
 }
 
 export interface EvidenceApproval {
+  policyVersion: typeof CURRENT_EVIDENCE_POLICY_VERSION;
   hash: string;
   revision: number;
   contentHash: string;
@@ -90,6 +96,7 @@ export interface MediaApprovalLedger {
 
 export interface PublicationRecord {
   state: "publishing" | "committed" | "completed";
+  evidencePolicyVersion: typeof CURRENT_EVIDENCE_POLICY_VERSION;
   claimId: string;
   revision: number;
   contentHash: string;
@@ -134,6 +141,7 @@ export interface NewsDraftInput {
 
 export interface PublicationReceipt {
   draftId: string;
+  evidencePolicyVersion: typeof CURRENT_EVIDENCE_POLICY_VERSION;
   slug: string;
   revision: number;
   contentHash: string;

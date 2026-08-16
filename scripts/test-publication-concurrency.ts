@@ -3,6 +3,8 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { CURRENT_EVIDENCE_POLICY_VERSION } from "../lib/news-review/types.js";
+
 async function main() {
   const originalDirectory = process.cwd();
   const testDirectory = await fs.mkdtemp(
@@ -73,6 +75,7 @@ async function main() {
       recordVersion: 1,
       contentHash,
       evidenceApproval: {
+        policyVersion: CURRENT_EVIDENCE_POLICY_VERSION,
         hash: "evidence-ledger",
         revision: 1,
         contentHash,
@@ -98,11 +101,20 @@ async function main() {
         approvedAt: now,
       },
     };
+    const legacyEvidenceApproval = {
+      ...draft.evidenceApproval,
+    } as Partial<typeof draft.evidenceApproval>;
+    delete legacyEvidenceApproval.policyVersion;
+    const legacyDraft = {
+      ...draft,
+      id: `${draftId}-legacy-policy`,
+      evidenceApproval: legacyEvidenceApproval,
+    };
     const runsDirectory = path.join(testDirectory, "pipeline-runs");
     await fs.mkdir(runsDirectory, { recursive: true });
     await fs.writeFile(
       path.join(runsDirectory, "news-drafts.json"),
-      JSON.stringify([draft]),
+      JSON.stringify([draft, legacyDraft]),
       "utf8",
     );
 
@@ -113,6 +125,11 @@ async function main() {
       mediaApprovalHash: "media-ledger",
       evidenceApprovalHash: "evidence-ledger",
     };
+    await assert.rejects(
+      storage.claimDraftPublication(legacyDraft.id, expected),
+      /approval ledger changed/,
+      "a serialized pre-version approval must not create a publication claim",
+    );
     const claims = await Promise.allSettled([
       storage.claimDraftPublication(draftId, expected),
       storage.claimDraftPublication(draftId, expected),
@@ -128,6 +145,10 @@ async function main() {
     assert.equal(acquired.length, 1, "exactly one publication claim must win");
     const claimId = acquired[0].draft.publication?.claimId;
     assert.ok(claimId);
+    assert.equal(
+      acquired[0].draft.publication?.evidencePolicyVersion,
+      CURRENT_EVIDENCE_POLICY_VERSION,
+    );
 
     const committed = await storage.recordDraftPublicationCommit(
       draftId,
@@ -158,6 +179,10 @@ async function main() {
     const commitReceipt =
       await storage.getPublicationReceiptByCommitSha(commitSha);
     assert.equal(receipt?.commitSha, commitSha);
+    assert.equal(
+      receipt?.evidencePolicyVersion,
+      CURRENT_EVIDENCE_POLICY_VERSION,
+    );
     assert.equal(commitReceipt?.draftId, draftId);
 
     console.log(

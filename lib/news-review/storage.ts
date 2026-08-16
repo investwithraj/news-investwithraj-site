@@ -23,6 +23,7 @@ import type {
   PublicationReceipt,
   PublicationRecord,
 } from "./types";
+import { CURRENT_EVIDENCE_POLICY_VERSION } from "./types";
 
 const DRAFTS_FILE = path.join(process.cwd(), "pipeline-runs", "news-drafts.json");
 
@@ -858,11 +859,19 @@ export async function claimDraftPublication(
     current.recordVersion !== expected.recordVersion ||
     current.contentHash !== expected.contentHash ||
     !mediaApprovalMatches ||
-    current.evidenceApproval?.hash !== expected.evidenceApprovalHash
+    current.evidenceApproval?.hash !== expected.evidenceApprovalHash ||
+    current.evidenceApproval.policyVersion !== CURRENT_EVIDENCE_POLICY_VERSION
   ) {
     throw new DraftConflictError(
       "The reviewed revision or approval ledger changed.",
     );
+  }
+  if (
+    current.publication &&
+    current.publication.evidencePolicyVersion !==
+      CURRENT_EVIDENCE_POLICY_VERSION
+  ) {
+    throw new DraftConflictError("Publication claim uses an obsolete evidence policy.");
   }
   if (current.publication) {
     return { draft: current, acquired: false };
@@ -870,6 +879,7 @@ export async function claimDraftPublication(
   const timestamp = new Date().toISOString();
   const publication: PublicationRecord = {
     state: "publishing",
+    evidencePolicyVersion: CURRENT_EVIDENCE_POLICY_VERSION,
     claimId: crypto.randomUUID(),
     revision: expected.revision,
     contentHash: expected.contentHash,
@@ -897,6 +907,12 @@ export async function recordDraftPublicationCommit(
   const current = await getStoredDraft(id);
   if (!current || current.publication?.claimId !== claimId) {
     throw new DraftConflictError("Publication claim is no longer current.");
+  }
+  if (
+    current.publication.evidencePolicyVersion !==
+    CURRENT_EVIDENCE_POLICY_VERSION
+  ) {
+    throw new DraftConflictError("Publication claim uses an obsolete evidence policy.");
   }
   if (
     current.publication.state === "committed" ||
@@ -936,6 +952,12 @@ export async function completeDraftPublication(
     throw new DraftConflictError("Publication claim is no longer current.");
   }
   if (
+    current.publication.evidencePolicyVersion !==
+    CURRENT_EVIDENCE_POLICY_VERSION
+  ) {
+    throw new DraftConflictError("Publication claim uses an obsolete evidence policy.");
+  }
+  if (
     !["committed", "completed"].includes(current.publication.state) ||
     !current.publication.commitSha ||
     !current.publication.url
@@ -955,6 +977,7 @@ export async function completeDraftPublication(
   };
   const receipt: PublicationReceipt = {
     draftId: next.id,
+    evidencePolicyVersion: CURRENT_EVIDENCE_POLICY_VERSION,
     slug: next.article.slug,
     revision: next.revision,
     contentHash: next.contentHash,
@@ -979,7 +1002,8 @@ for index, draft in ipairs(drafts) do
     if not draft.publication or draft.publication.claimId ~= ARGV[2]
       or (draft.publication.state ~= "committed" and draft.publication.state ~= "completed")
       or not draft.publication.commitSha
-      or not draft.publication.url then
+      or not draft.publication.url
+      or tonumber(draft.publication.evidencePolicyVersion or 0) ~= tonumber(ARGV[7]) then
       return {-1, cjson.encode(draft)}
     end
     local completed = cjson.decode(ARGV[3])
@@ -1008,6 +1032,7 @@ return {-2, ""}
         JSON.stringify(receipt),
         PUBLICATION_RECEIPT_TTL_SECONDS,
         PUBLICATION_ARCHIVE_TTL_SECONDS,
+        CURRENT_EVIDENCE_POLICY_VERSION,
       ],
     )) as [number | string, unknown];
     const code = Number(result?.[0]);
@@ -1029,7 +1054,9 @@ return {-2, ""}
     if (
       latest.publication?.claimId !== claimId ||
       !["committed", "completed"].includes(latest.publication.state) ||
-      latest.publication.commitSha !== next.publication?.commitSha
+      latest.publication.commitSha !== next.publication?.commitSha ||
+      latest.publication.evidencePolicyVersion !==
+        CURRENT_EVIDENCE_POLICY_VERSION
     ) {
       throw new DraftConflictError(
         "Publication state changed before deployment verification.",

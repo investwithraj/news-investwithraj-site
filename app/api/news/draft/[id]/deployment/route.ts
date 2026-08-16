@@ -5,12 +5,14 @@
 // canonical article responds with the expected article marker.
 
 import { NextRequest } from "next/server";
+import { reassessPublicationEvidence } from "@/lib/news-review/integrity";
 import {
   completeDraftPublication,
   DraftConflictError,
   getPublicationReceipt,
   getStoredDraft,
 } from "@/lib/news-review/storage";
+import { CURRENT_EVIDENCE_POLICY_VERSION } from "@/lib/news-review/types";
 import {
   authorizeServerMutation,
   privateJson,
@@ -91,6 +93,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const priorReceipt = await getPublicationReceipt(id);
     if (priorReceipt) {
       if (
+        priorReceipt.evidencePolicyVersion !==
+        CURRENT_EVIDENCE_POLICY_VERSION
+      ) {
+        return privateJson(
+          {
+            error:
+              "The completed receipt uses an obsolete evidence policy and requires manual inventory review.",
+          },
+          409,
+        );
+      }
+      if (
         priorReceipt.commitSha.toLowerCase() !==
         deployedCommitSha.toLowerCase()
       ) {
@@ -114,10 +128,23 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       publication.state !== "committed" ||
       publication.claimId !== claimId ||
       publication.commitSha?.toLowerCase() !== deployedCommitSha.toLowerCase() ||
-      !publication.url
+      !publication.url ||
+      publication.evidencePolicyVersion !== CURRENT_EVIDENCE_POLICY_VERSION ||
+      publication.revision !== draft.revision ||
+      publication.contentHash !== draft.contentHash
     ) {
       return privateJson(
         { error: "Deployment proof does not match the committed publication." },
+        409,
+      );
+    }
+    const currentEvidence = reassessPublicationEvidence(draft);
+    if (!currentEvidence) {
+      return privateJson(
+        {
+          error:
+            "Deployment completion is held because the evidence approval is obsolete or fails the current policy.",
+        },
         409,
       );
     }

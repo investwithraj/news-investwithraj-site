@@ -13,6 +13,7 @@ import type {
   NewsDraftInput,
   PublicationRecord,
 } from "@/lib/news-review/types";
+import { CURRENT_EVIDENCE_POLICY_VERSION } from "@/lib/news-review/types";
 import {
   validateDraft,
   type DraftArticle as ValidatorInput,
@@ -737,16 +738,25 @@ export async function v2ClaimPublication(
     current.revision !== expected.revision ||
     current.contentHash !== expected.contentHash ||
     current.mediaApproval?.hash !== expected.mediaApprovalHash ||
-    current.evidenceApproval?.hash !== expected.evidenceApprovalHash
+    current.evidenceApproval?.hash !== expected.evidenceApprovalHash ||
+    current.evidenceApproval.policyVersion !== CURRENT_EVIDENCE_POLICY_VERSION
   ) {
     throw new DraftConflictError(
       "The reviewed revision or approval ledger changed.",
     );
   }
+  if (
+    current.publication &&
+    current.publication.evidencePolicyVersion !==
+      CURRENT_EVIDENCE_POLICY_VERSION
+  ) {
+    throw new DraftConflictError("Publication claim uses an obsolete evidence policy.");
+  }
   if (current.publication) return current;
   const timestamp = new Date().toISOString();
   const publication: PublicationRecord = {
     state: "publishing",
+    evidencePolicyVersion: CURRENT_EVIDENCE_POLICY_VERSION,
     claimId: crypto.randomUUID(),
     ...expected,
     startedAt: timestamp,
@@ -766,6 +776,12 @@ export async function v2RecordCommit(
   const current = await v2GetDraft(id);
   if (!current || current.publication?.claimId !== claimId) {
     throw new DraftConflictError("Publication claim is no longer current.");
+  }
+  if (
+    current.publication.evidencePolicyVersion !==
+    CURRENT_EVIDENCE_POLICY_VERSION
+  ) {
+    throw new DraftConflictError("Publication claim uses an obsolete evidence policy.");
   }
   if (
     current.publication.state === "committed" ||
@@ -802,6 +818,12 @@ export async function v2CompletePublication(
   const current = await v2GetDraft(id);
   if (!current || current.publication?.claimId !== claimId) {
     throw new DraftConflictError("Publication claim is no longer current.");
+  }
+  if (
+    current.publication.evidencePolicyVersion !==
+    CURRENT_EVIDENCE_POLICY_VERSION
+  ) {
+    throw new DraftConflictError("Publication claim uses an obsolete evidence policy.");
   }
   if (current.publication.state === "completed") return current;
   if (

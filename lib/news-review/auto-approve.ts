@@ -5,8 +5,8 @@
 //   1. the 8-gate voice validator passes              (draft.validator.ok)
 //   2. every evidence record proves it was explicitly dated and fresh at the
 //      immutable direct-fetch/staging clock
-//   3. risk-based publisher count passes (one Tier-A factual source; otherwise
-//      two independent approved parent publishers)
+//   3. risk-based publisher count passes (one tightly attributed first-party
+//      own update; otherwise two independent approved parent publishers)
 //   4. EVERY figure in title/subtitle/TLDR/body/FAQ appears in fetched text
 //   5. SAFETY GUARD: a statistical signal the figure parser did not capture
 //      holds the draft rather than permitting a vacuous pass.
@@ -21,7 +21,7 @@ import type {
 import {
   findSourceByUrl,
   isOfficialDeveloperUrl,
-  type SourceTier,
+  type VerifiedSource,
 } from "@/lib/sources/registry";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
@@ -41,11 +41,11 @@ export interface EvidencePolicy {
 }
 
 const INVESTMENT_OR_FORECAST_CLAIM_RE =
-  /\b(?:recommend(?:s|ed|ation)?|should\s+(?:buy|sell|avoid)|buy\s+call|sell\s+call|undervalued|overvalued|outperform|underperform|guaranteed|risk[- ]free|forecast(?:s|ed)?|projected\s+return|will\s+(?:rise|fall|increase|decline)\s+by)\b/i;
+  /\b(?:recommend(?:s|ed|ation)?|should\s+(?:buy|sell|avoid)|buy\s+call|sell\s+call|undervalued|overvalued|outperform|underperform|guaranteed|risk[- ]free|forecast(?:s|ed)?|projected\s+return|will\s+(?:rise|fall|increase|decline)\s+by|analysts?\s+(?:expect|predict|forecast)|prices?\s+(?:will|are\s+(?:set|expected)\s+to)\s+(?:rise|fall|increase|decline))\b/i;
 const DISPUTED_OR_MARKET_WIDE_CLAIM_RE =
-  /\b(?:disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?|deni(?:ed|es|al)|alleg(?:ed|es|ation|ations)|market-wide|across\s+the\s+(?:property|real\s+estate|housing)\s+market|market\s+(?:will|is\s+set\s+to|is\s+expected\s+to))\b/i;
-const ATTRIBUTION_RE =
-  /\b(?:according to|said|says|announced|reported|confirmed|stated|published|disclosed)\b/i;
+  /\b(?:disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?|challeng(?:e[ds]?|ing)|critics?\s+(?:challeng(?:e[ds]?|ing)|disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?)|deni(?:ed|es|al)|alleg(?:ed|es|ation|ations)|market-wide|across\s+the\s+(?:property|real\s+estate|housing)\s+market|(?:property|real\s+estate|housing)\s+market\s+(?:grew|rose|fell|declined|increased|decreased)|market\s+(?:will|is\s+set\s+to|is\s+expected\s+to))\b/i;
+const OWN_UPDATE_VERB =
+  String.raw`(?:announc(?:e[ds]?|ing)|report(?:s|ed|ing)?|publish(?:es|ed|ing)?|confirm(?:s|ed|ing)?|stat(?:e[ds]?|ing)|disclos(?:e[ds]?|ing)|releas(?:e[ds]?|ing)|file(?:s|d|ing)|record(?:s|ed|ing)?|said|says)`;
 
 export interface EvidenceRiskClassification {
   requiresCorroboration: boolean;
@@ -55,12 +55,29 @@ export interface EvidenceRiskClassification {
 export function articleEvidenceText(article: DraftArticle): string {
   const tldr = Array.isArray(article.tldr) ? article.tldr : [];
   const faq = Array.isArray(article.faq) ? article.faq : [];
+  const semaform = article.semaform;
+  const viewsFrom = Array.isArray(semaform?.viewsFrom)
+    ? semaform.viewsFrom
+    : [];
+  const trade = semaform?.howIdTradeIt;
   return [
     article.title,
     article.subtitle ?? "",
+    article.metaDescription ?? "",
     ...tldr,
     article.body,
     ...faq.flatMap((entry) => [entry?.q ?? "", entry?.a ?? ""]),
+    semaform?.theTake ?? "",
+    ...viewsFrom.flatMap((view) => [
+      view?.source ?? "",
+      view?.role ?? "",
+      view?.view ?? "",
+    ]),
+    semaform?.realityCheck ?? "",
+    semaform?.whatHappensNext ?? "",
+    trade?.action ?? "",
+    trade?.reasoning ?? "",
+    trade?.horizon ?? "",
   ].join("\n");
 }
 
@@ -232,10 +249,60 @@ export function assessStoredEvidenceFreshness(
   };
 }
 
-function evidenceTiers(urls: string[]): SourceTier[] {
-  return urls
-    .map((url) => findSourceByUrl(url)?.tier)
-    .filter((tier): tier is SourceTier => Boolean(tier));
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function sourceAttributionAliases(source: VerifiedSource): string[] {
+  const parentheticalTrimmed = source.name.replace(/\s*\([^)]*\)\s*/g, " ").trim();
+  const suffixTrimmed = parentheticalTrimmed
+    .replace(
+      /\s+(?:dubai|mena|uae|properties|property|group|pjsc|llc)$/i,
+      "",
+    )
+    .trim();
+  const words = parentheticalTrimmed.match(/[A-Za-z0-9]+/g) ?? [];
+  const acronym = words
+    .filter((word) => !/^(?:the|of|and)$/i.test(word))
+    .map((word) => (/^[A-Z0-9]{2,}$/.test(word) ? word : word[0]))
+    .join("");
+  const firstTwo = words.slice(0, 2).join(" ");
+  let hostLabel = "";
+  try {
+    hostLabel = new URL(source.url).hostname
+      .replace(/^www\./, "")
+      .split(".")[0]
+      .replace(/[-_]+/g, " ");
+  } catch {
+    // Registry URLs are static, but an invalid entry must never widen policy.
+  }
+  return [
+    source.name,
+    parentheticalTrimmed,
+    suffixTrimmed,
+    acronym,
+    firstTwo,
+    hostLabel,
+  ]
+    .map((value) => value.trim())
+    .filter((value) => value.length >= 2)
+    .filter((value, index, all) => all.indexOf(value) === index);
+}
+
+function articleAttributesOwnUpdate(
+  article: DraftArticle,
+  source: VerifiedSource,
+): boolean {
+  const aliasPatterns = sourceAttributionAliases(source).map((alias) =>
+    escapeRegExp(alias).replace(/\s+/g, String.raw`\s+`),
+  );
+  if (aliasPatterns.length === 0) return false;
+  const alias = `(?:${aliasPatterns.join("|")})`;
+  const attribution = new RegExp(
+    String.raw`\b(?:according\s+to\s+(?:the\s+)?${alias}(?:['\u2019]s)?|${alias}(?:['\u2019]s)?\s+(?:${OWN_UPDATE_VERB}|own\s+(?:update|report|release)))\b`,
+    "i",
+  );
+  return attribution.test(articleEvidenceText(article));
 }
 
 /** Choose the lightest defensible evidence rule for the article. The policy is
@@ -244,7 +311,6 @@ export function determineEvidencePolicy(
   article: DraftArticle,
   evidenceUrls: string[],
 ): EvidencePolicy {
-  const body = articleEvidenceText(article);
   const risk = classifyEvidenceRisk(article);
   if (risk.requiresCorroboration) {
     return {
@@ -254,47 +320,58 @@ export function determineEvidencePolicy(
     };
   }
 
-  const tiers = evidenceTiers(evidenceUrls);
-  if (tiers.includes("government")) {
+  const publisherDomains = new Set(
+    evidenceUrls
+      .map(approvedPublisherDomain)
+      .filter((domain): domain is string => Boolean(domain)),
+  );
+  const source = evidenceUrls
+    .map((url) => findSourceByUrl(url))
+    .find((candidate): candidate is VerifiedSource => Boolean(candidate));
+  const tightlyAttributedOwnUpdate =
+    publisherDomains.size === 1 &&
+    source !== undefined &&
+    articleAttributesOwnUpdate(article, source);
+
+  if (tightlyAttributedOwnUpdate && source?.tier === "government") {
     return {
       lane: "official-update",
       requiredPublisherCount: 1,
-      reason: "one fetched government or regulator source is authoritative for its own update",
-    };
-  }
-  if (tiers.includes("national-press")) {
-    return {
-      lane: "fast-news",
-      requiredPublisherCount: 1,
-      reason: "one fetched verified national or international newsroom is sufficient for factual news",
+      reason:
+        "one explicitly attributed government or regulator source is authoritative for its own update",
     };
   }
   if (
-    tiers.includes("institutional-research") &&
+    tightlyAttributedOwnUpdate &&
+    source?.tier === "institutional-research" &&
     (article.category === "market-pulse" || article.category === "macro") &&
-    ATTRIBUTION_RE.test(body)
+    publisherDomains.size === 1
   ) {
     return {
       lane: "research-release",
       requiredPublisherCount: 1,
-      reason: "one attributed institutional report is sufficient for reporting that report's findings",
+      reason:
+        "one explicitly attributed institutional source is sufficient for reporting its own release",
     };
   }
   if (
-    evidenceUrls.some(isOfficialDeveloperUrl) &&
+    tightlyAttributedOwnUpdate &&
+    evidenceUrls.every(isOfficialDeveloperUrl) &&
     (article.category === "launch" || article.category === "developer-corporate") &&
-    ATTRIBUTION_RE.test(body)
+    publisherDomains.size === 1
   ) {
     return {
       lane: "developer-announcement",
       requiredPublisherCount: 1,
-      reason: "one attributed first-party developer release is sufficient for its own announcement",
+      reason:
+        "one explicitly attributed first-party developer source is sufficient for its own announcement",
     };
   }
   return {
     lane: "corroborated-analysis",
     requiredPublisherCount: DEFAULT_CORROBORATION_SOURCES,
-    reason: "portal, regional or unattributed claims require independent corroboration",
+    reason:
+      "national-press, market-wide, portal or otherwise ambiguous reporting requires independent corroboration",
   };
 }
 
@@ -327,112 +404,92 @@ export function normNumericEvidence(value: string): string {
     .replace(/\b(?:per\s*cent|percent)\b/g, "%")
     .replace(/(?<=\d),(?=\d{3}\b)/g, "")
     .replace(/\s+/g, "")
-    .replace(/[–—]/g, "-");
+    .replace(/[\u2013\u2014\u2212]/g, "-");
 }
 
-const CUR = String.raw`(?:AED|USD|US\$|\$|€|£|Dhs|Dh)`;
-// A comma only counts as a thousands separator (comma + exactly 3 digits), so a
-// year followed by a prose comma ("2026,") is NOT read as a comma-number.
-const NUM = String.raw`(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)`;
-// Financial, measured and claim-bearing count units. The finite noun list
-// catches material statements such as "7 towers" without treating every list
-// or section number as a sourced statistic.
-const UNIT = String.raw`(?:%|per\s?cent|percent|bps|pp|p\.a\.|per\s+annum|bn|billion|million|trillion|tn|sq\.?\s?ft|sqft|sq\.?\s?m|sqm|psf|km|kilomet(?:re|er)s?|met(?:re|er)s?|hectares?|acres?|towers?|buildings?|homes?|units?|apartments?|villas?|residences?|floors?|storeys?|stories|levels?|bedrooms?|rooms?|keys?|plots?|years?|months?|days?)`;
-
-// currency? number range? unit?  — capture groups decide "meaningful".
-const FIGURE_RE = new RegExp(
-  `(${CUR})?\\s?(${NUM})((?:\\s*[-–]\\s*${NUM})?)\\s*(${UNIT}|[mk](?![a-z]))?`,
-  "gi",
-);
-const LABELLED_COUNT_RE =
-  /\b(?:phase|stage|plot|unit|tower|building)\s+(?:no\.?\s*)?\d+(?:\.\d+)?\b/gi;
-const YEAR_RE = /\b(?:19|20)\d{2}\b/g;
+const CUR = String.raw`(?:AED|USD|US\$|\$|\u20ac|\u00a3|Dhs?|Dh)`;
+const UNSIGNED_NUM =
+  String.raw`(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)`;
+const SIGNED_NUM = String.raw`[+\-\u2212]?${UNSIGNED_NUM}`;
 const MONTH =
   String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`;
-const DATE_BEFORE_YEAR_RE = new RegExp(
-  String.raw`(?:\b\d{1,2}\s+${MONTH}\s*|\b${MONTH}(?:\s+\d{1,2},?)?\s*)$`,
-  "i",
-);
-const DATE_AFTER_YEAR_RE = new RegExp(String.raw`^\s+${MONTH}\b`, "i");
+const COMPOUND_UNIT =
+  String.raw`(?:basis\s+points?|square\s+(?:metres?|meters?|feet|foot)|sq\.?\s*(?:m|ft)|per\s*cent|per\s+annum)`;
+const GENERIC_WORD =
+  String.raw`(?!(?:and|or|to|in|of|for|from|by|at|on|with|as|is|was|were|are|the|a|an)\b)[A-Za-z][A-Za-z-]*`;
+const TRAILING_DESCRIPTOR =
+  String.raw`(?:%|percent|bps|pp|p\.a\.|bn|billion|million|trillion|tn|mn|sqm|sqft|psf|km|m|k|${COMPOUND_UNIT}|${GENERIC_WORD})`;
 
-// A cheap independent detector of "this body has statistics" — used as a guard
-// against the figure parser silently missing something (see check 5).
-const STAT_SIGNAL_RE = new RegExp(
-  `${CUR}\\s?\\d|\\d[\\d,]*(?:\\.\\d+)?\\s*${UNIT}|\\b(?:phase|stage|plot|unit|tower|building)\\s+(?:no\\.?\\s*)?\\d|\\d{1,3}(?:,\\d{3})+`,
-  "i",
+const EXCLUDED_DIGIT_PATTERNS = [
+  /https?:\/\/[^\s)\]]+/gi,
+  /\b(?:19|20)\d{2}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+\-]\d{2}:\d{2})?\b/gi,
+  /\b(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}\b/g,
+  /\b\d{1,2}[-/]\d{1,2}[-/](?:19|20)\d{2}\b/g,
+  new RegExp(
+    String.raw`\b(?:\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}|${MONTH}\s+\d{1,2}(?:st|nd|rd|th)?,?)\s+(?:19|20)\d{2}\b`,
+    "gi",
+  ),
+  new RegExp(String.raw`\b${MONTH}\s+(?:19|20)\d{2}\b`, "gi"),
+  /\b(?:19|20)\d{2}\s*[-\u2013\u2014]\s*(?:19|20)\d{2}\b/g,
+  /\b(?:section|article|chapter|clause|paragraph|pages?|figure|table|appendix|steps?|items?)\s+(?:no\.?\s*)?\d+(?:\.\d+)*(?:\s*[-\u2013\u2014]\s*\d+(?:\.\d+)*)?\b/gi,
+  /\[\d+(?:\s*[-,]\s*\d+)*\]/g,
+  /(?:^|\n)\s*(?:\(\d+\)|\d+[.)])(?=\s)/g,
+];
+
+const PERIOD_SPAN_RE =
+  /\b(?:H[12]|Q[1-4])(?:\s*(?:\/|&|,|\band\b)\s*(?:H[12]|Q[1-4]))*(?:\s+(?:19|20)\d{2})?\b/gi;
+const LABELLED_DIGIT_RE = new RegExp(
+  String.raw`(?<![-A-Za-z0-9])(?:phase|stage|tranche|plot|unit|tower|building|release|version)\s+(?:no\.?\s*)?${UNSIGNED_NUM}\b`,
+  "gi",
+);
+const RATIO_OR_FRACTION_RE = new RegExp(
+  String.raw`(?<![A-Za-z0-9])${SIGNED_NUM}\s*(?::|\/|\bin\b)\s*${UNSIGNED_NUM}(?![A-Za-z0-9])`,
+  "gi",
+);
+const RANGE_RE = new RegExp(
+  String.raw`(?<![A-Za-z0-9])${SIGNED_NUM}\s*(?:[-\u2013\u2014]|\bto\b)\s*${SIGNED_NUM}(?:\s*${TRAILING_DESCRIPTOR})?(?![A-Za-z0-9])`,
+  "gi",
+);
+const GENERAL_DIGIT_SPAN_RE = new RegExp(
+  String.raw`(?<![A-Za-z0-9])(?:${CUR}\s*)?${SIGNED_NUM}(?:(?:\s*${COMPOUND_UNIT})|(?:\s*(?:%|percent|bps|pp|p\.a\.|bn|billion|million|trillion|tn|mn|sqm|sqft|psf|km))|(?:\s*-\s*${GENERIC_WORD})|(?:\s+${GENERIC_WORD}))?(?![A-Za-z0-9])`,
+  "gi",
 );
 
-function withoutUrls(value: string): string {
-  return value.replace(/https?:\/\/[^\s)\]]+/gi, " ");
+function maskPattern(value: string, pattern: RegExp): string {
+  return value.replace(pattern, (match) => " ".repeat(match.length));
 }
 
-function yearIsOrdinaryCalendarDate(
-  text: string,
-  index: number,
-): boolean {
-  const before = text.slice(Math.max(0, index - 32), index);
-  const after = text.slice(index + 4, index + 36);
-  return (
-    /\d{1,2}[/-]\d{1,2}[/-]$/.test(before) ||
-    /^[/-]\d{1,2}[/-]\d{1,2}\b/.test(after) ||
-    DATE_BEFORE_YEAR_RE.test(before) ||
-    DATE_AFTER_YEAR_RE.test(after) ||
-    /(?:19|20)\d{2}\s*[-\u2013\u2014]\s*$/.test(before) ||
-    /^\s*[-\u2013\u2014]\s*(?:19|20)\d{2}\b/.test(after)
+function claimBearingNumericText(value: string): string {
+  return EXCLUDED_DIGIT_PATTERNS.reduce(
+    (text, pattern) => maskPattern(text, pattern),
+    value,
   );
 }
 
-/** Distinct claim-bearing figures found in publishable prose. Calendar dates
- * and ordinary section labels are excluded, while standalone claim years,
- * phases, measured values and finite property counts remain evidence-bound. */
+/** Every remaining digit-bearing span is evidence-bound after explicit safe
+ * exclusions for URLs, ordinary calendar dates and navigation labels. Ordered
+ * matching preserves periods, ratios, ranges, signs and noun/unit context. */
 export function extractFigures(value: string): string[] {
-  const body = withoutUrls(value);
+  let unclaimed = claimBearingNumericText(value);
   const out = new Set<string>();
-  for (const m of body.matchAll(FIGURE_RE)) {
-    const [full, cur, num, range, unit] = m;
-    const meaningful =
-      Boolean(cur) ||
-      Boolean(unit) ||
-      Boolean(range && range.trim()) ||
-      num.includes(",") ||
-      num.includes(".");
-    if (!meaningful) continue;
-    const index = m.index ?? 0;
-    const before = body.slice(Math.max(0, index - 24), index);
-    const after = body.slice(index + full.length, index + full.length + 16);
-    if (
-      !cur &&
-      !unit &&
-      Boolean(range?.trim()) &&
-      (/(?:section|article|chapter|clause|paragraph|page)s?\s*$/i.test(before) ||
-        (/^(?:19|20)\d{2}\s*-\s*\d{1,2}$/.test(full.trim()) &&
-          /^-\d{1,2}\b/.test(after)) ||
-        (/^\d{1,2}\s*-\s*\d{1,2}$/.test(full.trim()) &&
-          /^-(?:19|20)\d{2}\b/.test(after)))
-    ) {
-      continue;
-    }
-    // A bare range of two 4-digit years ("2023–2024") is a date span, not a
-    // statistic needing a source — skip it.
-    if (!cur && !unit && /^(?:19|20)\d{2}\s*[-–]\s*(?:19|20)\d{2}$/.test(full.trim())) {
-      continue;
-    }
-    const s = norm(full);
-    if (s) out.add(s);
-  }
-  for (const match of body.matchAll(LABELLED_COUNT_RE)) {
-    const figure = norm(match[0]);
-    if (figure) out.add(figure);
-  }
-  for (const match of body.matchAll(YEAR_RE)) {
-    const index = match.index ?? 0;
-    if (!yearIsOrdinaryCalendarDate(body, index)) out.add(match[0]);
+  for (const pattern of [
+    PERIOD_SPAN_RE,
+    LABELLED_DIGIT_RE,
+    RATIO_OR_FRACTION_RE,
+    RANGE_RE,
+    GENERAL_DIGIT_SPAN_RE,
+  ]) {
+    unclaimed = unclaimed.replace(pattern, (match) => {
+      const figure = norm(match);
+      if (figure) out.add(figure);
+      return " ".repeat(match.length);
+    });
   }
   return [...out];
 }
 
 export function bodyHasStatSignal(value: string): boolean {
-  return STAT_SIGNAL_RE.test(withoutUrls(value));
+  return /\d/.test(claimBearingNumericText(value));
 }
 
 export function findUnsupportedFigures(

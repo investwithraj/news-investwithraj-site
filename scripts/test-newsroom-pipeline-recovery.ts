@@ -8,6 +8,7 @@ import {
   draftFromCluster,
   type DraftOpts,
 } from "../lib/news-review/draft-engine.js";
+import { articleEvidenceText } from "../lib/news-review/auto-approve.js";
 import {
   extractMainText,
   extractPublicationDate,
@@ -18,10 +19,14 @@ import type { Cluster } from "../lib/pipeline/types.js";
 import {
   draftContentHash,
   evidenceApprovalFor,
+  reassessEvidenceApproval,
+  reassessPublicationEvidence,
 } from "../lib/news-review/integrity.js";
-import type {
-  DraftArticle,
-  NewsDraftProvenance,
+import {
+  CURRENT_EVIDENCE_POLICY_VERSION,
+  type EvidenceApproval,
+  type DraftArticle,
+  type NewsDraftProvenance,
 } from "../lib/news-review/types.js";
 
 const NOW = new Date("2026-08-15T22:00:00.000Z");
@@ -30,7 +35,9 @@ const REUTERS_URL =
   "https://www.reuters.com/world/middle-east/dubai-property-test-source";
 const NATIONAL_URL =
   "https://www.thenationalnews.com/business/property/abu-dhabi-test-source/";
-const WHITELIST = ["reuters.com", "thenationalnews.com"];
+const OFFICIAL_URL =
+  "https://dubailand.gov.ae/en/news/verified-property-test-source";
+const WHITELIST = ["reuters.com", "thenationalnews.com", "dubailand.gov.ae"];
 
 function cluster(urls: string[], category: Cluster["suggestedCategory"] = "market-pulse"): Cluster {
   return {
@@ -43,8 +50,12 @@ function cluster(urls: string[], category: Cluster["suggestedCategory"] = "marke
       publishedAt: FRESH_DATE,
       summary: "A discovery snippet that must never count as evidence: AED 999 million.",
       source: {
-        name: index === 0 ? "Reuters" : "The National",
-        tier: "national-press",
+        name: url === OFFICIAL_URL
+          ? "Dubai Land Department"
+          : index === 0
+            ? "Reuters"
+            : "The National",
+        tier: url === OFFICIAL_URL ? "government" : "national-press",
         domain: new URL(url).hostname.replace(/^www\./, ""),
       },
     })),
@@ -66,13 +77,25 @@ function cluster(urls: string[], category: Cluster["suggestedCategory"] = "marke
   };
 }
 
-function bodyWithFigure(figure = "AED 10 million", analytical = false): string {
+function bodyWithFigure(
+  figure = "AED 10 million",
+  analytical = false,
+  attribution = "Reuters reported",
+): string {
   const first = analytical
-    ? `Reuters reported ${figure} in verified transactions, and we recommend investors buy only where the structural mandate remains intact.`
-    : `Reuters reported ${figure} in verified transactions, establishing a structural mandate and a clear catalyst for this precinct.`;
+    ? `${attribution} ${figure} in verified transactions, and we recommend investors buy only where the structural mandate remains intact.`
+    : `${attribution} ${figure} in verified transactions, establishing a structural mandate and a clear catalyst for this precinct.`;
   const sentence =
     "The release describes the mandate, absorption pattern, precinct context and secondary market mechanics in measured terms for readers assessing the underlying thesis.";
   return `${first}\n\n${Array.from({ length: 45 }, () => sentence).join(" ")}`;
+}
+
+function officialBodyWithFigure(figure = "AED 10 million"): string {
+  return bodyWithFigure(
+    figure,
+    false,
+    "Dubai Land Department confirmed",
+  );
 }
 
 function draftJson(input: {
@@ -88,7 +111,11 @@ function draftJson(input: {
     body: input.body,
     faq: [],
     citations: (input.urls ?? [REUTERS_URL]).map((url, index) => ({
-      source: index === 0 ? "Reuters" : "The National",
+      source: url === OFFICIAL_URL
+        ? "Dubai Land Department"
+        : index === 0
+          ? "Reuters"
+          : "The National",
       url,
     })),
   });
@@ -141,12 +168,22 @@ function approvalFor(
 async function singleSourceTierA(): Promise<ReadyFixture> {
   let researchCalls = 0;
   let repairCalls = 0;
-  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => {
         researchCalls += 1;
-        return { ok: true, text: draftJson({ body: bodyWithFigure() }) };
+        return {
+          ok: true,
+          text: draftJson({
+            body: bodyWithFigure(
+              "AED 10 million",
+              false,
+              "Dubai Land Department confirmed",
+            ),
+            urls: [OFFICIAL_URL],
+          }),
+        };
       }) satisfies ResearchCall,
       repair: (async () => {
         repairCalls += 1;
@@ -183,7 +220,11 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
   };
   assert.ok(
     approvalFor(fixture),
-    "one fresh Tier-A publisher must mint a content-bound evidence ledger",
+    "one fresh, explicitly attributed official publisher must mint a content-bound evidence ledger",
+  );
+  assert.equal(
+    approvalFor(fixture)?.policyVersion,
+    CURRENT_EVIDENCE_POLICY_VERSION,
   );
 
   const [freshEvidence] = fixture.provenance.fetchedEvidence!;
@@ -260,7 +301,7 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
   );
 
   const countEvidenceText =
-    "Reuters reported AED 10 million across 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares scheduled for delivery in 2029.";
+    "Dubai Land Department confirmed AED 10 million across 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares scheduled for delivery in 2029.";
   const supportedCounts = {
     article: {
       ...fixture.article,
@@ -331,6 +372,85 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     "unsupported figures outside the body must block the ledger",
   );
   return fixture;
+}
+
+async function conservativeRiskClaimsRequireCorroboration(
+  officialFixture: ReadyFixture,
+): Promise<void> {
+  for (const [id, claim] of [
+    ["broad-market-growth", "The UAE property market grew 12% last year."],
+    ["analyst-price-forecast", "Analysts expect prices to rise by 12%."],
+    ["challenged-developer-claim", "Critics challenged the developer claim."],
+  ] as const) {
+    const body = `${officialBodyWithFigure()}\n\n${claim}`;
+    const oneSource = await draftFromCluster(
+      cluster([OFFICIAL_URL]),
+      WHITELIST,
+      {
+        now: NOW,
+        dependencies: {
+          research: (async () => ({
+            ok: true,
+            text: draftJson({ body, urls: [OFFICIAL_URL] }),
+          })) satisfies ResearchCall,
+          repair: (async () => ({
+            ok: false,
+            error: "risk policy must hold before repair",
+          })) satisfies RepairCall,
+          fetchArticle: (async (url) =>
+            fetched(url, FRESH_DATE, body)) satisfies FetchCall,
+        },
+      },
+    );
+    assert.equal(oneSource.ok, false, `${id} must be held during drafting`);
+    assert.match(oneSource.reason ?? "", /need 2 for corroborated-analysis/);
+
+    const onePublisherLedger = {
+      article: { ...officialFixture.article, body },
+      provenance: {
+        ...officialFixture.provenance,
+        fetchedEvidence: officialFixture.provenance.fetchedEvidence?.map(
+          (record) => ({ ...record, text: body, contentHash: undefined }),
+        ),
+      },
+    };
+    assert.equal(
+      approvalFor(onePublisherLedger),
+      null,
+      `${id} must not mint a one-publisher ledger`,
+    );
+
+    const twoSource = await draftFromCluster(
+      cluster([OFFICIAL_URL, NATIONAL_URL]),
+      WHITELIST,
+      {
+        now: NOW,
+        dependencies: {
+          research: (async () => ({
+            ok: true,
+            text: draftJson({
+              body,
+              urls: [OFFICIAL_URL, NATIONAL_URL],
+            }),
+          })) satisfies ResearchCall,
+          repair: (async () => ({
+            ok: false,
+            error: "repair should not run with supported evidence",
+          })) satisfies RepairCall,
+          fetchArticle: (async (url) =>
+            fetched(url, FRESH_DATE, body)) satisfies FetchCall,
+        },
+      },
+    );
+    assert.equal(twoSource.ok, true, `${id}: ${twoSource.reason}`);
+    assert.ok(
+      approvalFor({
+        article: twoSource.article!,
+        provenance: twoSource.provenance!,
+      }),
+      `${id} must mint only with two independent publishers`,
+    );
+  }
 }
 
 async function analysisRequiresTwoDomains(): Promise<{
@@ -468,6 +588,150 @@ async function analysisRequiresTwoDomains(): Promise<{
   };
 }
 
+function renderedFieldsAreEvidenceBound(
+  official: ReadyFixture,
+  corroborated: ReadyFixture,
+): void {
+  const article = {
+    ...corroborated.article,
+    metaDescription: "Metadata reports 81 transactions.",
+    semaform: {
+      theTake: "The take reports 82 transactions.",
+      viewsFrom: [
+        {
+          source: "Stakeholder 83",
+          role: "Advisor 84",
+          view: "The stakeholder reports 85 transactions.",
+        },
+      ],
+      realityCheck: "The reality check reports 86 transactions.",
+      whatHappensNext: "The next step reports 87 transactions.",
+      howIdTradeIt: {
+        action: "Watch" as const,
+        reasoning: "The trade reasoning reports 88 transactions.",
+        horizon: "A horizon of 89 months.",
+      },
+    },
+  };
+  const publicText = articleEvidenceText(article);
+  for (const expected of [
+    article.metaDescription,
+    article.semaform.theTake,
+    article.semaform.viewsFrom[0].source,
+    article.semaform.viewsFrom[0].role,
+    article.semaform.viewsFrom[0].view,
+    article.semaform.realityCheck,
+    article.semaform.whatHappensNext,
+    article.semaform.howIdTradeIt.action,
+    article.semaform.howIdTradeIt.reasoning,
+    article.semaform.howIdTradeIt.horizon,
+  ]) {
+    assert.ok(publicText.includes(expected), `${expected} must be evidence text`);
+  }
+  assert.equal(
+    approvalFor({ article, provenance: corroborated.provenance }),
+    null,
+    "unsupported digits in metadata and rendered Semaform must block the ledger",
+  );
+
+  const forecast = "Analysts expect prices to rise by 12%.";
+  const forecastArticle = {
+    ...official.article,
+    semaform: { whatHappensNext: forecast },
+  };
+  const forecastProvenance = {
+    ...official.provenance,
+    fetchedEvidence: official.provenance.fetchedEvidence?.map((record) => ({
+      ...record,
+      text: `${record.text} ${forecast}`,
+      contentHash: undefined,
+    })),
+  };
+  assert.equal(
+    approvalFor({ article: forecastArticle, provenance: forecastProvenance }),
+    null,
+    "a one-publisher forecast in rendered Semaform must require corroboration even when its figure is present",
+  );
+}
+
+function evidencePolicyVersionsFailClosed(fixture: ReadyFixture): void {
+  const verifiedSources = fixture.article.citations.map(({ url }) => url);
+  const contentHash = draftContentHash(fixture.article, fixture.provenance);
+  const approval = approvalFor(fixture);
+  assert.ok(approval);
+  const approvedDraft = {
+    revision: 1,
+    contentHash,
+    verifiedSources,
+    provenance: fixture.provenance,
+    article: fixture.article,
+    evidenceApproval: approval,
+  };
+  assert.equal(reassessEvidenceApproval(approvedDraft)?.hash, approval.hash);
+
+  const legacyApproval = { ...approval } as Partial<EvidenceApproval>;
+  delete legacyApproval.policyVersion;
+  assert.equal(
+    reassessEvidenceApproval({
+      ...approvedDraft,
+      evidenceApproval: legacyApproval as EvidenceApproval,
+    }),
+    null,
+    "a pre-version approval must remain manual",
+  );
+  assert.equal(
+    reassessEvidenceApproval({
+      ...approvedDraft,
+      evidenceApproval: {
+        ...approval,
+        policyVersion: 1 as typeof CURRENT_EVIDENCE_POLICY_VERSION,
+      },
+    }),
+    null,
+    "a mismatched approval version must remain manual",
+  );
+
+  const publication = {
+    state: "committed" as const,
+    evidencePolicyVersion: CURRENT_EVIDENCE_POLICY_VERSION,
+    claimId: "00000000-0000-4000-8000-000000000000",
+    revision: 1,
+    contentHash,
+    mediaApprovalHash: "a".repeat(64),
+    evidenceApprovalHash: approval.hash,
+    startedAt: NOW.toISOString(),
+    updatedAt: NOW.toISOString(),
+    commitSha: "b".repeat(40),
+    url: `https://news.investwithraj.com/news/${fixture.article.slug}`,
+  };
+  assert.equal(
+    reassessPublicationEvidence({ ...approvedDraft, publication })?.hash,
+    approval.hash,
+  );
+  assert.equal(
+    reassessPublicationEvidence({
+      ...approvedDraft,
+      publication: {
+        ...publication,
+        evidencePolicyVersion:
+          1 as typeof CURRENT_EVIDENCE_POLICY_VERSION,
+      },
+    }),
+    null,
+    "an obsolete committed claim must never get an idempotent/finalization pass",
+  );
+  const legacyPublication = { ...publication } as Partial<typeof publication>;
+  delete legacyPublication.evidencePolicyVersion;
+  assert.equal(
+    reassessPublicationEvidence({
+      ...approvedDraft,
+      publication: legacyPublication as typeof publication,
+    }),
+    null,
+    "a pre-version committed claim must never be finalized automatically",
+  );
+}
+
 async function disputedMarketClaimsRequireTwoDomains(): Promise<void> {
   const disputedBody = bodyWithFigure().replace(
     "establishing a structural mandate and a clear catalyst for this precinct",
@@ -539,12 +803,19 @@ async function disputedMarketClaimsRequireTwoDomains(): Promise<void> {
 }
 
 async function crossPublisherRedirectIsHeld(): Promise<void> {
-  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => ({
         ok: true,
-        text: draftJson({ body: bodyWithFigure() }),
+        text: draftJson({
+          body: bodyWithFigure(
+            "AED 10 million",
+            false,
+            "Dubai Land Department confirmed",
+          ),
+          urls: [OFFICIAL_URL],
+        }),
       })) satisfies ResearchCall,
       repair: (async () => ({ ok: false, error: "repair must not run" })) satisfies RepairCall,
       fetchArticle: (async (url) => ({
@@ -567,7 +838,7 @@ async function fetchCompletionClockIsStored(): Promise<void> {
   const sourcePublished = "2026-08-15T22:05:00.000Z";
   const fetchCompleted = new Date("2026-08-15T22:10:00.000Z");
   const clockValues = [draftClock, fetchCompleted];
-  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     dependencies: {
       clock: () => {
         const value = clockValues.shift();
@@ -576,7 +847,14 @@ async function fetchCompletionClockIsStored(): Promise<void> {
       },
       research: (async () => ({
         ok: true,
-        text: draftJson({ body: bodyWithFigure() }),
+        text: draftJson({
+          body: bodyWithFigure(
+            "AED 10 million",
+            false,
+            "Dubai Land Department confirmed",
+          ),
+          urls: [OFFICIAL_URL],
+        }),
       })) satisfies ResearchCall,
       repair: (async () => ({ ok: false, error: "repair should not run" })) satisfies RepairCall,
       fetchArticle: (async (url) =>
@@ -681,12 +959,15 @@ async function staleAndUnknownDatesHold(): Promise<void> {
     ["unknown", null, /publication date missing/],
   ] as const) {
     let repairCalls = 0;
-    const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+    const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
       now: NOW,
       dependencies: {
         research: (async () => ({
           ok: true,
-          text: draftJson({ body: bodyWithFigure() }),
+          text: draftJson({
+            body: officialBodyWithFigure(),
+            urls: [OFFICIAL_URL],
+          }),
         })) satisfies ResearchCall,
         repair: (async () => {
           repairCalls += 1;
@@ -705,20 +986,20 @@ async function staleAndUnknownDatesHold(): Promise<void> {
 async function unsupportedFiguresNeverPass(): Promise<void> {
   let repairCalls = 0;
   let repairPrompt = "";
-  const unsupportedBody = bodyWithFigure("AED 99 million");
-  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+  const unsupportedBody = officialBodyWithFigure("AED 99 million");
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => ({
         ok: true,
-        text: draftJson({ body: unsupportedBody }),
+        text: draftJson({ body: unsupportedBody, urls: [OFFICIAL_URL] }),
       })) satisfies ResearchCall,
       repair: (async (request) => {
         repairCalls += 1;
         repairPrompt = String(request.messages[0]?.content ?? "");
         return {
           ok: true,
-          text: draftJson({ body: unsupportedBody }),
+          text: draftJson({ body: unsupportedBody, urls: [OFFICIAL_URL] }),
         };
       }) satisfies RepairCall,
       fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
@@ -735,21 +1016,21 @@ async function repairFixesMechanicalGates(): Promise<void> {
   let repairCalls = 0;
   let repairPrompt = "";
   const badBody =
-    "This amazing release offers a brief property update without a quantified opening.";
-  const repairedBody = bodyWithFigure();
-  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+    "Dubai Land Department announced this amazing release with a brief property update but no quantified opening.";
+  const repairedBody = officialBodyWithFigure();
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => ({
         ok: true,
-        text: draftJson({ body: badBody }),
+        text: draftJson({ body: badBody, urls: [OFFICIAL_URL] }),
       })) satisfies ResearchCall,
       repair: (async (request) => {
         repairCalls += 1;
         repairPrompt = String(request.messages[0]?.content ?? "");
         return {
           ok: true,
-          text: draftJson({ body: repairedBody }),
+          text: draftJson({ body: repairedBody, urls: [OFFICIAL_URL] }),
         };
       }) satisfies RepairCall,
       fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
@@ -768,9 +1049,12 @@ async function generationRetryIsCapped(): Promise<void> {
   const requests: Parameters<ResearchCall>[0][] = [];
   const recoveryResponses = [
     { ok: true as const, text: "" },
-    { ok: true as const, text: draftJson({ body: bodyWithFigure() }) },
+    {
+      ok: true as const,
+      text: draftJson({ body: officialBodyWithFigure(), urls: [OFFICIAL_URL] }),
+    },
   ];
-  const recovered = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+  const recovered = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async (request) => {
@@ -787,7 +1071,7 @@ async function generationRetryIsCapped(): Promise<void> {
   assert.match(String(requests[1].messages.at(-1)?.content ?? ""), /empty output/);
 
   let unparseableCalls = 0;
-  const held = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+  const held = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => {
@@ -807,17 +1091,17 @@ async function generationRetryIsCapped(): Promise<void> {
 
 async function snippetsNeverBecomeEvidence(): Promise<void> {
   let repairCalls = 0;
-  const body = bodyWithFigure().replace(
+  const body = officialBodyWithFigure().replace(
     "AED 10 million",
     '<cite index="1">AED 10 million</cite>',
   );
-  const result = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => ({
         ok: true,
-        text: draftJson({ body }),
-        searchedUrls: [REUTERS_URL],
+        text: draftJson({ body, urls: [OFFICIAL_URL] }),
+        searchedUrls: [OFFICIAL_URL],
       })) satisfies ResearchCall,
       repair: (async () => {
         repairCalls += 1;
@@ -908,7 +1192,10 @@ async function main(): Promise<void> {
   publicationDateExtraction();
   await protectedFetchDiagnostics();
   const tierA = await singleSourceTierA();
+  await conservativeRiskClaimsRequireCorroboration(tierA);
   const analysis = await analysisRequiresTwoDomains();
+  renderedFieldsAreEvidenceBound(tierA, analysis.twoSources);
+  evidencePolicyVersionsFailClosed(tierA);
   await disputedMarketClaimsRequireTwoDomains();
   await crossPublisherRedirectIsHeld();
   await fetchCompletionClockIsStored();

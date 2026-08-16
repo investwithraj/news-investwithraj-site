@@ -5,8 +5,10 @@ import type {
   DraftArticle,
   EvidenceApproval,
   MediaApprovalLedger,
+  NewsDraft,
   NewsDraftProvenance,
 } from "@/lib/news-review/types";
+import { CURRENT_EVIDENCE_POLICY_VERSION } from "@/lib/news-review/types";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 import {
   approvedEvidencePublisherDomain,
@@ -613,6 +615,7 @@ export function evidenceApprovalFor(
     return null;
   }
   const payload = {
+    policyVersion: CURRENT_EVIDENCE_POLICY_VERSION,
     revision,
     contentHash,
     sourceUrls: citedUrls,
@@ -621,6 +624,68 @@ export function evidenceApprovalFor(
     approvedAt: now,
   };
   return { ...payload, hash: sha256Json(payload) };
+}
+
+/** Re-run the current evidence policy against immutable stored content. A
+ * legacy approval without the current version can never be upgraded merely by
+ * reading or retrying an old publication request. */
+export function reassessEvidenceApproval(
+  draft: Pick<
+    NewsDraft,
+    | "revision"
+    | "contentHash"
+    | "verifiedSources"
+    | "provenance"
+    | "article"
+    | "evidenceApproval"
+  >,
+): EvidenceApproval | null {
+  const stored = draft.evidenceApproval;
+  if (
+    !stored ||
+    stored.policyVersion !== CURRENT_EVIDENCE_POLICY_VERSION
+  ) {
+    return null;
+  }
+  const current = evidenceApprovalFor(
+    draft.revision,
+    draft.contentHash,
+    draft.verifiedSources ?? [],
+    draft.provenance,
+    draft.article,
+    stored.approvedAt,
+    stored.reviewer,
+  );
+  return current?.hash === stored.hash ? current : null;
+}
+
+/** Bind a current approval to the exact publication claim. This is used both
+ * for committed idempotent responses and deployment completion. */
+export function reassessPublicationEvidence(
+  draft: Pick<
+    NewsDraft,
+    | "revision"
+    | "contentHash"
+    | "verifiedSources"
+    | "provenance"
+    | "article"
+    | "evidenceApproval"
+    | "publication"
+  >,
+): EvidenceApproval | null {
+  const current = reassessEvidenceApproval(draft);
+  const publication = draft.publication;
+  if (
+    !current ||
+    !publication ||
+    publication.evidencePolicyVersion !== CURRENT_EVIDENCE_POLICY_VERSION ||
+    publication.revision !== draft.revision ||
+    publication.contentHash !== draft.contentHash ||
+    publication.evidenceApprovalHash !== current.hash
+  ) {
+    return null;
+  }
+  return current;
 }
 
 /**

@@ -11,8 +11,9 @@ import { authorizeMutation } from "@/lib/news-review/auth";
 import { githubConfigured, publishArticleCommit } from "@/lib/news-review/github";
 import {
   draftContentHash,
-  evidenceApprovalFor,
   mediaApprovalHash,
+  reassessEvidenceApproval,
+  reassessPublicationEvidence,
   validateDraftArticleShape,
   validateProvenanceShape,
   WITHHELD_MEDIA_APPROVAL_HASH,
@@ -99,13 +100,30 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     if (
       existingPublication?.state === "committed" &&
       existingPublication.commitSha &&
-      existingPublication.url &&
-      (automated ||
-        (existingPublication.revision === body.expectedRevision &&
-          existingPublication.contentHash === body.expectedContentHash &&
-          existingPublication.mediaApprovalHash === body.mediaApprovalHash &&
-          existingPublication.evidenceApprovalHash === body.evidenceApprovalHash))
+      existingPublication.url
     ) {
+      const currentEvidence = reassessPublicationEvidence(draft);
+      if (!currentEvidence) {
+        return privateJson(
+          {
+            error:
+              "The committed publication uses an obsolete or invalid evidence policy and requires manual review.",
+          },
+          409,
+        );
+      }
+      if (
+        !automated &&
+        (existingPublication.revision !== body.expectedRevision ||
+          existingPublication.contentHash !== body.expectedContentHash ||
+          existingPublication.mediaApprovalHash !== body.mediaApprovalHash ||
+          existingPublication.evidenceApprovalHash !== body.evidenceApprovalHash)
+      ) {
+        return privateJson(
+          { error: "Draft changed; reload before publishing." },
+          409,
+        );
+      }
       return privateJson(
         {
           ok: true,
@@ -262,15 +280,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         422,
       );
     }
-    const recomputedEvidence = evidenceApprovalFor(
-      draft.revision,
-      draft.contentHash,
-      draft.verifiedSources ?? [],
-      draft.provenance,
-      draft.article,
-      draft.evidenceApproval.approvedAt,
-      draft.evidenceApproval.reviewer,
-    );
+    const recomputedEvidence = reassessEvidenceApproval(draft);
     if (
       !recomputedEvidence ||
       recomputedEvidence.hash !== draft.evidenceApproval.hash ||
@@ -315,7 +325,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     if (!claim) return privateJson({ error: "Draft not found." }, 404);
     if (!claim.acquired) {
       const existing = claim.draft.publication;
+      const claimedEvidence = reassessPublicationEvidence(claim.draft);
       if (
+        claimedEvidence &&
         existing?.state === "committed" &&
         existing.commitSha &&
         existing.url
