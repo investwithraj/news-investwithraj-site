@@ -1,0 +1,195 @@
+{
+  "schemaVersion": "newsroom-legacy-evidence-remediation-v1",
+  "evidencePolicyVersion": 3,
+  "status": "manifest-only-unresolved",
+  "authority": {
+    "articleRegistry": "content/news/index.ts",
+    "lifecycleMatrix": "docs/migration/news-url-disposition.csv"
+  },
+  "implementationBoundary": {
+    "runtimeBehaviorChanged": false,
+    "runtimeSelectorsChanged": false,
+    "lifecycleCountsChanged": false,
+    "contentRecordsChanged": false,
+    "manualHashBackfillAllowed": false,
+    "unresolvedIndexationIntent": "noindex-hold"
+  },
+  "summary": {
+    "unresolved": 24,
+    "contentRepair": 17,
+    "secondSourceRequired": 7,
+    "noindexHold": 24,
+    "keepPilot": 1
+  },
+  "safestKeepPilot": "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+  "records": [
+    {
+      "slug": "2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-05-abu-dhabi-s-rent-freeze-a-structural-intervention-in-the-cap",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-07-dubai-logs-dhs28-51bn-in-may-property-deals-as-off-plan-abso",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-13-palm-jumeirah-handover-2026-two-sold-out-towers-test-the-cre",
+      "remediation": "second-source-required",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026",
+      "remediation": "second-source-required",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+      "remediation": "second-source-required",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
+      "remediation": "second-source-required",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar",
+      "remediation": "second-source-required",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "KEEP",
+      "keepPilot": true
+    },
+    {
+      "slug": "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+      "remediation": "second-source-required",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+      "remediation": "content-repair",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    },
+    {
+      "slug": "2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+      "remediation": "second-source-required",
+      "interimIntent": "noindex-hold",
+      "matrixDisposition": "IMPROVE",
+      "keepPilot": false
+    }
+  ]
+}
