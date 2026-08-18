@@ -1,20 +1,22 @@
 # Launch checklist — news.investwithraj.com
 
 This is the release gate for the news property. It describes the source
-contract as of 31 July 2026. It is not evidence that a production deployment,
+contract as of 19 August 2026. It is not evidence that a production deployment,
 provider connection, legal review, indexing result, or delivery test has
 already succeeded.
 
 ## 1. Non-negotiable publication contract
 
-- The pipeline may research and stage drafts. It does not publish them.
-- A publish action requires Raj's signed internal review session.
-- The server credential can stage content, but it cannot publish an article.
-- `AUTO_APPROVE` is off unless its value is exactly `1`. Even when enabled it
-  performs an evidence assessment only and does not publish.
+- The pipeline researches and stages drafts. When `AUTO_APPROVE` is exactly
+  `1`, its bounded publisher may publish at most `AUTO_PUBLISH_LIMIT` passing
+  drafts; the scheduled workflow fixes that limit at one.
+- The server credential is accepted by that deterministic publisher, but it
+  must re-run every hard gate. It is not a general approval credential.
+- Raj's signed internal review session remains the manual publication path for
+  drafts held by automation.
 - Every cited URL must be represented in the draft's verified-source record
   before publication.
-- Automated evidence assessment requires at least two distinct allowlisted
+- Evidence policy v3 requires at least two distinct allowlisted
   citation URLs with independently fetched source text.
 - Model-provided quotations or summaries are not accepted as fetched evidence.
 - Editorial images must be real, licensed or first-party, source-attributed,
@@ -89,8 +91,9 @@ search-engine requests.
 3. Open `/internal/review` and complete the protected sign-in flow.
 4. Confirm that a staged draft shows its citations, fetched evidence, media
    provenance, validator result, and hold reasons.
-5. Confirm that a server-header request can stage a draft but receives a
-   forbidden response from the publish endpoint.
+5. Confirm that the server credential can publish at most one passing draft
+   when the exact automation flags are enabled, while a failed, one-source, or
+   content-hash-mismatched draft stays held.
 6. Confirm that a signed same-origin review session can publish only after all
    hard gates pass.
 7. Confirm that the resulting article uses a canonical news URL and appears in
@@ -156,5 +159,29 @@ production-ready without recorded evidence for that exact deployment:
 - real-media provenance review;
 - Google Search Console and Bing Webmaster verification where applicable;
 - analytics/consent testing and a separate legal review.
+
+## 9. Newsroom lifecycle cutover
+
+`NEWSROOM_LIFECYCLE_CUTOVER=1` is the only enabling value. Treat it as a
+build/release-time switch and keep it off until release-owner sign-off.
+
+- Cutover off: 79 sitemap URLs, 41 public articles, and zero lifecycle
+  redirects.
+- Cutover on: 31 sitemap URLs, 26 public articles, and 31 exact redirects.
+- Three redirects remain intentionally held because their targets do not yet
+  satisfy the recorded content or indexation conditions.
+- Six removal candidates currently use the application's existing 404
+  response, not the lifecycle matrix's requested 410. That 404-vs-410 hold is
+  intentional and requires explicit release-owner sign-off before activation.
+
+Run `npm run certify:newsroom-release` before considering the switch. The
+no-network certificate emits deterministic cutover-off and cutover-on route
+manifests and verifies the repository contract; it does not prove a build,
+deployment, KV, secrets, GitHub, DNS, cron, indexing, or provider connection.
+
+The retained legacy set contains 24 records missing a publication content hash
+and 7 one-source records. They remain visible only because the lifecycle matrix
+retains them; they are not evidence policy v3 certified. Treat this inventory
+as fail-closed release debt and do not claim a complete evidence migration.
 
 Contact and correction address: `office@investwithraj.com`.

@@ -69,6 +69,7 @@ curl -X POST "https://news.investwithraj.com/api/cron/draft" \
 Browser mutations use the signed, HttpOnly review-session cookie and same-origin
 checks. The publication endpoint also accepts the server credential used by the
 scheduled publisher, but it independently re-runs every hard publication gate.
+The server credential cannot bypass evidence policy v3 or publish a held draft.
 
 ## Draft acceptance and evidence
 
@@ -213,14 +214,39 @@ uses `null` when a cover is not verified.
 | IndexNow fails | Release the operation claim for a reviewed retry. |
 | Feed validation fails | Stop release until corrected. |
 
+## Lifecycle release modes
+
+`NEWSROOM_LIFECYCLE_CUTOVER=1` is the only enabling value. It is evaluated at
+build/release time and must remain off while release sign-offs or external
+proof are missing.
+
+- Off: 79 sitemap URLs, 41 public articles, and zero lifecycle redirects.
+- On: 31 sitemap URLs, 26 public articles, and 31 exact redirects.
+- Three redirects remain held until their recorded content/indexation
+  conditions are satisfied.
+- Six removal candidates intentionally retain the application's 404 response
+  instead of the matrix-requested 410. The 404-vs-410 decision is an explicit
+  release hold, not an accidental omission.
+
+The legacy index-candidate inventory contains 24 records missing a publication
+content hash and 7 one-source records. Matrix retention does not certify those
+records under evidence policy v3. Keep this debt fail-closed: do not describe
+the corpus as fully migrated until each record is repaired, noindexed, or
+otherwise resolved by the release owner.
+
 ## Verification commands
 
-The Batch 10 checks are local and must not contact mutation providers:
+The offline release check must not contact mutation providers:
 
 ```bash
-npm run audit:batch10:news
-npm run build
+npm run certify:newsroom-release
 ```
+
+The certificate generates deterministic cutover-off and cutover-on route
+manifests and checks policy/document agreement. It deliberately excludes live
+KV, secrets, GitHub, DNS, cron, build, deployment, indexing, and provider
+proof. Run typecheck, the production build, and deployment smoke checks as
+separate exact-commit gates when the release environment is available.
 
 Production evidence is separate. Capture the deployment URL, commit SHA,
 response headers, feed output, structured-data result, and review-session

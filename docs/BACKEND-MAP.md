@@ -1,6 +1,6 @@
 # Backend map — news.investwithraj.com
 
-Verified source map updated 31 July 2026. This document records repository
+Verified source map updated 19 August 2026. This document records repository
 behaviour, not proof that a production deployment or third-party service is
 connected.
 
@@ -32,7 +32,10 @@ source registry
   → sitemap, News sitemap, RSS and advisory feed
 ```
 
-There is no automatic-publish branch.
+There is one bounded automatic-publication branch. It is disabled unless
+`AUTO_APPROVE=1`; the server credential can publish only after evidence policy
+v3 and all normal hard gates pass, and the configured limit is one in the
+scheduled workflow. Held drafts require the signed human-review path.
 
 ## Security contracts
 
@@ -61,8 +64,9 @@ respective paths are considered configured.
 - `review-session` — signed, HttpOnly, same-origin browser session.
 
 Browser mutations require the signed session and CSRF-origin checks. The
-publication endpoint additionally requires `review-session`; a valid server
-credential is rejected there.
+publication endpoint accepts either a `review-session` or the server credential
+used by the bounded publisher. Both paths re-run the validator, evidence,
+verified-source, figure, and integrity gates; neither credential bypasses them.
 
 ### Idempotency
 
@@ -99,7 +103,7 @@ figure-traceability gates. All other drafts remain held.
 
 ### Fail-closed evidence assessment
 
-`lib/news-review/auto-approve.ts` requires:
+Evidence policy v3 in `lib/news-review/auto-approve.ts` requires:
 
 - at least two distinct allowlisted citation URLs;
 - independently fetched evidence text for each counted source;
@@ -114,7 +118,7 @@ withheld, one-source, or model-only evidence results in a hold.
 
 `POST /api/news/draft/[id]/publish`:
 
-- accepts a signed review session only;
+- accepts a signed review session or the bounded server credential;
 - reloads the staged draft;
 - enforces the validator;
 - verifies every cited URL is represented in `verifiedSources`;
@@ -353,13 +357,35 @@ Their presence does not override the production deny rules.
   or media-provider accounts are connected in production.
 - No code claim establishes legal compliance; consent and privacy behaviour
   require separate legal and production verification.
+- The legacy index-candidate inventory contains 24 records missing a
+  publication content hash and 7 one-source records. Matrix retention is not
+  evidence policy v3 certification; this remains explicit fail-closed release
+  debt.
+
+## Lifecycle release contract
+
+`NEWSROOM_LIFECYCLE_CUTOVER=1` is the only enabling value and is evaluated at
+build/release time. The repository defaults to off.
+
+- Off produces 79 sitemap URLs, 41 public articles, and zero lifecycle
+  redirects.
+- On produces 31 sitemap URLs, 26 public articles, and 31 exact redirects.
+- Three redirects remain held until their target-specific conditions pass.
+- Six removal candidates use the existing application 404 response rather
+  than the matrix-requested 410. This intentional 404-vs-410 hold requires
+  release-owner sign-off; the offline certificate does not resolve it.
+
+`npm run certify:newsroom-release` validates these modes without network
+access and emits deterministic cutover-off/cutover-on route manifests. It does
+not prove KV, secrets, GitHub, DNS, cron, build, deployment, indexing, or any
+provider connection.
 
 ## Release gates
 
 The backend can be called release-ready only after the exact candidate commit
 passes:
 
-1. Batch 10 static security and truth audit.
+1. Offline newsroom release certification and static security/truth audit.
 2. Typecheck and production build.
 3. Unit/integration tests with all external mutations mocked.
 4. Signed-session human publication test.

@@ -13,6 +13,7 @@
     "test:newsroom-lifecycle": "tsx scripts/test-newsroom-lifecycle.ts",
     "test:lifecycle-public-apis": "tsx scripts/test-lifecycle-public-apis.ts",
     "test:queue-lifecycle": "tsx scripts/test-queue-lifecycle.ts",
+    "certify:newsroom-release": "tsx scripts/certify-newsroom-release.ts",
     "audit:media": "node scripts/audit-batch-9-media.mjs && node scripts/audit-media-quality.mjs",
     "test:intelligence": "tsx scripts/test-intelligence-registry.ts",
     "audit:p0-p5": "node scripts/audit-p0-p5-public-trust.mjs",
