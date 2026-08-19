@@ -20,6 +20,7 @@ import {
   isIndexEligibleDisposition,
   isIndexEligiblePath,
   isPublicNoindexPath,
+  isReleasedNewsroomRemovalPath,
   isReleasedIndexEligiblePath,
   isRenderableArticleSlug,
   isRenderableLifecyclePath,
@@ -131,6 +132,37 @@ process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
 assert.equal(isNewsroomLifecycleCutoverEnabled(), true);
 assert.equal(getReleasedNewsroomRedirects().length, 31);
 assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
+assert.deepEqual(
+  [...NEWSROOM_RELEASE_REMOVAL_CANDIDATES].sort(),
+  [
+    "/news/2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury",
+    "/news/2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-",
+    "/news/2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif",
+    "/news/2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",
+    "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
+    "/pulse",
+  ],
+);
+for (const pathname of NEWSROOM_RELEASE_REMOVAL_CANDIDATES) {
+  assert.equal(
+    isReleasedNewsroomRemovalPath(pathname, {
+      [NEWSROOM_LIFECYCLE_CUTOVER_ENV]: "1",
+    }),
+    true,
+  );
+  assert.equal(
+    isReleasedNewsroomRemovalPath(pathname, {
+      [NEWSROOM_LIFECYCLE_CUTOVER_ENV]: "0",
+    }),
+    false,
+  );
+}
+assert.equal(
+  isReleasedNewsroomRemovalPath("/wallet", {
+    [NEWSROOM_LIFECYCLE_CUTOVER_ENV]: "1",
+  }),
+  false,
+);
 assert.equal(getPublicDiscoveryNewsArticles().length, 26);
 
 assert.equal(rows.length, 130, "The authoritative CSV row count changed.");

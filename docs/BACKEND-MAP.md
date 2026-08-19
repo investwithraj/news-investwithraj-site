@@ -371,9 +371,12 @@ build/release time. The repository defaults to off.
   redirects.
 - On produces 31 sitemap URLs, 26 public articles, and 31 exact redirects.
 - Three redirects remain held until their target-specific conditions pass.
-- Six removal candidates use the existing application 404 response rather
-  than the matrix-requested 410. This intentional 404-vs-410 hold requires
-  release-owner sign-off; the offline certificate does not resolve it.
+- Six exact removal candidates return 410 Gone only when the cutover is on.
+  The request boundary emits no redirect or removed-page metadata and prevents
+  caching; flag-off behavior remains unchanged.
+- Activation remains blocked on Search Console, backlink/referral, analytics
+  and access-log demand checks for all six removals; Kuwait and Fendi are the
+  two medium-confidence retirement decisions.
 
 `npm run certify:newsroom-release` validates these modes without network
 access and emits deterministic cutover-off/cutover-on route manifests. It does

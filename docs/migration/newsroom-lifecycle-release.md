@@ -13,8 +13,9 @@ and not a NEXT_PUBLIC value.
 - Off preserves the current public route response and the exact 79-URL
   pre-cutover sitemap.
 - On activates exactly 31 approved one-hop redirects and the six new removal
-  gates: five article URLs plus /pulse. These routes intentionally use the
-  existing application 404 contract; no separate 410 implementation exists.
+  gates: five article URLs plus /pulse. Each exact URL returns a direct 410
+  Gone response with no redirect, no removed-page metadata, no-store caching
+  and a noindex/nofollow/noarchive header.
 - On emits the exact 31 KEEP + IMPROVE URLs in sitemap discovery.
 - /wallet remains outside that six-route release because it already returned
   the unreleased-product 404 before this lifecycle work.
@@ -24,6 +25,9 @@ and not a NEXT_PUBLIC value.
 
 The flag is evaluated at build/release time. Changing an environment value is
 not a production cutover until a separately approved deployment is created.
+Before activation, attach Search Console, backlink/referral, analytics and
+access-log demand checks for all six removals. The Kuwait and Fendi articles
+remain medium-confidence removal decisions until that evidence is reviewed.
 
 ## Outbound safety is not release-dependent
 

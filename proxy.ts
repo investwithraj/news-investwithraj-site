@@ -5,6 +5,7 @@
 // never receives POST_PUBLISH_SECRET.
 
 import { NextRequest, NextResponse } from "next/server";
+import { isReleasedNewsroomRemovalPath } from "@/lib/news-lifecycle";
 import {
   createReviewSession,
   REVIEW_SESSION_COOKIE,
@@ -80,6 +81,23 @@ function strongCredentials(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (isReleasedNewsroomRemovalPath(pathname)) {
+    return new NextResponse(
+      request.method === "HEAD"
+        ? null
+        : "Gone\n",
+      {
+        status: 410,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "private, no-store, max-age=0",
+          "X-Robots-Tag": "noindex, nofollow, noarchive",
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "no-referrer",
+        },
+      },
+    );
+  }
   if (!pathname.startsWith("/internal")) return NextResponse.next();
 
   const forbiddenUrlCredentials = new Set([
@@ -189,5 +207,13 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/internal/:path*",
+  matcher: [
+    "/internal/:path*",
+    "/pulse",
+    "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
+    "/news/2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",
+    "/news/2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif",
+    "/news/2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-",
+    "/news/2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury",
+  ],
 };

@@ -564,3 +564,22 @@ export const NEWSROOM_REMOVE_PATHS = Object.entries(NEWSROOM_LIFECYCLE)
 export const NEWSROOM_RELEASE_REMOVAL_CANDIDATES = NEWSROOM_REMOVE_PATHS.filter(
   (pathname) => pathname === "/pulse" || pathname.startsWith("/news/"),
 );
+
+const NEWSROOM_RELEASE_REMOVAL_PATHS = new Set(
+  NEWSROOM_RELEASE_REMOVAL_CANDIDATES,
+);
+
+/**
+ * True only for an exact release-removal URL while the single lifecycle
+ * cutover is enabled. Unknown article slugs and nested lookalikes must retain
+ * their ordinary route behavior.
+ */
+export function isReleasedNewsroomRemovalPath(
+  pathname: string,
+  environment: LifecycleEnvironment = process.env,
+): boolean {
+  return (
+    isNewsroomLifecycleCutoverEnabled(environment) &&
+    NEWSROOM_RELEASE_REMOVAL_PATHS.has(pathname)
+  );
+}

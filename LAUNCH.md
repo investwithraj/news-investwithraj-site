@@ -170,9 +170,12 @@ build/release-time switch and keep it off until release-owner sign-off.
 - Cutover on: 31 sitemap URLs, 26 public articles, and 31 exact redirects.
 - Three redirects remain intentionally held because their targets do not yet
   satisfy the recorded content or indexation conditions.
-- Six removal candidates currently use the application's existing 404
-  response, not the lifecycle matrix's requested 410. That 404-vs-410 hold is
-  intentional and requires explicit release-owner sign-off before activation.
+- Six exact removal candidates return 410 Gone only when the cutover is on.
+  They emit no redirect or removed-page metadata and remain unchanged while
+  the cutover is off. Activation still requires the wider release sign-offs.
+- Attach Search Console, backlink/referral, analytics and access-log demand
+  checks for all six removals before activation. Kuwait and Fendi remain
+  medium-confidence retirement decisions until that evidence is reviewed.
 
 Run `npm run certify:newsroom-release` before considering the switch. The
 no-network certificate emits deterministic cutover-off and cutover-on route

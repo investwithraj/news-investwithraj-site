@@ -224,9 +224,12 @@ proof are missing.
 - On: 31 sitemap URLs, 26 public articles, and 31 exact redirects.
 - Three redirects remain held until their recorded content/indexation
   conditions are satisfied.
-- Six removal candidates intentionally retain the application's 404 response
-  instead of the matrix-requested 410. The 404-vs-410 decision is an explicit
-  release hold, not an accidental omission.
+- Six exact removal candidates return 410 Gone when the cutover is on, with
+  no redirect, removed-page metadata or cache persistence. They retain their
+  current responses while the cutover is off.
+- Do not activate those responses until Search Console, backlink/referral,
+  analytics and access-log demand checks cover all six URLs. Kuwait and Fendi
+  remain medium-confidence removal decisions.
 
 The legacy index-candidate inventory contains 24 records missing a publication
 content hash and 7 one-source records. Matrix retention does not certify those

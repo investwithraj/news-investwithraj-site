@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { NextRequest } from "next/server";
 
 import sitemap from "../app/sitemap";
 import nextConfig from "../next.config";
+import { proxy } from "../proxy";
 import {
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_HELD_REDIRECTS,
@@ -227,7 +229,7 @@ async function main(): Promise<void> {
     assert.match(document, /server credential/iu);
     assert.match(document, /24[\s\S]{0,80}?content hash/iu);
     assert.match(document, /7[\s\S]{0,80}?one-source/iu);
-    assert.match(document, /404[\s\S]{0,80}?410/iu);
+    assert.match(document, /six[\s\S]{0,120}?410/iu);
   }
   assert.doesNotMatch(
     `${launch}\n${backendMap}`,
@@ -236,13 +238,43 @@ async function main(): Promise<void> {
   assert.match(workflow, /AUTO_APPROVE:\s*"1"/u);
   assert.match(workflow, /AUTO_PUBLISH_LIMIT:\s*"1"/u);
   assert.match(publishRoute, /const automated = auth\.credential === "server-secret"/u);
-  assert.match(lifecycleRelease, /existing application 404 contract/iu);
+  assert.match(lifecycleRelease, /direct 410[\s\S]{0,20}?Gone response/iu);
+
+  process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
+  try {
+    for (const pathname of NEWSROOM_RELEASE_REMOVAL_CANDIDATES) {
+      const response = await proxy(
+        new NextRequest(`https://news.investwithraj.com${pathname}`),
+      );
+      assert.equal(response.status, 410);
+      assert.equal(response.headers.get("location"), null);
+      assert.equal(
+        response.headers.get("x-robots-tag"),
+        "noindex, nofollow, noarchive",
+      );
+    }
+  } finally {
+    if (originalCutover === undefined) {
+      delete process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV];
+    } else {
+      process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = originalCutover;
+    }
+  }
 
   const heldRedirects = Object.entries(NEWSROOM_HELD_REDIRECTS)
     .map(([sourcePath, hold]) => ({ source: sourcePath, ...hold }))
     .sort((left, right) =>
       left.source < right.source ? -1 : left.source > right.source ? 1 : 0,
     );
+  const mediumConfidenceRemovalCandidates = [
+    "/news/2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif",
+    "/news/2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",
+  ] as const;
+  assert.ok(
+    mediumConfidenceRemovalCandidates.every((pathname) =>
+      NEWSROOM_RELEASE_REMOVAL_CANDIDATES.includes(pathname),
+    ),
+  );
   const releaseBlockers = [
     {
       code: "HELD_REDIRECTS",
@@ -262,17 +294,19 @@ async function main(): Promise<void> {
         "These legacy articles require source repair or an explicit noindex decision before claiming universal two-publisher coverage.",
     },
     {
-      code: "REMOVAL_STATUS_SIGNOFF",
+      code: "REMOVAL_DEMAND_CHECKS",
       count: NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length,
+      candidates: [...NEWSROOM_RELEASE_REMOVAL_CANDIDATES].sort(),
+      mediumConfidenceCandidates: [...mediumConfidenceRemovalCandidates].sort(),
       releaseRule:
-        "The current cutover intentionally uses the application 404 contract, not the matrix's requested 410; release-owner sign-off remains required.",
+        "Do not activate the six 410 responses until Search Console, backlink/referral, analytics and access-log demand checks are attached; Kuwait and Fendi remain medium-confidence removals.",
     },
   ] as const;
 
   const manifest = {
-    schemaVersion: "newsroom-offline-release-certification-v1",
+    schemaVersion: "newsroom-offline-release-certification-v2",
     status: "offline-contract-valid-live-release-blocked",
-    runtimeBehaviorChanged: false,
+    runtimeBehaviorChanged: true,
     authority: {
       path: AUTHORITY_PATH,
       sha256: createHash("sha256").update(authority).digest("hex"),
@@ -306,10 +340,10 @@ async function main(): Promise<void> {
       lifecycleRedirectCount: cutoverOn.lifecycleRedirects.length,
       lifecycleRedirects: cutoverOn.lifecycleRedirects,
       removalResponse: {
-        status: 404,
-        matrixRequestedStatus: 410,
+        status: 410,
         candidates: [...NEWSROOM_RELEASE_REMOVAL_CANDIDATES].sort(),
-        signoff: "pending-release-owner",
+        implementation: "exact-path proxy response",
+        defaultState: "unchanged while cutover is off",
       },
     },
     heldRedirects,
@@ -326,7 +360,7 @@ async function main(): Promise<void> {
     },
     blockers: releaseBlockers,
     excludedProof:
-      "This offline certificate does not prove KV, secrets, GitHub, DNS, cron, build, deployment, indexing or provider connectivity.",
+      "This offline certificate does not prove KV, secrets, GitHub, DNS, cron, build, deployment, indexing, Search Console, backlinks/referrals, analytics, access logs or provider connectivity.",
   } as const;
 
   assert.equal(manifest.evidencePolicy.version, 3);
@@ -335,7 +369,7 @@ async function main(): Promise<void> {
 
   console.log(JSON.stringify(manifest, null, 2));
   console.error(
-    `Offline newsroom contract valid; live release remains blocked by ${heldRedirects.length} held redirects, ${missingContentHashSlugs.length} missing content hashes, ${oneSourceSlugs.length} one-source legacy records and 404/410 sign-off.`,
+    `Offline newsroom contract valid; live release remains blocked by ${heldRedirects.length} held redirects, ${missingContentHashSlugs.length} missing content hashes, ${oneSourceSlugs.length} one-source legacy records and ${NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length} removal demand checks.`,
   );
 }
 

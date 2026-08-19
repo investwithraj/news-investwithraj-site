@@ -11,6 +11,8 @@
     "test:news-archive": "tsx scripts/test-news-archive.ts",
     "test:news-article-template": "tsx scripts/test-news-article-template.ts",
     "test:newsroom-lifecycle": "tsx scripts/test-newsroom-lifecycle.ts",
+    "test:newsroom-gone": "tsx scripts/test-newsroom-gone-responses.ts",
+    "audit:newsroom-removal-runtime": "node scripts/test-newsroom-removal-runtime.mjs",
     "test:lifecycle-public-apis": "tsx scripts/test-lifecycle-public-apis.ts",
     "test:queue-lifecycle": "tsx scripts/test-queue-lifecycle.ts",
     "certify:newsroom-release": "tsx scripts/certify-newsroom-release.ts",
