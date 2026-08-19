@@ -243,22 +243,43 @@ function sameOrigin(response, requested, label) {
   assert.equal(delivered.pathname, requested.pathname, `${label} changed path`);
 }
 
-function parseBuildId(html) {
-  const normalized = html.replaceAll("\\u002F", "/").replaceAll("\\/", "/");
-  const candidates = new Set();
-  for (const match of normalized.matchAll(
-    /\/_next\/static\/([A-Za-z0-9_-]{8,128})\/(?:_buildManifest|_ssgManifest)\.js/gu,
-  )) {
-    candidates.add(match[1]);
+function collectDeploymentFilePaths(value, prefix = "") {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectDeploymentFilePaths(entry, prefix));
   }
-  for (const match of normalized.matchAll(/"buildId"\s*:\s*"([A-Za-z0-9_-]{8,128})"/gu)) {
-    candidates.add(match[1]);
-  }
-  assert.equal(candidates.size, 1, "Served HTML must expose exactly one Next build ID");
-  return [...candidates][0];
+  if (value === null || typeof value !== "object") return [];
+  const name = typeof value.name === "string" ? value.name : "";
+  const explicitPath = typeof value.path === "string" ? value.path : "";
+  const current = explicitPath || (name ? `${prefix}/${name}` : prefix);
+  const own = value.type === "file" || (!value.children && !value.files)
+    ? [current]
+    : [];
+  return [
+    ...own,
+    ...collectDeploymentFilePaths(value.children ?? [], current),
+    ...collectDeploymentFilePaths(value.files ?? [], current),
+  ];
 }
 
-async function discoverBuild(fetchImpl, auth, origin, label) {
+async function discoverBuild(requestProvider, fetchImpl, auth, deployment, label) {
+  const filesResponse = await requestProvider(`/v6/deployments/${deployment.id}/files`);
+  const filePaths = collectDeploymentFilePaths(filesResponse.files ?? filesResponse)
+    .map((filePath) => filePath.replaceAll("\\", "/").replace(/^\/+|\/+$/gu, ""));
+  const candidates = new Set();
+  for (const filePath of filePaths) {
+    const match = filePath.match(
+      /(?:^|\/)(?:\.next|_next)\/static\/([A-Za-z0-9_-]{8,128})\/_buildManifest\.js$/u,
+    );
+    if (match) candidates.add(match[1]);
+  }
+  assert.equal(
+    candidates.size,
+    1,
+    `${label} deployed files must expose exactly one Next build ID`,
+  );
+  const buildId = [...candidates][0];
+  const origin = deployment.url;
   const rootUrl = new URL("/", origin);
   const anonymous = await fetchImpl(rootUrl, {
     redirect: "manual",
@@ -267,15 +288,6 @@ async function discoverBuild(fetchImpl, auth, origin, label) {
   assert.ok([302, 401].includes(anonymous.status), `${label} is anonymously accessible`);
   assert.ok(robotsTokens(anonymous).includes("noindex"), `${label} anonymous response lacks noindex`);
 
-  const response = await fetchImpl(
-    rootUrl,
-    auth.fetchOptions({ redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS) }),
-  );
-  sameOrigin(response, rootUrl, label);
-  assert.equal(response.status, 200, `${label} root must return 200`);
-  assert.match(response.headers.get("content-type")?.toLowerCase() ?? "", /^text\/html(?:;|$)/u);
-  assert.ok(robotsTokens(response).includes("noindex"), `${label} root lacks noindex`);
-  const buildId = parseBuildId(await response.text());
   const buildPath = `/_next/static/${buildId}/_buildManifest.js`;
   const buildUrl = new URL(buildPath, origin);
   const buildResponse = await fetchImpl(
@@ -357,12 +369,19 @@ export async function runHostedNewsroomProviderPreflight({
   );
   assert.equal(auth.authConfigured, true, "Provider preflight requires newsroom Preview auth");
   const productionBuild = await discoverBuild(
+    requestProvider,
     fetchImpl,
     auth,
-    production.url,
+    production,
     "Immutable Production",
   );
-  const previewBuild = await discoverBuild(fetchImpl, auth, preview.url, "Preview");
+  const previewBuild = await discoverBuild(
+    requestProvider,
+    fetchImpl,
+    auth,
+    preview,
+    "Preview",
+  );
 
   return Object.freeze({
     schemaVersion: 1,

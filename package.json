@@ -14,7 +14,7 @@
     "test:newsroom-gone": "tsx scripts/test-newsroom-gone-responses.ts",
     "audit:newsroom-removal-runtime": "node scripts/test-newsroom-removal-runtime.mjs",
     "audit:newsroom-evidence-runtime": "tsx scripts/test-newsroom-evidence-hold-runtime.ts",
-    "test:hosted-preflight": "node scripts/test-protected-preview-auth.mjs && node scripts/test-hosted-newsroom-provider-preflight-contract.mjs && node scripts/test-hosted-newsroom-invariance-contract.mjs && node scripts/test-hosted-newsroom-media-delivery-contract.mjs && node scripts/test-newsroom-hosted-browser-contract.mjs && tsx scripts/test-newsroom-evidence-hold-runtime-origin.ts && tsx scripts/test-newsroom-public-media-policy.ts",
+    "test:hosted-preflight": "node scripts/test-protected-preview-auth.mjs && node scripts/test-hosted-newsroom-provider-preflight-contract.mjs && node scripts/test-hosted-newsroom-invariance-contract.mjs && node scripts/test-hosted-newsroom-media-delivery-contract.mjs && node scripts/test-newsroom-hosted-browser-contract.mjs && node scripts/test-newsroom-hosted-receipt-closure.mjs && tsx scripts/test-newsroom-evidence-hold-runtime-origin.ts && tsx scripts/test-newsroom-public-media-policy.ts",
     "audit:hosted-provider-preflight": "node scripts/test-hosted-newsroom-provider-preflight.mjs",
     "audit:hosted-invariance": "node scripts/test-hosted-newsroom-invariance.mjs",
     "audit:hosted-media-delivery": "node scripts/test-hosted-newsroom-media-delivery.mjs",

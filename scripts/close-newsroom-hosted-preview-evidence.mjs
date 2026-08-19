@@ -18,6 +18,13 @@ export const EXPECTED_TOOLING_TREE =
   "ae3e25a024b6656a8a7625f70392cd15f02120cb";
 export const EXPECTED_LOCAL_BUILD_ID = "Vw3nq0gSlyv08qacF7Xo8";
 
+const VERCEL_PROJECT_ID = "prj_kfTRKu4x1NZThilS9JTJTFt8S47h";
+const VERCEL_TEAM_ID = "team_fX0MDhZugKxOW3rijXKAgYiA";
+const IMMUTABLE_NEWSROOM_HOST =
+  /^news-investwithraj-site-[a-z0-9]{8,16}-office-2271s-projects\.vercel\.app$/u;
+const PREVIEW_ALIAS_HOST =
+  /^news-investwithraj-site(?:-[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)?-office-2271s-projects\.vercel\.app$/u;
+
 const AUTHORITY_MANIFEST_PATH =
   "docs/migration/HOSTED-PREVIEW-LOCAL-EVIDENCE-54C3566.json";
 const DEFAULT_CLOSURE_OUTPUT =
@@ -49,6 +56,15 @@ const PINNED_AUDIT_INPUTS = Object.freeze([
   "docs/migration/newsroom-legacy-evidence-remediation.json",
 ]);
 const EXPECTED_HOSTED_RECEIPTS = Object.freeze([
+  {
+    id: "provider-preflight",
+    path: "outputs/hosted-readiness-54c3566/hosted-provider-preflight.json",
+    repeatPath:
+      "outputs/hosted-readiness-54c3566/hosted-provider-preflight-repeat.json",
+    repeatByteDeterministic: true,
+    repeatRequired: true,
+    timestamped: false,
+  },
   {
     id: "production-before",
     path: "outputs/hosted-readiness-54c3566/hosted-production-before.json",
@@ -369,6 +385,48 @@ export function assertNoSecretSentinels(bytes, sentinels, label) {
 }
 
 function validateHostedReceipt(id, receipt, manifest, candidateBuildIds) {
+  if (id === "provider-preflight") {
+    assert.equal(receipt.schemaVersion, 1);
+    assert.equal(receipt.result, "pass");
+    assert.equal(receipt.authConfigured, true);
+    assert.equal(receipt.project?.id, VERCEL_PROJECT_ID);
+    assert.equal(receipt.project?.ownerId, VERCEL_TEAM_ID);
+    assert.equal(receipt.project?.productionDeploymentId, receipt.production?.id);
+    assert.ok(Array.isArray(receipt.environmentKeys));
+    assert.deepEqual(
+      receipt.environmentKeys,
+      [...receipt.environmentKeys].toSorted((left, right) =>
+        `${left.key}\0${left.type}\0${left.targets.join(",")}`.localeCompare(
+          `${right.key}\0${right.type}\0${right.targets.join(",")}`,
+        ),
+      ),
+      "Provider environment key set is not deterministic",
+    );
+    assert.equal(
+      new Set(
+        receipt.environmentKeys.map(
+          (entry) => `${entry.key}\0${entry.type}\0${entry.targets.join(",")}`,
+        ),
+      ).size,
+      receipt.environmentKeys.length,
+      "Provider environment key set contains duplicates",
+    );
+    validateProviderDeployment(receipt.production, {
+      canonicalAlias: true,
+      role: "Provider Production",
+      target: "production",
+    });
+    validateProviderDeployment(receipt.preview, {
+      canonicalAlias: false,
+      role: "Provider Preview",
+      target: "preview",
+    });
+    assert.equal(receipt.production.source?.branch, "main");
+    assert.equal(receipt.preview.source?.sha, manifest.runtimeSha);
+    assert.notEqual(receipt.production.url, receipt.preview.url);
+    candidateBuildIds.add(receipt.preview.buildId);
+    return;
+  }
   if (id === "production-before") {
     assert.equal(receipt.schemaVersion, 2);
     assert.equal(receipt.phase, "before");
@@ -472,6 +530,131 @@ function validateHostedReceipt(id, receipt, manifest, candidateBuildIds) {
   assert.fail(`Unknown hosted receipt ${id}`);
 }
 
+function validateProviderDeployment(
+  deployment,
+  { canonicalAlias, role, target },
+) {
+  assert.match(deployment?.id ?? "", /^dpl_[A-Za-z0-9]+$/u, `${role} ID is invalid`);
+  assert.equal(deployment?.projectId, VERCEL_PROJECT_ID, `${role} project drifted`);
+  assert.equal(deployment?.ownerId, VERCEL_TEAM_ID, `${role} team drifted`);
+  assert.equal(deployment?.readyState, "READY", `${role} is not READY`);
+  assert.equal(deployment?.target, target, `${role} target drifted`);
+  assert.match(deployment?.source?.sha ?? "", /^[0-9a-f]{40}$/u, `${role} SHA is invalid`);
+  assert.equal(typeof deployment?.source?.branch, "string", `${role} branch is missing`);
+  const url = new URL(deployment?.url);
+  assert.equal(url.pathname, "/", `${role} URL is not an origin`);
+  assert.match(url.hostname, IMMUTABLE_NEWSROOM_HOST, `${role} origin drifted`);
+  assert.ok(Array.isArray(deployment?.aliases), `${role} aliases are missing`);
+  assert.equal(new Set(deployment.aliases).size, deployment.aliases.length);
+  assert.equal(
+    deployment.aliases.includes("news.investwithraj.com"),
+    canonicalAlias,
+    `${role} canonical alias state drifted`,
+  );
+  if (!canonicalAlias) {
+    for (const alias of deployment.aliases) {
+      assert.match(alias, PREVIEW_ALIAS_HOST, `${role} has a custom alias`);
+    }
+  }
+  assert.match(deployment?.buildId ?? "", /^[A-Za-z0-9_-]{8,128}$/u);
+  assert.equal(
+    deployment?.buildAssetPath,
+    `/_next/static/${deployment.buildId}/_buildManifest.js`,
+    `${role} build asset drifted`,
+  );
+}
+
+function deploymentWithoutBuild(deployment) {
+  const identity = { ...deployment };
+  delete identity.buildAssetPath;
+  delete identity.buildId;
+  return identity;
+}
+
+function projectWithoutProductionDeployment(project) {
+  const identity = { ...project };
+  delete identity.productionDeploymentId;
+  return identity;
+}
+
+function crossBindHostedReceipts(receipts) {
+  const preflight = receipts.get("provider-preflight");
+  const before = receipts.get("production-before");
+  const after = receipts.get("invariance-after");
+  assert.ok(preflight, "Provider preflight receipt is missing from closure");
+  assert.ok(before, "Production-before receipt is missing from closure");
+  assert.ok(after, "Invariance-after receipt is missing from closure");
+
+  const productionIdentity = deploymentWithoutBuild(preflight.production);
+  const previewIdentity = deploymentWithoutBuild(preflight.preview);
+  const projectIdentity = projectWithoutProductionDeployment(preflight.project);
+  assert.deepEqual(
+    before.provider?.production,
+    productionIdentity,
+    "Production-before deployment does not match provider preflight",
+  );
+  assert.deepEqual(
+    before.provider?.project,
+    projectIdentity,
+    "Production-before project does not match provider preflight",
+  );
+  assert.deepEqual(
+    before.provider?.environmentKeys,
+    preflight.environmentKeys,
+    "Production-before environment set does not match provider preflight",
+  );
+  assert.deepEqual(
+    after.production?.deployment,
+    productionIdentity,
+    "Invariance Production deployment does not match provider preflight",
+  );
+  assert.equal(
+    after.production?.buildId,
+    preflight.production.buildId,
+    "Production build ID does not match provider preflight",
+  );
+  assert.equal(
+    after.production?.sha,
+    preflight.production.source.sha,
+    "Production SHA does not match provider preflight",
+  );
+  assert.equal(
+    after.production?.url,
+    preflight.production.url,
+    "Production origin does not match provider preflight",
+  );
+  assert.deepEqual(
+    after.preview?.deployment,
+    previewIdentity,
+    "Invariance Preview deployment does not match provider preflight",
+  );
+  assert.equal(
+    after.preview?.buildId,
+    preflight.preview.buildId,
+    "Preview build ID does not match provider preflight",
+  );
+  assert.equal(
+    after.preview?.sha,
+    preflight.preview.source.sha,
+    "Preview SHA does not match provider preflight",
+  );
+  assert.equal(
+    after.preview?.url,
+    preflight.preview.url,
+    "Preview origin does not match provider preflight",
+  );
+  assert.deepEqual(
+    after.provider?.project,
+    projectIdentity,
+    "Invariance project does not match provider preflight",
+  );
+  assert.deepEqual(
+    after.provider?.environmentKeys,
+    preflight.environmentKeys,
+    "Invariance environment set does not match provider preflight",
+  );
+}
+
 function receiptRecord(spec, bytes, repeatBytes) {
   const record = {
     bytes: bytes.byteLength,
@@ -503,6 +686,7 @@ export function buildClosureManifest({
   assert.match(operatorHead, /^[0-9a-f]{40}$/u, "Operator tooling SHA is invalid");
   assert.match(operatorTree, /^[0-9a-f]{40}$/u, "Operator tooling tree is invalid");
   const candidateBuildIds = new Set();
+  const parsedReceipts = new Map();
   const hostedReceipts = [];
   for (const spec of authority.hostedReceiptContract) {
     const bytes = hostedReceiptBytes.get(spec.path);
@@ -510,6 +694,7 @@ export function buildClosureManifest({
     assertNoSecretSentinels(bytes, sentinels, spec.id);
     const receipt = parseJson(bytes, spec.id);
     validateHostedReceipt(spec.id, receipt, authority, candidateBuildIds);
+    parsedReceipts.set(spec.id, receipt);
     const repeatBytes = spec.repeatPath
       ? hostedReceiptBytes.get(spec.repeatPath)
       : undefined;
@@ -524,6 +709,7 @@ export function buildClosureManifest({
     }
     hostedReceipts.push(receiptRecord(spec, bytes, repeatBytes));
   }
+  crossBindHostedReceipts(parsedReceipts);
   assert.equal(candidateBuildIds.size, 1, "Hosted candidate build IDs disagree");
   const [hostedBuildId] = candidateBuildIds;
   assert.equal(typeof hostedBuildId, "string", "Hosted candidate build ID is missing");

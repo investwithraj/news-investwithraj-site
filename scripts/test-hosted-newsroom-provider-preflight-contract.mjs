@@ -146,6 +146,20 @@ function fixtureFetch(
       }
       if (url.pathname.endsWith(productionId)) return json(production);
       if (url.pathname.endsWith(previewId)) return json(preview);
+      if (url.pathname.endsWith(`${productionId}/files`) || url.pathname.endsWith(`${previewId}/files`)) {
+        const buildId = url.pathname.includes(productionId) ? productionBuildId : previewBuildId;
+        return json({
+          files: [
+            { path: ".next/server/app/index.html", type: "file" },
+            ...(buildIdentity === "missing"
+              ? []
+              : [{ path: `.next/static/${buildId}/_buildManifest.js`, type: "file" }]),
+            ...(buildIdentity === "multiple"
+              ? [{ path: ".next/static/otherBuild_789/_buildManifest.js", type: "file" }]
+              : []),
+          ],
+        });
+      }
       throw new Error(`Unexpected provider request ${url.href}`);
     }
 
@@ -162,18 +176,7 @@ function fixtureFetch(
     }
     assert.equal(bypass, bypassSentinel);
     const buildId = url.origin === productionOrigin ? productionBuildId : previewBuildId;
-    if (url.pathname === "/") {
-      const buildMarkup =
-        buildIdentity === "missing"
-          ? ""
-          : buildIdentity === "multiple"
-            ? `<script src="/_next/static/${buildId}/_buildManifest.js"></script><script src="/_next/static/otherBuild_789/_ssgManifest.js"></script>`
-            : `<script src="/_next/static/${buildId}/_buildManifest.js"></script>`;
-      return responseWithUrl(`<!doctype html><html><body><h1>News</h1>${buildMarkup}</body></html>`, {
-        headers: { "content-type": "text/html", "x-robots-tag": "noindex, nofollow" },
-        status: 200,
-      }, url);
-    }
+    if (url.pathname === "/") throw new Error("Authenticated root HTML must not be used for build discovery");
     assert.equal(url.pathname, `/_next/static/${buildId}/_buildManifest.js`);
     return responseWithUrl(null, {
       headers: { "content-type": "application/javascript" },
@@ -198,10 +201,10 @@ assert.equal(receipt.preview.id, previewId);
 assert.equal(receipt.preview.buildId, previewBuildId);
 assert.equal(receipt.preview.source.sha, candidateSha);
 assert.equal(receipt.environmentKeys.length, 2, "Provider env pagination must be complete");
-assert.equal(receipt.providerRequests, 6);
+assert.equal(receipt.providerRequests, 8);
 assert.equal(calls.length, 12);
-assert.equal(calls.filter((call) => call.authorization !== null).length, 6);
-assert.equal(calls.filter((call) => call.bypass !== null).length, 4);
+assert.equal(calls.filter((call) => call.authorization !== null).length, 8);
+assert.equal(calls.filter((call) => call.bypass !== null).length, 2);
 assert.ok(calls.filter((call) => call.origin !== "https://api.vercel.com").every((call) => call.authorization === null));
 assert.ok(calls.filter((call) => call.origin === "https://api.vercel.com").every((call) => call.bypass === null));
 const serialized = JSON.stringify(receipt);
@@ -226,7 +229,7 @@ await assert.rejects(
 for (const buildIdentity of ["missing", "multiple"]) {
   await assert.rejects(
     () => runHostedNewsroomProviderPreflight({ environment, fetchImpl: fixtureFetch([], { buildIdentity }) }),
-    /Served HTML must expose exactly one Next build ID/u,
+    /deployed files must expose exactly one Next build ID/u,
   );
 }
 assert.throws(

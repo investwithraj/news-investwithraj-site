@@ -48,6 +48,14 @@
   ],
   "hostedReceiptContract": [
     {
+      "id": "provider-preflight",
+      "path": "outputs/hosted-readiness-54c3566/hosted-provider-preflight.json",
+      "repeatPath": "outputs/hosted-readiness-54c3566/hosted-provider-preflight-repeat.json",
+      "repeatByteDeterministic": true,
+      "repeatRequired": true,
+      "timestamped": false
+    },
+    {
       "id": "production-before",
       "path": "outputs/hosted-readiness-54c3566/hosted-production-before.json",
       "repeatByteDeterministic": true,

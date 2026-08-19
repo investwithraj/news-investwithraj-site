@@ -88,10 +88,79 @@ function bytes(value) {
 
 function hostedFixtures(batchTimestamp = "2026-08-19T08:00:00.000Z") {
   const receipts = new Map();
+  const environmentKeys = [
+    { key: "NEXT_PUBLIC_SITE_NAME", targets: ["preview", "production"], type: "plain" },
+  ];
+  const projectIdentity = {
+    autoAssignCustomDomains: true,
+    framework: "nextjs",
+    git: {
+      org: "investwithraj",
+      productionBranch: "main",
+      repo: "news-investwithraj-site",
+      repoId: "1248443593",
+      type: "github",
+    },
+    gitForkProtection: true,
+    id: "prj_kfTRKu4x1NZThilS9JTJTFt8S47h",
+    name: "news-investwithraj-site",
+    nodeVersion: "24.x",
+    ownerId: "team_fX0MDhZugKxOW3rijXKAgYiA",
+    protectionBypassCount: 1,
+    ssoProtection: "all_except_custom_domains",
+  };
+  const productionIdentity = {
+    aliases: ["news.investwithraj.com"],
+    id: "dpl_Production123",
+    ownerId: "team_fX0MDhZugKxOW3rijXKAgYiA",
+    projectId: "prj_kfTRKu4x1NZThilS9JTJTFt8S47h",
+    readyState: "READY",
+    source: { branch: "main", sha: "a".repeat(40) },
+    target: "production",
+    url: "https://news-investwithraj-site-prod12345-office-2271s-projects.vercel.app",
+  };
+  const previewIdentity = {
+    aliases: [
+      "news-investwithraj-site-git-proposed-office-2271s-projects.vercel.app",
+    ],
+    id: "dpl_Preview123",
+    ownerId: "team_fX0MDhZugKxOW3rijXKAgYiA",
+    projectId: "prj_kfTRKu4x1NZThilS9JTJTFt8S47h",
+    readyState: "READY",
+    source: { branch: "codex/iwr-newsroom-preview-54c3566", sha: EXPECTED_RUNTIME_SHA },
+    target: "preview",
+    url: "https://news-investwithraj-site-prev12345-office-2271s-projects.vercel.app",
+  };
+  const providerPreflight = {
+    schemaVersion: 1,
+    authConfigured: true,
+    project: {
+      ...projectIdentity,
+      productionDeploymentId: productionIdentity.id,
+    },
+    environmentKeys,
+    production: {
+      ...productionIdentity,
+      buildAssetPath: "/_next/static/ProductionBuild_123/_buildManifest.js",
+      buildId: "ProductionBuild_123",
+    },
+    preview: {
+      ...previewIdentity,
+      buildAssetPath: `/_next/static/${hostedBuildId}/_buildManifest.js`,
+      buildId: hostedBuildId,
+    },
+    providerRequests: 6,
+    result: "pass",
+  };
   const productionBefore = {
     schemaVersion: 2,
     phase: "before",
-    provider: { project: { id: "prj_kfTRKu4x1NZThilS9JTJTFt8S47h" } },
+    provider: {
+      environmentKeys,
+      preview: null,
+      production: productionIdentity,
+      project: projectIdentity,
+    },
     routes: [{}, {}, {}, {}],
     result: "pass",
   };
@@ -102,8 +171,16 @@ function hostedFixtures(batchTimestamp = "2026-08-19T08:00:00.000Z") {
     preview: {
       buildId: hostedBuildId,
       sha: EXPECTED_RUNTIME_SHA,
-      deployment: { target: "preview" },
+      url: previewIdentity.url,
+      deployment: previewIdentity,
     },
+    production: {
+      buildId: providerPreflight.production.buildId,
+      sha: productionIdentity.source.sha,
+      url: productionIdentity.url,
+      deployment: productionIdentity,
+    },
+    provider: { environmentKeys, project: projectIdentity },
     invariance: { equal: true, routeCount: 4 },
     result: "pass",
   };
@@ -156,6 +233,7 @@ function hostedFixtures(batchTimestamp = "2026-08-19T08:00:00.000Z") {
     failures: [],
   };
   const primary = new Map([
+    ["provider-preflight", providerPreflight],
     ["production-before", productionBefore],
     ["invariance-after", invarianceAfter],
     ["media-delivery", media],
@@ -170,6 +248,17 @@ function hostedFixtures(batchTimestamp = "2026-08-19T08:00:00.000Z") {
     if (spec.repeatPath) receipts.set(spec.repeatPath, Buffer.from(receiptBytes));
   }
   return receipts;
+}
+
+function mutateReceipt(receipts, id, mutate) {
+  const changed = new Map(receipts);
+  const spec = authority.hostedReceiptContract.find((entry) => entry.id === id);
+  const receipt = JSON.parse(changed.get(spec.path).toString("utf8"));
+  mutate(receipt);
+  const changedBytes = bytes(receipt);
+  changed.set(spec.path, changedBytes);
+  if (spec.repeatPath) changed.set(spec.repeatPath, Buffer.from(changedBytes));
+  return changed;
 }
 
 const sentinel = "closure-sentinel-secret-8c3e8f";
@@ -201,7 +290,7 @@ assert.equal(first.closure.runtimeSha, EXPECTED_RUNTIME_SHA);
 assert.equal(first.closure.localEvidenceToolingSha, EXPECTED_TOOLING_SHA);
 assert.equal(first.closure.toolingSha, gitAuthority.head);
 assert.equal(first.closure.toolingTree, gitAuthority.headTree);
-assert.equal(first.closure.hostedReceipts.length, 7);
+assert.equal(first.closure.hostedReceipts.length, 8);
 assert.equal(first.closure.localEvidence.length, 2);
 assert.equal(first.closure.secretScan.configured, true);
 assert.equal(first.closure.secretScan.matches, 0);
@@ -214,6 +303,85 @@ assert.equal(
   first.closure.hostedReceipts.find((record) => record.id === "batch-9")
     ?.timestamped,
   true,
+);
+
+const providerSpec = authority.hostedReceiptContract.find(
+  (spec) => spec.id === "provider-preflight",
+);
+const missingProvider = hostedFixtures();
+missingProvider.delete(providerSpec.path);
+missingProvider.delete(providerSpec.repeatPath);
+assert.throws(
+  () =>
+    buildClosureManifest({
+      authority,
+      hostedReceiptBytes: missingProvider,
+      localEvidence,
+      operatorHead: gitAuthority.head,
+      operatorTree: gitAuthority.headTree,
+      sentinels,
+    }),
+  /provider-preflight receipt is missing/u,
+);
+
+const deploymentDrift = mutateReceipt(
+  hostedFixtures(),
+  "production-before",
+  (receipt) => {
+    receipt.provider.production.id = "dpl_Drifted123";
+  },
+);
+assert.throws(
+  () =>
+    buildClosureManifest({
+      authority,
+      hostedReceiptBytes: deploymentDrift,
+      localEvidence,
+      operatorHead: gitAuthority.head,
+      operatorTree: gitAuthority.headTree,
+      sentinels,
+    }),
+  /Production-before deployment does not match provider preflight/u,
+);
+
+const environmentDrift = mutateReceipt(
+  hostedFixtures(),
+  "invariance-after",
+  (receipt) => {
+    receipt.provider.environmentKeys = [];
+  },
+);
+assert.throws(
+  () =>
+    buildClosureManifest({
+      authority,
+      hostedReceiptBytes: environmentDrift,
+      localEvidence,
+      operatorHead: gitAuthority.head,
+      operatorTree: gitAuthority.headTree,
+      sentinels,
+    }),
+  /Invariance environment set does not match provider preflight/u,
+);
+
+const buildDrift = mutateReceipt(
+  hostedFixtures(),
+  "invariance-after",
+  (receipt) => {
+    receipt.preview.buildId = "OtherHostedBuild_123";
+  },
+);
+assert.throws(
+  () =>
+    buildClosureManifest({
+      authority,
+      hostedReceiptBytes: buildDrift,
+      localEvidence,
+      operatorHead: gitAuthority.head,
+      operatorTree: gitAuthority.headTree,
+      sentinels,
+    }),
+  /Preview build ID does not match provider preflight/u,
 );
 
 const changedTimestamp = buildClosureManifest({
@@ -271,5 +439,5 @@ assert.match(leakMessage, /configured secret sentinel/u);
 assert.equal(leakMessage.includes(sentinel), false);
 
 console.log(
-  "Newsroom hosted receipt closure contract PASS: exact Git authority, portable local evidence, seven future receipt hashes, deterministic repeats, timestamped Batch exceptions and secret-free closure.",
+  "Newsroom hosted receipt closure contract PASS: exact Git authority, portable local evidence, provider-bound future receipt hashes, deterministic repeats, timestamped Batch exceptions and secret-free closure.",
 );
