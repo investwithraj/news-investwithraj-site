@@ -1,5 +1,18 @@
 import assert from "node:assert/strict";
 
+import {
+  NEWSROOM_PROTECTION_BYPASS_ENV,
+  createProtectedPreviewAuth,
+} from "./lib/protected-preview-auth.mjs";
+
+const newsroomAuth = createProtectedPreviewAuth(
+  NEWSROOM_PROTECTION_BYPASS_ENV,
+);
+
+function newsroomFetch(input, options = {}) {
+  return fetch(input, newsroomAuth.fetchOptions(options));
+}
+
 const baseUrl = (process.env.NEWSROOM_REMOVAL_BASE_URL ?? "").replace(/\/$/u, "");
 const mode = process.env.NEWSROOM_REMOVAL_MODE;
 
@@ -17,7 +30,7 @@ const removalPaths = [
 
 for (const pathname of removalPaths) {
   for (const method of ["GET", "HEAD"]) {
-    const response = await fetch(`${baseUrl}${pathname}?audit=gone`, {
+    const response = await newsroomFetch(`${baseUrl}${pathname}?audit=gone`, {
       method,
       redirect: "manual",
       cache: "no-store",
@@ -48,20 +61,22 @@ for (const [pathname, expectedStatus] of [
     200,
   ],
 ]) {
-  const response = await fetch(`${baseUrl}${pathname}`, {
+  const response = await newsroomFetch(`${baseUrl}${pathname}`, {
     redirect: "manual",
     cache: "no-store",
   });
   assert.equal(response.status, expectedStatus, pathname);
 }
 
-const nested = await fetch(`${baseUrl}${removalPaths[0]}/extra`, {
+const nested = await newsroomFetch(`${baseUrl}${removalPaths[0]}/extra`, {
   redirect: "manual",
   cache: "no-store",
 });
 assert.equal(nested.status, 404);
 
-const sitemapResponse = await fetch(`${baseUrl}/sitemap.xml`, { cache: "no-store" });
+const sitemapResponse = await newsroomFetch(`${baseUrl}/sitemap.xml`, {
+  cache: "no-store",
+});
 assert.equal(sitemapResponse.status, 200);
 const sitemapXml = await sitemapResponse.text();
 const sitemapPaths = [...sitemapXml.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(

@@ -2,6 +2,19 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 
+import {
+  ADVISORY_PROTECTION_BYPASS_ENV,
+  NEWSROOM_PROTECTION_BYPASS_ENV,
+  createProtectedPreviewAuth,
+} from "./lib/protected-preview-auth.mjs";
+
+const newsroomAuth = createProtectedPreviewAuth(
+  NEWSROOM_PROTECTION_BYPASS_ENV,
+);
+const advisoryAuth = createProtectedPreviewAuth(
+  ADVISORY_PROTECTION_BYPASS_ENV,
+);
+
 const NEWS_BASE =
   process.env.IWR_NEWS_AUDIT_URL ?? "http://localhost:3130";
 const ADVISORY_BASE =
@@ -212,9 +225,8 @@ async function staticChecks() {
     "app/api/brief/route.ts",
   )}`;
   const spatial = file("app/spatial/page.tsx");
-  const wallet = `${file("app/wallet/page.tsx")}\n${file(
-    "app/api/wallet/install/route.ts",
-  )}`;
+  const walletPage = file("app/wallet/page.tsx");
+  const walletInstallApi = file("app/api/wallet/install/route.ts");
   const about = `${file("app/about/page.tsx")}\n${file(
     "lib/schema/person.ts",
   )}`;
@@ -266,11 +278,12 @@ async function staticChecks() {
   );
   check(
     "order-61:static",
-    "Wallet is visibly unsigned and cannot return a live install URL",
-    /unsigned/i.test(wallet) &&
-      /coming soon/i.test(wallet) &&
+    "Wallet remains an intentional public 404 and its install API cannot return a live URL",
+    /notFound\(\)/u.test(walletPage) &&
+      /state:\s*["']coming-soon["']/u.test(walletInstallApi) &&
+      /status:\s*501/u.test(walletInstallApi) &&
       !/installUrl\s*:\s*["'`]https?:|signed pass ready|daily delivery is active/i.test(
-        wallet,
+        walletInstallApi,
       ),
   );
   check(
@@ -627,10 +640,12 @@ async function browserChecks() {
   });
   try {
     for (const viewport of VIEWPORTS) {
-      const context = await browser.newContext({
-        viewport: { width: viewport.width, height: viewport.height },
-        reducedMotion: viewport.reducedMotion,
-      });
+      const context = await browser.newContext(
+        newsroomAuth.browserContextOptions({
+          viewport: { width: viewport.width, height: viewport.height },
+          reducedMotion: viewport.reducedMotion,
+        }),
+      );
       for (const route of ROUTES) {
         const page = await context.newPage();
         const response = await page.goto(`${NEWS_BASE}${route.path}`, {
@@ -811,7 +826,9 @@ async function browserChecks() {
       await context.close();
     }
 
-    const context = await browser.newContext();
+    const context = await browser.newContext(
+      newsroomAuth.browserContextOptions(),
+    );
     for (const internalRoute of ["/internal/review", "/internal/dashboard"]) {
       const response = await context.request.get(`${NEWS_BASE}${internalRoute}`, {
         maxRedirects: 0,
@@ -858,14 +875,19 @@ async function browserChecks() {
         !/"installUrl"\s*:\s*"https?:/i.test(walletBody),
       `${walletGet.status()} ${walletBody.slice(0, 180)}`,
     );
-    const advisory = await context.request.get(`${ADVISORY_BASE}/media`);
+    await context.close();
+
+    const advisoryContext = await browser.newContext(
+      advisoryAuth.browserContextOptions(),
+    );
+    const advisory = await advisoryContext.request.get(`${ADVISORY_BASE}/media`);
     check(
       "orders-66-77:runtime",
       "advisory media route remains reachable",
       advisory.status() === 200,
       advisory.status(),
     );
-    await context.close();
+    await advisoryContext.close();
   } finally {
     await browser.close();
   }
@@ -881,6 +903,10 @@ const report = {
   mode: STATIC_ONLY ? "static" : "production-browser",
   newsBase: STATIC_ONLY ? null : NEWS_BASE,
   advisoryBase: STATIC_ONLY ? null : ADVISORY_BASE,
+  authConfigured: {
+    newsroom: newsroomAuth.authConfigured,
+    advisory: advisoryAuth.authConfigured,
+  },
   totals: {
     checks: checks.length,
     passed: checks.length - failures.length,

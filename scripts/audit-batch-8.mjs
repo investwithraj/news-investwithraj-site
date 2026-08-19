@@ -2,6 +2,15 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 
+import {
+  NEWSROOM_PROTECTION_BYPASS_ENV,
+  createProtectedPreviewAuth,
+} from "./lib/protected-preview-auth.mjs";
+
+const newsroomAuth = createProtectedPreviewAuth(
+  NEWSROOM_PROTECTION_BYPASS_ENV,
+);
+
 const BASE_URL = process.env.IWR_NEWS_AUDIT_URL ?? "http://localhost:3130";
 const SITE_URL =
   process.env.IWR_NEWS_CANONICAL_URL ?? "https://news.investwithraj.com";
@@ -445,10 +454,12 @@ if (!STATIC_ONLY) {
   });
   try {
     for (const viewport of VIEWPORTS) {
-      const context = await browser.newContext({
-        viewport: { width: viewport.width, height: viewport.height },
-        reducedMotion: viewport.reducedMotion,
-      });
+      const context = await browser.newContext(
+        newsroomAuth.browserContextOptions({
+          viewport: { width: viewport.width, height: viewport.height },
+          reducedMotion: viewport.reducedMotion,
+        }),
+      );
       for (const route of REPRESENTATIVE_ROUTES) {
         const page = await context.newPage();
         const response = await page.goto(`${BASE_URL}${route.path}`, {
@@ -552,7 +563,9 @@ if (!STATIC_ONLY) {
       await context.close();
     }
 
-    const requestContext = await browser.newContext();
+    const requestContext = await browser.newContext(
+      newsroomAuth.browserContextOptions(),
+    );
     const sitemapResponse = await requestContext.request.get(`${BASE_URL}/sitemap.xml`);
     const sitemapText = await sitemapResponse.text();
     const newsUrls = [
@@ -631,6 +644,7 @@ const report = {
   orders: [46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57],
   generatedAt: new Date().toISOString(),
   baseUrl: STATIC_ONLY ? null : BASE_URL,
+  authConfigured: newsroomAuth.authConfigured,
   mode: STATIC_ONLY ? "static" : "production-browser",
   totals: {
     checks: checks.length,
