@@ -105,11 +105,12 @@ type JsonRecord = Readonly<Record<string, unknown>>;
 type CsvRow = Readonly<Record<string, string>>;
 
 type ArticleRuntimeResult = Readonly<{
+  allSchemaTypes: readonly string[];
   canonical: string;
   pathname: string;
   robots: string;
-  schemaTypes: readonly string[];
   status: number;
+  topLevelGraphTypes: readonly string[];
 }>;
 
 function parseCsv(input: string): CsvRow[] {
@@ -299,6 +300,54 @@ function collectSchemaTypes(value: unknown, result = new Set<string>()): Set<str
 
 function schemaTypes(html: string): string[] {
   return [...collectSchemaTypes(jsonLdDocuments(html))].sort();
+}
+
+function topLevelGraphNodes(value: unknown): JsonRecord[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => topLevelGraphNodes(item));
+  }
+  if (value === null || typeof value !== "object") return [];
+
+  const record = value as Record<string, unknown>;
+  if (Array.isArray(record["@graph"])) {
+    return record["@graph"].filter(
+      (item): item is JsonRecord => item !== null && typeof item === "object",
+    );
+  }
+  return [record];
+}
+
+function directSchemaTypes(node: JsonRecord): string[] {
+  const type = node["@type"];
+  if (typeof type === "string") return [type];
+  if (Array.isArray(type)) {
+    return type.filter((item): item is string => typeof item === "string");
+  }
+  return [];
+}
+
+function topLevelGraphTypes(html: string): string[] {
+  return [
+    ...new Set(
+      jsonLdDocuments(html)
+        .flatMap((document) => topLevelGraphNodes(document))
+        .flatMap((node) => directSchemaTypes(node)),
+    ),
+  ].sort();
+}
+
+function topLevelPrimaryImageNodes(html: string): JsonRecord[] {
+  return jsonLdDocuments(html)
+    .flatMap((document) => topLevelGraphNodes(document))
+    .filter((node) => {
+      if (!directSchemaTypes(node).includes("ImageObject")) return false;
+      return (
+        typeof node.contentUrl === "string" ||
+        typeof node.url === "string" ||
+        (typeof node["@id"] === "string" &&
+          /(?:#|\/)(?:primary-?)?image$/iu.test(node["@id"] as string))
+      );
+    });
 }
 
 function findSchemaObject(value: unknown, type: string): JsonRecord | null {
@@ -612,31 +661,41 @@ async function main(): Promise<void> {
     assert.equal(page.status, 200, pathname);
     const canonical = canonicalHref(page.body);
     const robotsMetadata = metadataContent(page.body, "robots");
-    const types = schemaTypes(page.body);
+    const allTypes = schemaTypes(page.body);
+    const topTypes = topLevelGraphTypes(page.body);
     assert.equal(canonical, `${SITE_ORIGIN}${pathname}`, `${pathname} canonical`);
 
     if (expectation.evidenceHoldEnabled) {
       assertRobotsDirective(robotsMetadata, pathname, "noindex");
       for (const type of FORBIDDEN_HELD_SCHEMA_TYPES) {
-        assert.ok(!types.includes(type), `${pathname} leaked ${type} schema.`);
+        assert.ok(
+          !topTypes.includes(type),
+          `${pathname} leaked top-level ${type} schema.`,
+        );
       }
+      assert.deepEqual(
+        topLevelPrimaryImageNodes(page.body),
+        [],
+        `${pathname} leaked a top-level primary-image node.`,
+      );
     } else {
       assertRobotsDirective(robotsMetadata, pathname, "index");
-      assert.ok(types.includes("NewsArticle"), `${pathname} lacks NewsArticle schema.`);
-      assert.ok(types.includes("BreadcrumbList"), `${pathname} lacks breadcrumb schema.`);
+      assert.ok(topTypes.includes("NewsArticle"), `${pathname} lacks NewsArticle schema.`);
+      assert.ok(topTypes.includes("BreadcrumbList"), `${pathname} lacks breadcrumb schema.`);
     }
 
     if (slug === HELD_PILOT && !expectation.evidenceHoldEnabled) {
-      assert.ok(types.includes("FAQPage"), "The held pilot lacks FAQ schema.");
-      assert.ok(types.includes("ImageObject"), "The held pilot lacks image schema.");
+      assert.ok(topTypes.includes("FAQPage"), "The held pilot lacks FAQ schema.");
+      assert.ok(topTypes.includes("ImageObject"), "The held pilot lacks image schema.");
     }
 
     heldArticles.push({
+      allSchemaTypes: allTypes,
       canonical: canonical ?? "",
       pathname,
       robots: robotsMetadata ?? "",
-      schemaTypes: types,
       status: page.status,
+      topLevelGraphTypes: topTypes,
     });
   }
 
@@ -647,17 +706,19 @@ async function main(): Promise<void> {
     assert.equal(page.status, 200, pathname);
     const canonical = canonicalHref(page.body);
     const robotsMetadata = metadataContent(page.body, "robots");
-    const types = schemaTypes(page.body);
+    const allTypes = schemaTypes(page.body);
+    const topTypes = topLevelGraphTypes(page.body);
     assert.equal(canonical, `${SITE_ORIGIN}${pathname}`);
     assertRobotsDirective(robotsMetadata, pathname, "index");
-    assert.ok(types.includes("NewsArticle"));
-    assert.ok(types.includes("BreadcrumbList"));
+    assert.ok(topTypes.includes("NewsArticle"));
+    assert.ok(topTypes.includes("BreadcrumbList"));
     certifiedArticles.push({
+      allSchemaTypes: allTypes,
       canonical: canonical ?? "",
       pathname,
       robots: robotsMetadata ?? "",
-      schemaTypes: types,
       status: page.status,
+      topLevelGraphTypes: topTypes,
     });
   }
 
