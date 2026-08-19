@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  canonicalNewsroomUrl,
   createRuntimeAuditTransport,
   normalisedAuditUrl,
 } from "./test-newsroom-evidence-hold-runtime";
@@ -8,6 +9,20 @@ import {
 const immutableOrigin =
   "https://news-investwithraj-site-abc123xyz-office-2271s-projects.vercel.app";
 const bypass = "newsroom-origin-bound-bypass-41c8";
+
+const canonicalUrls = [
+  canonicalNewsroomUrl("/"),
+  canonicalNewsroomUrl("/news"),
+] as const;
+assert.deepEqual(canonicalUrls, [
+  "https://news.investwithraj.com",
+  "https://news.investwithraj.com/news",
+]);
+assert.equal(
+  new Set(canonicalUrls).size,
+  canonicalUrls.length,
+  "Root and non-root canonical URLs must remain duplicate-free.",
+);
 
 async function main(): Promise<void> {
 for (const origin of [

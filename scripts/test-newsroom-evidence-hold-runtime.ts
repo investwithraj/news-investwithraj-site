@@ -537,6 +537,11 @@ function assertCanonicalUrlList(
   );
 }
 
+export function canonicalNewsroomUrl(pathname: string): string {
+  assert.match(pathname, /^\/(?:[^?#]*)$/u, "Canonical URL requires a pathname.");
+  return pathname === "/" ? SITE_ORIGIN : `${SITE_ORIGIN}${pathname}`;
+}
+
 function expectedSitemapUrls(
   mode: RuntimeMode,
   lifecycleAuthority: readonly CsvRow[],
@@ -565,7 +570,7 @@ function expectedSitemapUrls(
         /^\/(?:[^?#]*)$/u,
         "Lifecycle authority sitemap URLs must be canonical paths.",
       );
-      return new URL(row.current_url, `${SITE_ORIGIN}/`).href;
+      return canonicalNewsroomUrl(row.current_url);
     });
   assert.equal(
     new Set(urls).size,
