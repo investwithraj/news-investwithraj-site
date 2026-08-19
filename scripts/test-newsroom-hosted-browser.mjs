@@ -14,7 +14,7 @@ import {
 } from "./lib/protected-preview-auth.mjs";
 
 export const EXPECTED_CANDIDATE_SHA =
-  "ae9be863cba17e3383fa94fc14353fdbdfd5f20a";
+  "54c35668f90dcdf696785c6fd5cc6e67a268e866";
 export const EXPECTED_GENERATED_PAGES = 98;
 export const EXPECTED_SITEMAP_ROUTES = 79;
 export const EXPECTED_PUBLIC_ARTICLES = 41;

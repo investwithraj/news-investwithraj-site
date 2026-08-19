@@ -36,6 +36,11 @@ const runtimeReceipt = JSON.parse(
     "utf8",
   ),
 );
+assert.equal(
+  EXPECTED_CANDIDATE_SHA,
+  "54c35668f90dcdf696785c6fd5cc6e67a268e866",
+  "Hosted browser gate must remain pinned to the media-policy runtime candidate",
+);
 const sitemapXml = `<?xml version="1.0"?><urlset>${runtimeReceipt.discovery.sitemap.paths
   .map((routePath) => `<url><loc>https://news.investwithraj.com${routePath}</loc></url>`)
   .join("")}</urlset>`;
