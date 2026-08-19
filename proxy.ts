@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { isReleasedNewsroomRemovalPath } from "@/lib/news-lifecycle";
+import { decideNewsroomPublicMedia } from "@/lib/public-media-policy";
 import {
   createReviewSession,
   REVIEW_SESSION_COOKIE,
@@ -81,6 +82,24 @@ function strongCredentials(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const mediaDecision = decideNewsroomPublicMedia(pathname);
+  if (mediaDecision.state !== "ungoverned") {
+    if (mediaDecision.allowed) {
+      const response = NextResponse.next();
+      response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+      return response;
+    }
+    return new NextResponse(request.method === "HEAD" ? null : "Not found.\n", {
+      status: 404,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "private, no-store, max-age=0",
+        "X-Robots-Tag": "noindex, nofollow, noarchive",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+      },
+    });
+  }
   if (isReleasedNewsroomRemovalPath(pathname)) {
     return new NextResponse(
       request.method === "HEAD"
@@ -209,6 +228,12 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/internal/:path*",
+    "/audio/:path*",
+    "/brand/:path*",
+    "/cinema/:path*",
+    "/media/real-uhd/:path*",
+    "/media/verified/:path*",
+    "/hero.mp4",
     "/pulse",
     "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
     "/news/2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",

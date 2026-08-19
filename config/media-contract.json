@@ -680,6 +680,24 @@
       "alt": "Raj Tomar, independent UAE property advisor in Dubai."
     }
   ],
+  "unknownGovernedMedia": [
+    "/brand/lockup-4k.png",
+    "/brand/lockup-cropped.png",
+    "/brand/lockup.png",
+    "/brand/monogram.png",
+    "/cinema/library/hero-dubai-coast-poster.jpg",
+    "/cinema/library/portrait-hero-poster.jpg",
+    "/cinema/v17/bg/dubai-aerial.jpg",
+    "/cinema/v17/bg/dubai-fountain.jpg",
+    "/cinema/v17/bg/dubai-marina.jpg",
+    "/cinema/v17/bg/dubai-night.jpg",
+    "/cinema/v17/bg/dubai-palm.jpg",
+    "/cinema/v17/bg/dubai-skyline.jpg",
+    "/cinema/v17/bg/dubai-towers.jpg",
+    "/cinema/v17/bg/dubai-yacht.jpg",
+    "/cinema/v21/atmosphere-poster.webp",
+    "/cinema/v21/plate-1.webp"
+  ],
   "playback": [],
   "dormantMedia": [
     {

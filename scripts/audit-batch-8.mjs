@@ -6,6 +6,11 @@ import {
   NEWSROOM_PROTECTION_BYPASS_ENV,
   createProtectedPreviewAuth,
 } from "./lib/protected-preview-auth.mjs";
+import {
+  createOriginScopedRequestClient,
+  installOriginScopedBrowserAuth,
+  navigationIdentityProblems,
+} from "./test-newsroom-hosted-browser.mjs";
 
 const newsroomAuth = createProtectedPreviewAuth(
   NEWSROOM_PROTECTION_BYPASS_ENV,
@@ -183,6 +188,33 @@ function schemaNodes(schemas) {
     if (Array.isArray(schema)) return schemaNodes(schema);
     return Array.isArray(schema?.["@graph"]) ? schema["@graph"] : [schema];
   });
+}
+
+function archiveArticlePaths(html) {
+  const documents = [
+    ...html.matchAll(
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/giu,
+    ),
+  ].flatMap((match) => {
+    try {
+      return [JSON.parse(match[1])];
+    } catch {
+      return [];
+    }
+  });
+  const nodes = schemaNodes(documents);
+  const itemList = nodes.find((node) => {
+    const type = node?.["@type"];
+    return type === "ItemList" || (Array.isArray(type) && type.includes("ItemList"));
+  });
+  const urls = Array.isArray(itemList?.itemListElement)
+    ? itemList.itemListElement
+        .map((item) => item?.url ?? item?.item?.url)
+        .filter((url) => typeof url === "string")
+        .filter((url) => new URL(url, SITE_URL).pathname.startsWith("/news/"))
+        .map((url) => new URL(url, SITE_URL).pathname)
+    : [];
+  return [...new Set(urls)];
 }
 
 async function staticChecks() {
@@ -428,11 +460,11 @@ async function dismissConsent(page) {
   }
 }
 
-async function checkInternalLinks(context, route, links) {
+async function checkInternalLinks(requestClient, route, links) {
   for (const href of links) {
     const target = new URL(href, BASE_URL);
     target.hash = "";
-    const response = await context.request.get(target.href, { maxRedirects: 5 });
+    const response = await requestClient.get(target.href);
     check(
       `${route.key}:links`,
       `${target.pathname}${target.search} resolves`,
@@ -452,21 +484,32 @@ if (!STATIC_ONLY) {
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
+  const requestClient = createOriginScopedRequestClient(newsroomAuth, BASE_URL);
   try {
     for (const viewport of VIEWPORTS) {
-      const context = await browser.newContext(
-        newsroomAuth.browserContextOptions({
-          viewport: { width: viewport.width, height: viewport.height },
-          reducedMotion: viewport.reducedMotion,
-        }),
-      );
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height },
+        reducedMotion: viewport.reducedMotion,
+      });
+      await installOriginScopedBrowserAuth(context, newsroomAuth, BASE_URL);
       for (const route of REPRESENTATIVE_ROUTES) {
         const page = await context.newPage();
-        const response = await page.goto(`${BASE_URL}${route.path}`, {
+        const requestedUrl = new URL(route.path, BASE_URL).href;
+        const response = await page.goto(requestedUrl, {
           waitUntil: "domcontentloaded",
           timeout: 45_000,
         });
         const scope = `${route.key}:${viewport.name}`;
+        check(
+          scope,
+          "navigation keeps the exact first-response URL",
+          navigationIdentityProblems({
+            pageUrl: page.url(),
+            redirected: response?.request().redirectedFrom() !== null,
+            requestedUrl,
+            responseUrl: response?.url() ?? "",
+          }).length === 0,
+        );
         check(scope, "route returns 200", response?.status() === 200, response?.status());
         await dismissConsent(page);
         await revealAndSettle(page);
@@ -552,7 +595,7 @@ if (!STATIC_ONLY) {
           ),
         );
         if (viewport.name === "desktop") {
-          await checkInternalLinks(context, route, state.internalLinks);
+          await checkInternalLinks(requestClient, route, state.internalLinks);
           await page.screenshot({
             path: path.join(OUT_DIR, `${route.key}-desktop.png`),
             fullPage: true,
@@ -563,32 +606,50 @@ if (!STATIC_ONLY) {
       await context.close();
     }
 
-    const requestContext = await browser.newContext(
-      newsroomAuth.browserContextOptions(),
-    );
-    const sitemapResponse = await requestContext.request.get(`${BASE_URL}/sitemap.xml`);
+    const sitemapResponse = await requestClient.get(`${BASE_URL}/sitemap.xml`);
     const sitemapText = await sitemapResponse.text();
-    const newsUrls = [
-      ...sitemapText.matchAll(/<loc>([^<]+\/news\/[^<]+)<\/loc>/g),
+    const sitemapUrls = [
+      ...sitemapText.matchAll(/<loc>([^<]+)<\/loc>/g),
     ].map((match) => match[1]);
+    const sitemapNewsPaths = [
+      ...sitemapText.matchAll(/<loc>([^<]+\/news\/[^<]+)<\/loc>/g),
+    ].map((match) => new URL(match[1], SITE_URL).pathname);
+    const archiveResponse = await requestClient.get(`${BASE_URL}/news`);
+    const archiveText = await archiveResponse.text();
+    const newsPaths = archiveArticlePaths(archiveText);
     check(
       "order-48:inventory",
-      "sitemap contains 38 live report routes",
-      newsUrls.length === 38,
-      newsUrls.length,
+      "news archive exposes the current 41 public article routes",
+      archiveResponse.status() === 200 && newsPaths.length === 41,
+      newsPaths.length,
     );
-    for (const url of newsUrls) {
-      const response = await requestContext.request.get(url);
+    check(
+      "order-48:inventory",
+      "default sitemap contains 79 unique public routes",
+      sitemapResponse.status() === 200 &&
+        sitemapUrls.length === 79 &&
+        new Set(sitemapUrls).size === 79,
+      `${sitemapResponse.status()}/${sitemapUrls.length}`,
+    );
+    check(
+      "order-48:inventory",
+      "sitemap retains 40 distinct article destinations while the merged source stays readable",
+      sitemapNewsPaths.length === 40 &&
+        newsPaths.filter((routePath) => !sitemapNewsPaths.includes(routePath)).length === 1,
+      `${sitemapNewsPaths.length}/${newsPaths.length}`,
+    );
+    for (const routePath of newsPaths) {
+      const response = await requestClient.get(`${BASE_URL}${routePath}`);
       check(
         "order-48:inventory",
-        `${new URL(url).pathname} returns 200`,
+        `${routePath} returns 200`,
         response.status() === 200,
         response.status(),
       );
     }
     for (const slug of AREA_SLUGS) {
       const route = `/areas/${slug}`;
-      const response = await requestContext.request.get(`${BASE_URL}${route}`);
+      const response = await requestClient.get(`${BASE_URL}${route}`);
       check(
         "order-50:inventory",
         `${route} remains accessible`,
@@ -603,7 +664,7 @@ if (!STATIC_ONLY) {
     }
     for (const slug of DEVELOPER_SLUGS) {
       const route = `/developer/${slug}`;
-      const response = await requestContext.request.get(`${BASE_URL}${route}`);
+      const response = await requestClient.get(`${BASE_URL}${route}`);
       check(
         "order-52:inventory",
         `${route} returns 200`,
@@ -613,7 +674,7 @@ if (!STATIC_ONLY) {
     }
     for (const slug of VERTICAL_SLUGS) {
       const route = `/v/${slug}`;
-      const response = await requestContext.request.get(`${BASE_URL}${route}`);
+      const response = await requestClient.get(`${BASE_URL}${route}`);
       check(
         "order-53:inventory",
         `${route} returns 200`,
@@ -633,7 +694,6 @@ if (!STATIC_ONLY) {
       "/map is included in sitemap",
       sitemapText.includes(`${SITE_URL}/map`),
     );
-    await requestContext.close();
   } finally {
     await browser.close();
   }

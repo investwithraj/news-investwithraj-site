@@ -7,6 +7,11 @@ import {
   NEWSROOM_PROTECTION_BYPASS_ENV,
   createProtectedPreviewAuth,
 } from "./lib/protected-preview-auth.mjs";
+import {
+  createOriginScopedRequestClient,
+  installOriginScopedBrowserAuth,
+  navigationIdentityProblems,
+} from "./test-newsroom-hosted-browser.mjs";
 
 const newsroomAuth = createProtectedPreviewAuth(
   NEWSROOM_PROTECTION_BYPASS_ENV,
@@ -64,15 +69,6 @@ const ROUTES = [
     schema: ["CollectionPage", "ItemList", "BreadcrumbList"],
     required: [/browser|flat web/i, /desk|directory/i, /area atlas/i],
     forbidden: [/pinch to/i, /gaze to/i, /WebXR required/i, /headset required/i],
-  },
-  {
-    order: 61,
-    key: "wallet",
-    path: "/wallet",
-    noindex: true,
-    schema: ["WebPage", "BreadcrumbList"],
-    required: [/unsigned|not a signed/i, /coming soon/i, /concept/i],
-    forbidden: [/installed successfully/i, /delivered daily/i, /live pass/i],
   },
   {
     order: 62,
@@ -614,13 +610,11 @@ async function dismissConsent(page) {
   }
 }
 
-async function checkLinks(context, route, links) {
+async function checkLinks(requestClient, route, links) {
   for (const href of links) {
     const target = new URL(href, NEWS_BASE);
     target.hash = "";
-    const response = await context.request.get(target.href, {
-      maxRedirects: 5,
-    });
+    const response = await requestClient.get(target.href);
     check(
       `${route.key}:links`,
       `${target.pathname}${target.search} resolves`,
@@ -638,21 +632,39 @@ async function browserChecks() {
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
+  const newsroomRequestClient = createOriginScopedRequestClient(
+    newsroomAuth,
+    NEWS_BASE,
+  );
+  const advisoryRequestClient = createOriginScopedRequestClient(
+    advisoryAuth,
+    ADVISORY_BASE,
+  );
   try {
     for (const viewport of VIEWPORTS) {
-      const context = await browser.newContext(
-        newsroomAuth.browserContextOptions({
-          viewport: { width: viewport.width, height: viewport.height },
-          reducedMotion: viewport.reducedMotion,
-        }),
-      );
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height },
+        reducedMotion: viewport.reducedMotion,
+      });
+      await installOriginScopedBrowserAuth(context, newsroomAuth, NEWS_BASE);
       for (const route of ROUTES) {
         const page = await context.newPage();
-        const response = await page.goto(`${NEWS_BASE}${route.path}`, {
+        const requestedUrl = new URL(route.path, NEWS_BASE).href;
+        const response = await page.goto(requestedUrl, {
           waitUntil: "domcontentloaded",
           timeout: 45_000,
         });
         const scope = `${route.key}:${viewport.key}`;
+        check(
+          scope,
+          "navigation keeps the exact first-response URL",
+          navigationIdentityProblems({
+            pageUrl: page.url(),
+            redirected: response?.request().redirectedFrom() !== null,
+            requestedUrl,
+            responseUrl: response?.url() ?? "",
+          }).length === 0,
+        );
         check(scope, "route returns 200", response?.status() === 200, response?.status());
         await dismissConsent(page);
         await revealAndSettle(page);
@@ -809,7 +821,7 @@ async function browserChecks() {
         );
 
         if (viewport.key === "desktop") {
-          await checkLinks(context, route, state.internalLinks);
+          await checkLinks(newsroomRequestClient, route, state.internalLinks);
           await page.screenshot({
             path: path.join(OUTPUT, `${route.key}-desktop.png`),
             fullPage: true,
@@ -826,17 +838,14 @@ async function browserChecks() {
       await context.close();
     }
 
-    const context = await browser.newContext(
-      newsroomAuth.browserContextOptions(),
-    );
     for (const internalRoute of ["/internal/review", "/internal/dashboard"]) {
-      const response = await context.request.get(`${NEWS_BASE}${internalRoute}`, {
-        maxRedirects: 0,
-      });
+      const response = await newsroomRequestClient.get(
+        `${NEWS_BASE}${internalRoute}`,
+      );
       check(
         "order-65:runtime",
         `${internalRoute} fails closed without a valid internal session`,
-        [401, 503].includes(response.status()),
+        [401, 403, 503].includes(response.status()),
         response.status(),
       );
       const robots = response.headers()["x-robots-tag"] ?? "";
@@ -848,7 +857,15 @@ async function browserChecks() {
       );
     }
 
-    const querySecret = await context.request.get(
+    const walletPage = await newsroomRequestClient.get(`${NEWS_BASE}/wallet`);
+    check(
+      "order-61:runtime",
+      "/wallet remains an intentional public 404",
+      walletPage.status() === 404,
+      walletPage.status(),
+    );
+
+    const querySecret = await newsroomRequestClient.get(
       `${NEWS_BASE}/api/queue/add?secret=do-not-log-this`,
     );
     check(
@@ -857,14 +874,14 @@ async function browserChecks() {
       querySecret.status() === 400,
       querySecret.status(),
     );
-    const queueGet = await context.request.get(`${NEWS_BASE}/api/queue/add`);
+    const queueGet = await newsroomRequestClient.get(`${NEWS_BASE}/api/queue/add`);
     check(
       "order-65:runtime",
       "queue API does not expose public stats",
       [401, 503].includes(queueGet.status()),
       queueGet.status(),
     );
-    const walletGet = await context.request.get(
+    const walletGet = await newsroomRequestClient.get(
       `${NEWS_BASE}/api/wallet/install?platform=apple`,
     );
     const walletBody = await walletGet.text();
@@ -875,19 +892,13 @@ async function browserChecks() {
         !/"installUrl"\s*:\s*"https?:/i.test(walletBody),
       `${walletGet.status()} ${walletBody.slice(0, 180)}`,
     );
-    await context.close();
-
-    const advisoryContext = await browser.newContext(
-      advisoryAuth.browserContextOptions(),
-    );
-    const advisory = await advisoryContext.request.get(`${ADVISORY_BASE}/media`);
+    const advisory = await advisoryRequestClient.get(`${ADVISORY_BASE}/media`);
     check(
       "orders-66-77:runtime",
       "advisory media route remains reachable",
       advisory.status() === 200,
       advisory.status(),
     );
-    await advisoryContext.close();
   } finally {
     await browser.close();
   }

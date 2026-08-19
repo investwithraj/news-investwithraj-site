@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import evidenceRemediation from "../docs/migration/newsroom-legacy-evidence-remediation.json";
 import { getNewsForGoogleNewsSitemap } from "../content/news";
@@ -21,6 +22,9 @@ import {
 } from "./lib/protected-preview-auth.mjs";
 
 const SITE_ORIGIN = "https://news.investwithraj.com";
+const IMMUTABLE_NEWSROOM_HOST =
+  /^news-investwithraj-site-[a-z0-9]{8,16}-office-2271s-projects\.vercel\.app$/u;
+const LOCAL_AUDIT_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const LIFECYCLE_AUTHORITY_PATH =
   "docs/migration/news-url-disposition.csv" as const;
 const RUNTIME_MODES = [
@@ -187,15 +191,128 @@ function runtimeMode(value: string): RuntimeMode {
   return value as RuntimeMode;
 }
 
-function normalisedAuditUrl(value: string): URL {
+export function normalisedAuditUrl(value: string): URL {
+  assert.equal(
+    /%[0-9a-f]{2}/iu.test(value),
+    false,
+    "NEWSROOM_AUDIT_URL must not contain percent-encoded input.",
+  );
   const url = new URL(value);
-  assert.ok(url.protocol === "http:" || url.protocol === "https:");
   assert.equal(url.username, "", "NEWSROOM_AUDIT_URL must not contain credentials.");
   assert.equal(url.password, "", "NEWSROOM_AUDIT_URL must not contain credentials.");
-  url.pathname = url.pathname.replace(/\/+$/u, "") || "/";
-  url.search = "";
-  url.hash = "";
+  assert.equal(url.pathname, "/", "NEWSROOM_AUDIT_URL must be an origin.");
+  assert.equal(url.search, "", "NEWSROOM_AUDIT_URL must not contain a query.");
+  assert.equal(url.hash, "", "NEWSROOM_AUDIT_URL must not contain a fragment.");
+  const local = LOCAL_AUDIT_HOSTS.has(url.hostname);
+  if (local) {
+    assert.ok(
+      url.protocol === "http:" || url.protocol === "https:",
+      "Local newsroom audits must use HTTP or HTTPS.",
+    );
+  } else {
+    assert.equal(url.protocol, "https:", "Hosted newsroom audits must use HTTPS.");
+    assert.match(
+      url.hostname,
+      IMMUTABLE_NEWSROOM_HOST,
+      "Hosted newsroom audits require the exact immutable newsroom deployment host.",
+    );
+  }
   return url;
+}
+
+export function createRuntimeAuditTransport(
+  auditUrl: string,
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+  fetchImpl: typeof fetch = globalThis.fetch,
+): Readonly<{
+  auditUrl: string;
+  authConfigured: boolean;
+  fetch: (pathname: string, options?: RequestInit) => Promise<Response>;
+  hosted: boolean;
+}> {
+  // Validate the complete destination boundary before the bypass credential is
+  // read or captured by the protected-Preview adapter.
+  const baseUrl = normalisedAuditUrl(auditUrl);
+  const hosted = !LOCAL_AUDIT_HOSTS.has(baseUrl.hostname);
+  if (!hosted) {
+    assert.equal(
+      environment[NEWSROOM_PROTECTION_BYPASS_ENV],
+      undefined,
+      "Local newsroom audits must not configure the hosted bypass credential.",
+    );
+  }
+  const newsroomAuth = createProtectedPreviewAuth(
+    NEWSROOM_PROTECTION_BYPASS_ENV,
+    (hosted ? environment : {}) as NodeJS.ProcessEnv,
+  );
+  assert.equal(
+    newsroomAuth.authConfigured,
+    hosted,
+    hosted
+      ? "Hosted newsroom audits require protected-Preview authentication."
+      : "Local newsroom audits must not configure the hosted bypass credential.",
+  );
+
+  return Object.freeze({
+    auditUrl: baseUrl.origin,
+    authConfigured: newsroomAuth.authConfigured,
+    hosted,
+    async fetch(pathname: string, options: RequestInit = {}): Promise<Response> {
+      assert.equal(typeof pathname, "string", "Audit pathname must be a string.");
+      assert.equal(
+        /%[0-9a-f]{2}/iu.test(pathname),
+        false,
+        "Audit pathname must not contain percent-encoded input.",
+      );
+      assert.ok(
+        pathname.startsWith("/") && !pathname.startsWith("//"),
+        "Audit pathname must be single-root relative.",
+      );
+      assert.equal(
+        /\\|[\u0000-\u001f\u007f]/u.test(pathname),
+        false,
+        "Audit pathname must not contain backslashes or control characters.",
+      );
+      const rawPathname = pathname.split(/[?#]/u, 1)[0];
+      assert.equal(
+        rawPathname
+          .split("/")
+          .some((segment) => segment === "." || segment === ".."),
+        false,
+        "Audit pathname must not contain dot segments.",
+      );
+      const url = new URL(pathname, baseUrl);
+      assert.equal(
+        url.origin,
+        baseUrl.origin,
+        "Audit request escaped the validated newsroom origin.",
+      );
+
+      const response = await fetchImpl(
+        url,
+        newsroomAuth.fetchOptions({
+          cache: "no-store",
+          ...options,
+          // Never follow a response Location with the protected credential.
+          redirect: "manual",
+        }),
+      );
+      if (response.url) {
+        const delivered = new URL(response.url);
+        assert.equal(
+          delivered.origin,
+          url.origin,
+          "Audit response escaped the validated newsroom origin.",
+        );
+        assert.equal(
+          delivered.pathname,
+          url.pathname,
+          "Audit response changed the requested newsroom path.",
+        );
+      }
+      return response;
+    },
+  });
 }
 
 function resolveOutputPath(value: string | undefined): string | null {
@@ -388,6 +505,152 @@ function newsArticleSlugs(value: string): string[] {
     .filter((slug, index, all) => all.indexOf(slug) === index);
 }
 
+function xmlLocUrls(value: string): string[] {
+  return [...value.matchAll(/<loc>([^<]+)<\/loc>/giu)].map(
+    (match) => match[1],
+  );
+}
+
+function assertCanonicalUrlList(
+  actualUrls: readonly string[],
+  expectedUrls: readonly string[],
+  context: string,
+  options: Readonly<{ ordered?: boolean }> = {},
+): void {
+  assert.equal(
+    new Set(actualUrls).size,
+    actualUrls.length,
+    `${context} contains duplicate URLs.`,
+  );
+  for (const rawUrl of actualUrls) {
+    const url = new URL(rawUrl);
+    assert.equal(url.origin, SITE_ORIGIN, `${context} leaked ${url.origin}.`);
+    assert.equal(url.username, "", `${context} URL contains a username.`);
+    assert.equal(url.password, "", `${context} URL contains a password.`);
+    assert.equal(url.search, "", `${context} URL contains a query string.`);
+    assert.equal(url.hash, "", `${context} URL contains a fragment.`);
+  }
+  assert.deepEqual(
+    options.ordered ? actualUrls : [...actualUrls].sort(),
+    options.ordered ? expectedUrls : [...expectedUrls].sort(),
+    `${context} drifted from its authoritative URL set.`,
+  );
+}
+
+function expectedSitemapUrls(
+  mode: RuntimeMode,
+  lifecycleAuthority: readonly CsvRow[],
+  heldSlugs: readonly string[],
+): string[] {
+  const lifecycleEnabled = mode === "lifecycle-evidence";
+  const evidenceHoldEnabled =
+    mode === "evidence-preview" || mode === "lifecycle-evidence";
+  const primaryRows = lifecycleAuthority.filter(
+    (row) => row.in_sitemap === "yes",
+  );
+  const eligibleRows = lifecycleEnabled
+    ? primaryRows.filter(
+        (row) => row.disposition === "KEEP" || row.disposition === "IMPROVE",
+      )
+    : primaryRows;
+  const urls = eligibleRows
+    .filter((row) => {
+      if (!evidenceHoldEnabled) return true;
+      if (!row.current_url.startsWith("/news/")) return true;
+      return !heldSlugs.includes(row.current_url.slice("/news/".length));
+    })
+    .map((row) => {
+      assert.match(
+        row.current_url,
+        /^\/(?:[^?#]*)$/u,
+        "Lifecycle authority sitemap URLs must be canonical paths.",
+      );
+      return new URL(row.current_url, `${SITE_ORIGIN}/`).href;
+    });
+  assert.equal(
+    new Set(urls).size,
+    urls.length,
+    "Lifecycle authority contains duplicate sitemap URLs.",
+  );
+  return urls.sort();
+}
+
+function schemaStringValues(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(schemaStringValues);
+  if (value === null || typeof value !== "object") {
+    return typeof value === "string" ? [value] : [];
+  }
+  return Object.values(value as JsonRecord).flatMap(schemaStringValues);
+}
+
+function assertArticleSchemaCanonicalOrigin(
+  html: string,
+  pathname: string,
+  expectsArticleSchema: boolean,
+  auditOrigin: string,
+): void {
+  const documents = jsonLdDocuments(html);
+  const expectedUrl = `${SITE_ORIGIN}${pathname}`;
+  for (const value of schemaStringValues(documents)) {
+    if (!/^https?:\/\//u.test(value)) continue;
+    const url = new URL(value);
+    if (auditOrigin !== SITE_ORIGIN) {
+      assert.notEqual(
+        url.origin,
+        auditOrigin,
+        `${pathname} schema leaked the audit origin.`,
+      );
+    }
+  }
+
+  const article = documents
+    .map((document) => findSchemaObject(document, "NewsArticle"))
+    .find(Boolean);
+  if (!expectsArticleSchema) {
+    assert.equal(article, undefined, `${pathname} leaked NewsArticle schema.`);
+    return;
+  }
+  assert.ok(article, `${pathname} lacks NewsArticle schema.`);
+  assert.equal(article["@id"], `${expectedUrl}#article`);
+  assert.ok(
+    article.mainEntityOfPage && typeof article.mainEntityOfPage === "object",
+    `${pathname} lacks a schema mainEntityOfPage.`,
+  );
+  assert.equal(
+    (article.mainEntityOfPage as JsonRecord)["@id"],
+    expectedUrl,
+    `${pathname} schema mainEntityOfPage is not canonical.`,
+  );
+  if (article.image !== undefined) {
+    assert.ok(typeof article.image === "object" && article.image !== null);
+    assert.equal(
+      (article.image as JsonRecord)["@id"],
+      `${expectedUrl}#primaryimage`,
+      `${pathname} schema image reference is not canonical.`,
+    );
+  }
+
+  const breadcrumb = documents
+    .map((document) => findSchemaObject(document, "BreadcrumbList"))
+    .find(Boolean);
+  assert.ok(breadcrumb, `${pathname} lacks BreadcrumbList schema.`);
+  assert.ok(Array.isArray(breadcrumb.itemListElement));
+  const breadcrumbItems = breadcrumb.itemListElement as JsonRecord[];
+  assert.ok(breadcrumbItems.length > 0);
+  assert.equal(
+    breadcrumbItems.at(-1)?.item,
+    expectedUrl,
+    `${pathname} schema breadcrumb is not self-canonical.`,
+  );
+  for (const item of breadcrumbItems) {
+    assert.equal(
+      new URL(String(item.item)).origin,
+      SITE_ORIGIN,
+      `${pathname} schema breadcrumb leaked a non-canonical origin.`,
+    );
+  }
+}
+
 function assertNoHeldReferences(
   surface: string,
   body: string,
@@ -414,18 +677,17 @@ function headerSnapshot(headers: Headers): Readonly<Record<string, string | null
 }
 
 async function main(): Promise<void> {
-  const baseUrl = normalisedAuditUrl(requiredEnvironment("NEWSROOM_AUDIT_URL"));
+  const auditUrl = requiredEnvironment("NEWSROOM_AUDIT_URL");
   const mode = runtimeMode(requiredEnvironment("NEWSROOM_RUNTIME_MODE"));
   const candidateSha = requiredEnvironment("NEWSROOM_CANDIDATE_SHA");
   const buildId = requiredEnvironment("NEWSROOM_BUILD_ID");
   const outputPath = resolveOutputPath(process.env.NEWSROOM_AUDIT_OUTPUT);
   assert.match(candidateSha, /^[0-9a-f]{40}$/u, "Invalid NEWSROOM_CANDIDATE_SHA.");
   assert.match(buildId, /^[A-Za-z0-9_-]+$/u, "Invalid NEWSROOM_BUILD_ID.");
+  const runtimeTransport = createRuntimeAuditTransport(auditUrl);
+  const baseUrl = new URL(runtimeTransport.auditUrl);
 
   const expectation = MODE_EXPECTATIONS[mode];
-  const newsroomAuth = createProtectedPreviewAuth(
-    NEWSROOM_PROTECTION_BYPASS_ENV,
-  );
   const lifecycleAuthority = parseCsv(
     readFileSync(resolve(process.cwd(), LIFECYCLE_AUTHORITY_PATH), "utf8"),
   );
@@ -485,6 +747,9 @@ async function main(): Promise<void> {
   const expectedDiscoverySlugs = expectedDiscoveryArticles
     .map((article) => article.slug)
     .sort();
+  const expectedDiscoveryUrls = expectedDiscoverySlugs.map(
+    (slug) => `${SITE_ORIGIN}/news/${slug}`,
+  );
   const expectedFrontSlugs = selectDistinctArticles(
     expectedDiscoveryArticles,
     6,
@@ -507,6 +772,18 @@ async function main(): Promise<void> {
     )
     .slice(0, 1_000)
     .map((article) => article.slug);
+  const expectedNewsSitemapUrls = expectedNewsSitemapSlugs.map(
+    (slug) => `${SITE_ORIGIN}/news/${slug}`,
+  );
+  const expectedRssUrls = expectedRssSlugs.map(
+    (slug) => `${SITE_ORIGIN}/news/${slug}`,
+  );
+  const authoritativeSitemapUrls = expectedSitemapUrls(
+    mode,
+    lifecycleAuthority,
+    heldSlugs,
+  );
+  assert.equal(authoritativeSitemapUrls.length, expectation.sitemapCount);
 
   assert.equal(heldSlugs.length, 24);
   assert.equal(new Set(heldSlugs).size, 24);
@@ -522,15 +799,7 @@ async function main(): Promise<void> {
     pathname: string,
     options: RequestInit = {},
   ): Promise<Response> {
-    const url = new URL(pathname, baseUrl);
-    return fetch(
-      url,
-      newsroomAuth.fetchOptions({
-        cache: "no-store",
-        redirect: "manual",
-        ...options,
-      }),
-    );
+    return runtimeTransport.fetch(pathname, options);
   }
 
   async function htmlResponse(pathname: string): Promise<{
@@ -554,22 +823,16 @@ async function main(): Promise<void> {
   const sitemapResponse = await auditedFetch("/sitemap.xml");
   assert.equal(sitemapResponse.status, 200);
   const sitemapBody = await sitemapResponse.text();
-  const sitemapPaths = [...sitemapBody.matchAll(/<loc>([^<]+)<\/loc>/gu)]
-    .map((match) => new URL(match[1]).pathname)
-    .sort();
+  const sitemapUrls = xmlLocUrls(sitemapBody);
+  assertCanonicalUrlList(
+    sitemapUrls,
+    authoritativeSitemapUrls,
+    "sitemap.xml",
+  );
+  const sitemapPaths = sitemapUrls.map((url) => new URL(url).pathname).sort();
   assert.equal(sitemapPaths.length, expectation.sitemapCount);
   if (expectation.evidenceHoldEnabled) {
     assertNoHeldReferences("sitemap", sitemapBody, heldSlugs);
-  }
-  if (mode === "lifecycle-evidence") {
-    assert.deepEqual(sitemapPaths, [
-      "/",
-      "/about",
-      "/about/editorial-standards",
-      "/legal/privacy",
-      "/news",
-      ...certifiedSlugs.map((slug) => `/news/${slug}`),
-    ].sort());
   }
 
   const newsArchive = await htmlResponse("/news");
@@ -581,13 +844,19 @@ async function main(): Promise<void> {
   const itemListElements = itemList.itemListElement;
   assert.ok(Array.isArray(itemListElements));
   assert.equal(itemListElements.length, expectation.discoveryArticleCount);
-  const archiveSlugs = itemListElements
-    .map((item) => {
-      assert.ok(item && typeof item === "object");
-      const url = (item as Record<string, unknown>).url;
-      assert.equal(typeof url, "string");
-      return new URL(url as string).pathname.replace(/^\/news\//u, "");
-    })
+  const archiveUrls = itemListElements.map((item) => {
+    assert.ok(item && typeof item === "object");
+    const url = (item as Record<string, unknown>).url;
+    assert.equal(typeof url, "string");
+    return url as string;
+  });
+  assertCanonicalUrlList(
+    archiveUrls,
+    expectedDiscoveryUrls,
+    "news archive ItemList schema",
+  );
+  const archiveSlugs = archiveUrls
+    .map((url) => new URL(url).pathname.replace(/^\/news\//u, ""))
     .sort();
   assert.deepEqual(archiveSlugs, expectedDiscoverySlugs);
 
@@ -609,11 +878,29 @@ async function main(): Promise<void> {
   const rssResponse = await auditedFetch("/rss.xml");
   assert.equal(rssResponse.status, 200);
   const rssBody = await rssResponse.text();
-  const rssSlugs = [
-    ...rssBody.matchAll(
-      /<guid isPermaLink=["']true["']>[^<]*\/news\/([^<]+)<\/guid>/gu,
-    ),
+  const rssGuidUrls = [
+    ...rssBody.matchAll(/<guid isPermaLink=["']true["']>([^<]+)<\/guid>/gu),
   ].map((match) => match[1]);
+  assertCanonicalUrlList(rssGuidUrls, expectedRssUrls, "RSS GUIDs", {
+    ordered: true,
+  });
+  const rssItemLinkUrls = [
+    ...rssBody.matchAll(/<item>[\s\S]*?<link>([^<]+)<\/link>/gu),
+  ].map((match) => match[1]);
+  assertCanonicalUrlList(rssItemLinkUrls, expectedRssUrls, "RSS item links", {
+    ordered: true,
+  });
+  assert.ok(
+    rssBody.includes(`<channel>\n    <title>`) &&
+      rssBody.includes(`<link>${SITE_ORIGIN}</link>`) &&
+      rssBody.includes(
+        `<atom:link href="${SITE_ORIGIN}/rss.xml" rel="self" type="application/rss+xml" />`,
+      ),
+    "RSS channel or self URL is not canonical.",
+  );
+  const rssSlugs = rssGuidUrls.map((url) =>
+    new URL(url).pathname.replace(/^\/news\//u, ""),
+  );
   assert.equal(rssSlugs.length, expectation.rssItemCount);
   assert.deepEqual(rssSlugs, expectedRssSlugs);
 
@@ -621,7 +908,16 @@ async function main(): Promise<void> {
   assert.equal(newsSitemapResponse.status, 200);
   const newsSitemapBody = await newsSitemapResponse.text();
   assert.match(newsSitemapBody, /<urlset\b[\s\S]*<\/urlset>/u);
-  const newsSitemapSlugs = newsArticleSlugOccurrences(newsSitemapBody);
+  const newsSitemapUrls = xmlLocUrls(newsSitemapBody);
+  assertCanonicalUrlList(
+    newsSitemapUrls,
+    expectedNewsSitemapUrls,
+    "news-sitemap.xml",
+    { ordered: true },
+  );
+  const newsSitemapSlugs = newsSitemapUrls.map((url) =>
+    new URL(url).pathname.replace(/^\/news\//u, ""),
+  );
   assert.deepEqual(newsSitemapSlugs, expectedNewsSitemapSlugs);
   if (expectedNewsSitemapSlugs.length === 0) {
     assert.match(newsSitemapBody, /No articles published in the last 48 hours/u);
@@ -664,6 +960,12 @@ async function main(): Promise<void> {
     const allTypes = schemaTypes(page.body);
     const topTypes = topLevelGraphTypes(page.body);
     assert.equal(canonical, `${SITE_ORIGIN}${pathname}`, `${pathname} canonical`);
+    assertArticleSchemaCanonicalOrigin(
+      page.body,
+      pathname,
+      !expectation.evidenceHoldEnabled,
+      baseUrl.origin,
+    );
 
     if (expectation.evidenceHoldEnabled) {
       assertRobotsDirective(robotsMetadata, pathname, "noindex");
@@ -709,6 +1011,12 @@ async function main(): Promise<void> {
     const allTypes = schemaTypes(page.body);
     const topTypes = topLevelGraphTypes(page.body);
     assert.equal(canonical, `${SITE_ORIGIN}${pathname}`);
+    assertArticleSchemaCanonicalOrigin(
+      page.body,
+      pathname,
+      true,
+      baseUrl.origin,
+    );
     assertRobotsDirective(robotsMetadata, pathname, "index");
     assert.ok(topTypes.includes("NewsArticle"));
     assert.ok(topTypes.includes("BreadcrumbList"));
@@ -834,7 +1142,7 @@ async function main(): Promise<void> {
 
   const receipt = {
     schemaVersion: "newsroom-evidence-hold-served-runtime-v1",
-    authConfigured: newsroomAuth.authConfigured,
+    authConfigured: runtimeTransport.authConfigured,
     buildId,
     candidateSha,
     mode,
@@ -878,11 +1186,16 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `Newsroom served-runtime PASS: mode=${mode}; sitemap=${sitemapPaths.length}; discovery=${archiveSlugs.length}; redirects=${expectation.lifecycleRedirectCount}; gone=${expectation.removalGoneCount}; held=${heldArticles.length}; authConfigured=${newsroomAuth.authConfigured}; receipt=${outputPath ? "written" : "not-written"}.`,
+    `Newsroom served-runtime PASS: mode=${mode}; sitemap=${sitemapPaths.length}; discovery=${archiveSlugs.length}; redirects=${expectation.lifecycleRedirectCount}; gone=${expectation.removalGoneCount}; held=${heldArticles.length}; authConfigured=${runtimeTransport.authConfigured}; receipt=${outputPath ? "written" : "not-written"}.`,
   );
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+const isMain =
+  process.argv[1] !== undefined &&
+  pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+if (isMain) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

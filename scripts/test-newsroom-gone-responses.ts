@@ -107,16 +107,51 @@ async function main() {
 
   const proxySource = readFileSync(resolve(process.cwd(), "proxy.ts"), "utf8");
   assert.ok(Array.isArray(config.matcher));
-  const publicMatchers = config.matcher
-    .filter((matcher) => matcher !== "/internal/:path*")
+  const internalMatchers = config.matcher.filter((matcher) =>
+    matcher.startsWith("/internal"),
+  );
+  assert.deepEqual(internalMatchers, ["/internal/:path*"]);
+  const expectedMediaMatchers = [
+    "/audio/:path*",
+    "/brand/:path*",
+    "/cinema/:path*",
+    "/media/real-uhd/:path*",
+    "/media/verified/:path*",
+    "/hero.mp4",
+  ].sort();
+  const mediaMatcherSet = new Set(expectedMediaMatchers);
+  const publicMediaMatchers = config.matcher
+    .filter((matcher) => mediaMatcherSet.has(matcher))
     .sort();
   assert.deepEqual(
-    publicMatchers,
+    publicMediaMatchers,
+    expectedMediaMatchers,
+    "The static Next proxy media matcher cohort drifted.",
+  );
+  const removalMatchers = config.matcher
+    .filter(
+      (matcher) =>
+        !internalMatchers.includes(matcher) && !mediaMatcherSet.has(matcher),
+    )
+    .sort();
+  assert.deepEqual(
+    removalMatchers,
     [...NEWSROOM_RELEASE_REMOVAL_CANDIDATES].sort(),
     "The static Next proxy matcher must equal the six typed removal candidates.",
   );
-  assert.ok(!publicMatchers.includes("/wallet"));
-  assert.ok(publicMatchers.every((matcher) => !matcher.includes(":")));
+  assert.equal(new Set(config.matcher).size, config.matcher.length);
+  assert.equal(
+    removalMatchers.some((matcher) => mediaMatcherSet.has(matcher)),
+    false,
+  );
+  assert.ok(!removalMatchers.includes("/wallet"));
+  assert.ok(removalMatchers.every((matcher) => !matcher.includes(":")));
+  assert.ok(
+    removalMatchers.every(
+      (matcher) => matcher === "/pulse" || matcher.startsWith("/news/"),
+    ),
+    "Newsroom removal matching must remain exact and wildcard-free.",
+  );
   assert.match(proxySource, /isReleasedNewsroomRemovalPath\(pathname\)/u);
 
   console.log(
