@@ -17,8 +17,12 @@ import {
   isNewsroomLifecycleCutoverEnabled,
 } from "../lib/news-lifecycle";
 import {
+  EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES,
   INDEXABLE_NEWS_ARTICLES,
+  NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV,
+  NEWSROOM_EVIDENCE_HOLD_SLUGS,
   getPublicDiscoveryNewsArticles,
+  isNewsroomEvidenceHoldPreviewEnabled,
 } from "../lib/public-content";
 import { CURRENT_EVIDENCE_POLICY_VERSION } from "../lib/news-review/types";
 
@@ -120,6 +124,39 @@ function withCutover<T>(enabled: boolean, action: () => T): T {
   }
 }
 
+function withEvidenceHoldPreview<T>(
+  enabled: boolean,
+  vercelEnvironment: string | undefined,
+  action: () => T,
+): T {
+  const originalPreview = process.env[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV];
+  const originalVercelEnvironment = process.env.VERCEL_ENV;
+  try {
+    if (enabled) {
+      process.env[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV] = "1";
+    } else {
+      delete process.env[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV];
+    }
+    if (vercelEnvironment === undefined) {
+      delete process.env.VERCEL_ENV;
+    } else {
+      process.env.VERCEL_ENV = vercelEnvironment;
+    }
+    return action();
+  } finally {
+    if (originalPreview === undefined) {
+      delete process.env[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV];
+    } else {
+      process.env[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV] = originalPreview;
+    }
+    if (originalVercelEnvironment === undefined) {
+      delete process.env.VERCEL_ENV;
+    } else {
+      process.env.VERCEL_ENV = originalVercelEnvironment;
+    }
+  }
+}
+
 async function redirectsWithCutover(enabled: boolean): Promise<Redirect[]> {
   const original = process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV];
   try {
@@ -140,6 +177,9 @@ async function redirectsWithCutover(enabled: boolean): Promise<Redirect[]> {
 
 async function main(): Promise<void> {
   const originalCutover = process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV];
+  const originalEvidencePreview =
+    process.env[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV];
+  const originalVercelEnvironment = process.env.VERCEL_ENV;
   const authority = source(AUTHORITY_PATH);
   const rows = parseCsv(authority);
   const primaryRows = rows.filter((row) => row.in_sitemap === "yes");
@@ -161,23 +201,82 @@ async function main(): Promise<void> {
       `The lifecycle switch accepted ${JSON.stringify(disabledValue)}.`,
     );
   }
+  assert.equal(isNewsroomEvidenceHoldPreviewEnabled({}), false);
+  assert.equal(
+    isNewsroomEvidenceHoldPreviewEnabled({
+      [NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV]: "1",
+      VERCEL_ENV: "preview",
+    }),
+    true,
+  );
+  assert.equal(
+    isNewsroomEvidenceHoldPreviewEnabled({
+      [NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV]: "1",
+      VERCEL_ENV: "production",
+    }),
+    false,
+  );
+  for (const disabledValue of ["", "0", "true", " 1 ", "on"]) {
+    assert.equal(
+      isNewsroomEvidenceHoldPreviewEnabled({
+        [NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV]: disabledValue,
+        VERCEL_ENV: "preview",
+      }),
+      false,
+      `The evidence-hold preview accepted ${JSON.stringify(disabledValue)}.`,
+    );
+  }
 
-  const cutoverOff = withCutover(false, () => ({
-    sitemapPaths: sitemapPaths(),
-    publicArticleSlugs: articleSlugs(),
-    lifecycleRedirects: getReleasedNewsroomRedirects(),
-  }));
-  const cutoverOn = withCutover(true, () => ({
-    sitemapPaths: sitemapPaths(),
-    publicArticleSlugs: articleSlugs(),
-    lifecycleRedirects: getReleasedNewsroomRedirects().map((redirect) => ({
-      source: redirect.source,
-      destination: redirect.destination,
-      statusCode: redirect.statusCode,
-    })).sort((left, right) =>
-      left.source < right.source ? -1 : left.source > right.source ? 1 : 0,
-    ),
-  }));
+  const cutoverOff = withEvidenceHoldPreview(false, undefined, () =>
+    withCutover(false, () => ({
+      sitemapPaths: sitemapPaths(),
+      publicArticleSlugs: articleSlugs(),
+      lifecycleRedirects: getReleasedNewsroomRedirects(),
+    })),
+  );
+  const cutoverOn = withEvidenceHoldPreview(false, undefined, () =>
+    withCutover(true, () => ({
+      sitemapPaths: sitemapPaths(),
+      publicArticleSlugs: articleSlugs(),
+      lifecycleRedirects: getReleasedNewsroomRedirects().map((redirect) => ({
+        source: redirect.source,
+        destination: redirect.destination,
+        statusCode: redirect.statusCode,
+      })).sort((left, right) =>
+        left.source < right.source ? -1 : left.source > right.source ? 1 : 0,
+      ),
+    })),
+  );
+  const evidencePreviewCutoverOff = withEvidenceHoldPreview(
+    true,
+    "preview",
+    () =>
+      withCutover(false, () => ({
+        sitemapPaths: sitemapPaths(),
+        publicArticleSlugs: articleSlugs(),
+        lifecycleRedirects: getReleasedNewsroomRedirects(),
+      })),
+  );
+  const evidencePreviewCutoverOn = withEvidenceHoldPreview(
+    true,
+    "preview",
+    () =>
+      withCutover(true, () => ({
+        sitemapPaths: sitemapPaths(),
+        publicArticleSlugs: articleSlugs(),
+        lifecycleRedirects: getReleasedNewsroomRedirects(),
+      })),
+  );
+  const productionFailClosed = withEvidenceHoldPreview(
+    true,
+    "production",
+    () =>
+      withCutover(false, () => ({
+        sitemapPaths: sitemapPaths(),
+        publicArticleSlugs: articleSlugs(),
+        lifecycleRedirects: getReleasedNewsroomRedirects(),
+      })),
+  );
   const configuredOff = await redirectsWithCutover(false);
   const configuredOn = await redirectsWithCutover(true);
 
@@ -187,6 +286,17 @@ async function main(): Promise<void> {
   assert.equal(cutoverOn.sitemapPaths.length, 31);
   assert.equal(cutoverOn.publicArticleSlugs.length, 26);
   assert.equal(cutoverOn.lifecycleRedirects.length, 31);
+  assert.equal(evidencePreviewCutoverOff.sitemapPaths.length, 55);
+  assert.equal(evidencePreviewCutoverOff.publicArticleSlugs.length, 17);
+  assert.equal(evidencePreviewCutoverOff.lifecycleRedirects.length, 0);
+  assert.equal(evidencePreviewCutoverOn.sitemapPaths.length, 7);
+  assert.equal(evidencePreviewCutoverOn.publicArticleSlugs.length, 2);
+  assert.equal(evidencePreviewCutoverOn.lifecycleRedirects.length, 31);
+  assert.equal(productionFailClosed.sitemapPaths.length, 79);
+  assert.equal(productionFailClosed.publicArticleSlugs.length, 41);
+  assert.equal(productionFailClosed.lifecycleRedirects.length, 0);
+  assert.equal(NEWSROOM_EVIDENCE_HOLD_SLUGS.length, 24);
+  assert.equal(EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length, 2);
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
   assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
@@ -230,6 +340,11 @@ async function main(): Promise<void> {
     assert.match(document, /24[\s\S]{0,80}?content hash/iu);
     assert.match(document, /7[\s\S]{0,80}?one-source/iu);
     assert.match(document, /six[\s\S]{0,120}?410/iu);
+    assert.match(document, /NEWSROOM_EVIDENCE_HOLD_PREVIEW=1/u);
+    assert.match(document, /default[\s\S]{0,60}?off/iu);
+    assert.match(document, /production[\s\S]{0,100}?fail(?:s)? closed/iu);
+    assert.match(document, /55[\s\S]{0,40}?17/iu);
+    assert.match(document, /7[\s\S]{0,40}?2/iu);
   }
   assert.doesNotMatch(
     `${launch}\n${backendMap}`,
@@ -304,7 +419,7 @@ async function main(): Promise<void> {
   ] as const;
 
   const manifest = {
-    schemaVersion: "newsroom-offline-release-certification-v2",
+    schemaVersion: "newsroom-offline-release-certification-v3",
     status: "offline-contract-valid-live-release-blocked",
     runtimeBehaviorChanged: true,
     authority: {
@@ -318,6 +433,34 @@ async function main(): Promise<void> {
       enabledValue: "1",
       defaultState: "off",
       evaluation: "build/release-time",
+    },
+    evidenceHoldPreview: {
+      environment: NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV,
+      enabledValue: "1",
+      defaultState: "off",
+      nonProductionOnly: true,
+      productionFailClosed: true,
+      authorizesRelease: false,
+      heldArticleCount: NEWSROOM_EVIDENCE_HOLD_SLUGS.length,
+      evidenceCertifiedIndexCandidateCount:
+        EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length,
+      cutoverOff: {
+        sitemapCount: evidencePreviewCutoverOff.sitemapPaths.length,
+        publicArticleCount: evidencePreviewCutoverOff.publicArticleSlugs.length,
+        lifecycleRedirectCount:
+          evidencePreviewCutoverOff.lifecycleRedirects.length,
+      },
+      cutoverOn: {
+        sitemapCount: evidencePreviewCutoverOn.sitemapPaths.length,
+        publicArticleCount: evidencePreviewCutoverOn.publicArticleSlugs.length,
+        lifecycleRedirectCount:
+          evidencePreviewCutoverOn.lifecycleRedirects.length,
+      },
+      productionWithFlag: {
+        sitemapCount: productionFailClosed.sitemapPaths.length,
+        publicArticleCount: productionFailClosed.publicArticleSlugs.length,
+        lifecycleRedirectCount: productionFailClosed.lifecycleRedirects.length,
+      },
     },
     evidencePolicy: {
       version: CURRENT_EVIDENCE_POLICY_VERSION,
@@ -366,6 +509,11 @@ async function main(): Promise<void> {
   assert.equal(manifest.evidencePolicy.version, 3);
   assert.equal(manifest.status, "offline-contract-valid-live-release-blocked");
   assert.equal(originalCutover, process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV]);
+  assert.equal(
+    originalEvidencePreview,
+    process.env[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV],
+  );
+  assert.equal(originalVercelEnvironment, process.env.VERCEL_ENV);
 
   console.log(JSON.stringify(manifest, null, 2));
   console.error(

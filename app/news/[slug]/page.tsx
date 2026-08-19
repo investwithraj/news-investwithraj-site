@@ -16,7 +16,10 @@ import {
   relatedVerticalsForArticle,
   supportedImageAlt,
 } from "@/lib/news-editorial";
-import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
+import {
+  getPublicDiscoveryNewsArticles,
+  isNewsroomEvidenceHeldArticleSlug,
+} from "@/lib/public-content";
 import {
   asGraph,
   BREADCRUMB_PRESETS,
@@ -62,6 +65,9 @@ export async function generateMetadata({
 
   const url = `${SITE.url}/news/${slug}`;
   const hasImage = hasVerifiedEditorialImage(article);
+  const indexEligible =
+    isReleasedIndexEligiblePath(`/news/${slug}`) &&
+    !isNewsroomEvidenceHeldArticleSlug(slug);
   const imageUrl = article.heroImage.src.startsWith("http")
     ? article.heroImage.src
     : `${SITE.url}${article.heroImage.src}`;
@@ -70,7 +76,7 @@ export async function generateMetadata({
     title: article.title,
     description: article.metaDescription || article.subtitle,
     robots: {
-      index: isReleasedIndexEligiblePath(`/news/${slug}`),
+      index: indexEligible,
       follow: true,
     },
     alternates: {
@@ -123,9 +129,9 @@ export default async function NewsArticlePage({
   }
 
   const articleUrl = `${SITE.url}/news/${article.slug}`;
-  const indexEligible = isReleasedIndexEligiblePath(
-    `/news/${article.slug}`,
-  );
+  const indexEligible =
+    isReleasedIndexEligiblePath(`/news/${article.slug}`) &&
+    !isNewsroomEvidenceHeldArticleSlug(article.slug);
   const hasImage = hasVerifiedEditorialImage(article);
   const imageUrl = article.heroImage.src.startsWith("http")
     ? article.heroImage.src

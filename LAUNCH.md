@@ -187,4 +187,14 @@ and 7 one-source records. They remain visible only because the lifecycle matrix
 retains them; they are not evidence policy v3 certified. Treat this inventory
 as fail-closed release debt and do not claim a complete evidence migration.
 
+`NEWSROOM_EVIDENCE_HOLD_PREVIEW=1` is a separate, non-authorizing preview of
+the exact 24-record noindex hold. It is default off and Production fails closed
+to the existing projection even if the flag is set. In a non-production
+environment only, the held articles stay readable and self-canonical but emit
+no NewsArticle, FAQ, image, or article breadcrumb schema and leave discovery,
+front page, RSS, news-sitemap, and sitemap projections. The resulting counts
+are 55 sitemap URLs / 17 discovery articles with lifecycle cutover off and 7 / 2
+with lifecycle cutover on. Redirects and the six removal responses do not
+change. This preview does not approve the evidence debt or authorize release.
+
 Contact and correction address: `office@investwithraj.com`.

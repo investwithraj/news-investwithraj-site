@@ -1,6 +1,7 @@
 import { AREAS, type AreaPage } from "@/content/areas";
 import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
 import type { NewsArticle } from "@/content/news/types";
+import evidenceRemediation from "@/docs/migration/newsroom-legacy-evidence-remediation.json";
 import { DEVELOPERS, type DeveloperProfile } from "@/lib/developers";
 import {
   articleMentionsArea,
@@ -35,15 +36,63 @@ export const INDEXABLE_NEWS_ARTICLES: NewsArticle[] =
     isIndexEligibleArticleSlug(article.slug),
   );
 
+export const NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV =
+  "NEWSROOM_EVIDENCE_HOLD_PREVIEW" as const;
+
+type EvidenceHoldEnvironment = Readonly<
+  Record<string, string | undefined>
+>;
+
+export const NEWSROOM_EVIDENCE_HOLD_SLUGS = Object.freeze(
+  evidenceRemediation.records.map((record) => record.slug),
+);
+
+const newsroomEvidenceHoldSlugs = new Set(NEWSROOM_EVIDENCE_HOLD_SLUGS);
+
+export function isNewsroomEvidenceHoldPreviewEnabled(
+  environment: EvidenceHoldEnvironment = process.env,
+): boolean {
+  return (
+    environment[NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV] === "1" &&
+    environment.VERCEL_ENV !== "production"
+  );
+}
+
+export function isNewsroomEvidenceHeldArticleSlug(
+  slug: string,
+  environment: EvidenceHoldEnvironment = process.env,
+): boolean {
+  return (
+    isNewsroomEvidenceHoldPreviewEnabled(environment) &&
+    newsroomEvidenceHoldSlugs.has(slug)
+  );
+}
+
+export const EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES: NewsArticle[] =
+  INDEXABLE_NEWS_ARTICLES.filter(
+    (article) =>
+      article.publicationContentHash &&
+      !newsroomEvidenceHoldSlugs.has(article.slug),
+  );
+
 /**
  * Public discovery is release-aware. Before explicit cutover, all existing
  * live records keep their current discoverability. Once the single lifecycle
  * flag is enabled, only the approved KEEP + IMPROVE projection is emitted.
  */
-export function getPublicDiscoveryNewsArticles(): NewsArticle[] {
+export function getLifecycleProjectedNewsArticles(): NewsArticle[] {
   return isNewsroomLifecycleCutoverEnabled()
     ? INDEXABLE_NEWS_ARTICLES
     : PUBLISHED_NEWS_ARTICLES;
+}
+
+export function getPublicDiscoveryNewsArticles(): NewsArticle[] {
+  const lifecycleProjection = getLifecycleProjectedNewsArticles();
+  return isNewsroomEvidenceHoldPreviewEnabled()
+    ? lifecycleProjection.filter(
+        (article) => !newsroomEvidenceHoldSlugs.has(article.slug),
+      )
+    : lifecycleProjection;
 }
 
 export function isPublicDiscoveryNewsArticleSlug(slug: string): boolean {

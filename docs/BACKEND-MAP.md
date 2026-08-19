@@ -378,6 +378,17 @@ build/release time. The repository defaults to off.
   and access-log demand checks for all six removals; Kuwait and Fendi are the
   two medium-confidence retirement decisions.
 
+`NEWSROOM_EVIDENCE_HOLD_PREVIEW=1` is an independent non-production review
+mode for the exact checked-in 24-record evidence hold. It is default off and
+Production fails closed to the existing projection even if the flag is set.
+Held article routes remain readable and self-canonical, but are noindex and
+emit no NewsArticle, FAQ, image, or article breadcrumb schema; discovery,
+front-page, RSS, news-sitemap, and sitemap selectors exclude them. The derived
+preview counts are 55 sitemap URLs / 17 discovery articles with lifecycle
+cutover off and 7 / 2 with lifecycle cutover on. Redirects and the six removal
+responses are unchanged. This preview cannot authorize release or certify the
+held records under evidence policy v3.
+
 `npm run certify:newsroom-release` validates these modes without network
 access and emits deterministic cutover-off/cutover-on route manifests. It does
 not prove KV, secrets, GitHub, DNS, cron, build, deployment, indexing, or any

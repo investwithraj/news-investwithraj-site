@@ -6,7 +6,9 @@ import { SITE } from "@/lib/constants";
 import { selectDistinctArticles } from "@/lib/news-editorial";
 import { isNewsroomLifecycleCutoverEnabled } from "@/lib/news-lifecycle";
 import {
-  getPublicDiscoveryNewsArticles,
+  getLifecycleProjectedNewsArticles,
+  isNewsroomEvidenceHeldArticleSlug,
+  isNewsroomEvidenceHoldPreviewEnabled,
   PUBLIC_AREA_RECORDS,
   PUBLIC_DEVELOPER_RECORDS,
 } from "@/lib/public-content";
@@ -21,13 +23,22 @@ const SITE_UPDATED = new Date("2026-07-25T00:00:00+04:00");
  * cutover, only the matrix-approved KEEP + IMPROVE URLs are emitted.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return isNewsroomLifecycleCutoverEnabled()
+  const projection = isNewsroomLifecycleCutoverEnabled()
     ? releasedLifecycleSitemap()
     : currentPublicSitemap();
+  return isNewsroomEvidenceHoldPreviewEnabled()
+    ? projection.filter((entry) => {
+        const pathname = new URL(entry.url).pathname;
+        return (
+          !pathname.startsWith("/news/") ||
+          !isNewsroomEvidenceHeldArticleSlug(pathname.slice("/news/".length))
+        );
+      })
+    : projection;
 }
 
 function releasedLifecycleSitemap(): MetadataRoute.Sitemap {
-  const publicArticles = getPublicDiscoveryNewsArticles();
+  const publicArticles = getLifecycleProjectedNewsArticles();
   const latestNewsUpdate = latestArticleUpdate(publicArticles);
   const entries: MetadataRoute.Sitemap = [
     {
@@ -68,7 +79,7 @@ function releasedLifecycleSitemap(): MetadataRoute.Sitemap {
 
 /** Exact pre-lifecycle public sitemap, retained while cutover is off. */
 function currentPublicSitemap(): MetadataRoute.Sitemap {
-  const allPublicArticles = getPublicDiscoveryNewsArticles();
+  const allPublicArticles = getLifecycleProjectedNewsArticles();
   const liveNews = selectDistinctArticles(
     allPublicArticles,
     allPublicArticles.length,

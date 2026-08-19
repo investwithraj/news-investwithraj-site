@@ -11,6 +11,7 @@ import {
   selectDistinctArticles,
 } from "@/lib/news-editorial";
 import {
+  isPublicDiscoveryNewsArticleSlug,
   PUBLIC_DEVELOPER_RECORDS,
   PUBLIC_DEVELOPERS,
 } from "@/lib/public-content";
@@ -52,7 +53,9 @@ export default function DevelopersIndex() {
     };
   });
   const latestReports = selectDistinctArticles(
-    PUBLIC_DEVELOPER_RECORDS.flatMap(({ reports }) => reports),
+    PUBLIC_DEVELOPER_RECORDS.flatMap(({ reports }) => reports).filter(
+      (article) => isPublicDiscoveryNewsArticleSlug(article.slug),
+    ),
     8,
   );
   const latestReportingDate = latestReports[0]?.publishedAt;

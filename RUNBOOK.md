@@ -237,6 +237,17 @@ records under evidence policy v3. Keep this debt fail-closed: do not describe
 the corpus as fully migrated until each record is repaired, noindexed, or
 otherwise resolved by the release owner.
 
+For local release review only, exact `NEWSROOM_EVIDENCE_HOLD_PREVIEW=1`
+previews the checked-in 24-record hold when `VERCEL_ENV` is not `production`.
+The flag is default off; Production fails closed to existing behavior even if
+it is set. Held articles remain readable and self-canonical, become noindex,
+emit no NewsArticle, FAQ, image, or article breadcrumb schema, and are removed
+from front-page/discovery, RSS, news-sitemap, and sitemap projections. Expected
+counts are 55 sitemap URLs / 17 discovery articles with lifecycle cutover off
+and 7 / 2 with lifecycle cutover on. Redirect and six-route removal behavior
+is unchanged. The preview is non-authorizing and does not resolve the evidence
+debt, enable lifecycle cutover, or approve deployment.
+
 ## Verification commands
 
 The offline release check must not contact mutation providers:

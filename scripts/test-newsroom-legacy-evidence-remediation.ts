@@ -28,6 +28,17 @@ type Manifest = Readonly<{
     contentRecordsChanged: boolean;
     manualHashBackfillAllowed: boolean;
     unresolvedIndexationIntent: string;
+    previewRuntimeBehaviorChanged: boolean;
+    productionRuntimeBehaviorChanged: boolean;
+  }>;
+  previewModel: Readonly<{
+    environment: string;
+    enabledValue: string;
+    nonProductionOnly: boolean;
+    defaultState: string;
+    authorizesRelease: boolean;
+    cutoverOff: Readonly<{ sitemap: number; discoveryArticles: number }>;
+    cutoverOn: Readonly<{ sitemap: number; discoveryArticles: number }>;
   }>;
   summary: Readonly<{
     unresolved: number;
@@ -66,14 +77,25 @@ function main(): void {
     "newsroom-legacy-evidence-remediation-v1",
   );
   assert.equal(manifest.evidencePolicyVersion, CURRENT_EVIDENCE_POLICY_VERSION);
-  assert.equal(manifest.status, "manifest-only-unresolved");
+  assert.equal(manifest.status, "preview-hold-implemented-unresolved");
   assert.deepEqual(manifest.implementationBoundary, {
-    runtimeBehaviorChanged: false,
-    runtimeSelectorsChanged: false,
+    runtimeBehaviorChanged: true,
+    runtimeSelectorsChanged: true,
     lifecycleCountsChanged: false,
     contentRecordsChanged: false,
     manualHashBackfillAllowed: false,
     unresolvedIndexationIntent: "noindex-hold",
+    previewRuntimeBehaviorChanged: true,
+    productionRuntimeBehaviorChanged: false,
+  });
+  assert.deepEqual(manifest.previewModel, {
+    environment: "NEWSROOM_EVIDENCE_HOLD_PREVIEW",
+    enabledValue: "1",
+    nonProductionOnly: true,
+    defaultState: "off",
+    authorizesRelease: false,
+    cutoverOff: { sitemap: 55, discoveryArticles: 17 },
+    cutoverOn: { sitemap: 7, discoveryArticles: 2 },
   });
 
   const records = manifest.records;
@@ -146,18 +168,22 @@ function main(): void {
   for (const runtimePath of [
     "app/sitemap.ts",
     "lib/news-lifecycle.ts",
-    "lib/public-content.ts",
   ]) {
     assert.doesNotMatch(
       source(runtimePath),
       /newsroom-legacy-evidence-remediation/iu,
-      `${runtimePath} must not consume the manifest in this static-only slice.`,
+      `${runtimePath} must not become a second remediation authority.`,
     );
   }
+  assert.match(
+    source("lib/public-content.ts"),
+    /newsroom-legacy-evidence-remediation\.json/u,
+    "The preview selector must consume the exact checked-in remediation manifest.",
+  );
   assert.equal(originalCutover, process.env.NEWSROOM_LIFECYCLE_CUTOVER);
 
   console.log(
-    `Legacy evidence remediation PASS: ${records.length} unresolved = ${contentRepair.length} content-repair + ${secondSourceRequired.length} second-source-required; ${records.length} carry noindex-hold intent; pilot ${manifest.safestKeepPilot}; runtime selectors unchanged.`,
+    `Legacy evidence remediation PASS: ${records.length} unresolved = ${contentRepair.length} content-repair + ${secondSourceRequired.length} second-source-required; ${records.length} carry non-production noindex-hold preview intent; pilot ${manifest.safestKeepPilot}; default and Production selectors unchanged.`,
   );
 }
 

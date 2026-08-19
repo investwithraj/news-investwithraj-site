@@ -29,6 +29,24 @@ Before activation, attach Search Console, backlink/referral, analytics and
 access-log demand checks for all six removals. The Kuwait and Fendi articles
 remain medium-confidence removal decisions until that evidence is reviewed.
 
+## Evidence-hold preview
+
+`NEWSROOM_EVIDENCE_HOLD_PREVIEW=1` enables a separate evidence-hold preview
+only when `VERCEL_ENV` is not `production`. The default is off, every value
+other than the exact string `1` is off, and Production fails closed to the
+existing public projection even if the flag is present.
+
+The preview uses the checked-in 24-record remediation manifest. Those articles
+remain readable at their self-canonical URLs, but become noindex and emit no
+NewsArticle, FAQ, image, or article breadcrumb schema. Discovery, the front
+page, RSS, the news sitemap, and the generic sitemap exclude the held records.
+With lifecycle cutover off the preview emits 55 sitemap URLs and 17 discovery
+articles; with lifecycle cutover on it emits 7 sitemap URLs and 2 discovery
+articles. Redirect and six-route removal behavior is unchanged in both modes.
+
+This flag is non-authorizing. It does not activate lifecycle cutover, approve
+the 24 evidence records, prove a hosted preview, or permit production release.
+
 ## Outbound safety is not release-dependent
 
 OG article rendering, the automated brief source packet, digest previews,

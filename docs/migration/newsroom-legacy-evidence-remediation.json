@@ -1,18 +1,35 @@
 {
   "schemaVersion": "newsroom-legacy-evidence-remediation-v1",
   "evidencePolicyVersion": 3,
-  "status": "manifest-only-unresolved",
+  "status": "preview-hold-implemented-unresolved",
   "authority": {
     "articleRegistry": "content/news/index.ts",
     "lifecycleMatrix": "docs/migration/news-url-disposition.csv"
   },
   "implementationBoundary": {
-    "runtimeBehaviorChanged": false,
-    "runtimeSelectorsChanged": false,
+    "runtimeBehaviorChanged": true,
+    "runtimeSelectorsChanged": true,
     "lifecycleCountsChanged": false,
     "contentRecordsChanged": false,
     "manualHashBackfillAllowed": false,
-    "unresolvedIndexationIntent": "noindex-hold"
+    "unresolvedIndexationIntent": "noindex-hold",
+    "previewRuntimeBehaviorChanged": true,
+    "productionRuntimeBehaviorChanged": false
+  },
+  "previewModel": {
+    "environment": "NEWSROOM_EVIDENCE_HOLD_PREVIEW",
+    "enabledValue": "1",
+    "nonProductionOnly": true,
+    "defaultState": "off",
+    "authorizesRelease": false,
+    "cutoverOff": {
+      "sitemap": 55,
+      "discoveryArticles": 17
+    },
+    "cutoverOn": {
+      "sitemap": 7,
+      "discoveryArticles": 2
+    }
   },
   "summary": {
     "unresolved": 24,

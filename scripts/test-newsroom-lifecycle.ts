@@ -498,8 +498,9 @@ function assertPublicNoindexMetadataGates() {
 
   assert.match(
     articleRoute,
-    /index:\s*isReleasedIndexEligiblePath\(`\/news\/\$\{slug\}`\),\s*\n\s*follow:\s*true/,
+    /const indexEligible =\s*\n\s*isReleasedIndexEligiblePath\(`\/news\/\$\{slug\}`\) &&\s*\n\s*!isNewsroomEvidenceHeldArticleSlug\(slug\)/,
   );
+  assert.match(articleRoute, /index:\s*indexEligible,\s*\n\s*follow:\s*true/);
   assert.match(
     areaRoute,
     /index:\s*isReleasedIndexEligiblePath\(`\/areas\/\$\{slug\}`\)/,
