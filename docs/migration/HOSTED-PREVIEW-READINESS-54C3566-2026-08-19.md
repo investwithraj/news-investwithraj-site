@@ -15,13 +15,17 @@ exist.
 | Authority | Exact value | Role |
 | --- | --- | --- |
 | Runtime and deploy candidate | `54c35668f90dcdf696785c6fd5cc6e67a268e866` | The only application commit that may be deployed by this packet. |
-| Audit-tooling authority | `0aabdefaccceaf97fcc336ddcc1ab2c11a7eb145` | Clean committed descendant used to run the hosted audits; it must not replace the deploy candidate. |
+| Local-evidence tooling authority | `0aabdefaccceaf97fcc336ddcc1ab2c11a7eb145` | Pins the runtime inputs, portable local receipts and deterministic local evidence manifest; it is not the deploy candidate. |
+| Hosted operator tooling authority | `31ba37e4e588a1a1b67dc63d20f2280324bae1f5` | Clean committed descendant containing provider deployment-file preflight, package aliases, strict alias policy and cross-bound final evidence closure; it is not the deploy candidate. |
+| Readiness-document execution authority | Pending docs-only successor of `31ba37e4e588a1a1b67dc63d20f2280324bae1f5` | At execution, pin the exact clean committed HEAD containing this final packet and prove its diff from `31ba37e...` is documentation-only. |
 | Proposed create-only branch | `codex/iwr-newsroom-preview-54c3566` | Preview branch only; never a Production branch or alias. |
 
-At documentation time, the tooling worktree was clean, the tooling authority
-was a descendant of the runtime candidate, and the hosted browser gate was
-pinned to the exact runtime candidate. Recheck all three facts immediately
-before execution.
+The runtime, local-evidence tooling and hosted operator tooling are deliberately
+layered authorities. The final closure must run from a clean committed
+documentation-only descendant of `31ba37e...`, record that exact HEAD/tree, and
+prove that the runtime inputs pinned by `0aabdef...` have not changed. The
+deployment source remains exact `54c3566...`; neither tooling nor documentation
+HEAD may replace it.
 
 ## Local evidence — not hosted evidence
 
@@ -31,10 +35,16 @@ These receipts were produced against localhost with
 `authConfigured: false`; they do not prove Vercel protection, a hosted Preview,
 or any public response.
 
-| Evidence | Exact path | Bytes | SHA-256 |
+The authoritative local evidence index is the checked-in
+`docs/migration/HOSTED-PREVIEW-LOCAL-EVIDENCE-54C3566.json`. It pins both Git
+trees, the local build, portable receipt paths, hashes, byte counts and the
+complete hosted receipt contract. Files under `outputs/` are retained local
+working copies only and are not the release authority.
+
+| Evidence | Checked-in portable receipt | Bytes | SHA-256 |
 | --- | --- | ---: | --- |
-| Default served runtime | `outputs/hosted-readiness-54c3566/default-runtime.json` | 66,516 | `8806976FD2980BAB389F47C798DD96BA1472AB1223104578BC4CF022E5635E76` |
-| Protected-Preview media policy, exercised locally | `outputs/hosted-readiness-54c3566/media-delivery.json` | 9,639 | `110C555EFD7E6FA308D532D097A48B39C45946FAFDB4ECA3692B12010406F358` |
+| Default served runtime | `docs/migration/evidence/hosted-readiness-54c3566/default-runtime.json` | 66,516 | `8806976FD2980BAB389F47C798DD96BA1472AB1223104578BC4CF022E5635E76` |
+| Protected-Preview media policy, exercised locally | `docs/migration/evidence/hosted-readiness-54c3566/media-delivery.json` | 9,639 | `110C555EFD7E6FA308D532D097A48B39C45946FAFDB4ECA3692B12010406F358` |
 
 The default receipt proves the local 79-sitemap / 41-discovery / zero-redirect /
 zero-Gone projection. The media receipt proves its local 71-request contract:
@@ -80,16 +90,45 @@ Before seeking approval:
 
 1. Confirm the application object exists and remains exactly
    `54c35668f90dcdf696785c6fd5cc6e67a268e866`.
-2. Confirm the audit tooling is clean at exact
-   `0aabdefaccceaf97fcc336ddcc1ab2c11a7eb145` and that the runtime candidate is
-   its ancestor.
-3. Capture the read-only Production/provider baseline described below.
-4. Verify that `refs/heads/codex/iwr-newsroom-preview-54c3566` is absent using a
-   fresh remote query. Stop if it exists or the query is inconclusive.
+2. Confirm local-evidence tooling `0aabdef...` and hosted operator tooling
+   `31ba37e4e588a1a1b67dc63d20f2280324bae1f5` are ancestors of the exact clean
+   committed execution HEAD. Require the execution diff from `31ba37e...` to
+   contain this readiness-document update only, and require zero changes to
+   application/runtime inputs.
+3. Pass the offline preflight alias and validate the checked-in local evidence
+   manifest and portable receipts.
+4. Verify that `refs/heads/codex/iwr-newsroom-preview-54c3566` is absent using
+   the two-stage read-only remote check below. Stop if it exists or either
+   query is inconclusive.
 5. Obtain explicit approval for one new branch push and its automatic protected
    Preview deployment. That approval does not include an environment edit,
    custom-domain assignment, Production deployment, alias move, lifecycle
    activation, provider mutation, or external publication.
+
+Run the remote absence check immediately before approval and again immediately
+before the push:
+
+```powershell
+$branchRef = 'refs/heads/codex/iwr-newsroom-preview-54c3566'
+$transportProbe = & git ls-remote --exit-code origin HEAD 2>&1
+$transportCode = $LASTEXITCODE
+if ($transportCode -ne 0 -or [string]::IsNullOrWhiteSpace(($transportProbe -join "`n"))) {
+  throw 'Remote transport/authentication was not proven; branch absence is unknown.'
+}
+$branchProbe = & git ls-remote --exit-code --heads origin $branchRef 2>&1
+$branchCode = $LASTEXITCODE
+$branchText = ($branchProbe -join "`n").Trim()
+if ($branchCode -eq 0) { throw "Preview branch already exists: $branchText" }
+if ($branchCode -ne 2 -or $branchText.Length -ne 0) {
+  throw 'Branch query failed or was ambiguous; do not treat it as absent.'
+}
+```
+
+`git ls-remote --exit-code --heads origin refs/heads/codex/iwr-newsroom-preview-54c3566`
+returns exit `2` with no output for no matching ref, but that result is accepted
+only after the immediately preceding `origin HEAD` probe returned exit `0` with
+nonempty output. Exit `0` from the branch query means the branch exists; every
+other state is a stop. The empty lease below remains the final race-safe guard.
 
 Only after approval, the create-only empty-lease command is:
 
@@ -101,6 +140,15 @@ The empty lease is mandatory. Do not retry with a force push, ordinary update,
 or non-empty lease if the branch was created concurrently. The resulting
 deployment must remain a Preview, must not own `news.investwithraj.com`, and
 must resolve to the exact candidate SHA.
+
+Every Preview alias must be unique and match the strict operator allowlist
+`^news-investwithraj-site(?:-[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)?-office-2271s-projects\.vercel\.app$`.
+No custom domain, `news.investwithraj.com`, other project prefix, other team
+suffix or malformed DNS label is allowed. The immutable deployment origin is
+additionally constrained to the exact 8–16-character deployment-hash form.
+Manually assigned or custom aliases are prohibited even when they appear
+benign; acceptance is limited to provider-returned aliases that pass this exact
+allowlist.
 
 ## Runner-only credentials
 
@@ -121,154 +169,206 @@ record only `authConfigured: true`, never credential material.
 
 ## Exact hosted acceptance sequence
 
-All output paths below are new hosted evidence paths. Hash and byte-pin every
-receipt after a pass. Do not overwrite the two local receipts above.
+All output paths below are hosted evidence paths. Do not overwrite the
+checked-in local evidence. Operator tooling `31ba37e...` supplies these exact
+package aliases:
 
-### 1. Offline auth and tooling contracts
+| Alias | Purpose |
+| --- | --- |
+| `test:hosted-preflight` | Offline auth, provider-preflight, invariance, media, browser, origin and public-media contracts |
+| `audit:hosted-provider-preflight` | Read-only provider/project/env/deployment discovery and exact Production/Preview build discovery from Vercel deployment-file inventories |
+| `audit:hosted-invariance` | Production/provider before/after invariance |
+| `audit:hosted-media-delivery` | Exact 71-request protected media contract |
+| `audit:hosted-browser` | Exact 85-route / 170-viewport browser contract plus controls |
+| `audit:newsroom-evidence-runtime` | Default served-runtime contract |
+| `audit:hosted-batch-8` | Batch 8 hosted browser/report gate |
+| `audit:hosted-batch-9` | Batch 9 hosted cross-site/report gate |
+| `audit:hosted-evidence-closure` | Strict clean-Git, receipt, determinism, secret-scan and closure manifest gate |
+
+### 1. Offline contracts and portable local evidence
+
+From the exact clean committed execution HEAD:
 
 ```powershell
-node scripts/test-protected-preview-auth.mjs
-node scripts/test-hosted-newsroom-invariance-contract.mjs
-node scripts/test-hosted-newsroom-media-delivery-contract.mjs
-node scripts/test-newsroom-hosted-browser-contract.mjs
-.\node_modules\.bin\tsx.cmd scripts/test-newsroom-evidence-hold-runtime-origin.ts
+npm run test:hosted-preflight
 ```
 
-All must pass at the exact tooling authority before any hosted request.
+This alias must pass before any hosted request. The closure contract also
+validates `docs/migration/HOSTED-PREVIEW-LOCAL-EVIDENCE-54C3566.json`, its two
+portable receipts, exact SHA/tree ancestry and the absence of runtime-input
+drift from `0aabdef...`.
 
-### 2. Production/provider baseline — before branch creation
+### 2. Create-only branch and protected Preview
 
-Supply the exact current Production build ID discovered during preflight; do
-not reuse the local Preview build ID.
+Perform the two-stage remote absence check and the empty-lease push only after
+the separate approval boundary above. Wait for exactly one `READY` Preview for
+the exact candidate SHA and branch. Do not discover or copy build IDs manually.
+
+### 3. Read-only provider preflight and generated operator values
+
+Supply both runner-only credentials, then let the committed provider preflight
+discover and validate the exact Production and Preview deployment IDs, SHAs,
+immutable URLs, project/env state, protection and strict alias set. Build IDs
+are derived from each deployment's Vercel
+`/v6/deployments/<deployment-id>/files` inventory, then verified with a
+same-origin authenticated `HEAD` to the exact build manifest. Run preflight
+twice because closure requires deterministic provider evidence:
+
+```powershell
+$env:NEWSROOM_CANDIDATE_SHA='54c35668f90dcdf696785c6fd5cc6e67a268e866'
+$env:NEWSROOM_PREVIEW_BRANCH='codex/iwr-newsroom-preview-54c3566'
+$env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-provider-preflight.json'
+$env:NEWSROOM_VERCEL_API_TOKEN='<runner-only provider token>'
+$env:NEWSROOM_VERCEL_PROTECTION_BYPASS='<runner-only newsroom bypass>'
+npm run audit:hosted-provider-preflight
+$env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-provider-preflight-repeat.json'
+npm run audit:hosted-provider-preflight
+
+$preflightPath='outputs/hosted-readiness-54c3566/hosted-provider-preflight.json'
+$preflight = Get-Content -LiteralPath $preflightPath -Raw | ConvertFrom-Json
+$env:NEWSROOM_PUBLIC_PRODUCTION_URL='https://news.investwithraj.com'
+$env:NEWSROOM_IMMUTABLE_PRODUCTION_URL=[string]$preflight.production.url
+$env:NEWSROOM_PRODUCTION_DEPLOYMENT_ID=[string]$preflight.production.id
+$env:NEWSROOM_EXPECTED_PRODUCTION_SHA=[string]$preflight.production.source.sha
+$env:NEWSROOM_EXPECTED_PRODUCTION_BUILD_ID=[string]$preflight.production.buildId
+$env:NEWSROOM_PREVIEW_URL=[string]$preflight.preview.url
+$env:NEWSROOM_PREVIEW_DEPLOYMENT_ID=[string]$preflight.preview.id
+$env:NEWSROOM_BUILD_ID=[string]$preflight.preview.buildId
+```
+
+The primary receipt, not operator transcription, feeds every command below;
+the primary and repeat receipts must be byte-identical. Stop if either does not
+report `result: pass`, exact candidate/branch, one `READY` Preview,
+canonical Production alias ownership, Preview alias allowlist compliance,
+protected/noindex anonymous and authenticated behavior, distinct immutable
+origins, or a single verified build ID for each deployment. Hash and byte-pin
+both provider-preflight receipts.
+
+Leave `NEWSROOM_LIFECYCLE_CUTOVER` and
+`NEWSROOM_EVIDENCE_HOLD_PREVIEW` **unset** throughout.
+
+### 4. Production/provider baseline and first Preview invariance
 
 ```powershell
 $env:NEWSROOM_INVARIANCE_PHASE='before'
-$env:NEWSROOM_PUBLIC_PRODUCTION_URL='https://news.investwithraj.com'
-$env:NEWSROOM_IMMUTABLE_PRODUCTION_URL='https://news-investwithraj-site-179bid75d-office-2271s-projects.vercel.app'
-$env:NEWSROOM_PRODUCTION_DEPLOYMENT_ID='dpl_8E31vxF1y7iCkSkZdcxVwHqsGmwe'
-$env:NEWSROOM_EXPECTED_PRODUCTION_SHA='4a3280271d9c1b52c941bcad8bfe83bcb6d1f32a'
-$env:NEWSROOM_EXPECTED_PRODUCTION_BUILD_ID='<fresh exact Production build ID>'
 $env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-production-before.json'
-$env:NEWSROOM_VERCEL_API_TOKEN='<runner-only provider token>'
-node scripts/test-hosted-newsroom-invariance.mjs
-```
+npm run audit:hosted-invariance
 
-This captures four public Production identities plus exact provider, project,
-environment-name, Production deployment, alias, and Git-source facts. Stop on
-any difference from the verified project identity or if either feature flag or
-either runner credential appears in Vercel environment metadata.
-
-### 3. Protected Preview invariance — immediately after `READY`
-
-Read the new immutable URL, deployment ID, and build ID from the exact Preview;
-do not use an alias or guessed value.
-
-```powershell
 $env:NEWSROOM_INVARIANCE_PHASE='after'
 $env:NEWSROOM_EXPECTED_RUNTIME_MODE='default'
-$env:NEWSROOM_PREVIEW_BRANCH='codex/iwr-newsroom-preview-54c3566'
-$env:NEWSROOM_PREVIEW_URL='<exact immutable Preview origin>'
-$env:NEWSROOM_PREVIEW_DEPLOYMENT_ID='<exact Preview deployment ID>'
-$env:NEWSROOM_CANDIDATE_SHA='54c35668f90dcdf696785c6fd5cc6e67a268e866'
-$env:NEWSROOM_BUILD_ID='<exact hosted Preview build ID>'
 $env:NEWSROOM_PRODUCTION_BASELINE='outputs/hosted-readiness-54c3566/hosted-production-before.json'
 $env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-invariance-after.json'
-$env:NEWSROOM_VERCEL_PROTECTION_BYPASS='<runner-only newsroom bypass>'
-node scripts/test-hosted-newsroom-invariance.mjs
+npm run audit:hosted-invariance
 ```
 
-Retain the section 2 Production variables and provider token for this command.
-Leave `NEWSROOM_LIFECYCLE_CUTOVER` and
-`NEWSROOM_EVIDENCE_HOLD_PREVIEW` **unset**. Acceptance requires the Preview to
-be SSO-protected and `noindex`, exact candidate/build identity, no canonical
-alias, and byte-equivalent before/after Production identities. The immutable
-Production deployment must remain protected and unchanged.
+Acceptance requires exact project/environment/deployment identity, protected
+immutable Production and Preview, no Preview canonical alias, exact
+candidate/build identity and four unchanged public Production identities.
 
-### 4. Hosted media delivery — exactly 71 requests
+### 5. Hosted media delivery — 71 requests, repeated
 
 ```powershell
 $env:NEWSROOM_EXPECT_PROTECTED_PREVIEW='1'
-$env:NEWSROOM_AUDIT_URL='<exact immutable Preview origin>'
-$env:NEWSROOM_CANDIDATE_SHA='54c35668f90dcdf696785c6fd5cc6e67a268e866'
-$env:NEWSROOM_BUILD_ID='<exact hosted Preview build ID>'
+$env:NEWSROOM_AUDIT_URL=$env:NEWSROOM_PREVIEW_URL
 $env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-media-delivery.json'
-node scripts/test-hosted-newsroom-media-delivery.mjs
+npm run audit:hosted-media-delivery
+$env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-media-delivery-repeat.json'
+npm run audit:hosted-media-delivery
 ```
 
 Acceptance is 16 / 16 approved `HEAD`, 3 / 3 nonempty ranged `GET`, 51 / 51
-fail-closed denied `HEAD`, and one exact build identity. Every response must
-remain same-origin without a redirect. The governed media and denial responses
-must carry the protected noindex policy; the build-manifest identity probe is
-not a media robots check.
+fail-closed denied `HEAD`, and one exact build identity. Every response remains
+same-origin without a redirect. Governed media and denial responses carry the
+protected noindex policy; the build-manifest identity probe is not a media
+robots check. The two receipts must be byte-identical.
 
-### 5. Hosted browser — 85 routes / 170 viewport cases plus controls
+### 6. Hosted browser — 85 routes / 170 viewport cases, repeated
 
 ```powershell
 $env:IWR_EXPECT_NEWSROOM_PROTECTED_PREVIEW='1'
-$env:IWR_NEWS_AUDIT_URL='<exact immutable Preview origin>'
-$env:IWR_NEWS_CANDIDATE_SHA='54c35668f90dcdf696785c6fd5cc6e67a268e866'
-$env:IWR_NEWS_BUILD_ID='<exact hosted Preview build ID>'
+$env:IWR_NEWS_AUDIT_URL=$env:NEWSROOM_PREVIEW_URL
+$env:IWR_NEWS_CANDIDATE_SHA=$env:NEWSROOM_CANDIDATE_SHA
+$env:IWR_NEWS_BUILD_ID=$env:NEWSROOM_BUILD_ID
 $env:IWR_NEWS_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-browser.json'
-node scripts/test-newsroom-hosted-browser.mjs
+npm run audit:hosted-browser
+$env:IWR_NEWS_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-browser-repeat.json'
+npm run audit:hosted-browser
 ```
 
 Acceptance is the exact 79-route canonical sitemap and 41-article authority,
-their 85-route HTML union across desktop and mobile (**170 cases**), plus seven
-static, two private, and three not-found controls. All 24 held articles remain
-default-mode indexable with article schema. No redirect, Preview-host canonical,
-credential-bearing external resource, contracted basic-accessibility failure,
-overflow, console error, same-origin media request failure, or build mismatch
-may be accepted. This is not an Axe or general accessibility certification.
+their 85-route HTML union across desktop and mobile (170 cases), seven static,
+two private and three not-found controls. All 24 held articles remain
+default-mode indexable with article schema. Contracted basic accessibility,
+overflow, console, same-origin media, canonical, redirect, secret-scope and
+build checks must pass. This is not an Axe/general accessibility certificate.
+The two receipts must be byte-identical.
 
-### 6. Default mode of the four-mode served-runtime auditor
+### 7. Default served-runtime — repeated
 
 ```powershell
-$env:NEWSROOM_AUDIT_URL='<exact immutable Preview origin>'
+$env:NEWSROOM_AUDIT_URL=$env:NEWSROOM_PREVIEW_URL
 $env:NEWSROOM_RUNTIME_MODE='default'
-$env:NEWSROOM_CANDIDATE_SHA='54c35668f90dcdf696785c6fd5cc6e67a268e866'
-$env:NEWSROOM_BUILD_ID='<exact hosted Preview build ID>'
 $env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-default-runtime.json'
-.\node_modules\.bin\tsx.cmd scripts/test-newsroom-evidence-hold-runtime.ts
+npm run audit:newsroom-evidence-runtime
+$env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-default-runtime-repeat.json'
+npm run audit:newsroom-evidence-runtime
 ```
 
 Acceptance is exactly 79 sitemap URLs, 41 discovery articles, six developer
-reports, zero lifecycle redirects, and zero Gone responses. The root sitemap
-location must be exactly `https://news.investwithraj.com` without a trailing
-slash; all canonical, RSS, News sitemap, schema, robots, held-article, retained,
-404, and current-state assertions must pass.
+reports, zero lifecycle redirects and zero Gone responses. Root sitemap,
+canonical, RSS, News sitemap, schema, robots, held/retained article, 404 and
+authority-state checks must pass. The two receipts must be byte-identical.
 
-### 7. Batch 8 and Batch 9
+### 8. Batch 8 and Batch 9 aliases
 
 ```powershell
-$env:IWR_NEWS_AUDIT_URL='<exact immutable Preview origin>'
+$env:IWR_NEWS_AUDIT_URL=$env:NEWSROOM_PREVIEW_URL
 $env:IWR_NEWS_CANONICAL_URL='https://news.investwithraj.com'
 $env:IWR_NEWS_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/batch-8'
-node scripts/audit-batch-8.mjs
+npm run audit:hosted-batch-8
 
 $env:IWR_BATCH_9_OUTPUT='outputs/hosted-readiness-54c3566/batch-9'
 $env:IWR_ADVISORY_AUDIT_URL='<separately approved advisory control origin>'
-node scripts/audit-batch-9.mjs
+npm run audit:hosted-batch-9
 ```
 
-Both reports must contain zero failures. Batch 8/9 must retain origin-scoped
-browser and request authentication with redirects disabled. Batch 9 may run
-only when its advisory control origin and authentication state have been
-separately approved. Its newsroom API probes must remain exact read-only `GET`
-status/rejection checks; no `POST`, `PUT`, `PATCH`, `DELETE`, publication,
-queue write, wallet registration, external delivery, or provider mutation is
-permitted.
+Both reports must contain zero failures. Batch 8/9 retain origin-scoped auth
+and manual redirects. Batch 9 runs only with a separately approved advisory
+control. Its newsroom API probes remain exact read-only `GET` status/rejection
+checks; no mutation method, publication, queue write, wallet registration,
+external delivery or provider mutation is permitted. These reports contain
+`generatedAt`: hash and byte-pin each, but do not require repeat-byte identity.
 
-### 8. Final invariance and receipt closure
+### 9. Final invariance repeat and deterministic closure
 
-Rerun the section 3 invariance command after all hosted audits. Require the
-same Production identities, provider configuration, Production deployment,
-canonical alias ownership, environment-name set, and candidate Preview identity.
-Hash and byte-count all hosted receipts. Repeat and require deterministic output
-only for the invariance, media, browser, and served-runtime receipts designed
-for that contract. Batch 8/9 reports include `generatedAt`; preserve and
-hash/byte-pin each exact report, but do not require repeat-byte identity. Search
-every receipt and console log for runner-secret sentinels before accepting it;
-only boolean authentication state may be persisted.
+After all hosted audits, rerun the same after-phase invariance into its required
+repeat path:
+
+```powershell
+$env:NEWSROOM_INVARIANCE_PHASE='after'
+$env:NEWSROOM_AUDIT_OUTPUT='outputs/hosted-readiness-54c3566/hosted-invariance-after-repeat.json'
+npm run audit:hosted-invariance
+```
+
+The initial and repeated invariance receipts must be byte-identical. Then run
+the committed closure from the exact clean documentation execution HEAD:
+
+```powershell
+$env:NEWSROOM_HOSTED_CLOSURE_OUTPUT='outputs/hosted-readiness-54c3566/hosted-evidence-closure.json'
+npm run audit:hosted-evidence-closure
+Get-FileHash -Algorithm SHA256 -LiteralPath $env:NEWSROOM_HOSTED_CLOSURE_OUTPUT
+```
+
+Closure fails unless the runtime/local-evidence authority manifest, portable
+receipts, exact Git ancestry/tree, pinned runtime inputs, all eight hosted
+receipt groups, required deterministic repeats, provider-preflight identity
+cross-binding, Batch 8/9 pass states, one shared hosted candidate build ID and
+configured secret-sentinel scans all pass. Provider Production/Preview
+deployments, project, environment set, SHAs, origins and build IDs must exactly
+match the invariance receipts.
+It records the exact clean execution HEAD/tree as operator tooling. Only the
+closure receipt and its hash/bytes may close hosted evidence; it does not grant
+release approval.
 
 ## Stop conditions
 
