@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 import evidenceRemediation from "../docs/migration/newsroom-legacy-evidence-remediation.json";
@@ -21,6 +21,8 @@ import {
 } from "./lib/protected-preview-auth.mjs";
 
 const SITE_ORIGIN = "https://news.investwithraj.com";
+const LIFECYCLE_AUTHORITY_PATH =
+  "docs/migration/news-url-disposition.csv" as const;
 const RUNTIME_MODES = [
   "default",
   "evidence-preview",
@@ -100,6 +102,7 @@ const MODE_EXPECTATIONS: Readonly<Record<RuntimeMode, RuntimeExpectation>> = {
 };
 
 type JsonRecord = Readonly<Record<string, unknown>>;
+type CsvRow = Readonly<Record<string, string>>;
 
 type ArticleRuntimeResult = Readonly<{
   canonical: string;
@@ -108,6 +111,65 @@ type ArticleRuntimeResult = Readonly<{
   schemaTypes: readonly string[];
   status: number;
 }>;
+
+function parseCsv(input: string): CsvRow[] {
+  const records: string[][] = [];
+  let record: string[] = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < input.length; index += 1) {
+    const character = input[index];
+    if (quoted) {
+      if (character === '"' && input[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+      continue;
+    }
+    if (character === '"') {
+      quoted = true;
+    } else if (character === ",") {
+      record.push(field);
+      field = "";
+    } else if (character === "\n") {
+      record.push(field.replace(/\r$/u, ""));
+      records.push(record);
+      record = [];
+      field = "";
+    } else {
+      field += character;
+    }
+  }
+  assert.equal(quoted, false, "Lifecycle authority contains an open CSV quote.");
+  if (field || record.length > 0) {
+    record.push(field.replace(/\r$/u, ""));
+    records.push(record);
+  }
+
+  const [headers, ...rows] = records.filter((row) => row.some(Boolean));
+  assert.ok(headers, "Lifecycle authority needs a CSV header.");
+  return rows.map((row) =>
+    Object.fromEntries(
+      headers.map((header, index) => [header, row[index] ?? ""]),
+    ),
+  );
+}
+
+function currentAuthorityStatus(
+  currentState: string,
+  source: string,
+): 200 | 404 {
+  if (/^200(?:[,;]|$)/u.test(currentState)) return 200;
+  if (/^404(?:[,;]|$)/u.test(currentState)) return 404;
+  assert.fail(
+    `${source} has unsupported lifecycle-authority current_state: ${currentState}`,
+  );
+}
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name];
@@ -315,6 +377,50 @@ async function main(): Promise<void> {
   const newsroomAuth = createProtectedPreviewAuth(
     NEWSROOM_PROTECTION_BYPASS_ENV,
   );
+  const lifecycleAuthority = parseCsv(
+    readFileSync(resolve(process.cwd(), LIFECYCLE_AUTHORITY_PATH), "utf8"),
+  );
+  const redirectSourceAuthority = new Map(
+    NEWSROOM_EXACT_REDIRECTS.map((redirect) => {
+      const authorityRows = lifecycleAuthority.filter(
+        (row) => row.current_url === redirect.source,
+      );
+      assert.equal(
+        authorityRows.length,
+        1,
+        `${redirect.source} must exist exactly once in ${LIFECYCLE_AUTHORITY_PATH}.`,
+      );
+      const authority = authorityRows[0];
+      const currentState = authority.current_state;
+      assert.ok(currentState, `${redirect.source} has no current_state.`);
+      return [
+        redirect.source,
+        {
+          currentState,
+          expectedStatus: currentAuthorityStatus(currentState, redirect.source),
+        },
+      ] as const;
+    }),
+  );
+  const heldRedirectAuthority = new Map(
+    Object.keys(NEWSROOM_HELD_REDIRECTS).map((source) => {
+      const authorityRows = lifecycleAuthority.filter(
+        (row) => row.current_url === source,
+      );
+      assert.equal(
+        authorityRows.length,
+        1,
+        `${source} must exist exactly once in ${LIFECYCLE_AUTHORITY_PATH}.`,
+      );
+      const authority = authorityRows[0];
+      assert.equal(
+        authority.current_state,
+        "200,indexable",
+        `${source} must remain current and indexable while lifecycle is OFF.`,
+      );
+      return [source, authority.current_state] as const;
+    }),
+  );
   const heldSlugs = evidenceRemediation.records.map((record) => record.slug);
   const certifiedSlugs = EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.map(
     (article) => article.slug,
@@ -358,7 +464,9 @@ async function main(): Promise<void> {
   assert.equal(certifiedSlugs.length, 2);
   assert.equal(expectedDiscoverySlugs.length, expectation.discoveryArticleCount);
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
+  assert.equal(redirectSourceAuthority.size, NEWSROOM_EXACT_REDIRECTS.length);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
+  assert.equal(heldRedirectAuthority.size, 3);
   assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
 
   async function auditedFetch(
@@ -559,6 +667,8 @@ async function main(): Promise<void> {
   )) {
     const response = await auditedFetch(redirect.source);
     const location = response.headers.get("location");
+    const authority = redirectSourceAuthority.get(redirect.source);
+    assert.ok(authority, `${redirect.source} lacks lifecycle authority.`);
     if (mode === "lifecycle-evidence") {
       assert.equal(response.status, 301, redirect.source);
       assert.equal(
@@ -567,14 +677,18 @@ async function main(): Promise<void> {
         redirect.source,
       );
     } else {
-      assert.equal(response.status, 200, redirect.source);
+      assert.equal(response.status, authority.expectedStatus, redirect.source);
       assert.equal(location, null, redirect.source);
     }
     redirectResults.push({
+      authorityCurrentState: authority.currentState,
+      authorityExpectedStatus: authority.expectedStatus,
+      actualStatus: response.status,
       destination: redirect.destination,
       location,
+      runtimeExpectedStatus:
+        mode === "lifecycle-evidence" ? 301 : authority.expectedStatus,
       source: redirect.source,
-      status: response.status,
     });
   }
 
@@ -585,15 +699,26 @@ async function main(): Promise<void> {
     const page = await htmlResponse(pathname);
     assert.equal(page.status, 200, pathname);
     assert.equal(page.headers.location, null, pathname);
+    const authorityCurrentState = heldRedirectAuthority.get(pathname);
+    assert.equal(authorityCurrentState, "200,indexable", pathname);
+    const expectedRobots =
+      mode === "lifecycle-evidence" ? "noindex, follow" : "index, follow";
     const robots = assertRobotsDirective(
       metadataContent(page.body, "robots"),
       pathname,
-      "noindex",
+      mode === "lifecycle-evidence" ? "noindex" : "index",
+    );
+    assert.deepEqual(
+      [...robotsTokens(robots, pathname)].sort(),
+      expectedRobots.split(", ").sort(),
+      `${pathname} robots directives changed.`,
     );
     heldRedirectResults.push({
+      actualRobots: robots,
+      authorityCurrentState,
       destination: hold.destination,
+      expectedRobots,
       pathname,
-      robots,
       status: page.status,
     });
   }
