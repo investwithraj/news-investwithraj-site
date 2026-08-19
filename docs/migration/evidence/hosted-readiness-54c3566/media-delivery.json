@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "auditUrl": "http://127.0.0.1:43437",
+  "authConfigured": false,
+  "candidate": {
+    "buildAssetPath": "/_next/static/Vw3nq0gSlyv08qacF7Xo8/_buildManifest.js",
+    "buildAssetStatus": 200,
+    "buildId": "Vw3nq0gSlyv08qacF7Xo8",
+    "sha": "54c35668f90dcdf696785c6fd5cc6e67a268e866"
+  },
+  "expectation": "protected-preview",
+  "authority": {
+    "exactPaths": 16,
+    "schemaVersion": 1,
+    "source": "config/media-contract.json#assets",
+    "unknownOnDisk": 16,
+    "withheld": 31
+  },
+  "requests": {
+    "head": {
+      "expected": 16,
+      "passed": 16,
+      "results": [
+        {
+          "path": "/media/verified/areas/hudayriyat-island.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/palm-jebel-ali.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/downtown-dubai.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/dubai-marina.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/palm-jumeirah.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/dubai-hills-estate.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/sobha-hartland.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/dubai-creek-harbour.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/saadiyat-island.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/areas/yas-island.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/developers/emaar.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/developers/aldar.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/developers/nakheel.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/developers/modon.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/verified/developers/sobha.webp",
+          "status": 200
+        },
+        {
+          "path": "/media/real-uhd/raj-tomar-portrait.webp",
+          "status": 200
+        }
+      ]
+    },
+    "get": {
+      "expected": 3,
+      "passed": 3,
+      "results": [
+        {
+          "path": "/media/verified/areas/downtown-dubai.webp",
+          "role": "/media/verified/areas/",
+          "status": 206
+        },
+        {
+          "path": "/media/verified/developers/aldar.webp",
+          "role": "/media/verified/developers/",
+          "status": 206
+        },
+        {
+          "path": "/media/real-uhd/raj-tomar-portrait.webp",
+          "role": "/media/real-uhd/",
+          "status": 206
+        }
+      ]
+    },
+    "denied": {
+      "expected": 51,
+      "passed": 51,
+      "results": [
+        {
+          "path": "/hero.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/brand/ident-fall.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/library/hero-dubai-coast.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/library/hudayriyat-aerial.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/library/portrait-chapter06.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/library/portrait-hero.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/library/portrait-operator.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/01-hero-lamp.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/02-operator-notebook.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/03-market-terminal.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/04-notes-archive.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/05-hudayriyat-aerial.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/06-mispricing-split.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/07-the-ask.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/08-brass-monogram.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/09-portrait-hero-rt.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/10-portrait-operator-rt.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/raw/11-portrait-chapter06-rt.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v21/atmosphere.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v21/pulse-loop.mp4",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/iwr-ambient.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/iwr-ambient-classic.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/raj-intro.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/audio-on.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/cmdk-swell.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/cta-click.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/cta-hover.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/cursor-tick.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/form-submit.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/page-turn.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/audio/ui/section-reveal.mp3",
+          "state": "withheld",
+          "status": 404
+        },
+        {
+          "path": "/brand/lockup-4k.png",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/brand/lockup-cropped.png",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/brand/lockup.png",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/brand/monogram.png",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/library/hero-dubai-coast-poster.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/library/portrait-hero-poster.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-aerial.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-fountain.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-marina.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-night.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-palm.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-skyline.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-towers.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v17/bg/dubai-yacht.jpg",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v21/atmosphere-poster.webp",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/cinema/v21/plate-1.webp",
+          "state": "unknown-on-disk",
+          "status": 404
+        },
+        {
+          "path": "/audio/not-recorded.mp3",
+          "state": "unknown-synthetic",
+          "status": 404
+        },
+        {
+          "path": "/cinema/not-recorded.mp4",
+          "state": "unknown-synthetic",
+          "status": 404
+        },
+        {
+          "path": "/media/real-uhd/not-recorded.webp",
+          "state": "unknown-synthetic",
+          "status": 404
+        },
+        {
+          "path": "/media/verified/areas/not-recorded.webp",
+          "state": "unknown-synthetic",
+          "status": 404
+        }
+      ]
+    },
+    "total": 71
+  },
+  "result": "pass"
+}

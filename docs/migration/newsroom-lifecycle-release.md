@@ -19,8 +19,10 @@ and not a NEXT_PUBLIC value.
 - On emits the exact 31 KEEP + IMPROVE URLs in sitemap discovery.
 - /wallet remains outside that six-route release because it already returned
   the unreleased-product 404 before this lifecycle work.
-- The three held redirects remain readable/noindex and never activate from
-  this flag.
+- The three held redirects remain readable and non-redirecting. They are
+  `index, follow` while lifecycle cutover is off and become `noindex, follow`
+  only while lifecycle cutover is on; the evidence-hold preview alone does not
+  change their indexation.
 - PRIVATE and research records remain unavailable in both states.
 
 The flag is evaluated at build/release time. Changing an environment value is

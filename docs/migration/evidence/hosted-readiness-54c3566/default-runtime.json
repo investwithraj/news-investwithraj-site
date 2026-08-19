@@ -1,0 +1,1522 @@
+{
+  "schemaVersion": "newsroom-evidence-hold-served-runtime-v1",
+  "authConfigured": false,
+  "buildId": "Vw3nq0gSlyv08qacF7Xo8",
+  "candidateSha": "54c35668f90dcdf696785c6fd5cc6e67a268e866",
+  "mode": "default",
+  "expectation": {
+    "discoveryArticleCount": 41,
+    "developerReportCount": 6,
+    "evidenceHoldEnabled": false,
+    "frontItemCount": 6,
+    "lifecycleRedirectCount": 0,
+    "removalGoneCount": 0,
+    "rssItemCount": 30,
+    "sitemapCount": 79
+  },
+  "buildProbe": {
+    "status": 200
+  },
+  "discovery": {
+    "developers": {
+      "reportSlugs": [
+        "2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du",
+        "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+        "2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+        "2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-",
+        "2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+        "2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu"
+      ],
+      "status": 200
+    },
+    "front": {
+      "expectedItemSlugs": [
+        "2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+        "2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak",
+        "2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+        "2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+        "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+        "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island"
+      ],
+      "itemSlugs": [
+        "2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+        "2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak",
+        "2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+        "2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+        "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+        "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island"
+      ],
+      "status": 200
+    },
+    "home": {
+      "heldReferenceCount": 7,
+      "status": 200
+    },
+    "newsArchive": {
+      "articleSlugs": [
+        "2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin",
+        "2026-05-30-dubai-s-19-6m-visitors-drive-luxury-property-surge-as-touris",
+        "2026-05-31-al-barari-villa-leased-for-aed-14-million-sets-dubai-rental-",
+        "2026-06-05-abu-dhabi-s-rent-freeze-a-structural-intervention-in-the-cap",
+        "2026-06-06-dubai-s-off-plan-dominance-66-900-sales-in-five-months-as-ma",
+        "2026-06-07-dubai-logs-dhs28-51bn-in-may-property-deals-as-off-plan-abso",
+        "2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-",
+        "2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu",
+        "2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du",
+        "2026-06-12-dubai-luxury-off-plan-sales-hit-aed4-96bn-in-may",
+        "2026-06-13-palm-jumeirah-handover-2026-two-sold-out-towers-test-the-cre",
+        "2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-",
+        "2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-absorbs",
+        "2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+        "2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026",
+        "2026-06-18-dld-expands-barwa-programme-with-workshops-after-serving-18-",
+        "2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh",
+        "2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury",
+        "2026-06-22-oman-scraps-sponsor-mandate-for-property-linked-residency-pe",
+        "2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+        "2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-",
+        "2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl",
+        "2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif",
+        "2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g",
+        "2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
+        "2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
+        "2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra",
+        "2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+        "2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+        "2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat",
+        "2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",
+        "2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
+        "2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma",
+        "2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
+        "2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar",
+        "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+        "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+        "2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+        "2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+        "2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+        "2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak"
+      ],
+      "status": 200
+    },
+    "newsSitemap": {
+      "articleSlugs": [],
+      "expectedArticleSlugs": [],
+      "status": 200
+    },
+    "rss": {
+      "articleSlugs": [
+        "2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+        "2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak",
+        "2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+        "2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+        "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+        "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+        "2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar",
+        "2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
+        "2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma",
+        "2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
+        "2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",
+        "2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+        "2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat",
+        "2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+        "2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra",
+        "2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
+        "2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
+        "2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g",
+        "2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif",
+        "2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl",
+        "2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-",
+        "2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+        "2026-06-22-oman-scraps-sponsor-mandate-for-property-linked-residency-pe",
+        "2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury",
+        "2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh",
+        "2026-06-18-dld-expands-barwa-programme-with-workshops-after-serving-18-",
+        "2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026",
+        "2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+        "2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-absorbs",
+        "2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-"
+      ],
+      "expectedArticleSlugs": [
+        "2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+        "2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak",
+        "2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+        "2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+        "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+        "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+        "2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar",
+        "2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
+        "2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma",
+        "2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
+        "2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",
+        "2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+        "2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat",
+        "2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+        "2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra",
+        "2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
+        "2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
+        "2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g",
+        "2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif",
+        "2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl",
+        "2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-",
+        "2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+        "2026-06-22-oman-scraps-sponsor-mandate-for-property-linked-residency-pe",
+        "2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury",
+        "2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh",
+        "2026-06-18-dld-expands-barwa-programme-with-workshops-after-serving-18-",
+        "2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026",
+        "2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+        "2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-absorbs",
+        "2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-"
+      ],
+      "status": 200
+    },
+    "sitemap": {
+      "paths": [
+        "/",
+        "/about",
+        "/about/editorial-standards",
+        "/areas",
+        "/areas/al-marjan-island",
+        "/areas/al-raha-beach",
+        "/areas/al-reef",
+        "/areas/al-reem-island",
+        "/areas/business-bay",
+        "/areas/difc",
+        "/areas/downtown-dubai",
+        "/areas/dubai-creek-harbour",
+        "/areas/dubai-hills-estate",
+        "/areas/dubai-marina",
+        "/areas/hudayriyat-island",
+        "/areas/jvc",
+        "/areas/masdar-city",
+        "/areas/mbr-city",
+        "/areas/palm-jebel-ali",
+        "/areas/palm-jumeirah",
+        "/areas/saadiyat-island",
+        "/areas/wynn-al-marjan",
+        "/areas/yas-island",
+        "/developer/aldar",
+        "/developer/dubai-holding",
+        "/developer/emaar",
+        "/developer/modon",
+        "/developer/nakheel",
+        "/developer/sobha",
+        "/developers",
+        "/legal/privacy",
+        "/map",
+        "/news",
+        "/news/2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin",
+        "/news/2026-05-30-dubai-s-19-6m-visitors-drive-luxury-property-surge-as-touris",
+        "/news/2026-05-31-al-barari-villa-leased-for-aed-14-million-sets-dubai-rental-",
+        "/news/2026-06-05-abu-dhabi-s-rent-freeze-a-structural-intervention-in-the-cap",
+        "/news/2026-06-06-dubai-s-off-plan-dominance-66-900-sales-in-five-months-as-ma",
+        "/news/2026-06-07-dubai-logs-dhs28-51bn-in-may-property-deals-as-off-plan-abso",
+        "/news/2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-",
+        "/news/2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu",
+        "/news/2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du",
+        "/news/2026-06-12-dubai-luxury-off-plan-sales-hit-aed4-96bn-in-may",
+        "/news/2026-06-13-palm-jumeirah-handover-2026-two-sold-out-towers-test-the-cre",
+        "/news/2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-",
+        "/news/2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+        "/news/2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026",
+        "/news/2026-06-18-dld-expands-barwa-programme-with-workshops-after-serving-18-",
+        "/news/2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh",
+        "/news/2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury",
+        "/news/2026-06-22-oman-scraps-sponsor-mandate-for-property-linked-residency-pe",
+        "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+        "/news/2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-",
+        "/news/2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl",
+        "/news/2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif",
+        "/news/2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g",
+        "/news/2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
+        "/news/2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
+        "/news/2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra",
+        "/news/2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+        "/news/2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+        "/news/2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat",
+        "/news/2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-",
+        "/news/2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
+        "/news/2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma",
+        "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",
+        "/news/2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar",
+        "/news/2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+        "/news/2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+        "/news/2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+        "/news/2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+        "/news/2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+        "/news/2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak",
+        "/terminal",
+        "/v/beyond-the-deal",
+        "/v/dld-pulse",
+        "/v/off-plan-watch",
+        "/v/sovereign-plays",
+        "/v/uhnw-trades"
+      ],
+      "status": 200
+    }
+  },
+  "heldArticles": [
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin",
+      "pathname": "/news/2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-05-abu-dhabi-s-rent-freeze-a-structural-intervention-in-the-cap",
+      "pathname": "/news/2026-06-05-abu-dhabi-s-rent-freeze-a-structural-intervention-in-the-cap",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-07-dubai-logs-dhs28-51bn-in-may-property-deals-as-off-plan-abso",
+      "pathname": "/news/2026-06-07-dubai-logs-dhs28-51bn-in-may-property-deals-as-off-plan-abso",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-",
+      "pathname": "/news/2026-06-10-cbd-and-dubai-holding-real-estate-launch-aed-157-9bn-backed-",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu",
+      "pathname": "/news/2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du",
+      "pathname": "/news/2026-06-11-emaar-unveils-dh200bn-masterplan-for-150-000-residents-in-du",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-13-palm-jumeirah-handover-2026-two-sold-out-towers-test-the-cre",
+      "pathname": "/news/2026-06-13-palm-jumeirah-handover-2026-two-sold-out-towers-test-the-cre",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-",
+      "pathname": "/news/2026-06-14-branded-residences-command-64-premium-as-dubai-buyers-chase-",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+      "pathname": "/news/2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026",
+      "pathname": "/news/2026-06-18-abu-dhabi-residential-sales-hit-dh38-1bn-in-record-q1-2026",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+      "pathname": "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g",
+      "pathname": "/news/2026-07-01-uk-buyers-lead-dubai-property-demand-but-banks-tighten-the-g",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
+      "pathname": "/news/2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
+      "pathname": "/news/2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+      "pathname": "/news/2026-07-09-modon-and-adib-launch-75-off-plan-financing-for-abu-dhabi-co",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+      "pathname": "/news/2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat",
+      "pathname": "/news/2026-07-10-dubai-retail-sales-surge-171-to-aed-2-1bn-as-off-plan-mandat",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
+      "pathname": "/news/2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma",
+      "pathname": "/news/2026-07-19-aed-318-billion-q1-transactions-reveal-diverging-investor-ma",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar",
+      "pathname": "/news/2026-07-22-dubai-office-rents-stabilise-at-aed-238-sqft-as-grade-a-scar",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+      "pathname": "/news/2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "ImageObject",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+      "pathname": "/news/2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+      "pathname": "/news/2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+      "pathname": "/news/2026-07-28-burtville-launches-405-unit-bab-al-qasr-garden-residences-65",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    }
+  ],
+  "certifiedArticles": [
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+      "pathname": "/news/2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    },
+    {
+      "allSchemaTypes": [
+        "Answer",
+        "BreadcrumbList",
+        "CreativeWork",
+        "FAQPage",
+        "ImageObject",
+        "ListItem",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "Question",
+        "WebPage",
+        "WebSite"
+      ],
+      "canonical": "https://news.investwithraj.com/news/2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak",
+      "pathname": "/news/2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak",
+      "robots": "index, follow",
+      "status": 200,
+      "topLevelGraphTypes": [
+        "BreadcrumbList",
+        "FAQPage",
+        "NewsArticle",
+        "NewsMediaOrganization",
+        "Person",
+        "WebSite"
+      ]
+    }
+  ],
+  "lifecycleRedirects": [
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/al-marjan-island",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/al-marjan-island"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/al-reem-island",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/al-reem-island"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/downtown-dubai",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/downtown-dubai"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/dubai-creek-harbour",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/dubai-creek-harbour"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/dubai-hills-estate",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/dubai-hills-estate"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/dubai-marina",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/dubai-marina"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/hudayriyat-island",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/hudayriyat-island"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/palm-jebel-ali",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/palm-jebel-ali"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/palm-jumeirah",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/palm-jumeirah"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/saadiyat-island",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/saadiyat-island"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/areas/yas-island",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/areas/yas-island"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/developers/aldar",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/developer/aldar"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/developers/emaar",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/developer/emaar"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/developers/modon",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/developer/modon"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/developers/nakheel",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/developer/nakheel"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/developers/sobha",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/developer/sobha"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "https://investwithraj.com/developers",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/developers"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/map"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news/2026-05-30-al-barari-villa-lease-resets-dubai-ultra-prime-rental-ceilin",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/news/2026-05-31-al-barari-villa-leased-for-aed-14-million-sets-dubai-rental-"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news/2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-gains-i",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/news/2026-06-17-dir-completes-189-villa-delivery-at-danah-bay-as-rak-absorbs"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news/2026-06-10-shangri-la-dubai-sells-for-dh1-1bn-as-sheikh-zayed-road-valu",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/news/2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/news/2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news/2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/news/2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra"
+    },
+    {
+      "authorityCurrentState": "404; research record excluded from static params",
+      "authorityExpectedStatus": 404,
+      "actualStatus": 404,
+      "destination": "/news/2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
+      "location": null,
+      "runtimeExpectedStatus": 404,
+      "source": "/news/2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-"
+    },
+    {
+      "authorityCurrentState": "200,noindex",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/spatial"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news?desk=beyond-the-deal",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/v/beyond-the-deal"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news?desk=dld-pulse",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/v/dld-pulse"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news?desk=off-plan-watch",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/v/off-plan-watch"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news?desk=sovereign-plays",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/v/sovereign-plays"
+    },
+    {
+      "authorityCurrentState": "200,indexable",
+      "authorityExpectedStatus": 200,
+      "actualStatus": 200,
+      "destination": "/news?desk=uhnw-trades",
+      "location": null,
+      "runtimeExpectedStatus": 200,
+      "source": "/v/uhnw-trades"
+    }
+  ],
+  "heldRedirects": [
+    {
+      "actualRobots": "index, follow",
+      "authorityCurrentState": "200,indexable",
+      "destination": "https://investwithraj.com/projects/wynn-al-marjan",
+      "expectedRobots": "index, follow",
+      "pathname": "/areas/wynn-al-marjan",
+      "status": 200
+    },
+    {
+      "actualRobots": "index, follow",
+      "authorityCurrentState": "200,indexable",
+      "destination": "/news/2026-07-26-off-plan-sales-capture-71-of-dubai-transactions-as-h1-2026-h",
+      "expectedRobots": "index, follow",
+      "pathname": "/news/2026-06-06-dubai-s-off-plan-dominance-66-900-sales-in-five-months-as-ma",
+      "status": 200
+    },
+    {
+      "actualRobots": "index, follow",
+      "authorityCurrentState": "200,indexable",
+      "destination": "/news/2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
+      "expectedRobots": "index, follow",
+      "pathname": "/news/2026-06-12-dubai-luxury-off-plan-sales-hit-aed4-96bn-in-may",
+      "status": 200
+    }
+  ],
+  "removals": [
+    {
+      "methods": {
+        "get": {
+          "bodyClass": "non-empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        },
+        "head": {
+          "bodyClass": "empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        }
+      },
+      "pathname": "/news/2026-06-22-from-dhoom-to-dubai-how-rimi-sen-traded-bollywood-for-luxury"
+    },
+    {
+      "methods": {
+        "get": {
+          "bodyClass": "non-empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        },
+        "head": {
+          "bodyClass": "empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        }
+      },
+      "pathname": "/news/2026-06-24-oman-tenders-1-035bn-solar-mandate-as-vision-2040-absorbs-1-"
+    },
+    {
+      "methods": {
+        "get": {
+          "bodyClass": "non-empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        },
+        "head": {
+          "bodyClass": "empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        }
+      },
+      "pathname": "/news/2026-06-29-dar-global-launches-19-fendi-casa-villas-at-oman-s-aida-clif"
+    },
+    {
+      "methods": {
+        "get": {
+          "bodyClass": "non-empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        },
+        "head": {
+          "bodyClass": "empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        }
+      },
+      "pathname": "/news/2026-07-12-kuwait-property-deals-fall-13-as-land-fees-and-war-chill-h1-"
+    },
+    {
+      "methods": {
+        "get": {
+          "bodyClass": "non-empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        },
+        "head": {
+          "bodyClass": "empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        }
+      },
+      "pathname": "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop"
+    },
+    {
+      "methods": {
+        "get": {
+          "bodyClass": "non-empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        },
+        "head": {
+          "bodyClass": "empty",
+          "headers": {
+            "cacheControl": "s-maxage=31536000",
+            "contentSecurityPolicy": null,
+            "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "referrerPolicy": "strict-origin-when-cross-origin",
+            "xContentTypeOptions": "nosniff",
+            "xRobotsTag": null
+          },
+          "status": 200
+        }
+      },
+      "pathname": "/pulse"
+    }
+  ],
+  "controls": [
+    {
+      "pathname": "/wallet",
+      "status": 404
+    },
+    {
+      "pathname": "/news/not-a-removal-candidate",
+      "status": 404
+    },
+    {
+      "pathname": "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop/extra",
+      "status": 404
+    }
+  ],
+  "productionHeaders": {
+    "cacheControl": "s-maxage=31536000",
+    "contentSecurityPolicy": null,
+    "contentSecurityPolicyReportOnly": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' va.vercel-scripts.com *.vercel-analytics.com *.vercel-insights.com www.googletagmanager.com www.google-analytics.com plausible.io connect.facebook.net snap.licdn.com static.ads-twitter.com analytics.tiktok.com www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms; font-src 'self' data: fonts.gstatic.com; connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' www.youtube.com www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+    "contentType": "text/html; charset=utf-8",
+    "location": null,
+    "referrerPolicy": "strict-origin-when-cross-origin",
+    "xContentTypeOptions": "nosniff",
+    "xRobotsTag": null
+  }
+}

@@ -74,6 +74,7 @@ function hostedFetch(
   calls,
   {
     changedPulse = false,
+    customPreviewAlias = false,
     missingProductionAlias = false,
     previewCanonicalTakeover = false,
     projectMismatch = false,
@@ -104,7 +105,7 @@ function hostedFetch(
       });
       if (url.pathname.endsWith("/env")) return json({ envs: [{ key: "NEXT_PUBLIC_SITE_NAME", target: ["production", "preview"], type: "plain" }] });
       if (url.pathname.endsWith(productionDeploymentId)) return json(deployment({ aliases: missingProductionAlias ? [] : undefined, id: productionDeploymentId, origin: productionOrigin, branch: "main", sha: productionSha, target: "production" }));
-      if (url.pathname.endsWith(previewDeploymentId)) return json(deployment({ aliases: previewCanonicalTakeover ? ["news.investwithraj.com"] : undefined, id: previewDeploymentId, origin: previewOrigin, branch: "proposed", sha: candidateSha, target: "preview" }));
+      if (url.pathname.endsWith(previewDeploymentId)) return json(deployment({ aliases: previewCanonicalTakeover ? ["news.investwithraj.com"] : customPreviewAlias ? ["preview.example.com"] : ["news-investwithraj-site-git-proposed-office-2271s-projects.vercel.app"], id: previewDeploymentId, origin: previewOrigin, branch: "proposed", sha: candidateSha, target: "preview" }));
       throw new Error(`Unexpected provider path ${url.pathname}`);
     }
     assert.equal(authorization, null, "Provider credential escaped Vercel API");
@@ -154,6 +155,7 @@ await assert.rejects(() => runHostedNewsroomInvariance({ baseline, environment: 
 await assert.rejects(() => runHostedNewsroomInvariance({ baseline, environment: afterEnvironment, fetchImpl: hostedFetch([], { projectMismatch: true }) }), /Provider team ID mismatch/u);
 await assert.rejects(() => runHostedNewsroomInvariance({ baseline, environment: afterEnvironment, fetchImpl: hostedFetch([], { missingProductionAlias: true }) }), /Production aliases must include canonical news\.investwithraj\.com/u);
 await assert.rejects(() => runHostedNewsroomInvariance({ baseline, environment: afterEnvironment, fetchImpl: hostedFetch([], { previewCanonicalTakeover: true }) }), /Preview aliases must exclude canonical news\.investwithraj\.com/u);
+await assert.rejects(() => runHostedNewsroomInvariance({ baseline, environment: afterEnvironment, fetchImpl: hostedFetch([], { customPreviewAlias: true }) }), /not an exact newsroom project\/team Vercel hostname/u);
 assert.throws(() => parseInvarianceConfiguration({ ...afterEnvironment, NEWSROOM_LIFECYCLE_CUTOVER: "1" }), /Lifecycle cutover must be unset/u);
 assert.throws(() => parseInvarianceConfiguration({ ...afterEnvironment, NEWSROOM_EVIDENCE_HOLD_PREVIEW: "1" }), /Evidence hold must be unset/u);
 await assert.rejects(() => runHostedNewsroomInvariance({ baseline, environment: { ...afterEnvironment, NEWSROOM_VERCEL_PROTECTION_BYPASS: undefined }, fetchImpl: hostedFetch([]) }), /requires newsroom auth/u);

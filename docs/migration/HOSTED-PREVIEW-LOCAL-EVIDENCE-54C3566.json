@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "kind": "newsroom-hosted-preview-local-evidence",
+  "runtimeSha": "54c35668f90dcdf696785c6fd5cc6e67a268e866",
+  "runtimeTree": "72b9a20648cf5ae70efea9f2fd2b572a0c40c744",
+  "toolingSha": "0aabdefaccceaf97fcc336ddcc1ab2c11a7eb145",
+  "toolingTree": "ae3e25a024b6656a8a7625f70392cd15f02120cb",
+  "buildId": "Vw3nq0gSlyv08qacF7Xo8",
+  "localEvidence": [
+    {
+      "id": "default-runtime",
+      "path": "docs/migration/evidence/hosted-readiness-54c3566/default-runtime.json",
+      "sourcePath": "outputs/hosted-readiness-54c3566/default-runtime.json",
+      "bytes": 66516,
+      "sha256": "8806976FD2980BAB389F47C798DD96BA1472AB1223104578BC4CF022E5635E76",
+      "repeatByteDeterministic": true,
+      "counts": {
+        "sitemap": 79,
+        "discoveryArticles": 41,
+        "developerReports": 6,
+        "frontItems": 6,
+        "rssItems": 30,
+        "heldArticles": 24,
+        "certifiedArticles": 2,
+        "lifecycleRedirectSources": 31,
+        "heldRedirects": 3,
+        "removals": 6,
+        "controls": 3
+      }
+    },
+    {
+      "id": "media-delivery",
+      "path": "docs/migration/evidence/hosted-readiness-54c3566/media-delivery.json",
+      "sourcePath": "outputs/hosted-readiness-54c3566/media-delivery.json",
+      "bytes": 9639,
+      "sha256": "110C555EFD7E6FA308D532D097A48B39C45946FAFDB4ECA3692B12010406F358",
+      "repeatByteDeterministic": true,
+      "counts": {
+        "approvedHead": 16,
+        "rangedGet": 3,
+        "deniedHead": 51,
+        "total": 71,
+        "withheld": 31,
+        "unknownOnDisk": 16,
+        "approvedPaths": 16
+      }
+    }
+  ],
+  "hostedReceiptContract": [
+    {
+      "id": "production-before",
+      "path": "outputs/hosted-readiness-54c3566/hosted-production-before.json",
+      "repeatByteDeterministic": true,
+      "repeatRequired": false,
+      "timestamped": false
+    },
+    {
+      "id": "invariance-after",
+      "path": "outputs/hosted-readiness-54c3566/hosted-invariance-after.json",
+      "repeatPath": "outputs/hosted-readiness-54c3566/hosted-invariance-after-repeat.json",
+      "repeatByteDeterministic": true,
+      "repeatRequired": true,
+      "timestamped": false
+    },
+    {
+      "id": "media-delivery",
+      "path": "outputs/hosted-readiness-54c3566/hosted-media-delivery.json",
+      "repeatPath": "outputs/hosted-readiness-54c3566/hosted-media-delivery-repeat.json",
+      "repeatByteDeterministic": true,
+      "repeatRequired": true,
+      "timestamped": false
+    },
+    {
+      "id": "browser",
+      "path": "outputs/hosted-readiness-54c3566/hosted-browser.json",
+      "repeatPath": "outputs/hosted-readiness-54c3566/hosted-browser-repeat.json",
+      "repeatByteDeterministic": true,
+      "repeatRequired": true,
+      "timestamped": false
+    },
+    {
+      "id": "default-runtime",
+      "path": "outputs/hosted-readiness-54c3566/hosted-default-runtime.json",
+      "repeatPath": "outputs/hosted-readiness-54c3566/hosted-default-runtime-repeat.json",
+      "repeatByteDeterministic": true,
+      "repeatRequired": true,
+      "timestamped": false
+    },
+    {
+      "id": "batch-8",
+      "path": "outputs/hosted-readiness-54c3566/batch-8/report.json",
+      "repeatByteDeterministic": false,
+      "repeatRequired": false,
+      "timestamped": true
+    },
+    {
+      "id": "batch-9",
+      "path": "outputs/hosted-readiness-54c3566/batch-9/report.json",
+      "repeatByteDeterministic": false,
+      "repeatRequired": false,
+      "timestamped": true
+    }
+  ]
+}

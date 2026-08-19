@@ -24,6 +24,8 @@ const VERCEL_PRODUCTION_BRANCH = "main";
 const VERCEL_PROVIDER_CREDENTIAL_ENV = "NEWSROOM_VERCEL_API_TOKEN";
 const IMMUTABLE_NEWSROOM_HOST =
   /^news-investwithraj-site-[a-z0-9]{8,16}-office-2271s-projects\.vercel\.app$/u;
+const NEWSROOM_PREVIEW_ALIAS =
+  /^news-investwithraj-site(?:-[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)?-office-2271s-projects\.vercel\.app$/u;
 const PUBLIC_ROUTES = Object.freeze([
   { kind: "html", path: "/" },
   { kind: "html", path: "/pulse" },
@@ -343,6 +345,27 @@ function validateDeployment(deployment, expected, role) {
       ? `${role} aliases must include canonical news.investwithraj.com`
       : `${role} aliases must exclude canonical news.investwithraj.com`,
   );
+  if (!expected.ownsCanonicalAlias) {
+    assertPreviewAliasPolicy(deployment.aliases);
+  }
+}
+
+export function assertPreviewAliasPolicy(aliases) {
+  assert.ok(Array.isArray(aliases), "Preview aliases must be an array");
+  assert.equal(new Set(aliases).size, aliases.length, "Preview aliases must be unique");
+  for (const alias of aliases) {
+    assert.equal(typeof alias, "string", "Preview alias must be a hostname");
+    assert.match(
+      alias,
+      NEWSROOM_PREVIEW_ALIAS,
+      `Preview alias is not an exact newsroom project/team Vercel hostname: ${alias}`,
+    );
+    assert.ok(
+      alias.split(".").every((label) => label.length >= 1 && label.length <= 63),
+      `Preview alias has an invalid DNS label: ${alias}`,
+    );
+    assert.notEqual(alias, "news.investwithraj.com", "Preview aliases must exclude canonical");
+  }
 }
 
 export async function captureVercelProviderSnapshot({
