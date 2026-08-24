@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import IwrMark from "@/components/brand/IwrMark";
+
 import styles from "./NewsFooter.module.css";
 
 const PRACTICE_URL =
@@ -151,11 +153,18 @@ export default function NewsFooter() {
               data-cta-action="editorial"
               data-cta-source="news-footer"
             >
-              <span>Invest With Raj</span>
-              <strong>Intelligence.</strong>
+              <IwrMark
+                className={styles.brandMark}
+                surface="dark"
+                decorative
+              />
+              <span className={styles.brandCopy}>
+                <span>Invest With Raj</span>
+                <strong>Daily Intelligence.</strong>
+              </span>
             </Link>
             <p>
-              Independent UAE property reporting, analysis and decision
+              Source-cited UAE real estate reporting, analysis and decision
               intelligence from the Invest With Raj News Desk.
             </p>
             <a

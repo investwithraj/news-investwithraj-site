@@ -1,11 +1,10 @@
 .footer {
   position: relative;
   z-index: 2;
-  border-top: 1px solid rgba(240, 240, 236, 0.14);
-  background:
-    radial-gradient(circle at 88% 0%, rgba(89, 107, 255, 0.17), transparent 30rem),
-    #090b10;
-  color: #f0f0ec;
+  border-top: 1px solid var(--iwr-rule-dark);
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
+  font-family: var(--iwr-font-body);
 }
 
 .frame {
@@ -24,7 +23,7 @@
 
 .callout p {
   margin: 0 0 1.6rem;
-  color: #95a0ff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.67rem;
   font-weight: 650;
   letter-spacing: 0.14em;
@@ -33,10 +32,11 @@
 
 .callout h2 {
   margin: 0;
+  font-family: var(--iwr-font-display);
   font-size: clamp(3.4rem, 7.2vw, 8rem);
-  font-weight: 420;
-  letter-spacing: -0.074em;
-  line-height: 0.86;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
 }
 
 .calloutLink {
@@ -45,10 +45,10 @@
   min-height: 4.3rem;
   align-items: center;
   justify-content: space-between;
-  border-radius: 999px;
+  border-radius: var(--iwr-radius-small);
   padding: 0 1.5rem;
-  background: #4050c8;
-  color: #fff;
+  background: var(--iwr-cobalt);
+  color: var(--iwr-white);
   font-size: 0.75rem;
   font-weight: 620;
   letter-spacing: 0.03em;
@@ -60,7 +60,8 @@
 
 .calloutLink:hover {
   transform: translateY(-2px);
-  background: #7180ff;
+  background: var(--iwr-cobalt-soft);
+  color: var(--iwr-ink);
 }
 
 .calloutActions {
@@ -95,18 +96,36 @@
 }
 
 .brand {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.8rem;
   color: inherit;
-  flex-direction: column;
-  font-size: 0.92rem;
-  line-height: 0.96;
   text-decoration: none;
 }
 
-.brand strong {
-  font-size: 2.25rem;
-  font-weight: 520;
-  letter-spacing: -0.045em;
+.brandMark {
+  --iwr-mark-width: clamp(5.5rem, 8vw, 7.5rem);
+  --iwr-mark-clear-space: 0.25rem;
+}
+
+.brandCopy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.brandCopy > span {
+  font-size: 0.82rem;
+  font-weight: 640;
+  letter-spacing: 0.035em;
+}
+
+.brandCopy strong {
+  color: var(--iwr-cobalt-soft);
+  font-size: 0.72rem;
+  font-weight: 620;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .identity p {
@@ -154,7 +173,7 @@
 .group a:hover,
 .base a:hover,
 .identity > a:hover {
-  color: #a5aeff;
+  color: var(--iwr-cobalt-soft);
 }
 
 .base {
@@ -185,7 +204,7 @@
 .identity > a:focus-visible,
 .group a:focus-visible,
 .base a:focus-visible {
-  outline: 3px solid #a9b2ff;
+  outline: 3px solid var(--iwr-cobalt-soft);
   outline-offset: 4px;
 }
 

@@ -1,0 +1,14 @@
+.mark {
+  display: inline-flex;
+  box-sizing: content-box;
+  width: var(--iwr-mark-width, 8rem);
+  flex: none;
+  padding: var(--iwr-mark-clear-space, 0.35rem);
+  line-height: 0;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+}

@@ -194,7 +194,7 @@ export default function NewsArchive({
           <div>
             <p className={styles.eyebrow}>The reporting · structured archive</p>
             <h1>
-              Every report,
+              Every <br className={styles.mobileBreak} />report,
               <br />
               in order.
             </h1>

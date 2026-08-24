@@ -86,7 +86,7 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
           <h1 id="news-home-title">
             The market,
             <br />
-            without the noise.
+            without <br className={styles.mobileBreak} />the noise.
           </h1>
           <p>
             What moved. What it changes. What a serious buyer, seller or

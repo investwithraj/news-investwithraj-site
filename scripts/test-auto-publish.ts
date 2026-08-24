@@ -99,6 +99,7 @@ draft.provenance.score = 50;
 
 const originalFetch = globalThis.fetch;
 const calls: string[] = [];
+let forcePublishFailure = false;
 globalThis.fetch = async (input) => {
   const url = String(input);
   calls.push(url);
@@ -106,6 +107,9 @@ globalThis.fetch = async (input) => {
     return Response.json({ drafts: [staleDraft, olderDraft, draft] });
   }
   if (/\/api\/news\/draft\/[^/]+\/publish$/.test(url)) {
+    if (forcePublishFailure) {
+      return Response.json({ error: "simulated publication failure" }, { status: 503 });
+    }
     return Response.json(
       {
         claimId: "00000000-0000-4000-8000-000000000000",
@@ -721,6 +725,12 @@ async function main() {
     assert.equal(result.failed, 0);
     assert.equal(result.held, 0);
     assert.equal(result.deferred, 2);
+    assert.deepEqual(result.publicationShas, ["a".repeat(40)]);
+    assert.deepEqual(result.publishedSlugs, [draft.article.slug]);
+    assert.equal(result.deploymentVerified, 0);
+    assert.equal(result.pendingVerification, 0);
+    assert.equal(result.verificationSkipped, 1);
+    assert.deepEqual(result.failureMessages, []);
     assert.equal(calls.length, 2);
     assert.match(calls[1], /\/publish$/);
     assert.ok(calls[1].includes(draft.id), "newest passing draft must publish first");
@@ -743,6 +753,39 @@ async function main() {
       calls[1].includes(olderDraft.id),
       "backlog lane must publish the strongest still-timely draft first",
     );
+
+    calls.length = 0;
+    forcePublishFailure = true;
+    const failedResult = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: true,
+      publishLimit: 1,
+      deploymentAttempts: 0,
+      log: () => undefined,
+    });
+    forcePublishFailure = false;
+    assert.equal(failedResult.published, 0);
+    assert.equal(failedResult.failed, 1);
+    assert.deepEqual(failedResult.publicationShas, []);
+    assert.match(failedResult.failureMessages[0] ?? "", /simulated publication failure/u);
+
+    calls.length = 0;
+    const noEligibleResult = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: true,
+      publishLimit: 1,
+      publishOrder: "backlog",
+      now: new Date("2026-09-30T12:00:00.000Z"),
+      deploymentAttempts: 0,
+      log: () => undefined,
+    });
+    assert.equal(noEligibleResult.total, 3);
+    assert.equal(noEligibleResult.eligible, 0);
+    assert.equal(noEligibleResult.published, 0);
+    assert.equal(noEligibleResult.failed, 0);
+    assert.equal(calls.length, 1, "No eligible story must not call the publish endpoint");
     console.log(
       "Auto-publish regression passed: universal two-publisher, contextual-range and timely-backlog gates are enforced.",
     );

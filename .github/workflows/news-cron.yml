@@ -17,8 +17,11 @@ jobs:
           node-version: "22"
       - run: npm ci
       - run: npx tsx scripts/test-developer-source-registry.ts
+      - run: npx tsx scripts/test-news-cron-outcome.ts
       - run: npx tsx scripts/check-source-health.ts
-      - run: npx tsx scripts/draft-once.ts
+      - name: Run daily news pipeline
+        id: pipeline
+        run: npx tsx scripts/draft-once.ts
         env:
           SITE_URL: https://news.investwithraj.com
           POST_PUBLISH_SECRET: ${{ secrets.POST_PUBLISH_SECRET }}
@@ -34,3 +37,17 @@ jobs:
           # A manual recovery run may retry failed (never processing/staged)
           # reservations immediately after a pipeline fix.
           PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+      - name: Surface daily news outcome
+        if: always()
+        shell: bash
+        env:
+          PIPELINE_OUTCOME: ${{ steps.pipeline.outputs.outcome }}
+          PIPELINE_OUTCOMES: ${{ steps.pipeline.outputs.outcomes }}
+          PUBLICATION_SHA: ${{ steps.pipeline.outputs.publication_sha }}
+          NEWEST_PUBLICATION_AGE_HOURS: ${{ steps.pipeline.outputs.newest_publication_age_hours }}
+        run: |
+          if [ -z "$PIPELINE_OUTCOME" ]; then
+            echo "::error title=Daily news pipeline::The pipeline exited without an outcome receipt."
+            exit 1
+          fi
+          echo "::notice title=Daily news pipeline::outcome=$PIPELINE_OUTCOME; outcomes=$PIPELINE_OUTCOMES; publication_sha=$PUBLICATION_SHA; newest_age_hours=$NEWEST_PUBLICATION_AGE_HOURS"

@@ -1,16 +1,16 @@
 .page {
   overflow: hidden;
-  background: #f0f0ec;
-  color: #0b0d12;
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  background: var(--iwr-paper);
+  color: var(--iwr-ink);
+  font-family: var(--iwr-font-body);
 }
 
 .header {
   position: relative;
   min-height: min(760px, 72svh);
   padding: clamp(3rem, 6vw, 6rem) clamp(1.25rem, 8vw, 10rem) clamp(4rem, 8vw, 8rem);
-  background: #090b10;
-  color: #f0f0ec;
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
 }
 
 .headerGrid {
@@ -21,7 +21,7 @@
     linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
   background-size: calc(100vw / 12) calc(100vw / 12);
-  mask-image: linear-gradient(to bottom, #000, transparent 85%);
+  mask-image: linear-gradient(to bottom, var(--iwr-ink), transparent 85%);
 }
 
 .header > *:not(.headerGrid) {
@@ -41,7 +41,7 @@
 }
 
 .back:hover {
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
 }
 
 .meta {
@@ -57,16 +57,17 @@
 }
 
 .meta span:first-child {
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
 }
 
 .header h1 {
   max-width: 16ch;
   margin: 0;
+  font-family: var(--iwr-font-display);
   font-size: clamp(3.2rem, 6.5vw, 6.8rem);
-  font-weight: 420;
-  letter-spacing: -0.071em;
-  line-height: 0.89;
+  font-weight: 800;
+  letter-spacing: -0.052em;
+  line-height: 0.93;
   text-wrap: balance;
 }
 
@@ -102,11 +103,11 @@
 }
 
 .author:hover b {
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
 }
 
 .byline b {
-  color: #f0f0ec;
+  color: var(--iwr-paper);
   font-size: 0.79rem;
   font-weight: 600;
 }
@@ -123,7 +124,7 @@
   height: clamp(28rem, 52vw, 58rem);
   margin: 0;
   overflow: hidden;
-  background: #151820;
+  background: var(--iwr-ink);
 }
 
 .hero img {
@@ -134,8 +135,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, transparent 52%, rgba(9, 11, 16, 0.46)),
-    linear-gradient(120deg, rgba(89, 107, 255, 0.13), transparent 45%);
+    linear-gradient(180deg, transparent 52%, rgba(11, 13, 18, 0.46)),
+    linear-gradient(120deg, rgba(64, 80, 200, 0.13), transparent 45%);
 }
 
 .hero figcaption {
@@ -159,15 +160,17 @@
   align-content: end;
   padding: clamp(2rem, 6vw, 7rem) clamp(1.25rem, 8vw, 10rem);
   background:
-    radial-gradient(circle at 78% 18%, rgba(127, 91, 51, 0.14), transparent 30%),
-    linear-gradient(135deg, #e7e0d4 0%, #cfc4b4 100%);
-  color: #171714;
+    linear-gradient(rgba(11, 13, 18, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 13, 18, 0.08) 1px, transparent 1px),
+    var(--iwr-paper);
+  background-size: 4rem 4rem;
+  color: var(--iwr-ink);
 }
 
 .heroFallback > span,
 .heroFallback > small {
   align-self: start;
-  color: rgba(23, 23, 20, 0.58);
+  color: rgba(11, 13, 18, 0.58);
   font-size: 0.64rem;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -176,23 +179,24 @@
 
 .heroFallback > strong {
   max-width: 10ch;
+  font-family: var(--iwr-font-display);
   font-size: clamp(3rem, 7vw, 7rem);
-  font-weight: 420;
-  letter-spacing: -0.07em;
-  line-height: 0.86;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
 }
 
 .heroFallback > p {
   max-width: 28rem;
   margin: 0;
-  color: rgba(23, 23, 20, 0.66);
+  color: rgba(11, 13, 18, 0.66);
   line-height: 1.62;
 }
 
 .heroFallback > small {
   grid-column: 2;
   margin-top: 1rem;
-  color: rgba(23, 23, 20, 0.52);
+  color: rgba(11, 13, 18, 0.52);
 }
 
 .articleGrid {
@@ -210,14 +214,14 @@
   grid-template-columns: minmax(11rem, 0.28fr) minmax(0, 1fr);
   gap: clamp(2rem, 6vw, 7rem);
   margin-inline: auto;
-  border-top: 2px solid #4050c8;
+  border-top: 2px solid var(--iwr-cobalt);
   padding-block: clamp(2rem, 4vw, 3.5rem);
 }
 
 .tldr > p,
 .sourceRail > p {
   margin: 0 0 2.2rem;
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-size: 0.66rem;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -242,7 +246,7 @@
 }
 
 .tldr li > span {
-  color: #5d6167;
+  color: var(--iwr-architectural-slate);
   font-size: 0.62rem;
   font-weight: 650;
 }
@@ -268,7 +272,7 @@
 }
 
 .disclosure span {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-size: 0.62rem;
   font-weight: 650;
   letter-spacing: 0.09em;
@@ -283,7 +287,7 @@
 }
 
 .disclosure a {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-weight: 650;
 }
 
@@ -297,7 +301,7 @@
 .body > p:first-of-type::first-letter {
   float: left;
   margin: 0.07em 0.1em 0 0;
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-size: 4.8em;
   font-weight: 520;
   line-height: 0.72;
@@ -308,7 +312,7 @@
 .reality,
 .next {
   margin-block: 5rem;
-  border-left: 2px solid #4050c8;
+  border-left: 2px solid var(--iwr-cobalt);
   padding: 1rem 0 1rem clamp(1.5rem, 4vw, 3rem);
 }
 
@@ -316,7 +320,7 @@
 .take > span,
 .reality > span,
 .next > span {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-size: 0.65rem;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -327,10 +331,11 @@
 .take h2 {
   max-width: 15ch;
   margin: 2rem 0;
+  font-family: var(--iwr-font-display);
   font-size: clamp(2rem, 3.5vw, 3.4rem);
-  font-weight: 430;
-  letter-spacing: -0.058em;
-  line-height: 0.96;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .consequence p,
@@ -360,20 +365,21 @@
 }
 
 .sourceRail > p {
-  color: #5d6167;
+  color: var(--iwr-architectural-slate);
 }
 
 .sourceRail strong {
   display: block;
-  color: #4050c8;
+  color: var(--iwr-cobalt);
+  font-family: var(--iwr-font-display);
   font-size: 3.5rem;
-  font-weight: 430;
-  letter-spacing: -0.07em;
+  font-weight: 800;
+  letter-spacing: -0.04em;
 }
 
 .sourceRail > span {
   display: block;
-  color: #5d6167;
+  color: var(--iwr-architectural-slate);
   font-size: 0.67rem;
   text-transform: uppercase;
 }
@@ -393,7 +399,7 @@
 }
 
 .sourceRail a {
-  color: #0b0d12;
+  color: var(--iwr-ink);
   font-size: 0.67rem;
   font-weight: 620;
   text-decoration: none;
@@ -406,7 +412,7 @@
 }
 
 .context {
-  background: #f0f0ec;
+  background: var(--iwr-paper);
 }
 
 .context .faq {
@@ -414,12 +420,12 @@
 }
 
 .finalLayer {
-  background: #090b10;
+  background: var(--iwr-ink);
 }
 
 .sources {
-  background: #090b10;
-  color: #f0f0ec;
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
 }
 
 .sources header,
@@ -436,7 +442,7 @@
 .relations > header > p:first-child,
 .faq header > p:first-child {
   align-self: start;
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.66rem;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -448,10 +454,11 @@
 .faq h2 {
   max-width: 11ch;
   margin: 0;
+  font-family: var(--iwr-font-display);
   font-size: clamp(2.8rem, 5vw, 5.2rem);
-  font-weight: 420;
-  letter-spacing: -0.068em;
-  line-height: 0.89;
+  font-weight: 800;
+  letter-spacing: -0.048em;
+  line-height: 0.93;
 }
 
 .sources header > p:last-child,
@@ -463,7 +470,7 @@
 .evidenceNotice {
   max-width: 62rem;
   margin: 2rem 0 0;
-  border-left: 1px solid #d8c089;
+  border-left: 1px solid var(--iwr-architectural-slate);
   padding-left: 1rem;
   color: rgba(240, 240, 236, 0.65);
   font-size: 0.78rem;
@@ -471,11 +478,11 @@
 }
 
 .relations {
-  background: #f0f0ec;
+  background: var(--iwr-paper);
 }
 
 .relations > header > p:first-child {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
 }
 
 .relations > header > p:last-child {
@@ -499,7 +506,7 @@
   margin: 0;
   border-bottom: 1px solid rgba(11, 13, 18, 0.16);
   padding: 1rem 1.25rem;
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-size: 0.64rem;
   font-weight: 680;
   letter-spacing: 0.09em;
@@ -512,7 +519,7 @@
   gap: 0.45rem 1rem;
   border-bottom: 1px solid rgba(11, 13, 18, 0.12);
   padding: 1.25rem;
-  color: #0b0d12;
+  color: var(--iwr-ink);
   text-decoration: none;
 }
 
@@ -522,7 +529,7 @@
 
 .relationGrid a > span {
   grid-column: 1 / -1;
-  color: #5d6167;
+  color: var(--iwr-architectural-slate);
   font-size: 0.6rem;
   font-weight: 650;
   letter-spacing: 0.08em;
@@ -535,12 +542,12 @@
 }
 
 .relationGrid a > i {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-style: normal;
 }
 
 .relationGrid a:hover strong {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
 }
 
 .share {
@@ -550,7 +557,7 @@
   align-items: stretch;
   border-block: 1px solid rgba(240, 240, 236, 0.16);
   background: rgba(240, 240, 236, 0.16);
-  color: #f0f0ec;
+  color: var(--iwr-paper);
 }
 
 .share > * {
@@ -558,11 +565,11 @@
   min-height: 5rem;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: #090b10;
+  background: var(--iwr-ink);
 }
 
 .share > span {
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.65rem;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -570,7 +577,7 @@
 }
 
 .share a {
-  color: #f0f0ec;
+  color: var(--iwr-paper);
   font-size: 0.68rem;
   font-weight: 650;
   text-decoration: none;
@@ -578,7 +585,7 @@
 }
 
 .share a:hover {
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
 }
 
 .sources ol {
@@ -619,18 +626,18 @@
 }
 
 .sources li a {
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.68rem;
   font-weight: 620;
   text-decoration: none;
 }
 
 .faq {
-  background: #f0f0ec;
+  background: var(--iwr-paper);
 }
 
 .faq header > p:first-child {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
 }
 
 .faq > div {
@@ -659,13 +666,13 @@
 }
 
 .faq summary > span {
-  color: #5d6167;
+  color: var(--iwr-architectural-slate);
   font-size: 0.65rem;
   font-weight: 650;
 }
 
 .faq summary i {
-  color: #4050c8;
+  color: var(--iwr-cobalt);
   font-style: normal;
   font-size: 1.4rem;
 }
@@ -687,16 +694,14 @@
   gap: 2rem;
   align-items: end;
   padding: clamp(8rem, 14vw, 14rem) clamp(1.25rem, 8vw, 10rem);
-  background:
-    radial-gradient(circle at 77% 26%, rgba(89, 107, 255, 0.25), transparent 35%),
-    #090b10;
-  color: #f0f0ec;
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
 }
 
 .action > p {
   align-self: start;
   margin: 0;
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.66rem;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -706,10 +711,11 @@
 .action h2 {
   max-width: 9ch;
   margin: 0;
+  font-family: var(--iwr-font-display);
   font-size: clamp(2.8rem, 5.5vw, 5.8rem);
-  font-weight: 420;
-  letter-spacing: -0.072em;
-  line-height: 0.87;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 0.91;
 }
 
 .action > div > p {
@@ -725,7 +731,7 @@
   justify-content: space-between;
   border: 1px solid rgba(240, 240, 236, 0.28);
   padding-inline: 1.4rem;
-  color: #fff;
+  color: var(--iwr-white);
   font-size: 0.73rem;
   font-weight: 620;
   letter-spacing: 0.05em;
@@ -734,15 +740,15 @@
 }
 
 .action a:hover {
-  border-color: #4050c8;
-  background: #4050c8;
+  border-color: var(--iwr-cobalt);
+  background: var(--iwr-cobalt);
 }
 
 .more {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: #090b10;
-  color: #f0f0ec;
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
 }
 
 .more a {
@@ -755,7 +761,7 @@
 }
 
 .more a > span {
-  color: #b8c0ff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.65rem;
   font-weight: 630;
   letter-spacing: 0.09em;
@@ -766,10 +772,11 @@
   display: block;
   max-width: 28ch;
   margin-top: 3rem;
+  font-family: var(--iwr-font-display);
   font-size: clamp(1.3rem, 2vw, 2rem);
-  font-weight: 460;
-  letter-spacing: -0.042em;
-  line-height: 1.13;
+  font-weight: 800;
+  letter-spacing: -0.028em;
+  line-height: 1.12;
 }
 
 @media (max-width: 980px) {
@@ -803,7 +810,10 @@
   }
 
   .header h1 {
-    font-size: clamp(2.8rem, 11vw, 4.6rem);
+    max-width: 100%;
+    font-size: clamp(2.35rem, 9.8vw, 4rem);
+    overflow-wrap: break-word;
+    text-wrap: pretty;
   }
 
   .byline {

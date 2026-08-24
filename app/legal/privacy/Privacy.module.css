@@ -1,29 +1,29 @@
 .page {
-  --paper: #f0efe9;
-  --ink: #0a0c11;
-  --muted: #5d616b;
-  --line: rgba(10, 12, 17, 0.19);
-  --accent: #4050c8;
+  --paper: var(--iwr-paper);
+  --ink: var(--iwr-ink);
+  --muted: rgba(11, 13, 18, 0.66);
+  --line: var(--iwr-rule);
+  --accent: var(--iwr-cobalt);
   min-height: 100svh;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: var(--iwr-font-body);
 }
 
 .hero {
   min-height: 73svh;
   padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 4vw, 4.5rem);
-  background: #0a0c11;
-  color: #f3f2ed;
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
 }
 
 .hero > div {
   display: flex;
   justify-content: space-between;
   gap: 2rem;
-  border-bottom: 1px solid rgba(243, 242, 237, 0.25);
+  border-bottom: 1px solid rgba(240, 240, 236, 0.25);
   padding-bottom: 1rem;
-  color: rgba(243, 242, 237, 0.68);
+  color: rgba(240, 240, 236, 0.68);
   font-size: 0.67rem;
   font-weight: 650;
   letter-spacing: 0.12em;
@@ -37,7 +37,7 @@
 
 .hero > p:first-of-type {
   margin: clamp(4rem, 10vh, 8rem) 0 0;
-  color: #9aa4ff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.13em;
@@ -47,16 +47,17 @@
 .hero h1 {
   max-width: 14ch;
   margin: 2rem 0 0;
+  font-family: var(--iwr-font-display);
   font-size: clamp(4rem, 9.5vw, 9.5rem);
-  font-weight: 450;
-  letter-spacing: -0.075em;
-  line-height: 0.84;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 0.88;
 }
 
 .dek {
   width: min(100%, 44rem);
   margin: 3rem 0 0 auto;
-  color: rgba(243, 242, 237, 0.74);
+  color: rgba(240, 240, 236, 0.74);
   font-size: clamp(1.05rem, 1.7vw, 1.35rem);
   line-height: 1.65;
 }
@@ -158,10 +159,11 @@
 
 .policy h2 {
   margin: 0 0 2.5rem;
+  font-family: var(--iwr-font-display);
   font-size: clamp(2.1rem, 4vw, 4rem);
-  font-weight: 480;
-  letter-spacing: -0.055em;
-  line-height: 0.98;
+  font-weight: 800;
+  letter-spacing: -0.038em;
+  line-height: 1.01;
 }
 
 .policy section > p {
@@ -213,8 +215,8 @@
   border-radius: 0;
   padding: 0.9rem 1.2rem;
   background: var(--ink);
-  color: #fff;
-  font: 700 0.72rem/1 var(--font-geist-sans), Arial, sans-serif;
+  color: var(--iwr-white);
+  font: 700 0.72rem/1 var(--iwr-font-body);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;

@@ -1,6 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { IWR_ICON_URL } from "@/lib/brand-icon";
@@ -14,20 +12,17 @@ import {
   newsWebsiteSchema,
   rajPersonSchema,
 } from "@/lib/schema";
+import "./brand/brand-tokens.css";
 import "./globals.css";
 
 const IS_VERCEL_RUNTIME = process.env.VERCEL === "1";
 
-/* v11 fonts — same stack as IWR root, for visual continuity across the
-   brand family. Light-theme only, no dark variant (same lesson learned). */
-/* v25 Barnes-register pairing (parity with investwithraj.com): Raleway
-   ultra-light tracked display + Playfair Didot-class serif. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#F8FAFC",
-  colorScheme: "light",
+  themeColor: "#0B0D12",
+  colorScheme: "dark light",
 };
 
 export const metadata: Metadata = {
@@ -123,21 +118,18 @@ export default function RootLayout({
   return (
     <html
       lang="en-AE"
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full`}
+      className="h-full"
+      data-iwr-brand-version="v1.2"
       suppressHydrationWarning
     >
       <head>
-        {/* v11.4 — force light theme. Inline script runs before paint to
-            clear any stale data-theme attribute + localStorage. */}
+        {/* Keep legacy theme state from overriding the governed v1.2 system. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{document.documentElement.removeAttribute('data-theme');localStorage.removeItem('iwr-theme');localStorage.removeItem('nexus-theme');}catch(e){}})();`,
           }}
         />
 
-        {/* Performance: preconnect */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://investwithraj.com" />
 
         {/* One linked identity graph: WebSite + publisher + Raj. */}
@@ -153,41 +145,13 @@ export default function RootLayout({
       </head>
 
       <body className="min-h-full flex flex-col">
-        {/* v13 SOTY — page-load curtain. RT monogram strokes draw on,
-            then curtain wipes up over ~1.9s on first paint. */}
         <NewsChrome />
-
-        {/* V21 brand-motion unification — the main site's NavCurtain
-            (B&C route-change wipe: wordmark panel covers down, client
-            router.push, reveal up). No double-fire: PageLoadCurtain is
-            first-paint only, and app/template.tsx's curtain div never
-            paints (its transform is identical in both phases) — only its
-            subtle 320ms content fade runs, underneath this cover. */}
-
-        {/* v29 — THE NAV IS GLOBAL. It used to be mounted by three pages
-            only (/, /about, /about/editorial-standards), which left every
-            article, desk and index page — 80 of 83 — with no navigation at
-            all: /closing-bell and /power-list/2026 were pure dead ends whose
-            only internal link was the logo. Mounting it here is the fix for
-            "lack of connectivity inside the news section". */}
-
-          {/* DLD daily-pulse ticker — Bloomberg-style strip pinned to top */}
 
         <div id="news-content" tabIndex={-1}>
           {children}
         </div>
 
         <NewsFooter />
-
-        {/* v13 SOTY — cursor system with [data-cursor-label] + magnetic */}
-
-        {/* v13 SOTY — Web Audio ambient toggle, Cartier W&W pattern */}
-
-        {/* v13 SOTY — UI sound dispatcher, gated by ambient master switch */}
-
-        {/* v13 SOTY easter egg — Konami unlocks Bulgari emerald palette */}
-
-        {/* v12 SOTM — 35mm film-grain overlay, ~4% opacity, multiply blend */}
 
         {IS_VERCEL_RUNTIME ? (
           <>
@@ -196,9 +160,7 @@ export default function RootLayout({
           </>
         ) : null}
 
-        {/* GDPR/PDPL consent banner + 8-pixel network loader (gated by consent) */}
         <ConsentRoot />
-
       </body>
     </html>
   );

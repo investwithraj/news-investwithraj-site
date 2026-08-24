@@ -1,0 +1,57 @@
+@font-face {
+  font-family: "IWR Montserrat";
+  src: url("./approved-v1.2-package/Montserrat-ExtraBold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IWR Geist";
+  src: url("./approved-v1.2-package/Geist-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IWR Geist Mono";
+  src: url("./approved-v1.2-package/GeistMono-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --iwr-ink: #0b0d12;
+  --iwr-paper: #f0f0ec;
+  --iwr-cobalt: #4050c8;
+  --iwr-cobalt-soft: #b8c0ff;
+  --iwr-architectural-slate: #969ab1;
+  --iwr-white: #ffffff;
+
+  --iwr-surface: var(--iwr-paper);
+  --iwr-text: var(--iwr-ink);
+  --iwr-action: var(--iwr-cobalt);
+  --iwr-action-text: var(--iwr-white);
+  --iwr-rule: rgba(11, 13, 18, 0.18);
+  --iwr-rule-dark: rgba(240, 240, 236, 0.2);
+  --iwr-focus-color: var(--iwr-cobalt);
+
+  --iwr-font-display: "IWR Montserrat", "Arial Black", sans-serif;
+  --iwr-font-body: "IWR Geist", Inter, Arial, sans-serif;
+  --iwr-font-mono: "IWR Geist Mono", "SFMono-Regular", Consolas, monospace;
+
+  --iwr-radius-small: 0.375rem;
+  --iwr-radius-medium: 0.75rem;
+  --iwr-focus-ring: 0 0 0 3px var(--iwr-focus-color);
+}
+
+[data-theme="dark"] {
+  --iwr-surface: var(--iwr-ink);
+  --iwr-text: var(--iwr-paper);
+  --iwr-action: var(--iwr-cobalt-soft);
+  --iwr-action-text: var(--iwr-ink);
+  --iwr-rule: rgba(240, 240, 236, 0.22);
+  --iwr-focus-color: var(--iwr-cobalt-soft);
+}

@@ -48,10 +48,10 @@
     },
     {
       "pathPrefix": "/brand/",
-      "classification": "dormant-legacy-brand-video",
-      "defaultApproval": "withheld",
-      "evidenceUse": "none",
-      "sourceRecord": "No current production clearance or mounted public use."
+      "classification": "governed-brand-media",
+      "defaultApproval": "withheld-unless-v1.2-master",
+      "evidenceUse": "identity-only",
+      "sourceRecord": "The two canonical IWR v1.2 master marks are approved below; legacy brand media remains withheld."
     },
     {
       "pathPrefix": "/audio/",
@@ -69,6 +69,72 @@
     }
   ],
   "assets": [
+    {
+      "key": "brand:iwr-v1.2-color",
+      "path": "/brand/v1.2/IWR-B04-CORRECTED-Render-Safe-Color.svg",
+      "mediaType": "image",
+      "subject": "Invest With Raj master identity",
+      "classification": "approved-brand-identity",
+      "approval": "approved",
+      "routes": [
+        {
+          "path": "/*",
+          "role": "global-identity-light-surface",
+          "fullscreen": false
+        }
+      ],
+      "source": {
+        "provider": "IWR x The Dubai Upgrade approved v1.2 package",
+        "creator": "Invest With Raj",
+        "sourceId": "IWR-B04-CORRECTED-Render-Safe-Color",
+        "url": "local-approved-v1.2-package"
+      },
+      "rights": {
+        "status": "verified-owner-supplied",
+        "record": "SHA-256 f1150402f240fb66382152491e6d2e40fa93150632977721ad858eeb151e6d79"
+      },
+      "derivative": {
+        "width": 1280,
+        "height": 640,
+        "from": "approved render-safe SVG master"
+      },
+      "renderNotice": "Canonical Invest With Raj v1.2 identity for light surfaces.",
+      "aiGenerated": false,
+      "alt": "Invest With Raj"
+    },
+    {
+      "key": "brand:iwr-v1.2-knockout",
+      "path": "/brand/v1.2/IWR-B04-CORRECTED-Render-Safe-Knockout.svg",
+      "mediaType": "image",
+      "subject": "Invest With Raj master identity",
+      "classification": "approved-brand-identity",
+      "approval": "approved",
+      "routes": [
+        {
+          "path": "/*",
+          "role": "global-identity-dark-surface",
+          "fullscreen": false
+        }
+      ],
+      "source": {
+        "provider": "IWR x The Dubai Upgrade approved v1.2 package",
+        "creator": "Invest With Raj",
+        "sourceId": "IWR-B04-CORRECTED-Render-Safe-Knockout",
+        "url": "local-approved-v1.2-package"
+      },
+      "rights": {
+        "status": "verified-owner-supplied",
+        "record": "SHA-256 eaff363eb64c89b164abb08887555af164339b901314c987925431bd53fb9a58"
+      },
+      "derivative": {
+        "width": 1280,
+        "height": 640,
+        "from": "approved render-safe SVG master"
+      },
+      "renderNotice": "Canonical Invest With Raj v1.2 identity for dark surfaces.",
+      "aiGenerated": false,
+      "alt": "Invest With Raj"
+    },
     {
       "key": "area:hudayriyat-island",
       "path": "/media/verified/areas/hudayriyat-island.webp",

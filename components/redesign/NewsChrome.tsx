@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import InteractionAnalytics from "@/components/analytics/InteractionAnalytics";
+import IwrMark from "@/components/brand/IwrMark";
 
 import styles from "./NewsChrome.module.css";
 
@@ -237,10 +238,15 @@ export default function NewsChrome() {
           data-cta-action="editorial"
           data-cta-source="news-navigation"
         >
-          <span className={styles.mark}>IR</span>
-          <span>
+          <IwrMark
+            className={styles.brandMark}
+            surface="dark"
+            decorative
+            priority
+          />
+          <span className={styles.brandCopy}>
             <b>Invest With Raj</b>
-            <i>Intelligence</i>
+            <i>Daily Real Estate Intelligence</i>
           </span>
         </Link>
 
@@ -291,13 +297,15 @@ export default function NewsChrome() {
             ref={bookRef}
             className={styles.book}
             href={PRACTICE_URL}
+            aria-label="Book a working call"
             rel="noopener noreferrer"
             data-cta-level="1"
             data-cta-action="book-call"
             data-cta-source="news-navigation"
           >
-            Book a working call
-            <span aria-hidden="true">↗</span>
+            <span className={styles.bookLong}>Book a working call</span>
+            <span className={styles.bookShort}>Call</span>
+            <span className={styles.bookArrow} aria-hidden="true">↗</span>
           </a>
         </div>
       </header>
@@ -318,11 +326,11 @@ export default function NewsChrome() {
       >
         <div className={styles.directoryInner}>
           <div className={styles.directoryIntro}>
-            <p>Invest With Raj Intelligence</p>
+            <p>Invest With Raj · Daily Intelligence</p>
             <h2 id="news-directory-title">
               Read the market from every useful angle.
             </h2>
-            <span>Independent UAE property reporting and decision tools.</span>
+            <span>Source-cited UAE real estate reporting and decision tools.</span>
           </div>
 
           <nav className={styles.menuGroups} aria-label="Complete news directory">

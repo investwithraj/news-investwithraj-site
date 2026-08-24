@@ -682,6 +682,12 @@ export interface AutoApproveSummary {
   failed: number;
   held: number;
   deferred: number;
+  publicationShas: string[];
+  publishedSlugs: string[];
+  deploymentVerified: number;
+  pendingVerification: number;
+  verificationSkipped: number;
+  failureMessages: string[];
 }
 
 const wait = (milliseconds: number) =>
@@ -758,18 +764,34 @@ export async function runAutoApprove(opts: {
 
   let published = 0;
   let failed = 0;
+  let deploymentVerified = 0;
+  let pendingVerification = 0;
+  let verificationSkipped = 0;
+  const publicationShas: string[] = [];
+  const publishedSlugs: string[] = [];
+  const failureMessages: string[] = [];
   for (const assessment of selected) {
-    const response = await fetch(
-      `${base}/api/news/draft/${encodeURIComponent(assessment.id)}/publish`,
-      {
-        method: "POST",
-        headers: {
-          ...authHeaders,
-          "content-type": "application/json",
+    let response: Response;
+    try {
+      response = await fetch(
+        `${base}/api/news/draft/${encodeURIComponent(assessment.id)}/publish`,
+        {
+          method: "POST",
+          headers: {
+            ...authHeaders,
+            "content-type": "application/json",
+          },
+          body: "{}",
         },
-        body: "{}",
-      },
-    );
+      );
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : "publish request failed";
+      failed += 1;
+      failureMessages.push(`${assessment.slug}: ${detail}`);
+      log(`  fail ${assessment.slug} -> ${detail}`);
+      continue;
+    }
     const payload = (await response.json().catch(() => ({}))) as {
       error?: string;
       claimId?: string;
@@ -777,13 +799,15 @@ export async function runAutoApprove(opts: {
       idempotent?: boolean;
     };
     if (!response.ok || !payload.commitSha || !payload.claimId) {
+      const detail = payload.error ?? `publish returned ${response.status}`;
       failed += 1;
-      log(
-        `  fail ${assessment.slug} -> ${payload.error ?? `publish returned ${response.status}`}`,
-      );
+      failureMessages.push(`${assessment.slug}: ${detail}`);
+      log(`  fail ${assessment.slug} -> ${detail}`);
       continue;
     }
     published += 1;
+    publicationShas.push(payload.commitSha);
+    publishedSlugs.push(assessment.slug);
     log(
       `  live ${assessment.slug} -> commit ${payload.commitSha.slice(0, 8)}${payload.idempotent ? " (idempotent)" : ""}`,
     );
@@ -792,35 +816,55 @@ export async function runAutoApprove(opts: {
     // that the exact reviewed content is serving. A timeout leaves the commit
     // safely pending for a later verifier; it does not create a second commit.
     const attempts = Math.max(0, Math.min(20, opts.deploymentAttempts ?? 12));
+    if (attempts === 0) {
+      verificationSkipped += 1;
+      continue;
+    }
+    let verified = false;
+    let lastDeploymentError = "deployment verification timed out";
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       await wait(15_000);
-      const deployed = await fetch(
-        `${base}/api/news/draft/${encodeURIComponent(assessment.id)}/deployment`,
-        {
-          method: "POST",
-          headers: {
-            ...authHeaders,
-            "content-type": "application/json",
+      try {
+        const deployed = await fetch(
+          `${base}/api/news/draft/${encodeURIComponent(assessment.id)}/deployment`,
+          {
+            method: "POST",
+            headers: {
+              ...authHeaders,
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              claimId: payload.claimId,
+              deploymentStatus: "READY",
+              deployedCommitSha: payload.commitSha,
+            }),
           },
-          body: JSON.stringify({
-            claimId: payload.claimId,
-            deploymentStatus: "READY",
-            deployedCommitSha: payload.commitSha,
-          }),
-        },
-      );
-      if (deployed.ok) {
-        log(`  verified ${assessment.slug} on the canonical newsroom`);
-        break;
-      }
-      if (attempt === attempts) {
+        );
+        if (deployed.ok) {
+          verified = true;
+          deploymentVerified += 1;
+          log(`  verified ${assessment.slug} on the canonical newsroom`);
+          break;
+        }
         const detail = (await deployed.json().catch(() => ({}))) as {
           error?: string;
         };
-        log(
-          `  pending ${assessment.slug} -> ${detail.error ?? "deployment verification timed out"}`,
-        );
+        lastDeploymentError =
+          detail.error ?? `deployment verification returned ${deployed.status}`;
+      } catch (error) {
+        lastDeploymentError =
+          error instanceof Error
+            ? error.message
+            : "deployment verification request failed";
       }
+    }
+    if (!verified) {
+      pendingVerification += 1;
+      failed += 1;
+      failureMessages.push(
+        `${assessment.slug}: ${lastDeploymentError}`,
+      );
+      log(`  pending ${assessment.slug} -> ${lastDeploymentError}`);
     }
   }
   return {
@@ -831,5 +875,11 @@ export async function runAutoApprove(opts: {
     failed,
     held: held.length,
     deferred,
+    publicationShas,
+    publishedSlugs,
+    deploymentVerified,
+    pendingVerification,
+    verificationSkipped,
+    failureMessages,
   };
 }

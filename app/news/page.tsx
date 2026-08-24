@@ -77,8 +77,8 @@ export default async function NewsIndex() {
             style={{
               minHeight: "100svh",
               padding: "10rem 8vw",
-              background: "#090b10",
-              color: "#f0f0ec",
+              background: "var(--iwr-ink)",
+              color: "var(--iwr-paper)",
             }}
           >
             Loading the chronological archive…

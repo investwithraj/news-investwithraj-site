@@ -1518,3 +1518,60 @@ body {
     0 28px 70px -24px rgba(0, 0, 0, 0.62),
     inset 0 1px 0 rgba(242, 238, 231, 0.08);
 }
+
+/* Canonical IWR v1.2 compatibility bridge. The public newsroom presenters use
+   the governed --iwr-* tokens directly. Legacy public/no-index utilities that
+   still consume the historical semantic names inherit the same approved
+   palette and type families without changing their route or behaviour. */
+:root {
+  --background: var(--iwr-ink);
+  --foreground: var(--iwr-paper);
+  --paper: var(--iwr-paper);
+  --paper-pure: var(--iwr-white);
+  --paper-warm: var(--iwr-paper);
+  --paper-cream: var(--iwr-paper);
+  --surface-card: var(--iwr-paper);
+  --chrome: var(--iwr-architectural-slate);
+  --chrome-deep: rgba(11, 13, 18, 0.18);
+  --silver: var(--iwr-architectural-slate);
+  --ink: var(--iwr-ink);
+  --ink-soft: rgba(11, 13, 18, 0.78);
+  --ink-muted: rgba(11, 13, 18, 0.66);
+  --ink-faint: rgba(11, 13, 18, 0.52);
+  --navy: var(--iwr-ink);
+  --navy-deep: var(--iwr-ink);
+  --navy-rich: var(--iwr-ink);
+  --gold: var(--iwr-cobalt);
+  --gold-deep: var(--iwr-cobalt);
+  --gold-bright: var(--iwr-cobalt-soft);
+  --gold-rich: var(--iwr-cobalt);
+  --gold-soft: rgba(64, 80, 200, 0.12);
+  --gold-glow: rgba(64, 80, 200, 0.18);
+  --holo: var(--iwr-cobalt);
+  --holo-deep: var(--iwr-cobalt);
+  --holo-bright: var(--iwr-cobalt-soft);
+  --holo-soft: rgba(64, 80, 200, 0.12);
+  --holo-glow: rgba(64, 80, 200, 0.18);
+  --organic: var(--iwr-architectural-slate);
+  --organic-deep: var(--iwr-architectural-slate);
+  --organic-soft: rgba(150, 154, 177, 0.12);
+  --font-body: var(--iwr-font-body);
+  --font-display: var(--iwr-font-display);
+  --font-editorial: var(--iwr-font-body);
+  --font-mono: var(--iwr-font-mono);
+}
+
+body {
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
+  font-family: var(--iwr-font-body);
+}
+
+::selection {
+  background: var(--iwr-cobalt-soft);
+  color: var(--iwr-ink);
+}
+
+:focus-visible {
+  outline-color: var(--iwr-cobalt-soft);
+}

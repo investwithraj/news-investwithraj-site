@@ -8,7 +8,10 @@
 import { NEWS_ARTICLES } from "../content/news/index.js";
 import { dubaiCalendarDate } from "../lib/dubai-time.js";
 import { draftFromCluster } from "../lib/news-review/draft-engine.js";
-import { runAutoApprove } from "../lib/news-review/auto-approve.js";
+import {
+  runAutoApprove,
+  type AutoApproveSummary,
+} from "../lib/news-review/auto-approve.js";
 import { clusterAndScore } from "../lib/pipeline/cluster.js";
 import { dedupeEntries, similarity } from "../lib/pipeline/dedupe.js";
 import {
@@ -17,6 +20,11 @@ import {
   summarizeFetchRun,
 } from "../lib/sources/fetchers/index.js";
 import { getWhitelistDomains } from "../lib/sources/registry.js";
+import {
+  buildNewsCronRunReport,
+  emitNewsCronRunReport,
+  observeNewestPublication,
+} from "./lib/news-cron-outcome.js";
 
 const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
@@ -95,10 +103,10 @@ async function markClusterFailed(
   }
 }
 
-async function runPublicationPass(): Promise<void> {
+async function runPublicationPass(): Promise<AutoApproveSummary | null> {
   if (process.env.AUTO_APPROVE !== "1") {
     console.log("assessment disabled; all drafts remain in The Desk");
-    return;
+    return null;
   }
   const summary = await runAutoApprove({
     site: SITE,
@@ -119,15 +127,30 @@ async function runPublicationPass(): Promise<void> {
   console.log(
     `publication: ${summary.published} committed, ${summary.held} held, ${summary.deferred} deferred, ${summary.failed} failed`,
   );
+  return summary;
 }
 
-async function main(): Promise<void> {
+interface RunState {
+  candidates: number;
+  attempts: number;
+  staged: number;
+  draftHeld: number;
+  technicalFailures: number;
+  failureMessages: string[];
+  publication: AutoApproveSummary | null;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "unknown pipeline failure";
+}
+
+async function executePipeline(state: RunState): Promise<void> {
   if (new TextEncoder().encode(SECRET).byteLength < 32) {
     throw new Error("A strong POST_PUBLISH_SECRET is required.");
   }
   if (process.env.DRAFT_ENABLED === "0") {
     console.log("publication-only run: paid drafting and source ingestion skipped");
-    await runPublicationPass();
+    state.publication = await runPublicationPass();
     return;
   }
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -184,19 +207,18 @@ async function main(): Promise<void> {
   console.log(
     `clusters >= ${MIN_SCORE}: ${clusters.length}; candidates: ${candidates.length}`,
   );
+  state.candidates = candidates.length;
 
   const whitelist = getWhitelistDomains();
-  let staged = 0;
-  let attempts = 0;
   for (const cluster of candidates) {
-    if (staged >= MAX_DRAFTS || attempts >= MAX_ATTEMPTS) break;
+    if (state.staged >= MAX_DRAFTS || state.attempts >= MAX_ATTEMPTS) break;
 
     const reservationToken = await reserveCluster(cluster.id, cluster.topic);
     if (!reservationToken) {
       console.log(`skip reserved cluster: ${cluster.topic.slice(0, 72)}`);
       continue;
     }
-    attempts += 1;
+    state.attempts += 1;
 
     console.log(
       `researching: ${cluster.topic.slice(0, 72)} (score ${cluster.score})`,
@@ -212,15 +234,16 @@ async function main(): Promise<void> {
       const reason =
         error instanceof Error ? error.message : "draft provider failed";
       await markClusterFailed(cluster.id, reservationToken, reason);
-      console.log(
-        `held: ${error instanceof Error && error.stack ? error.stack : reason}`,
-      );
+      state.technicalFailures += 1;
+      state.failureMessages.push(`draft provider: ${reason}`);
+      console.error(`draft provider failed: ${reason}`);
       continue;
     }
 
     if (!result.ok || !result.article || !result.provenance) {
       const reason = result.reason ?? "draft did not pass staging";
       await markClusterFailed(cluster.id, reservationToken, reason);
+      state.draftHeld += 1;
       console.log(`held: ${reason}`);
       continue;
     }
@@ -238,28 +261,88 @@ async function main(): Promise<void> {
       }),
     });
     if (response.ok) {
-      staged += 1;
+      state.staged += 1;
       console.log(`staged for review: ${result.article.slug}`);
       continue;
     }
 
-    const responseText = await response.text().catch(() => "");
-    await markClusterFailed(
-      cluster.id,
-      reservationToken,
-      `draft staging failed (${response.status})`,
-    ).catch(() => undefined);
-    console.log(
-      `staging failed (${response.status}): ${responseText.slice(0, 200)}`,
+    state.technicalFailures += 1;
+    state.failureMessages.push(
+      `draft staging failed (${response.status}) for ${result.article.slug}`,
+    );
+    try {
+      await markClusterFailed(
+        cluster.id,
+        reservationToken,
+        `draft staging failed (${response.status})`,
+      );
+    } catch (error) {
+      state.technicalFailures += 1;
+      state.failureMessages.push(errorMessage(error));
+    }
+    console.error(
+      `staging failed (${response.status}) for ${result.article.slug}`,
     );
   }
 
-  console.log(`done: ${staged} staged from ${attempts} attempt(s)`);
+  console.log(
+    `done: ${state.staged} staged from ${state.attempts} attempt(s)`,
+  );
+
+  state.publication = await runPublicationPass();
+}
+
+async function main(): Promise<void> {
+  const startedAt = new Date().toISOString();
+  const state: RunState = {
+    candidates: 0,
+    attempts: 0,
+    staged: 0,
+    draftHeld: 0,
+    technicalFailures: 0,
+    failureMessages: [],
+    publication: null,
+  };
+  let executionError: Error | null = null;
+  let observation: Awaited<ReturnType<typeof observeNewestPublication>> | null =
+    null;
 
   try {
-    await runPublicationPass();
+    await executePipeline(state);
   } catch (error) {
-    console.error("assessment failed; drafting is unaffected:", error);
+    executionError =
+      error instanceof Error ? error : new Error("unknown pipeline failure");
+    state.technicalFailures += 1;
+    state.failureMessages.push(errorMessage(error));
+  }
+
+  try {
+    observation = await observeNewestPublication({ site: SITE });
+  } catch (error) {
+    executionError ??=
+      error instanceof Error
+        ? error
+        : new Error("front feed observation failed");
+    state.technicalFailures += 1;
+    state.failureMessages.push(errorMessage(error));
+  }
+
+  const report = buildNewsCronRunReport({
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    draftingEnabled: process.env.DRAFT_ENABLED !== "0",
+    ...state,
+    observation,
+  });
+  await emitNewsCronRunReport(report);
+
+  if (report.failed > 0) {
+    throw (
+      executionError ??
+      new Error(
+        `daily news pipeline reported ${report.failed} operational failure(s)`,
+      )
+    );
   }
 }
 

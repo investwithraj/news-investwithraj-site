@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-labelledby="title desc">
+  <title id="title">IWR B04 render-safe knockout mark</title>
+  <desc id="desc">The selected IWR B04 monogram rebuilt without clip-path dependencies for consistent raster and video rendering on dark fields.</desc>
+  <rect x="80" y="100" width="120" height="440" fill="#F0F0EC"/>
+  <path fill="#F0F0EC" d="M236.706424 100H324.885413L424.558882 540H336.379894Z M446.301991 100H534.531342L433.698009 540H345.468658Z M455.468658 100H543.698009L644.531342 540H556.301991Z M665.114587 100H753.293576L653.620106 540H565.441118Z"/>
+  <path fill="#F0F0EC" fill-rule="evenodd" d="M790 100H970C1081 100 1140 151 1140 246C1140 320 1100 362 1034 382C1087 398 1118 438 1148 498L1170 540H1032L989 457C970 422 950 408 912 408H900V540H790V100ZM900 190V318H966C1016 318 1042 297 1042 254C1042 211 1016 190 966 190H900Z"/>
+  <circle cx="495" cy="55" r="28" fill="#F0F0EC"/>
+</svg>

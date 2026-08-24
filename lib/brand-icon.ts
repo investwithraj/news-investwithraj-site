@@ -1,5 +1,5 @@
 export const IWR_ICON_SHA256 =
-  "2617a21ba23b753515db82ddd04e0a0e656d2facbcbb87fae7814dc79aef164c";
+  "3aea2aa94b915b2c4e439d48f493081f1f1190cccd983b781db43e84f01e13f1";
 
 // Content-address the verified IWR mark so browser and CDN icon caches cannot
 // reuse a favicon from an earlier brand deployment.

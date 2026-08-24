@@ -4,11 +4,11 @@
   top: 0.8rem;
   left: 0.8rem;
   transform: translateY(-180%);
-  border-radius: 999px;
+  border-radius: var(--iwr-radius-small);
   padding: 0.7rem 1rem;
-  background: #f1f1ed;
-  color: #090b10;
-  font: 600 0.75rem/1 var(--font-geist-sans), sans-serif;
+  background: var(--iwr-paper);
+  color: var(--iwr-ink);
+  font: 600 0.75rem/1 var(--iwr-font-body);
   text-decoration: none;
 }
 
@@ -26,11 +26,11 @@
   grid-template-columns: minmax(14rem, 0.9fr) auto minmax(16rem, 0.9fr);
   gap: clamp(1rem, 2vw, 2.5rem);
   align-items: center;
-  border-bottom: 1px solid rgba(240, 240, 236, 0.13);
+  border-bottom: 1px solid var(--iwr-rule-dark);
   padding-inline: clamp(1.25rem, 3vw, 3.5rem);
-  background: rgba(9, 11, 16, 0.9);
-  color: #f0f0ec;
-  backdrop-filter: blur(24px) saturate(120%);
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
+  font-family: var(--iwr-font-body);
 }
 
 .brand {
@@ -42,20 +42,12 @@
   text-decoration: none;
 }
 
-.mark {
-  display: grid;
-  width: 2.35rem;
-  aspect-ratio: 1;
-  place-items: center;
-  border: 1px solid rgba(184, 192, 255, 0.62);
-  border-radius: 50%;
-  color: #b8c0ff;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.brandMark {
+  --iwr-mark-width: clamp(3.25rem, 4vw, 4.35rem);
+  --iwr-mark-clear-space: 0.15rem;
 }
 
-.brand > span:last-child {
+.brandCopy {
   display: grid;
   gap: 0.18rem;
 }
@@ -66,7 +58,7 @@
   letter-spacing: -0.02em;
 }
 
-.brand i {
+.brandCopy i {
   color: rgba(240, 240, 236, 0.7);
   font-size: 0.56rem;
   font-style: normal;
@@ -101,14 +93,14 @@
   height: 1px;
   transform: scaleX(0);
   transform-origin: left;
-  background: #8290ff;
+  background: var(--iwr-cobalt-soft);
   content: "";
   transition: transform 200ms ease;
 }
 
 .nav a:hover,
 .nav a[aria-current="page"] {
-  color: #e2e4ff;
+  color: var(--iwr-paper);
 }
 
 .nav a:hover::after,
@@ -128,7 +120,7 @@
   display: inline-flex;
   min-height: 2.65rem;
   align-items: center;
-  border-radius: 999px;
+  border-radius: var(--iwr-radius-small);
   font-size: 0.66rem;
   font-weight: 620;
   letter-spacing: 0.06em;
@@ -170,8 +162,8 @@
   justify-content: space-between;
   gap: 1rem;
   padding-inline: 1.15rem;
-  background: #4050c8;
-  color: #fff;
+  background: var(--iwr-cobalt);
+  color: var(--iwr-white);
   text-decoration: none;
   transition:
     background 180ms ease,
@@ -179,8 +171,13 @@
 }
 
 .book:hover {
-  background: #7080ff;
+  background: var(--iwr-cobalt-soft);
+  color: var(--iwr-ink);
   transform: translateY(-1px);
+}
+
+.bookShort {
+  display: none;
 }
 
 .directory {
@@ -189,10 +186,8 @@
   inset: 5rem 0 0;
   overflow-y: auto;
   transform: translateY(-105%);
-  background:
-    radial-gradient(circle at 88% 8%, rgba(89, 107, 255, 0.18), transparent 34rem),
-    #0b0d12;
-  color: #f0f0ec;
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -224,7 +219,7 @@
 
 .directoryIntro p {
   margin: 0;
-  color: #909aff;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.66rem;
   font-weight: 650;
   letter-spacing: 0.13em;
@@ -234,10 +229,11 @@
 .directoryIntro h2 {
   margin: 0;
   max-width: 15ch;
+  font-family: var(--iwr-font-display);
   font-size: clamp(2.7rem, 5vw, 5.8rem);
-  font-weight: 430;
-  letter-spacing: -0.06em;
-  line-height: 0.92;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.94;
 }
 
 .directoryIntro > span {
@@ -283,8 +279,8 @@
 }
 
 .menuGroup a:hover {
-  border-color: #8290ff;
-  color: #b8c0ff;
+  border-color: var(--iwr-cobalt-soft);
+  color: var(--iwr-cobalt-soft);
 }
 
 .menuGroup i {
@@ -318,7 +314,7 @@
 .book:focus-visible,
 .menuGroup a:focus-visible,
 .directoryBase a:focus-visible {
-  outline: 3px solid #a9b2ff;
+  outline: 3px solid var(--iwr-cobalt-soft);
   outline-offset: 4px;
 }
 
@@ -377,8 +373,24 @@
     display: none;
   }
 
-  .book span {
+  .bookLong {
     display: none;
+  }
+
+  .bookShort {
+    display: inline;
+  }
+
+  .bookArrow {
+    margin-left: 0.1rem;
+  }
+
+  .brandMark {
+    --iwr-mark-width: 2.8rem;
+  }
+
+  .brand {
+    gap: 0.55rem;
   }
 
   .directory {
@@ -400,6 +412,17 @@
   .directoryBase span:last-child {
     margin-left: 0;
   }
+}
+
+@media (max-width: 410px) {
+  .brandCopy i {
+    display: none;
+  }
+
+  .chrome {
+    padding-inline: 0.75rem;
+  }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

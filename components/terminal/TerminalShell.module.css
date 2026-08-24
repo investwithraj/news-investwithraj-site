@@ -1,10 +1,25 @@
 .page {
-  --terminal-ink: #191918;
-  --terminal-muted: #66635e;
-  --terminal-rule: rgba(25, 25, 24, 0.18);
-  --terminal-gold: #654814;
-  background: #f3f0e9;
+  --terminal-ink: var(--iwr-ink);
+  --terminal-muted: rgba(11, 13, 18, 0.64);
+  --terminal-rule: rgba(11, 13, 18, 0.18);
+  --terminal-accent: var(--iwr-cobalt);
+  background: var(--iwr-paper);
   color: var(--terminal-ink);
+  font-family: var(--iwr-font-body);
+  overflow-x: clip;
+}
+
+.page h1,
+.page h2,
+.page h3 {
+  font-family: var(--iwr-font-display);
+  font-weight: 800;
+}
+
+.metrics,
+.tape,
+.sourceLine {
+  font-family: var(--iwr-font-mono);
 }
 
 .frame {
@@ -16,8 +31,8 @@
   padding: clamp(72px, 10vw, 144px) 0 clamp(52px, 7vw, 96px);
   border-bottom: 1px solid var(--terminal-rule);
   background:
-    linear-gradient(90deg, transparent 49.95%, rgba(25, 25, 24, 0.06) 50%, transparent 50.05%),
-    #f7f5ef;
+    linear-gradient(90deg, transparent 49.95%, rgba(11, 13, 18, 0.06) 50%, transparent 50.05%),
+    var(--iwr-paper);
 }
 
 .breadcrumbs {
@@ -44,7 +59,7 @@
 
 .kicker {
   margin: 0 0 20px;
-  color: var(--terminal-gold);
+  color: var(--terminal-accent);
   font-size: 0.69rem;
   font-weight: 600;
   letter-spacing: 0.2em;
@@ -67,7 +82,7 @@
 
 .heroCopy p {
   margin: 0 0 24px;
-  color: #343330;
+  color: rgba(11, 13, 18, 0.82);
   font-size: clamp(1.04rem, 1.5vw, 1.3rem);
   line-height: 1.58;
 }
@@ -121,7 +136,7 @@
 .hiddenBar button:hover,
 .emptyDesk button:hover {
   background: var(--terminal-ink);
-  color: #f7f5ef;
+  color: var(--iwr-paper);
 }
 
 .hiddenBar {
@@ -162,7 +177,7 @@
   min-height: 390px;
   border-right: 1px solid var(--terminal-rule);
   border-bottom: 1px solid var(--terminal-rule);
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--iwr-white);
 }
 
 .pane:nth-child(1),
@@ -204,7 +219,7 @@
 
 .paneHead button:hover {
   color: var(--terminal-ink);
-  background: rgba(25, 25, 24, 0.06);
+  background: rgba(11, 13, 18, 0.06);
 }
 
 .paneBody {
@@ -225,27 +240,27 @@
 }
 
 .neutral {
-  border-color: #8f8b83;
-  background: rgba(143, 139, 131, 0.08);
-  color: #5f5b55;
+  border-color: var(--iwr-architectural-slate);
+  background: rgba(150, 154, 177, 0.12);
+  color: rgba(11, 13, 18, 0.68);
 }
 
 .reference {
-  border-color: #9c7440;
-  background: rgba(156, 116, 64, 0.09);
-  color: #6c4f2b;
+  border-color: var(--iwr-cobalt);
+  background: rgba(64, 80, 200, 0.09);
+  color: var(--iwr-cobalt);
 }
 
 .live {
-  border-color: #386e53;
-  background: rgba(56, 110, 83, 0.08);
-  color: #28553f;
+  border-color: var(--iwr-cobalt);
+  background: rgba(64, 80, 200, 0.12);
+  color: var(--iwr-cobalt);
 }
 
 .error {
-  border-color: #9c4942;
-  background: rgba(156, 73, 66, 0.08);
-  color: #7d352f;
+  border-color: var(--iwr-ink);
+  background: rgba(64, 80, 200, 0.08);
+  color: var(--iwr-ink);
 }
 
 .metrics {
@@ -309,7 +324,7 @@
 }
 
 .fxList button[aria-pressed="true"] {
-  color: var(--terminal-gold);
+  color: var(--terminal-accent);
 }
 
 .fxList b {
@@ -363,7 +378,7 @@
 }
 
 .headlines li > span {
-  color: var(--terminal-gold);
+  color: var(--terminal-accent);
   font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
 }
@@ -401,7 +416,7 @@
 
 .desk > p {
   margin: 0;
-  color: #383733;
+  color: rgba(11, 13, 18, 0.8);
   font-size: 0.96rem;
   line-height: 1.65;
 }
@@ -425,7 +440,7 @@
 
 .shortcutList a::after {
   content: "→";
-  color: var(--terminal-gold);
+  color: var(--terminal-accent);
 }
 
 .email {
@@ -466,7 +481,7 @@
 }
 
 .preferencesNote strong {
-  color: var(--terminal-gold);
+  color: var(--terminal-accent);
   font-size: 0.68rem;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -483,7 +498,7 @@
 .method {
   padding: clamp(70px, 9vw, 128px) 0;
   border-top: 1px solid var(--terminal-rule);
-  background: #e9e4da;
+  background: var(--iwr-paper);
 }
 
 .methodGrid {
@@ -498,7 +513,7 @@
 
 .methodCopy p {
   margin: 0;
-  color: #47443f;
+  color: rgba(11, 13, 18, 0.74);
   font-size: 0.98rem;
   line-height: 1.68;
 }
@@ -518,7 +533,7 @@
 
   .hero {
     padding-top: 52px;
-    background: #f7f5ef;
+    background: var(--iwr-paper);
   }
 
   .heroGrid,
@@ -528,7 +543,10 @@
   }
 
   .hero h1 {
-    font-size: clamp(2.8rem, 15vw, 4.9rem);
+    max-width: 100%;
+    font-size: clamp(2.7rem, 12vw, 4.2rem);
+    overflow-wrap: break-word;
+    text-wrap: pretty;
   }
 
   .workspaceHead {

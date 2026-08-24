@@ -1,0 +1,120 @@
+.page {
+  position: relative;
+  display: grid;
+  min-height: min(56rem, calc(100svh - 5rem));
+  overflow: hidden;
+  place-items: center;
+  padding: clamp(4rem, 10vw, 9rem) clamp(1.25rem, 8vw, 10rem);
+  background: var(--iwr-ink);
+  color: var(--iwr-paper);
+  font-family: var(--iwr-font-body);
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: calc(100vw / 12) calc(100vw / 12);
+  pointer-events: none;
+}
+
+.frame {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 74rem);
+}
+
+.eyebrow {
+  margin: 0 0 clamp(3rem, 7vw, 6rem);
+  color: var(--iwr-cobalt-soft);
+  font-family: var(--iwr-font-mono);
+  font-size: 0.66rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.frame h1 {
+  max-width: 10ch;
+  margin: 0;
+  font-family: var(--iwr-font-display);
+  font-size: clamp(3.4rem, 8vw, 8.5rem);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 0.88;
+  text-wrap: balance;
+}
+
+.copy {
+  max-width: 39rem;
+  margin: clamp(2rem, 4vw, 3.5rem) 0 0;
+  color: rgba(240, 240, 236, 0.66);
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2.5rem;
+}
+
+.actions a {
+  display: inline-flex;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  border: 1px solid rgba(240, 240, 236, 0.24);
+  border-radius: var(--iwr-radius-small);
+  padding-inline: 1.2rem;
+  color: var(--iwr-white);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.actions a:first-child {
+  border-color: var(--iwr-cobalt);
+  background: var(--iwr-cobalt);
+}
+
+.actions a:hover {
+  border-color: var(--iwr-cobalt-soft);
+  background: var(--iwr-cobalt-soft);
+  color: var(--iwr-ink);
+}
+
+.actions a:focus-visible {
+  outline: 3px solid var(--iwr-cobalt-soft);
+  outline-offset: 4px;
+}
+
+@media (max-width: 560px) {
+  .page {
+    min-height: calc(100svh - 4.5rem);
+  }
+
+  .frame h1 {
+    max-width: 100%;
+    font-size: clamp(3.2rem, 14vw, 4.5rem);
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+  }
+
+  .actions {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions a {
+    transition: none;
+  }
+}
