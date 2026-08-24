@@ -41,8 +41,8 @@ assert.equal(component.includes("href={`/developer/${developer.slug}`"), false);
 
 const published = NEWS_ARTICLES.filter((article) => article.status !== "research");
 const research = NEWS_ARTICLES.filter((article) => article.status === "research");
-assert.equal(published.length, 41);
-assert.equal(research.length, 4);
+assert.ok(published.length >= 41, "The certified published baseline regressed.");
+assert.ok(research.length >= 4, "The held research baseline regressed.");
 assert.equal(ARTICLE_RELATION_RECORDS.length, published.length);
 validateArticleRelationRecords(ARTICLE_RELATION_RECORDS, NEWS_ARTICLES);
 

@@ -52,56 +52,36 @@ const HELD_PILOT =
 
 type RuntimeMode = (typeof RUNTIME_MODES)[number];
 type RuntimeExpectation = Readonly<{
-  discoveryArticleCount: number;
   developerReportCount: number;
   evidenceHoldEnabled: boolean;
-  frontItemCount: number;
   lifecycleRedirectCount: number;
   removalGoneCount: number;
-  rssItemCount: number;
-  sitemapCount: number;
 }>;
 
 const MODE_EXPECTATIONS: Readonly<Record<RuntimeMode, RuntimeExpectation>> = {
   default: {
-    discoveryArticleCount: 41,
     developerReportCount: 6,
     evidenceHoldEnabled: false,
-    frontItemCount: 6,
     lifecycleRedirectCount: 0,
     removalGoneCount: 0,
-    rssItemCount: 30,
-    sitemapCount: 79,
   },
   "evidence-preview": {
-    discoveryArticleCount: 17,
     developerReportCount: 0,
     evidenceHoldEnabled: true,
-    frontItemCount: 6,
     lifecycleRedirectCount: 0,
     removalGoneCount: 0,
-    rssItemCount: 17,
-    sitemapCount: 55,
   },
   "lifecycle-evidence": {
-    discoveryArticleCount: 2,
     developerReportCount: 0,
     evidenceHoldEnabled: true,
-    frontItemCount: 2,
     lifecycleRedirectCount: 31,
     removalGoneCount: 6,
-    rssItemCount: 2,
-    sitemapCount: 7,
   },
   production: {
-    discoveryArticleCount: 41,
     developerReportCount: 6,
     evidenceHoldEnabled: false,
-    frontItemCount: 6,
     lifecycleRedirectCount: 0,
     removalGoneCount: 0,
-    rssItemCount: 30,
-    sitemapCount: 79,
   },
 };
 
@@ -546,6 +526,7 @@ function expectedSitemapUrls(
   mode: RuntimeMode,
   lifecycleAuthority: readonly CsvRow[],
   heldSlugs: readonly string[],
+  discoverySlugs: readonly string[],
 ): string[] {
   const lifecycleEnabled = mode === "lifecycle-evidence";
   const evidenceHoldEnabled =
@@ -572,6 +553,15 @@ function expectedSitemapUrls(
       );
       return canonicalNewsroomUrl(row.current_url);
     });
+  const authorityPaths = new Set(
+    lifecycleAuthority.map((row) => row.current_url),
+  );
+  for (const slug of discoverySlugs) {
+    const pathname = `/news/${slug}`;
+    if (!authorityPaths.has(pathname)) {
+      urls.push(canonicalNewsroomUrl(pathname));
+    }
+  }
   assert.equal(
     new Set(urls).size,
     urls.length,
@@ -787,13 +777,12 @@ async function main(): Promise<void> {
     mode,
     lifecycleAuthority,
     heldSlugs,
+    expectedDiscoverySlugs,
   );
-  assert.equal(authoritativeSitemapUrls.length, expectation.sitemapCount);
 
   assert.equal(heldSlugs.length, 24);
   assert.equal(new Set(heldSlugs).size, 24);
-  assert.equal(certifiedSlugs.length, 2);
-  assert.equal(expectedDiscoverySlugs.length, expectation.discoveryArticleCount);
+  assert.ok(certifiedSlugs.length >= 2, "The certified evidence baseline regressed.");
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
   assert.equal(redirectSourceAuthority.size, NEWSROOM_EXACT_REDIRECTS.length);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
@@ -835,7 +824,7 @@ async function main(): Promise<void> {
     "sitemap.xml",
   );
   const sitemapPaths = sitemapUrls.map((url) => new URL(url).pathname).sort();
-  assert.equal(sitemapPaths.length, expectation.sitemapCount);
+  assert.equal(sitemapPaths.length, authoritativeSitemapUrls.length);
   if (expectation.evidenceHoldEnabled) {
     assertNoHeldReferences("sitemap", sitemapBody, heldSlugs);
   }
@@ -848,7 +837,7 @@ async function main(): Promise<void> {
   assert.ok(itemList, "The news archive did not emit ItemList schema.");
   const itemListElements = itemList.itemListElement;
   assert.ok(Array.isArray(itemListElements));
-  assert.equal(itemListElements.length, expectation.discoveryArticleCount);
+  assert.equal(itemListElements.length, expectedDiscoverySlugs.length);
   const archiveUrls = itemListElements.map((item) => {
     assert.ok(item && typeof item === "object");
     const url = (item as Record<string, unknown>).url;
@@ -877,7 +866,7 @@ async function main(): Promise<void> {
     assert.equal(typeof item.slug, "string");
     return item.slug as string;
   });
-  assert.equal(frontSlugs.length, expectation.frontItemCount);
+  assert.equal(frontSlugs.length, expectedFrontSlugs.length);
   assert.deepEqual(frontSlugs, expectedFrontSlugs);
 
   const rssResponse = await auditedFetch("/rss.xml");
@@ -906,7 +895,7 @@ async function main(): Promise<void> {
   const rssSlugs = rssGuidUrls.map((url) =>
     new URL(url).pathname.replace(/^\/news\//u, ""),
   );
-  assert.equal(rssSlugs.length, expectation.rssItemCount);
+  assert.equal(rssSlugs.length, expectedRssSlugs.length);
   assert.deepEqual(rssSlugs, expectedRssSlugs);
 
   const newsSitemapResponse = await auditedFetch("/news-sitemap.xml");

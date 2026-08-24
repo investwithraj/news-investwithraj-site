@@ -65,6 +65,22 @@ const primaryRows = rows.filter((row) => row.in_sitemap === "yes");
 const primaryByUrl = new Map(
   primaryRows.map((row) => [row.current_url, row]),
 );
+const publishedArticlePaths = PUBLISHED_NEWS_ARTICLES.map(
+  (article) => `/news/${article.slug}`,
+);
+const additivePublishedArticlePaths = publishedArticlePaths.filter(
+  (pathname) => !getNewsroomLifecycle(pathname),
+);
+const currentPublicAuthorityPaths = [
+  ...new Set([...primaryByUrl.keys(), ...additivePublishedArticlePaths]),
+].sort();
+for (const pathname of additivePublishedArticlePaths) {
+  assert.equal(getNewsroomLifecycle(pathname), null);
+  assert.deepEqual(
+    getNewsArticleLifecycle(pathname.slice("/news/".length)),
+    { disposition: "IMPROVE", destination: "self" },
+  );
+}
 
 const EXPECTED_PRIMARY_COUNTS: Record<string, number> = {
   KEEP: 5,
@@ -100,19 +116,22 @@ assert.equal(
   0,
   "Default release state must not activate lifecycle redirects.",
 );
-assert.equal(getPublicDiscoveryNewsArticles().length, 41);
+assert.equal(
+  getPublicDiscoveryNewsArticles().length,
+  PUBLISHED_NEWS_ARTICLES.length,
+);
 const currentPublicSitemapPaths = sitemap()
   .map((entry) => new URL(entry.url).pathname)
   .sort();
 assert.equal(
   currentPublicSitemapPaths.length,
-  79,
-  "Flag-off discovery must preserve the complete pre-cutover sitemap.",
+  currentPublicAuthorityPaths.length,
+  "Flag-off discovery must preserve the legacy baseline plus reviewed daily publications.",
 );
 assert.deepEqual(
   currentPublicSitemapPaths,
-  [...primaryByUrl.keys()].sort(),
-  "Flag-off discovery drifted from the authoritative pre-cutover URL set.",
+  currentPublicAuthorityPaths,
+  "Flag-off discovery drifted from the legacy baseline plus reviewed daily publications.",
 );
 assert.equal(
   isRenderableArticleSlug(
@@ -163,7 +182,16 @@ assert.equal(
   }),
   false,
 );
-assert.equal(getPublicDiscoveryNewsArticles().length, 26);
+const releasedLegacyPaths = primaryRows
+  .filter((row) => row.disposition === "KEEP" || row.disposition === "IMPROVE")
+  .map((row) => row.current_url);
+const releasedAuthorityPaths = [
+  ...new Set([...releasedLegacyPaths, ...additivePublishedArticlePaths]),
+].sort();
+assert.equal(
+  getPublicDiscoveryNewsArticles().length,
+  INDEXABLE_NEWS_ARTICLES.length,
+);
 
 assert.equal(rows.length, 130, "The authoritative CSV row count changed.");
 assert.equal(primaryRows.length, 79, "The primary sitemap baseline changed.");
@@ -213,12 +241,12 @@ const actualSitemapPaths = sitemap()
   .sort();
 
 assert.equal(expectedIndexablePaths.length, 31);
-assert.equal(actualSitemapPaths.length, 31);
-assert.equal(new Set(actualSitemapPaths).size, 31);
+assert.equal(actualSitemapPaths.length, releasedAuthorityPaths.length);
+assert.equal(new Set(actualSitemapPaths).size, releasedAuthorityPaths.length);
 assert.deepEqual(
   actualSitemapPaths,
-  expectedIndexablePaths,
-  "sitemap.xml must be the exact KEEP + IMPROVE set.",
+  releasedAuthorityPaths,
+  "sitemap.xml must be the legacy KEEP + IMPROVE set plus reviewed daily publications.",
 );
 for (const row of primaryRows) {
   assert.equal(
@@ -228,18 +256,28 @@ for (const row of primaryRows) {
   );
 }
 
-assert.equal(NEWS_ARTICLES.length, 45, "All source records must be preserved.");
-assert.equal(PUBLISHED_NEWS_ARTICLES.length, 41);
-assert.equal(
-  NEWS_ARTICLES.filter((article) => article.status === "research").length,
-  4,
+assert.ok(NEWS_ARTICLES.length >= 45, "The certified source-record baseline regressed.");
+assert.ok(
+  PUBLISHED_NEWS_ARTICLES.length >= 41,
+  "The certified published-record baseline regressed.",
 );
-assert.equal(INDEXABLE_NEWS_ARTICLES.length, 26);
+assert.ok(
+  NEWS_ARTICLES.filter((article) => article.status === "research").length >= 4,
+  "The held research-record baseline regressed.",
+);
+const expectedIndexableArticleSlugs = releasedAuthorityPaths
+  .filter((pathname) => pathname.startsWith("/news/"))
+  .map((pathname) => pathname.slice("/news/".length))
+  .sort();
+assert.equal(
+  INDEXABLE_NEWS_ARTICLES.length,
+  expectedIndexableArticleSlugs.length,
+);
 assert.ok(
   PUBLISHED_NEWS_ARTICLES.every((article) =>
     getNewsArticleLifecycle(article.slug),
   ),
-  "Every one of the 41 live records needs an explicit lifecycle state.",
+  "Every live record needs an explicit legacy or conservative additive lifecycle state.",
 );
 assert.ok(
   INDEXABLE_NEWS_ARTICLES.every((article) =>
@@ -248,18 +286,11 @@ assert.ok(
 );
 assert.deepEqual(
   INDEXABLE_NEWS_ARTICLES.map((article) => article.slug).sort(),
-  primaryRows
-    .filter(
-      (row) =>
-        row.scope === "primary-article" &&
-        (row.disposition === "KEEP" || row.disposition === "IMPROVE"),
-    )
-    .map((row) => row.current_url.slice("/news/".length))
-    .sort(),
+  expectedIndexableArticleSlugs,
 );
 
 const archiveItems = projectNewsArchiveItems(INDEXABLE_NEWS_ARTICLES);
-assert.equal(archiveItems.length, 26);
+assert.equal(archiveItems.length, expectedIndexableArticleSlugs.length);
 assert.ok(
   archiveItems.every((item) => isIndexEligibleArticleSlug(item.slug)),
   "The archive exposed a retired or noindex article.",
@@ -424,9 +455,9 @@ if (originalCutover === undefined) {
 }
 
 console.log(
-  "Newsroom lifecycle PASS: 79 authoritative primary URLs -> 31 indexable; " +
+  `Newsroom lifecycle PASS: 79-route legacy authority + ${additivePublishedArticlePaths.length} daily publication(s) -> ${releasedAuthorityPaths.length} indexable; ` +
     "12 matrix noindex + 3 held redirects retained, 5 article removals gated, " +
-    "31 exact lifecycle redirects, 41 live records preserved, feeds/archive/front clean; " +
+    `31 exact lifecycle redirects, ${PUBLISHED_NEWS_ARTICLES.length} live records preserved, feeds/archive/front clean; ` +
     "two fact-preservation gaps and Wynn target indexability held; www DNS remains external.",
 );
 }
@@ -623,7 +654,10 @@ async function assertDiscoveryExclusions() {
   const rssSlugs = [
     ...rss.matchAll(/<guid isPermaLink="true">[^<]*\/news\/([^<]+)<\/guid>/g),
   ].map((match) => match[1]);
-  assert.equal(rssSlugs.length, 26);
+  assert.equal(
+    rssSlugs.length,
+    Math.min(30, INDEXABLE_NEWS_ARTICLES.length),
+  );
   assert.ok(rssSlugs.every((slug) => !excludedSlugs.has(slug)));
 
   const newestTime = new Date(INDEXABLE_NEWS_ARTICLES[0].publishedAt).getTime();

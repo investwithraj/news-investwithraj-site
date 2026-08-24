@@ -59,3 +59,32 @@ export function patchIndex(src: string, slug: string): string {
 
   return out;
 }
+
+/**
+ * Add a conservative explicit relation record for an automated publication.
+ *
+ * The publication system never guesses area or developer relations from body
+ * text. Empty arrays are therefore the safe default and can be enriched later
+ * through editorial review without blocking the daily release.
+ */
+export function patchArticleRelations(src: string, slug: string): string {
+  const escapedSlug = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existingRecord = new RegExp(
+    `articleSlug\\s*:\\s*["']${escapedSlug}["']`,
+    "u",
+  );
+  if (existingRecord.test(src)) return src;
+
+  const marker = "export const ARTICLE_RELATION_RECORDS = [";
+  if (!src.includes(marker)) {
+    throw new Error("Article relation registry marker is missing.");
+  }
+
+  const record =
+    `\n  {\n` +
+    `    articleSlug: ${JSON.stringify(slug)},\n` +
+    `    areaSlugs: [],\n` +
+    `    developerSlugs: [],\n` +
+    `  },`;
+  return src.replace(marker, `${marker}${record}`);
+}

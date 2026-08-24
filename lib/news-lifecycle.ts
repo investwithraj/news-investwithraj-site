@@ -447,8 +447,16 @@ export function getNewsroomLifecycle(
 
 export function getNewsArticleLifecycle(
   slug: string,
-): NewsroomLifecycleEntry | null {
-  return getNewsroomLifecycle(`/news/${slug}`);
+): NewsroomLifecycleEntry {
+  // The matrix is a frozen legacy migration authority. A newly reviewed
+  // daily publication is additive, so it receives a conservative, indexable
+  // self lifecycle unless an explicit legacy disposition overrides it.
+  return (
+    getNewsroomLifecycle(`/news/${slug}`) ?? {
+      disposition: "IMPROVE",
+      destination: "self",
+    }
+  );
 }
 
 export function isIndexEligibleDisposition(
@@ -458,7 +466,9 @@ export function isIndexEligibleDisposition(
 }
 
 export function isIndexEligiblePath(pathname: string): boolean {
-  const lifecycle = getNewsroomLifecycle(pathname);
+  const lifecycle = pathname.startsWith("/news/")
+    ? getNewsArticleLifecycle(pathname.slice("/news/".length))
+    : getNewsroomLifecycle(pathname);
   return Boolean(
     lifecycle && isIndexEligibleDisposition(lifecycle.disposition),
   );
@@ -474,7 +484,9 @@ export function isIndexEligibleArticleSlug(slug: string): boolean {
  * PRIVATE, research or redirect-source records.
  */
 export function isApprovedPublicLifecyclePath(pathname: string): boolean {
-  const lifecycle = getNewsroomLifecycle(pathname);
+  const lifecycle = pathname.startsWith("/news/")
+    ? getNewsArticleLifecycle(pathname.slice("/news/".length))
+    : getNewsroomLifecycle(pathname);
   return Boolean(
     lifecycle &&
       (isIndexEligibleDisposition(lifecycle.disposition) ||

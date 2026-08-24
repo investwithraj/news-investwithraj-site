@@ -36,6 +36,12 @@ export type ResolvedArticleDeveloper = Readonly<{
 export const ARTICLE_RELATION_RECORDS = [
   {
     articleSlug:
+      "2026-08-20-82-of-uae-residents-plan-waterfront-move-as-values-surge",
+    areaSlugs: [],
+    developerSlugs: [],
+  },
+  {
+    articleSlug:
       "2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction",
     areaSlugs: [],
     developerSlugs: [],

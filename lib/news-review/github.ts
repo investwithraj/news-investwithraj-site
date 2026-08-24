@@ -9,7 +9,11 @@ import { createHash } from "node:crypto";
 
 import { verifyImageBytes } from "@/lib/media/image-integrity";
 import { assertCanonicalNewsSlug } from "@/lib/news-review/integrity";
-import { serializeArticle, patchIndex } from "./serialize";
+import {
+  patchArticleRelations,
+  patchIndex,
+  serializeArticle,
+} from "./serialize";
 import type {
   DraftArticle,
   MediaApprovalLedger,
@@ -130,7 +134,7 @@ export async function inspectEditorialMedia(
   };
 }
 
-/** Commit the article file + the registry update in a single commit.
+/** Commit the article file + both public registries in a single commit.
  *  Returns the new commit SHA. */
 export async function publishArticleCommit(
   slug: string,
@@ -192,12 +196,22 @@ export async function publishArticleCommit(
     };
   }
 
-  // 2. Read + patch the registry.
-  const indexFile = await gh<{ content: string; encoding: string }>(
-    `${base}/contents/content/news/index.ts?ref=${BRANCH}`,
-  );
+  // 2. Read + patch the content and conservative relation registries.
+  const [indexFile, relationFile] = await Promise.all([
+    gh<{ content: string; encoding: string }>(
+      `${base}/contents/content/news/index.ts?ref=${BRANCH}`,
+    ),
+    gh<{ content: string; encoding: string }>(
+      `${base}/contents/lib/article-relations.ts?ref=${BRANCH}`,
+    ),
+  ]);
   const currentIndex = Buffer.from(indexFile.content, "base64").toString("utf-8");
+  const currentRelations = Buffer.from(
+    relationFile.content,
+    "base64",
+  ).toString("utf-8");
   const nextIndex = patchIndex(currentIndex, slug);
+  const nextRelations = patchArticleRelations(currentRelations, slug);
 
   const articlePath = `content/news/${slug}.ts`;
   const encodedArticlePath = articlePath
@@ -223,6 +237,11 @@ export async function publishArticleCommit(
     if (!currentIndex.includes(`from "./${slug}"`)) {
       throw new Error(
         "Article exists but the registry is inconsistent; reconcile it before retrying.",
+      );
+    }
+    if (nextRelations !== currentRelations) {
+      throw new Error(
+        "Article exists but its explicit relation record is missing; reconcile it before retrying.",
       );
     }
     const commits = await gh<Array<{ sha?: string }>>(
@@ -256,8 +275,8 @@ export async function publishArticleCommit(
     return publicationCommitSha;
   }
 
-  // 3. Blobs for both files.
-  const [articleBlob, indexBlob] = await Promise.all([
+  // 3. Blobs for all three files.
+  const [articleBlob, indexBlob, relationBlob] = await Promise.all([
     gh<{ sha: string }>(`${base}/git/blobs`, {
       method: "POST",
       body: JSON.stringify({ content: expectedArticleTs, encoding: "utf-8" }),
@@ -265,6 +284,10 @@ export async function publishArticleCommit(
     gh<{ sha: string }>(`${base}/git/blobs`, {
       method: "POST",
       body: JSON.stringify({ content: nextIndex, encoding: "utf-8" }),
+    }),
+    gh<{ sha: string }>(`${base}/git/blobs`, {
+      method: "POST",
+      body: JSON.stringify({ content: nextRelations, encoding: "utf-8" }),
     }),
   ]);
 
@@ -276,6 +299,7 @@ export async function publishArticleCommit(
       tree: [
         { path: `content/news/${slug}.ts`, mode: "100644", type: "blob", sha: articleBlob.sha },
         { path: "content/news/index.ts", mode: "100644", type: "blob", sha: indexBlob.sha },
+        { path: "lib/article-relations.ts", mode: "100644", type: "blob", sha: relationBlob.sha },
       ],
     }),
   });

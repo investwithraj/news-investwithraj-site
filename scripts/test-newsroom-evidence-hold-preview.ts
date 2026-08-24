@@ -11,6 +11,7 @@ import {
   NEWSROOM_HELD_REDIRECTS,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
   NEWSROOM_RELEASE_REMOVAL_CANDIDATES,
+  getNewsroomLifecycle,
   getReleasedNewsroomRedirects,
 } from "../lib/news-lifecycle";
 import { selectDistinctArticles } from "../lib/news-editorial";
@@ -107,9 +108,9 @@ function developerDirectoryCandidateSlugs(): string[] {
 async function main(): Promise<void> {
   assert.equal(NEWSROOM_EVIDENCE_HOLD_SLUGS.length, 24);
   assert.equal(new Set(NEWSROOM_EVIDENCE_HOLD_SLUGS).size, 24);
-  assert.equal(PUBLISHED_NEWS_ARTICLES.length, 41);
-  assert.equal(INDEXABLE_NEWS_ARTICLES.length, 26);
-  assert.equal(EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length, 2);
+  assert.ok(PUBLISHED_NEWS_ARTICLES.length >= 41);
+  assert.ok(INDEXABLE_NEWS_ARTICLES.length >= 26);
+  assert.ok(EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length >= 2);
   assert.ok(
     NEWSROOM_EVIDENCE_HOLD_SLUGS.every((slug) =>
       INDEXABLE_NEWS_ARTICLES.some((article) => article.slug === slug),
@@ -147,24 +148,44 @@ async function main(): Promise<void> {
     );
   }
 
-  assert.deepEqual(
-    await withMode({ evidencePreview: false, lifecycle: false }, state),
-    { sitemap: 79, articles: 41, redirects: 0 },
+  const additivePublished = PUBLISHED_NEWS_ARTICLES.filter(
+    (article) => !getNewsroomLifecycle(`/news/${article.slug}`),
   );
+  const additiveCertified = EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.filter(
+    (article) => !getNewsroomLifecycle(`/news/${article.slug}`),
+  );
+  const defaultState = await withMode(
+    { evidencePreview: false, lifecycle: false },
+    state,
+  );
+  assert.deepEqual(defaultState, {
+    sitemap: 79 + additivePublished.length,
+    articles: PUBLISHED_NEWS_ARTICLES.length,
+    redirects: 0,
+  });
   assert.deepEqual(
     await withMode(
       { vercelEnv: "production", evidencePreview: true, lifecycle: false },
       state,
     ),
-    { sitemap: 79, articles: 41, redirects: 0 },
+    defaultState,
   );
   assert.deepEqual(
     await withMode({ vercelEnv: "preview", evidencePreview: true, lifecycle: false }, state),
-    { sitemap: 55, articles: 17, redirects: 0 },
+    {
+      sitemap: 55 + additivePublished.length,
+      articles:
+        PUBLISHED_NEWS_ARTICLES.length - NEWSROOM_EVIDENCE_HOLD_SLUGS.length,
+      redirects: 0,
+    },
   );
   assert.deepEqual(
     await withMode({ vercelEnv: "preview", evidencePreview: true, lifecycle: true }, state),
-    { sitemap: 7, articles: 2, redirects: 31 },
+    {
+      sitemap: 7 + additiveCertified.length,
+      articles: EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length,
+      redirects: 31,
+    },
   );
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
@@ -231,13 +252,20 @@ async function main(): Promise<void> {
       assert.equal(
         [...rss.matchAll(/<guid isPermaLink="true">[^<]*\/news\/([^<]+)<\/guid>/gu)]
           .map((match) => match[1]).length,
-        17,
+        Math.min(
+          30,
+          PUBLISHED_NEWS_ARTICLES.length -
+            NEWSROOM_EVIDENCE_HOLD_SLUGS.length,
+        ),
       );
 
       const originalNow = Date.now;
-      Date.now = () =>
-        new Date(EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES[0]!.publishedAt).getTime() +
+      const auditNow =
+        new Date(
+          EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES[0]!.publishedAt,
+        ).getTime() +
         60 * 60 * 1_000;
+      Date.now = () => auditNow;
       try {
         const newsSitemap = await getNewsSitemap().text();
         const slugs = [
@@ -245,7 +273,13 @@ async function main(): Promise<void> {
         ].map((match) => match[1]);
         assert.deepEqual(
           slugs.sort(),
-          EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.map((article) => article.slug).sort(),
+          EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.filter(
+            (article) =>
+              auditNow - new Date(article.publishedAt).getTime() <=
+              48 * 60 * 60 * 1_000,
+          )
+            .map((article) => article.slug)
+            .sort(),
         );
       } finally {
         Date.now = originalNow;
@@ -261,7 +295,7 @@ async function main(): Promise<void> {
   );
 
   console.log(
-    "Newsroom evidence-hold preview PASS: default/Production 79/41/0; preview OFF-lifecycle 55/17/0; preview ON-lifecycle 7/2/31; developer directory 6/6/0; 24 readable noindex holds; redirects/removals unchanged.",
+    `Newsroom evidence-hold preview PASS: default/Production ${defaultState.sitemap}/${defaultState.articles}/0; additive daily publications=${additivePublished.length}; 24 readable noindex holds; redirects/removals unchanged.`,
   );
 }
 
