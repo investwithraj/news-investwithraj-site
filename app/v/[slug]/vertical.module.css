@@ -1,12 +1,13 @@
 .page {
-  --desk-paper: #f0ece4;
-  --desk-paper-deep: #e3dbce;
-  --desk-ink: #171714;
-  --desk-muted: #635e56;
-  --desk-line: rgba(23, 23, 20, 0.2);
-  --desk-bronze: #8b6842;
+  --desk-paper: var(--iwr-paper);
+  --desk-paper-deep: var(--iwr-white);
+  --desk-ink: var(--iwr-ink);
+  --desk-muted: var(--iwr-ink);
+  --desk-line: rgba(11, 13, 18, 0.2);
+  --desk-accent: var(--iwr-cobalt);
   background: var(--desk-paper);
   color: var(--desk-ink);
+  font-family: var(--iwr-font-body);
 }
 
 .shell {
@@ -17,10 +18,8 @@
 .hero {
   min-height: 72svh;
   padding: clamp(7rem, 14vw, 11rem) 0 clamp(4rem, 9vw, 7rem);
-  color: #f4f0e8;
-  background:
-    linear-gradient(115deg, rgba(141, 105, 66, 0.18), transparent 42%),
-    #171714;
+  color: var(--iwr-paper);
+  background: var(--desk-ink);
   display: flex;
   align-items: flex-end;
 }
@@ -30,7 +29,7 @@
   flex-wrap: wrap;
   gap: 0.6rem;
   margin-bottom: clamp(3rem, 9vw, 7rem);
-  color: rgba(244, 240, 232, 0.62);
+  color: rgba(240, 240, 236, 0.72);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -41,7 +40,7 @@
 }
 
 .breadcrumbs a:hover {
-  color: #fff;
+  color: var(--iwr-white);
 }
 
 .heroGrid,
@@ -57,7 +56,7 @@
 .kicker,
 .sectionLabel {
   margin: 0 0 1rem;
-  color: var(--desk-bronze);
+  color: var(--desk-accent);
   font-size: 0.69rem;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -65,15 +64,15 @@
 }
 
 .hero .kicker {
-  color: #c6a77e;
+  color: var(--iwr-cobalt-soft);
 }
 
 .hero h1 {
   max-width: 12ch;
   margin: 0;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(3.4rem, 8vw, 7rem);
-  font-weight: 480;
+  font-weight: 800;
   letter-spacing: -0.065em;
   line-height: 0.86;
 }
@@ -81,18 +80,18 @@
 .standfirst {
   max-width: 34ch;
   margin: clamp(1.8rem, 4vw, 3rem) 0 0;
-  color: rgba(244, 240, 232, 0.76);
+  color: rgba(240, 240, 236, 0.8);
   font-size: clamp(1.08rem, 2vw, 1.35rem);
   line-height: 1.55;
 }
 
 .deskNote {
-  border-top: 1px solid rgba(244, 240, 232, 0.3);
+  border-top: 1px solid rgba(240, 240, 236, 0.3);
   padding-top: 1.2rem;
 }
 
 .deskNote span {
-  color: #c6a77e;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.67rem;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -101,7 +100,7 @@
 
 .deskNote p {
   margin: 0.8rem 0 0;
-  color: rgba(244, 240, 232, 0.76);
+  color: rgba(240, 240, 236, 0.8);
   line-height: 1.55;
 }
 
@@ -116,9 +115,9 @@
 .description {
   max-width: 37ch;
   margin: 0;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(1.65rem, 3vw, 2.8rem);
-  font-weight: 500;
+  font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.025em;
 }
@@ -130,7 +129,7 @@
 
 .method p:not(.sectionLabel) {
   margin: 0;
-  color: var(--desk-muted);
+  color: rgba(11, 13, 18, 0.72);
   line-height: 1.7;
 }
 
@@ -145,8 +144,8 @@
 
 .archive {
   padding: clamp(4.5rem, 9vw, 8rem) 0;
-  background: #1b1b18;
-  color: #f4f0e8;
+  background: var(--desk-ink);
+  color: var(--desk-paper);
 }
 
 .sectionHead {
@@ -162,9 +161,9 @@
 .actions h2,
 .cta h2 {
   margin: 0;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(2rem, 4.5vw, 4.2rem);
-  font-weight: 500;
+  font-weight: 800;
   letter-spacing: -0.045em;
   line-height: 0.96;
 }
@@ -172,7 +171,7 @@
 .sectionHead > p {
   max-width: 28ch;
   margin: 0;
-  color: rgba(244, 240, 232, 0.56);
+  color: rgba(240, 240, 236, 0.72);
   line-height: 1.5;
   text-align: right;
 }
@@ -180,12 +179,12 @@
 .storyList {
   margin: 0;
   padding: 0;
-  border-top: 1px solid rgba(244, 240, 232, 0.22);
+  border-top: 1px solid rgba(240, 240, 236, 0.22);
   list-style: none;
 }
 
 .storyList li {
-  border-bottom: 1px solid rgba(244, 240, 232, 0.22);
+  border-bottom: 1px solid rgba(240, 240, 236, 0.22);
 }
 
 .story {
@@ -199,7 +198,7 @@
 
 .storyNumber,
 .storyMeta {
-  color: #c6a77e;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.13em;
@@ -213,21 +212,21 @@
 
 .storyCopy strong {
   max-width: 32ch;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(1.35rem, 2.6vw, 2.25rem);
-  font-weight: 550;
+  font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.12;
   transition: color 160ms ease;
 }
 
 .story:hover .storyCopy strong {
-  color: #d5b387;
+  color: var(--iwr-cobalt-soft);
 }
 
 .storyDek {
   max-width: 65ch;
-  color: rgba(244, 240, 232, 0.62);
+  color: rgba(240, 240, 236, 0.76);
   line-height: 1.6;
 }
 
@@ -237,23 +236,23 @@
 
 .emptyState {
   max-width: 760px;
-  border-top: 1px solid rgba(244, 240, 232, 0.25);
-  border-bottom: 1px solid rgba(244, 240, 232, 0.25);
+  border-top: 1px solid rgba(240, 240, 236, 0.25);
+  border-bottom: 1px solid rgba(240, 240, 236, 0.25);
   padding: clamp(2.5rem, 6vw, 5rem) 0;
 }
 
 .emptyState h3 {
   margin: 0;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(1.8rem, 3.6vw, 3.1rem);
-  font-weight: 500;
+  font-weight: 800;
   line-height: 1.15;
 }
 
 .emptyState > p:not(.sectionLabel) {
   max-width: 55ch;
   margin: 1.5rem 0;
-  color: rgba(244, 240, 232, 0.66);
+  color: rgba(240, 240, 236, 0.76);
   line-height: 1.7;
 }
 
@@ -289,7 +288,7 @@
 }
 
 .contextGrid span {
-  color: var(--desk-muted);
+  color: rgba(11, 13, 18, 0.72);
   font-size: 0.69rem;
   letter-spacing: 0.11em;
   text-transform: uppercase;
@@ -297,9 +296,9 @@
 
 .contextGrid strong {
   margin: auto 0;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: 1.45rem;
-  font-weight: 500;
+  font-weight: 800;
 }
 
 .actions {
@@ -326,12 +325,12 @@
 
 .cta {
   padding: clamp(4.5rem, 10vw, 9rem) 0;
-  background: #8b6842;
-  color: #fffaf1;
+  background: var(--desk-accent);
+  color: var(--iwr-white);
 }
 
 .cta .sectionLabel {
-  color: rgba(255, 250, 241, 0.68);
+  color: var(--iwr-white);
 }
 
 .ctaGrid {
@@ -345,7 +344,7 @@
 .cta p:not(.sectionLabel) {
   max-width: 60ch;
   margin: 1.4rem 0 0;
-  color: rgba(255, 250, 241, 0.75);
+  color: rgba(255, 255, 255, 0.88);
   line-height: 1.65;
 }
 
@@ -355,12 +354,12 @@
 }
 
 .ctaLinks a {
-  color: #fffaf1;
+  color: var(--iwr-white);
 }
 
 .primaryCta {
   padding: 1.15rem 1.3rem;
-  background: #171714;
+  background: var(--desk-ink);
   text-align: center;
   font-weight: 700;
 }

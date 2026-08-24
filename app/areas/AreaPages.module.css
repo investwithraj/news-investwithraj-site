@@ -573,6 +573,12 @@
   color: var(--iwr-paper);
 }
 
+.advisory .advisoryLinks span,
+.advisory .advisoryLinks i,
+.advisory .advisoryLinks a:hover strong {
+  color: var(--iwr-cobalt-soft);
+}
+
 .cta {
   display: grid;
   grid-template-columns: 1fr auto;

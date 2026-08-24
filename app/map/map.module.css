@@ -1,12 +1,13 @@
 .page {
-  --paper: #f0ece4;
-  --paper-deep: #ddd4c7;
-  --ink: #181714;
-  --muted: #676158;
-  --line: rgba(24, 23, 20, 0.2);
-  --bronze: #896442;
+  --paper: var(--iwr-paper);
+  --paper-deep: var(--iwr-white);
+  --ink: var(--iwr-ink);
+  --muted: var(--iwr-ink);
+  --line: rgba(11, 13, 18, 0.2);
+  --accent: var(--iwr-cobalt);
   background: var(--paper);
   color: var(--ink);
+  font-family: var(--iwr-font-body);
 }
 
 .shell {
@@ -20,14 +21,14 @@
   display: flex;
   align-items: flex-end;
   background: var(--ink);
-  color: #f4efe7;
+  color: var(--iwr-paper);
 }
 
 .breadcrumbs {
   display: flex;
   gap: 0.6rem;
   margin-bottom: clamp(3rem, 8vw, 6rem);
-  color: rgba(244, 239, 231, 0.6);
+  color: rgba(240, 240, 236, 0.72);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -45,7 +46,7 @@
 
 .kicker {
   margin: 0 0 1rem;
-  color: var(--bronze);
+  color: var(--accent);
   font-size: 0.69rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -54,15 +55,15 @@
 
 .hero .kicker,
 .method .kicker {
-  color: #caa47e;
+  color: var(--iwr-cobalt-soft);
 }
 
 .hero h1 {
   max-width: 13ch;
   margin: 0;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(3.2rem, 7.5vw, 6.8rem);
-  font-weight: 500;
+  font-weight: 800;
   letter-spacing: -0.06em;
   line-height: 0.91;
 }
@@ -70,8 +71,8 @@
 .standfirst {
   margin: 0;
   padding-top: 1.2rem;
-  border-top: 1px solid rgba(244, 239, 231, 0.3);
-  color: rgba(244, 239, 231, 0.72);
+  border-top: 1px solid rgba(240, 240, 236, 0.3);
+  color: rgba(240, 240, 236, 0.78);
   font-size: 1.05rem;
   line-height: 1.65;
 }
@@ -95,9 +96,9 @@
 .cta h2 {
   max-width: 21ch;
   margin: 0;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(2.1rem, 4.5vw, 4.2rem);
-  font-weight: 500;
+  font-weight: 800;
   letter-spacing: -0.045em;
   line-height: 1;
 }
@@ -105,7 +106,7 @@
 .sectionHead > p {
   max-width: 28ch;
   margin: 0;
-  color: var(--muted);
+  color: rgba(11, 13, 18, 0.72);
   line-height: 1.55;
   text-align: right;
 }
@@ -130,7 +131,7 @@
 }
 
 .filters label span {
-  color: var(--muted);
+  color: rgba(11, 13, 18, 0.72);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -148,7 +149,7 @@
 
 .filters > p {
   margin: 0 0 0 auto;
-  color: var(--muted);
+  color: rgba(11, 13, 18, 0.72);
   font-size: 0.8rem;
 }
 
@@ -164,7 +165,7 @@
   min-height: 600px;
   overflow: hidden;
   border-right: 1px solid var(--line);
-  background: #e4dace;
+  background: var(--paper-deep);
 }
 
 .plot > svg {
@@ -175,23 +176,23 @@
 }
 
 .plotGround {
-  fill: #e4dace;
+  fill: var(--paper-deep);
 }
 
 .gridLine {
-  stroke: rgba(24, 23, 20, 0.09);
+  stroke: rgba(11, 13, 18, 0.1);
   stroke-width: 1;
 }
 
 .coastline {
   fill: none;
-  stroke: rgba(137, 100, 66, 0.55);
+  stroke: var(--accent);
   stroke-width: 3;
 }
 
 .plotLabel {
-  fill: rgba(24, 23, 20, 0.32);
-  font-family: Arial, sans-serif;
+  fill: rgba(11, 13, 18, 0.62);
+  font-family: var(--iwr-font-mono);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 3px;
@@ -212,16 +213,17 @@
 .node > span {
   position: absolute;
   inset: 4px;
+  border: 1px solid var(--paper-deep);
   border-radius: inherit;
   background: var(--ink);
-  box-shadow: 0 0 0 1px #e4dace;
 }
 
 .node:hover > span,
 .node:focus-visible > span,
 .nodeSelected > span {
-  background: var(--bronze);
-  box-shadow: 0 0 0 4px rgba(137, 100, 66, 0.24);
+  border-color: var(--accent);
+  background: var(--accent);
+  outline: 4px solid rgba(64, 80, 200, 0.24);
 }
 
 .node:focus-visible {
@@ -236,7 +238,7 @@
   width: max-content;
   max-width: 150px;
   padding: 0.18rem 0.3rem;
-  background: rgba(228, 218, 206, 0.9);
+  background: rgba(240, 240, 236, 0.96);
   color: var(--ink);
   font-size: 0.62rem;
   font-weight: 700;
@@ -257,13 +259,13 @@
 
 .selection {
   padding: clamp(1.5rem, 4vw, 3rem);
-  background: #1c1b18;
-  color: #f4efe7;
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .selection > p {
   margin: 0;
-  color: #caa47e;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -272,9 +274,9 @@
 
 .selection h3 {
   margin: 2rem 0 3rem;
-  font-family: var(--font-space-grotesk), Arial, sans-serif;
+  font-family: var(--iwr-font-display);
   font-size: clamp(1.7rem, 3vw, 2.8rem);
-  font-weight: 550;
+  font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1.05;
 }
@@ -285,11 +287,11 @@
 
 .selection dl div {
   padding: 1rem 0;
-  border-top: 1px solid rgba(244, 239, 231, 0.22);
+  border-top: 1px solid rgba(240, 240, 236, 0.22);
 }
 
 .selection dt {
-  color: rgba(244, 239, 231, 0.52);
+  color: var(--iwr-cobalt-soft);
   font-size: 0.68rem;
   letter-spacing: 0.11em;
   text-transform: uppercase;
@@ -297,7 +299,7 @@
 
 .selection dd {
   margin: 0.45rem 0 0;
-  color: rgba(244, 239, 231, 0.82);
+  color: rgba(240, 240, 236, 0.82);
   text-transform: capitalize;
 }
 
@@ -305,7 +307,7 @@
   display: block;
   margin-top: 2rem;
   padding: 1rem;
-  background: #f4efe7;
+  background: var(--paper);
   color: var(--ink);
   text-align: center;
   font-weight: 800;
@@ -324,7 +326,7 @@
 
 .tableWrap caption {
   padding: 1.2rem 0;
-  color: var(--muted);
+  color: rgba(11, 13, 18, 0.72);
   text-align: left;
 }
 
@@ -332,7 +334,7 @@
 .tableWrap td {
   padding: 1rem 0.8rem;
   border-top: 1px solid var(--line);
-  color: var(--muted);
+  color: rgba(11, 13, 18, 0.72);
   text-align: left;
 }
 
@@ -372,14 +374,14 @@
 .disclaimer {
   max-width: 78ch;
   margin: 1.4rem 0 0;
-  color: var(--muted);
+  color: rgba(11, 13, 18, 0.72);
   font-size: 0.82rem;
   line-height: 1.6;
 }
 
 .method {
-  background: #1c1b18;
-  color: #f4efe7;
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .methodGrid {
@@ -388,22 +390,22 @@
 
 .methodGrid > div:last-child > p {
   margin: 0 0 2rem;
-  color: rgba(244, 239, 231, 0.68);
+  color: rgba(240, 240, 236, 0.78);
   line-height: 1.7;
 }
 
 .method dl {
   margin: 0;
-  border-top: 1px solid rgba(244, 239, 231, 0.22);
+  border-top: 1px solid rgba(240, 240, 236, 0.22);
 }
 
 .method dl div {
   padding: 1rem 0;
-  border-bottom: 1px solid rgba(244, 239, 231, 0.22);
+  border-bottom: 1px solid rgba(240, 240, 236, 0.22);
 }
 
 .method dt {
-  color: #caa47e;
+  color: var(--iwr-cobalt-soft);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.11em;
@@ -412,12 +414,12 @@
 
 .method dd {
   margin: 0.45rem 0 0;
-  color: rgba(244, 239, 231, 0.72);
+  color: rgba(240, 240, 236, 0.82);
 }
 
 .cta {
-  background: var(--bronze);
-  color: #fff9ef;
+  background: var(--accent);
+  color: var(--iwr-white);
 }
 
 .ctaGrid {
@@ -425,12 +427,12 @@
 }
 
 .cta .kicker {
-  color: rgba(255, 249, 239, 0.66);
+  color: var(--iwr-white);
 }
 
 .cta p:not(.kicker) {
   max-width: 58ch;
-  color: rgba(255, 249, 239, 0.72);
+  color: rgba(255, 255, 255, 0.88);
   line-height: 1.65;
 }
 
@@ -440,7 +442,7 @@
 }
 
 .ctaLinks a {
-  color: #fff9ef;
+  color: var(--iwr-white);
 }
 
 .primary {

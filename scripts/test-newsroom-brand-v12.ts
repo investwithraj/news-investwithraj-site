@@ -70,6 +70,8 @@ const publicCss = [
   "components/terminal/TerminalShell.module.css",
   "app/areas/AreaPages.module.css",
   "app/developers/DeveloperPages.module.css",
+  "app/map/map.module.css",
+  "app/v/[slug]/vertical.module.css",
   "app/NotFound.module.css",
 ].map(text);
 
@@ -106,5 +108,5 @@ assert.match(icon, /#F0F0EC/u);
 assert.equal(/#D7BC79|#F8F4EA/iu.test(icon), false);
 
 console.log(
-  "Newsroom v1.2 brand PASS: 5 canonical binaries, 6 governed colours, 3 type families, exact IWR identity and 12 public surface styles.",
+  "Newsroom v1.2 brand PASS: 5 canonical binaries, 6 governed colours, 3 type families, exact IWR identity and 14 public surface styles.",
 );
