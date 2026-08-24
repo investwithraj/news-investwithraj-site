@@ -246,7 +246,7 @@
 }
 
 .tldr li > span {
-  color: var(--iwr-architectural-slate);
+  color: var(--iwr-ink);
   font-size: 0.62rem;
   font-weight: 650;
 }
@@ -351,7 +351,7 @@
 .consequence small {
   display: block;
   margin-top: 1.5rem;
-  color: rgba(11, 13, 18, 0.52);
+  color: rgba(11, 13, 18, 0.72);
   font-size: 0.68rem;
   line-height: 1.55;
 }
@@ -365,7 +365,7 @@
 }
 
 .sourceRail > p {
-  color: var(--iwr-architectural-slate);
+  color: var(--iwr-ink);
 }
 
 .sourceRail strong {
@@ -379,7 +379,7 @@
 
 .sourceRail > span {
   display: block;
-  color: var(--iwr-architectural-slate);
+  color: var(--iwr-ink);
   font-size: 0.67rem;
   text-transform: uppercase;
 }
@@ -529,7 +529,7 @@
 
 .relationGrid a > span {
   grid-column: 1 / -1;
-  color: var(--iwr-architectural-slate);
+  color: var(--iwr-ink);
   font-size: 0.6rem;
   font-weight: 650;
   letter-spacing: 0.08em;
@@ -666,7 +666,7 @@
 }
 
 .faq summary > span {
-  color: var(--iwr-architectural-slate);
+  color: var(--iwr-ink);
   font-size: 0.65rem;
   font-weight: 650;
 }

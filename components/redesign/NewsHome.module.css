@@ -427,7 +427,7 @@
 }
 
 .cardBody .meta {
-  color: var(--iwr-architectural-slate);
+  color: var(--iwr-ink);
 }
 
 .cardBody .meta > span {
@@ -452,7 +452,7 @@
 
 .cardEvidence {
   margin-top: 1.25rem;
-  color: var(--iwr-architectural-slate) !important;
+  color: var(--iwr-ink) !important;
   font-size: 0.62rem !important;
   font-weight: 650;
   letter-spacing: 0.08em;

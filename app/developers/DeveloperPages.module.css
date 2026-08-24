@@ -419,6 +419,15 @@
 
 .method a,
 .independence a {
+  color: var(--iwr-paper);
+  text-decoration: underline;
+  text-decoration-color: var(--iwr-cobalt-soft);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.25em;
+}
+
+.method .advisoryLinks span,
+.independence .advisoryLinks span {
   color: var(--iwr-cobalt-soft);
 }
 
@@ -542,6 +551,11 @@
 .advisoryLinks a {
   border-color: rgba(240, 240, 236, 0.16);
   color: var(--iwr-paper);
+}
+
+.advisory .advisoryLinks span,
+.advisory .advisoryLinks i {
+  color: var(--iwr-cobalt-soft);
 }
 
 .cta {
