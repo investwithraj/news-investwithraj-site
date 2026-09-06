@@ -100,6 +100,15 @@ export default function NewsArticle({
               </span>
             </span>
           </div>
+          {article.correction ? (
+            <aside className={styles.correction} aria-label="Correction note">
+              <strong>Correction</strong>
+              <p>{article.correction.summary}</p>
+              <time dateTime={article.correction.correctedAt}>
+                {formatEditorialDate(article.correction.correctedAt)}
+              </time>
+            </aside>
+          ) : null}
           </header>
 
           {displayMedia ? (

@@ -1,0 +1,71 @@
+{
+  "originalDraftId": "acb681a2-5eda-483f-ab6a-ac60185d15bb",
+  "expectedOriginalCommitSha": "4cb0c00b1a7a6cad0e8e1ba9f57a06082dc761c3",
+  "expectedOriginalContentHash": "163d72eaac23c71c46982fb0929893976cb9d6f0576b08788a727b93e747c83b",
+  "article": {
+    "author": "raj-tomar",
+    "body": "Aldar Properties and Abu Dhabi Commercial Bank have completed Abu Dhabi's first off-plan mortgage registration under the new Abu Dhabi Real Estate Centre framework, according to reports by Gulf News and Khaleej Times. The route lets an eligible buyer who has already paid 50 per cent of the purchase price arrange financing during construction instead of waiting until handover.\n\nBoth reports say the buyer can mortgage the outstanding amount. The bank can then fund the remaining construction instalments and the final payment due at handover. Aldar says the 50 per cent payment threshold is aligned with UAE Central Bank regulations, according to Gulf News.\n\nThe important change is not simply earlier access to a loan. Under the framework, the financing bank can be named on the mortgage registration certificate before the home is handed over. Gulf News reports that the bank's interest can be entered in the Initial Real Estate Register, creating a formal record for the buyer, developer and lender while the home is still under construction.\n\nADCB supported the inaugural transaction as the mortgage bank. Gulf News reports that the service is available across the Abu Dhabi market to participating institutions that meet the relevant requirements, while project and buyer eligibility still need to be confirmed for each application.\n\nAldar customers can access the route through Home Finance by Aldar after paying 50 per cent or more of the value of an eligible home, according to the two reports. Khaleej Times describes the in-house advisory service as free to customers. That refers to the advisory service; buyers should still confirm lender charges, valuation costs, insurance, rates and all other mortgage terms before proceeding.\n\nThe participating lenders named in the reports are Abu Dhabi Commercial Bank, Abu Dhabi Islamic Bank, Dubai Islamic Bank, Emirates NBD, Emirates Islamic and First Abu Dhabi Bank. Gulf News says customers can request a call back from the Home Finance by Aldar team through the Live Aldar app.\n\nFor buyers, the practical benefit is timing. Financing can be arranged before completion, which may provide earlier visibility on borrowing terms and reduce the amount of cash tied up through the later stages of construction. Khaleej Times says the route offers an alternative to traditional handover-stage financing and a wider choice of rates and terms.\n\nIt does not make every off-plan purchase suitable, and it does not remove the need for due diligence. Buyers still need to examine the developer's record, construction progress, escrow arrangements, payment schedule, mortgage conditions, valuation basis and their own ability to service the loan. They should also establish what happens if a valuation changes, a handover is delayed or their circumstances change before completion.\n\nThe framework matters because it closes a familiar timing gap. Buyers often commit substantial capital during construction while formal mortgage arrangements are left until the final payment approaches. An earlier, registered financing route can make that sequence clearer for eligible buyers, but the value depends on the exact project, lender offer and buyer profile.\n\nBefore using the route, a buyer should ask five straightforward questions: is the specific home eligible; which lenders will consider the application; what costs apply outside Aldar's advisory service; when can the rate be fixed; and what conditions must still be met before each payment is released? Those answers are more useful than treating the 50 per cent threshold as a blanket approval.\n\nThe precedent is significant for Abu Dhabi's off-plan market because the framework has now moved from policy into a completed registration. The next test is practical adoption: how consistently participating banks offer it, which projects qualify and whether the financing terms are competitive with conventional handover-stage options.",
+    "category": "market-pulse",
+    "citations": [
+      {
+        "accessedAt": "2026-09-06T19:31:05.544Z",
+        "source": "Gulf News — Property",
+        "tier": "national-press",
+        "url": "https://gulfnews.com/business/property/new-mortgage-option-opens-for-abu-dhabi-off-plan-buyers-with-aldar-and-adcb-deal-1.500663048"
+      },
+      {
+        "accessedAt": "2026-09-06T19:31:05.544Z",
+        "source": "Khaleej Times — Real Estate",
+        "tier": "national-press",
+        "url": "https://www.khaleejtimes.com/business/aldar-adcb-complete-abu-dhabis-first-off-plan-mortgage-under-new-adrec-framework"
+      }
+    ],
+    "correction": {
+      "correctedAt": "2026-09-06T20:10:00.000Z",
+      "summary": "Revised after publication to repair two malformed sentences and remove analysis that went beyond the cited reporting. The core event and cited sources are unchanged."
+    },
+    "cta": {
+      "href": "https://investwithraj.com/engage?utm_source=news&utm_medium=internal&utm_campaign=news_auto_draft&utm_content=newsletter-cta",
+      "label": "Discuss your real estate decision with Raj"
+    },
+    "displayDate": "06 Sept 2026",
+    "distribution": {},
+    "faq": [
+      {
+        "a": "Both reports say buyers must have paid 50 per cent of the purchase price to be eligible for this off-plan mortgage route. Eligibility still depends on the specific home and lender.",
+        "q": "What is the payment threshold for the new mortgage route?"
+      },
+      {
+        "a": "The participating lenders named in the reports are ADCB, Abu Dhabi Islamic Bank, Dubai Islamic Bank, Emirates NBD, Emirates Islamic and First Abu Dhabi Bank.",
+        "q": "Which banks are named as participants?"
+      },
+      {
+        "a": "Gulf News reports that the Initial Real Estate Register allows the lender's mortgage interest in an eligible off-plan home to be formally recorded before handover.",
+        "q": "What does registration before handover change?"
+      },
+      {
+        "a": "Khaleej Times describes Home Finance by Aldar's advisory service as free to customers. Buyers should separately confirm all lender, valuation, insurance and mortgage costs.",
+        "q": "Does the new route have no extra costs?"
+      }
+    ],
+    "heroImage": {
+      "alt": "Aldar and ADCB complete Abu Dhabi's first off-plan mortgage registration",
+      "credit": "Verified editorial image withheld pending UHD rights approval",
+      "src": "/news/2026-09-06-aldar-completes-abu-dhabi-s-first-off-plan-mortgage-under/cover.jpg"
+    },
+    "market": [
+      "Abu Dhabi"
+    ],
+    "modifiedAt": "2026-09-06T20:10:00.000Z",
+    "publishedAt": "2026-09-06T19:31:05.544Z",
+    "slug": "2026-09-06-aldar-completes-abu-dhabi-s-first-off-plan-mortgage-under",
+    "subtitle": "The first completed registration lets eligible buyers arrange financing during construction after meeting the payment threshold",
+    "tier": "news",
+    "title": "Aldar and ADCB complete Abu Dhabi's first off-plan mortgage registration",
+    "tldr": [
+      "Aldar and ADCB completed Abu Dhabi's first off-plan mortgage registration under the new ADREC framework.",
+      "Eligible buyers who have paid 50 per cent can arrange financing for the outstanding amount before handover.",
+      "The lender's interest can be formally recorded before completion, according to Gulf News."
+    ]
+  }
+}

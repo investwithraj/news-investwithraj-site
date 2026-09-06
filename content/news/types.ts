@@ -78,6 +78,13 @@ export interface FaqItem {
   a: string;
 }
 
+export interface CorrectionNote {
+  /** ISO timestamp for the reviewed correction release. */
+  correctedAt: string;
+  /** Plain-language disclosure of what materially changed. */
+  summary: string;
+}
+
 /** Semaform-style structured perspective from a named source / stakeholder. */
 export interface ViewFrom {
   /** Who's speaking — "Modon", "Knight Frank", "DLD spokesperson", "Off-plan buyer", etc. */
@@ -136,6 +143,8 @@ export interface NewsArticle {
   publishedAt: string;
   /** Last modified ISO — defaults to publishedAt if unchanged */
   modifiedAt: string;
+  /** Visible disclosure for a material post-publication correction. */
+  correction?: CorrectionNote;
   /** Display date for cards ("23 May 2026") */
   displayDate: string;
   /** Author — currently always "raj-tomar" (single-byline + AI-assist disclosure) */

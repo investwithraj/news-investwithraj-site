@@ -215,6 +215,22 @@ function validSemaform(value: unknown): boolean {
   return true;
 }
 
+function validCorrection(value: unknown, modifiedAt: unknown): boolean {
+  if (value === undefined) return true;
+  if (
+    !isRecord(value) ||
+    Object.keys(value).some(
+      (key) => !new Set(["correctedAt", "summary"]).has(key),
+    ) ||
+    !validIso(value.correctedAt) ||
+    !boundedString(value.summary, 20, 600) ||
+    !validIso(modifiedAt)
+  ) {
+    return false;
+  }
+  return Date.parse(value.correctedAt) === Date.parse(modifiedAt);
+}
+
 export function isCanonicalNewsSlug(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -244,6 +260,7 @@ export function validateDraftArticleShape(
     "subtitle",
     "publishedAt",
     "modifiedAt",
+    "correction",
     "displayDate",
     "author",
     "tier",
@@ -290,6 +307,13 @@ export function validateDraftArticleShape(
     return {
       ok: false,
       error: "article.modifiedAt cannot precede article.publishedAt.",
+    };
+  }
+  if (!validCorrection(value.correction, value.modifiedAt)) {
+    return {
+      ok: false,
+      error:
+        "article.correction must be a bounded visible disclosure whose correctedAt equals modifiedAt.",
     };
   }
   const dubaiDate = dubaiCalendarDate(publishedAt);
@@ -574,7 +598,6 @@ export function evidenceApprovalFor(
   ) {
     return null;
   }
-
   const boundArticle = articleResult.article;
   const articleCitationUrls = boundArticle.citations.map(
     (citation) => citation.url,

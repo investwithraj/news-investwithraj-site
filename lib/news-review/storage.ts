@@ -363,6 +363,171 @@ export async function getPublicationReceiptByCommitSha(
   }
 }
 
+/** Read the immutable completed-draft archive used for governed corrections. */
+export async function getArchivedPublicationDraft(
+  id: string,
+): Promise<NewsDraft | null> {
+  assertDurableStorage();
+  if (kvConfigured()) {
+    const raw = await kvCommand(["GET", publicationArchiveKey(id)]);
+    if (raw == null) return null;
+    if (typeof raw !== "string") {
+      throw new Error("Publication archive returned invalid state.");
+    }
+    return hydrateDraft(JSON.parse(raw) as NewsDraft);
+  }
+  try {
+    return hydrateDraft(
+      JSON.parse(
+        await fs.readFile(publicationArchiveFile(id), "utf8"),
+      ) as NewsDraft,
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function correctionReplayMatches(
+  candidate: NewsDraft,
+  stored: NewsDraft,
+  completed: boolean,
+): boolean {
+  const candidateOrigin = candidate.correctionOf;
+  const storedOrigin = stored.correctionOf;
+  return Boolean(
+    candidateOrigin &&
+      storedOrigin &&
+      stored.id === candidate.id &&
+      stored.contentHash === candidate.contentHash &&
+      stored.article.slug === candidate.article.slug &&
+      storedOrigin.draftId === candidateOrigin.draftId &&
+      storedOrigin.revision === candidateOrigin.revision &&
+      storedOrigin.contentHash === candidateOrigin.contentHash &&
+      storedOrigin.commitSha.toLowerCase() ===
+        candidateOrigin.commitSha.toLowerCase() &&
+      (!completed ||
+        (stored.publication?.state === "completed" &&
+          stored.publication.contentHash === candidate.contentHash)),
+  );
+}
+
+/**
+ * Atomically stage one deterministic correction draft. Replays return the
+ * exact active or completed correction instead of creating another revision.
+ */
+export async function storeCorrectionDraft(
+  candidate: NewsDraft,
+): Promise<{ draft: NewsDraft; state: "active" | "completed" }> {
+  if (!candidate.correctionOf || candidate.publication) {
+    throw new DraftConflictError("Correction lineage is missing or invalid.");
+  }
+  assertDurableStorage();
+  if (kvConfigured()) {
+    const script = `
+local candidate = cjson.decode(ARGV[1])
+local function same_lineage(stored)
+  return stored.id == candidate.id
+    and stored.contentHash == candidate.contentHash
+    and stored.article and stored.article.slug == candidate.article.slug
+    and stored.correctionOf and candidate.correctionOf
+    and stored.correctionOf.draftId == candidate.correctionOf.draftId
+    and tonumber(stored.correctionOf.revision) == tonumber(candidate.correctionOf.revision)
+    and stored.correctionOf.contentHash == candidate.correctionOf.contentHash
+    and string.lower(stored.correctionOf.commitSha) == string.lower(candidate.correctionOf.commitSha)
+end
+local archived = redis.call("GET", KEYS[2])
+if archived then
+  local completed = cjson.decode(archived)
+  if same_lineage(completed)
+    and completed.publication
+    and completed.publication.state == "completed"
+    and completed.publication.contentHash == candidate.contentHash then
+    return {2, archived}
+  end
+  return {-3, ""}
+end
+local raw = redis.call("GET", KEYS[1])
+local drafts = {}
+if raw then drafts = cjson.decode(raw) end
+for _, existing in ipairs(drafts) do
+  if existing.id == ARGV[2] then
+    if same_lineage(existing) then return {1, cjson.encode(existing)} end
+    return {-2, ""}
+  end
+  if existing.article.slug == ARGV[4] then return {-1, ""} end
+end
+table.insert(drafts, cjson.decode(ARGV[1]))
+redis.call("SET", KEYS[1], cjson.encode(drafts))
+return {1, ARGV[1]}
+`;
+    const result = (await kvEval(
+      script,
+      [KV_KEY, publicationArchiveKey(candidate.id)],
+      [
+        JSON.stringify(candidate),
+        candidate.id,
+        candidate.contentHash,
+        candidate.article.slug,
+      ],
+    )) as [number | string, unknown];
+    const code = Number(result?.[0]);
+    const raw = result?.[1];
+    if ((code === 1 || code === 2) && typeof raw === "string") {
+      const stored = hydrateDraft(JSON.parse(raw) as NewsDraft);
+      if (!correctionReplayMatches(candidate, stored, code === 2)) {
+        throw new DraftConflictError(
+          "Stored correction replay does not match the requested correction.",
+        );
+      }
+      return {
+        draft: stored,
+        state: code === 2 ? "completed" : "active",
+      };
+    }
+    if (code === -1) {
+      throw new DraftCollisionError(
+        "Another active draft already occupies this publication slug.",
+      );
+    }
+    throw new DraftConflictError(
+      code === -3
+        ? "The completed correction archive does not match this correction."
+        : "A different correction already occupies this correction identity.",
+    );
+  }
+
+  return withLocalMutation(async () => {
+    const archived = await getArchivedPublicationDraft(candidate.id);
+    if (archived) {
+      if (!correctionReplayMatches(candidate, archived, true)) {
+        throw new DraftConflictError(
+          "The completed correction archive does not match this correction.",
+        );
+      }
+      return { draft: archived, state: "completed" as const };
+    }
+    const all = await fsGet();
+    const existing = all.find((draft) => draft.id === candidate.id);
+    if (existing) {
+      if (!correctionReplayMatches(candidate, existing, false)) {
+        throw new DraftConflictError(
+          "A different correction already occupies this correction identity.",
+        );
+      }
+      return { draft: existing, state: "active" as const };
+    }
+    if (all.some((draft) => draft.article.slug === candidate.article.slug)) {
+      throw new DraftCollisionError(
+        "Another active draft already occupies this publication slug.",
+      );
+    }
+    all.push(candidate);
+    if (!(await fsSet(all))) throw new Error("Draft storage write failed.");
+    return { draft: candidate, state: "active" as const };
+  });
+}
+
 export async function getCommittedDraftByCommitSha(
   commitSha: string,
 ): Promise<NewsDraft | null> {

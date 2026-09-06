@@ -16,6 +16,7 @@ import {
 import type {
   DraftArticle,
   MediaApprovalLedger,
+  PublicationCorrectionOrigin,
 } from "./types";
 
 const TOKEN = process.env.GITHUB_TOKEN || "";
@@ -146,11 +147,17 @@ export async function publishArticleCommit(
   article: DraftArticle,
   mediaApproval: MediaApprovalLedger | null,
   publicationContentHash: string,
+  correctionOf?: PublicationCorrectionOrigin,
 ): Promise<string> {
   if (!TOKEN) throw new Error("GITHUB_TOKEN not set");
   assertCanonicalNewsSlug(slug);
   if (article.slug !== slug || (mediaApproval && mediaApproval.slug !== slug)) {
     throw new Error("Publication slug does not match the reviewed records.");
+  }
+  if (correctionOf && mediaApproval) {
+    throw new Error(
+      "Corrected publications with approved media require a separate media review.",
+    );
   }
 
   const base = `/repos/${OWNER}/${REPO}`;
@@ -234,11 +241,6 @@ export async function publishArticleCommit(
       existingArticle.encoding === "base64" && existingArticle.content
         ? Buffer.from(existingArticle.content, "base64").toString("utf8")
         : "";
-    if (existingText !== expectedArticleTs) {
-      throw new Error(
-        "A different article already occupies the reviewed publication slug.",
-      );
-    }
     if (!currentIndex.includes(`from "./${slug}"`)) {
       throw new Error(
         "Article exists but the registry is inconsistent; reconcile it before retrying.",
@@ -248,6 +250,50 @@ export async function publishArticleCommit(
       throw new Error(
         "Article exists but its explicit relation record is missing; reconcile it before retrying.",
       );
+    }
+    if (existingText !== expectedArticleTs) {
+      if (!correctionOf || !existingArticle.sha) {
+        throw new Error(
+          "A different article already occupies the reviewed publication slug.",
+        );
+      }
+      const priorArticle = await ghOptional<{
+        content?: string;
+        encoding?: string;
+        sha?: string;
+      }>(
+        `${base}/contents/${encodedArticlePath}?ref=${encodeURIComponent(correctionOf.commitSha)}`,
+      );
+      const priorText =
+        priorArticle?.encoding === "base64" && priorArticle.content
+          ? Buffer.from(priorArticle.content, "base64").toString("utf8")
+          : "";
+      const expectedPriorMarker = `"publicationContentHash": ${JSON.stringify(correctionOf.contentHash)}`;
+      if (
+        priorArticle?.sha !== existingArticle.sha ||
+        priorText !== existingText ||
+        !existingText.includes(expectedPriorMarker)
+      ) {
+        throw new Error(
+          "The live article no longer matches the completed correction origin.",
+        );
+      }
+      const updated = await gh<{ commit?: { sha?: string } }>(
+        `${base}/contents/${encodedArticlePath}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            message: `news: correct ${slug} (reviewed + disclosed)`,
+            content: Buffer.from(expectedArticleTs, "utf8").toString("base64"),
+            sha: existingArticle.sha,
+            branch: BRANCH,
+          }),
+        },
+      );
+      if (!updated.commit?.sha || !/^[a-f0-9]{40}$/i.test(updated.commit.sha)) {
+        throw new Error("GitHub did not return the correction commit identity.");
+      }
+      return updated.commit.sha;
     }
     const commits = await gh<Array<{ sha?: string }>>(
       `${base}/commits?sha=${encodeURIComponent(BRANCH)}&path=${encodeURIComponent(articlePath)}&per_page=1`,

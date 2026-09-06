@@ -108,6 +108,14 @@ export interface PublicationRecord {
   url?: string;
 }
 
+/** Immutable lineage for a new draft that corrects one completed publication. */
+export interface PublicationCorrectionOrigin {
+  draftId: string;
+  revision: number;
+  contentHash: string;
+  commitSha: string;
+}
+
 /** A staged article draft (status always "review" while in KV). */
 export interface NewsDraft {
   id: string;
@@ -129,6 +137,7 @@ export interface NewsDraft {
   evidenceApproval?: EvidenceApproval;
   mediaApproval?: MediaApprovalLedger;
   publication?: PublicationRecord;
+  correctionOf?: PublicationCorrectionOrigin;
 }
 
 /** Payload the pipeline / cron posts to create a draft. */

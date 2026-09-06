@@ -1,0 +1,35 @@
+name: news-correction
+on:
+  workflow_dispatch:
+    inputs:
+      correction_key:
+        description: "Version-controlled newsroom correction key"
+        required: true
+        default: "aldar-offplan-mortgage-2026-09-06"
+        type: string
+concurrency:
+  group: news-cron-production
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  correct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx tsx scripts/test-news-correction.ts
+      - run: npx tsx scripts/test-news-correction-storage.ts
+      - run: npx tsx scripts/test-news-correction-github.ts
+      - name: Publish exact correction
+        run: npx tsx scripts/publish-news-correction.ts "$CORRECTION_KEY"
+        env:
+          CORRECTION_KEY: ${{ inputs.correction_key }}
+          SITE_URL: https://news.investwithraj.com
+          POST_PUBLISH_SECRET: ${{ secrets.POST_PUBLISH_SECRET }}

@@ -8,6 +8,7 @@ import { NextRequest } from "next/server";
 
 import { assessDraft } from "@/lib/news-review/auto-approve";
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
+import { assertPublishedCorrectionLineage } from "@/lib/news-review/correction";
 import { githubConfigured, publishArticleCommit } from "@/lib/news-review/github";
 import {
   draftContentHash,
@@ -156,6 +157,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     let draft = await getDraft(id);
     if (!draft) return privateJson({ error: "Draft not found." }, 404);
+    await assertPublishedCorrectionLineage(draft);
     const existingPublication = draft.publication;
     if (
       existingPublication?.state === "committed" &&
@@ -432,6 +434,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       draft.article,
       draft.mediaApproval ?? null,
       draft.contentHash,
+      draft.correctionOf,
     );
     const url = `${NEWS_SITE}/news/${slug}`;
     stage = "receipt-recording";
