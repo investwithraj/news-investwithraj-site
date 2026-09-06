@@ -4,7 +4,10 @@
 // and dynamically injects/removes pixel snippets. Tracking IDs are passed
 // in via props from a server component that reads the env vars.
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   ga4Snippet,
   ga4ExternalSrc,
@@ -18,7 +21,7 @@ import {
   googleAdsExternalSrc,
   clarityPixelSnippet,
 } from "@/lib/pixels/snippets";
-import { readConsent } from "@/lib/consent/state";
+import { hasExplicitConsent, readConsent } from "@/lib/consent/state";
 
 interface Props {
   /** Tracking IDs supplied from a server component reading env vars. */
@@ -32,6 +35,15 @@ interface Props {
     tiktok?: string;
     googleAds?: string;
   };
+  /** Public PostHog project configuration; no request is sent before consent. */
+  posthog?: {
+    apiKey: string;
+    apiHost: string;
+  };
+  /** Canonical hosts that share the same GA property. */
+  crossDomainHosts: readonly string[];
+  /** Vercel integrations exist only in a Vercel runtime and remain consented. */
+  enableVercelObservability: boolean;
 }
 
 // Track which pixels we've already loaded so we don't double-inject
@@ -63,21 +75,44 @@ function removePixel(id: string) {
   loaded.delete(id);
 }
 
-function applyConsent(ids: Props["ids"]) {
+const POSTHOG_ANONYMOUS_ID_KEY = "iwr-news-posthog-anonymous-id";
+
+function posthogAnonymousId(): string | undefined {
+  try {
+    const existing = localStorage.getItem(POSTHOG_ANONYMOUS_ID_KEY);
+    if (existing) return existing;
+    const generated = crypto.randomUUID();
+    localStorage.setItem(POSTHOG_ANONYMOUS_ID_KEY, generated);
+    return generated;
+  } catch {
+    return undefined;
+  }
+}
+
+function forgetPosthogAnonymousId() {
+  try {
+    localStorage.removeItem(POSTHOG_ANONYMOUS_ID_KEY);
+  } catch {
+    // Storage may be blocked. There is nothing else to withdraw locally.
+  }
+}
+
+function applyConsent(ids: Props["ids"], crossDomainHosts: readonly string[]) {
   const state = readConsent();
-  if (!state) return; // No consent yet — nothing fires
+
+  if (!hasExplicitConsent(state, "posthog")) forgetPosthogAnonymousId();
 
   // GA4
-  if (state.consents.ga4 && ids.ga4) {
+  if (hasExplicitConsent(state, "ga4") && ids.ga4) {
     injectExternal("ga4", ga4ExternalSrc(ids.ga4));
-    injectInline("ga4-init", ga4Snippet(ids.ga4));
+    injectInline("ga4-init", ga4Snippet(ids.ga4, crossDomainHosts));
   } else {
     removePixel("ga4");
     removePixel("ga4-init");
   }
 
   // Plausible
-  if (state.consents.plausible && ids.plausibleDomain) {
+  if (hasExplicitConsent(state, "plausible") && ids.plausibleDomain) {
     injectExternal("plausible", plausibleSrc(), {
       ...plausibleAttrs(ids.plausibleDomain),
       defer: "true",
@@ -87,42 +122,42 @@ function applyConsent(ids: Props["ids"]) {
   }
 
   // Clarity
-  if (state.consents.clarity && ids.clarity) {
+  if (hasExplicitConsent(state, "clarity") && ids.clarity) {
     injectInline("clarity", clarityPixelSnippet(ids.clarity));
   } else {
     removePixel("clarity");
   }
 
   // Meta
-  if (state.consents.meta && ids.meta) {
+  if (hasExplicitConsent(state, "meta") && ids.meta) {
     injectInline("meta", metaPixelSnippet(ids.meta));
   } else {
     removePixel("meta");
   }
 
   // LinkedIn
-  if (state.consents.linkedin && ids.linkedin) {
+  if (hasExplicitConsent(state, "linkedin") && ids.linkedin) {
     injectInline("linkedin", linkedinSnippet(ids.linkedin));
   } else {
     removePixel("linkedin");
   }
 
   // X
-  if (state.consents.x && ids.x) {
+  if (hasExplicitConsent(state, "x") && ids.x) {
     injectInline("x", xPixelSnippet(ids.x));
   } else {
     removePixel("x");
   }
 
   // TikTok
-  if (state.consents.tiktok && ids.tiktok) {
+  if (hasExplicitConsent(state, "tiktok") && ids.tiktok) {
     injectInline("tiktok", tiktokSnippet(ids.tiktok));
   } else {
     removePixel("tiktok");
   }
 
   // Google Ads
-  if (state.consents.googleads && ids.googleAds) {
+  if (hasExplicitConsent(state, "googleads") && ids.googleAds) {
     injectExternal("googleads", googleAdsExternalSrc(ids.googleAds));
     injectInline("googleads-init", googleAdsSnippet(ids.googleAds));
   } else {
@@ -131,18 +166,114 @@ function applyConsent(ids: Props["ids"]) {
   }
 }
 
-export function PixelLoader({ ids }: Props) {
+let lastGaPageView = "";
+let lastPosthogPageView = "";
+
+function recordGaPageView(ids: Props["ids"]) {
+  const state = readConsent();
+  if (
+    !hasExplicitConsent(state, "ga4") ||
+    !ids.ga4 ||
+    typeof window === "undefined"
+  ) {
+    return;
+  }
+  const location = `${window.location.pathname}${window.location.search}`;
+  if (lastGaPageView === location) return;
+  lastGaPageView = location;
+  window.gtag?.("event", "page_view", {
+    page_location: window.location.href,
+    page_path: location,
+    page_title: document.title,
+  });
+}
+
+function recordPosthogPageView(posthog: Props["posthog"]) {
+  const state = readConsent();
+  if (
+    !hasExplicitConsent(state, "posthog") ||
+    !posthog ||
+    typeof window === "undefined"
+  ) {
+    return;
+  }
+
+  // Deliberately omit the query string: searches and campaign parameters can
+  // contain reader-entered data. GA handles consented campaign attribution.
+  const page = `${window.location.origin}${window.location.pathname}`;
+  if (lastPosthogPageView === page) return;
+  const distinctId = posthogAnonymousId();
+  if (!distinctId) return;
+  lastPosthogPageView = page;
+
+  void fetch(`${posthog.apiHost}/capture/`, {
+    method: "POST",
+    mode: "cors",
+    credentials: "omit",
+    keepalive: true,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      api_key: posthog.apiKey,
+      event: "$pageview",
+      properties: {
+        distinct_id: distinctId,
+        $current_url: page,
+        $host: window.location.hostname,
+        $pathname: window.location.pathname,
+      },
+    }),
+  }).catch(() => {
+    // Measurement must never interrupt reading or navigation.
+  });
+}
+
+export function PixelLoader({
+  ids,
+  posthog,
+  crossDomainHosts,
+  enableVercelObservability,
+}: Props) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const [vercelConsent, setVercelConsent] = useState({
+    analytics: false,
+    speedInsights: false,
+  });
+
   useEffect(() => {
-    // Apply current consent on mount
-    applyConsent(ids);
-
-    // React to live changes via custom event
-    function onChange() {
-      applyConsent(ids);
+    function applyCurrentConsent() {
+      const state = readConsent();
+      applyConsent(ids, crossDomainHosts);
+      recordGaPageView(ids);
+      recordPosthogPageView(posthog);
+      setVercelConsent({
+        analytics:
+          enableVercelObservability &&
+          hasExplicitConsent(state, "vercelanalytics"),
+        speedInsights:
+          enableVercelObservability &&
+          hasExplicitConsent(state, "vercelspeedinsights"),
+      });
     }
-    window.addEventListener("iwr-consent-changed", onChange);
-    return () => window.removeEventListener("iwr-consent-changed", onChange);
-  }, [ids]);
 
-  return null;
+    // Initial render is always off. Only a current, literal stored opt-in may
+    // mount either Vercel component after hydration.
+    applyCurrentConsent();
+    window.addEventListener("iwr-consent-changed", applyCurrentConsent);
+    return () =>
+      window.removeEventListener("iwr-consent-changed", applyCurrentConsent);
+  }, [crossDomainHosts, enableVercelObservability, ids, posthog]);
+
+  useEffect(() => {
+    recordGaPageView(ids);
+    recordPosthogPageView(posthog);
+  }, [ids, pathname, posthog, search]);
+
+  return (
+    <>
+      {vercelConsent.analytics ? <Analytics /> : null}
+      {vercelConsent.speedInsights ? <SpeedInsights /> : null}
+    </>
+  );
 }

@@ -1,14 +1,13 @@
 // /rss.xml — canonical, read-only RSS 2.0 feed for reviewed live news.
 
 import { SITE, CONTACT, EDITORIAL } from "@/lib/constants";
-import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
-import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
+import { getIndexablePublicNewsArticles } from "@/lib/news-discovery";
 
 export const dynamic = "force-static";
 export const revalidate = 3600; // hourly
 
 export function GET(): Response {
-  const newsArticles = getPublicDiscoveryNewsArticles().slice(0, 30);
+  const newsArticles = getIndexablePublicNewsArticles().slice(0, 30);
 
   type Entry = {
     title: string;
@@ -26,12 +25,10 @@ export function GET(): Response {
       url: `${SITE.url}/news/${a.slug}`,
       publishedAt: a.publishedAt,
       category: a.category,
-      image: hasVerifiedEditorialImage(a)
-        ? absoluteUrl(a.heroImage.src)
-        : undefined,
-      imageCredit: hasVerifiedEditorialImage(a)
+      image: `${SITE.url}/api/og?slug=${encodeURIComponent(a.slug)}`,
+      imageCredit: a.heroImage.approval === "approved-editorial"
         ? a.heroImage.credit
-        : undefined,
+        : EDITORIAL.articleByline,
     }))
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 
@@ -54,7 +51,12 @@ export function GET(): Response {
     })
     .join("\n");
 
-  const lastBuild = new Date().toUTCString();
+  const modifiedTimes = newsArticles
+    .map((article) => new Date(article.modifiedAt).getTime())
+    .filter(Number.isFinite);
+  const lastBuild = new Date(
+    modifiedTimes.length ? Math.max(...modifiedTimes) : 0,
+  ).toUTCString();
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
@@ -101,14 +103,6 @@ function escapeXml(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
-function absoluteUrl(source: string): string | undefined {
-  try {
-    return new URL(source, SITE.url).toString();
-  } catch {
-    return undefined;
-  }
-}
-
 function imageMimeType(source: string): string | null {
   let pathname: string;
   try {
@@ -116,6 +110,7 @@ function imageMimeType(source: string): string | null {
   } catch {
     return null;
   }
+  if (pathname === "/api/og") return "image/png";
   if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) {
     return "image/jpeg";
   }

@@ -19,12 +19,21 @@ export type Channel =
   | "discord";
 
 export type DistributionVia = "postiz" | "telegram-bot" | "discord-webhook";
+export type ChannelDeliveryStatus =
+  | "scheduled"
+  | "delivered"
+  | "failed"
+  | "skipped";
 
 /** Result of a single channel distribution attempt */
 export interface ChannelResult {
   channel: Channel;
   via: DistributionVia;
   ok: boolean;
+  configured: boolean;
+  attempted: boolean;
+  delivered: boolean;
+  status: ChannelDeliveryStatus;
   /** Scheduled-for timestamp (ISO) — may be in the future */
   scheduledFor?: string;
   /** Postiz post ID or platform post ID when available */
@@ -55,4 +64,6 @@ export interface DistributionRun {
   successCount: number;
   failureCount: number;
   skippedCount: number;
+  scheduledCount: number;
+  deliveredCount: number;
 }

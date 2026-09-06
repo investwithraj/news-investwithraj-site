@@ -7,23 +7,27 @@
 // Posts as a rich embed with title + description + URL + image.
 
 import type { ContentVariant, ChannelResult } from "./types";
-
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || "";
+import { channelConfiguration } from "./config";
 
 export function isDiscordConfigured(): boolean {
-  return Boolean(DISCORD_WEBHOOK_URL);
+  return channelConfiguration("discord").configured;
 }
 
 /** Post immediately to the configured Discord channel via webhook. */
 export async function postToDiscord(
   variant: ContentVariant
 ): Promise<ChannelResult> {
-  if (!isDiscordConfigured()) {
+  const configuration = channelConfiguration("discord");
+  if (!configuration.active) {
     return {
       channel: "discord",
       via: "discord-webhook",
       ok: false,
-      error: "Discord not configured (DISCORD_WEBHOOK_URL env var missing). Skipped.",
+      configured: configuration.configured,
+      attempted: false,
+      delivered: false,
+      status: "skipped",
+      error: configuration.reason ?? "Discord is inactive.",
     };
   }
 
@@ -53,11 +57,12 @@ export async function postToDiscord(
   };
 
   try {
-    const res = await fetch(DISCORD_WEBHOOK_URL, {
+    const res = await fetch(process.env.DISCORD_WEBHOOK_URL as string, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!res.ok && res.status !== 204) {
@@ -66,6 +71,10 @@ export async function postToDiscord(
         channel: "discord",
         via: "discord-webhook",
         ok: false,
+        configured: true,
+        attempted: true,
+        delivered: false,
+        status: "failed",
         error: `Discord webhook returned ${res.status}: ${text.slice(0, 200)}`,
       };
     }
@@ -74,14 +83,22 @@ export async function postToDiscord(
       channel: "discord",
       via: "discord-webhook",
       ok: true,
+      configured: true,
+      attempted: true,
+      delivered: true,
+      status: "delivered",
       scheduledFor: new Date().toISOString(),
     };
-  } catch (e) {
+  } catch {
     return {
       channel: "discord",
       via: "discord-webhook",
       ok: false,
-      error: e instanceof Error ? e.message : "Unknown Discord error",
+      configured: true,
+      attempted: true,
+      delivered: false,
+      status: "failed",
+      error: "Discord request failed or timed out before acceptance.",
     };
   }
 }

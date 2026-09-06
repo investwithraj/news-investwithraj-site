@@ -13,6 +13,8 @@ import { scheduleTimeFor, DEFAULT_PHASE_1_CHANNELS, ALL_CHANNELS } from "./sched
 import { schedulePostizPost, POSTIZ_CHANNELS } from "./postiz";
 import { postToTelegram } from "./telegram";
 import { postToDiscord } from "./discord";
+import { channelConfiguration } from "./config";
+import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
 
 export type { Channel, ChannelResult, DistributionRun, ContentVariant } from "./types";
 export {
@@ -26,6 +28,11 @@ export {
 } from "./postiz";
 export { isTelegramConfigured } from "./telegram";
 export { isDiscordConfigured } from "./discord";
+export {
+  channelConfiguration,
+  socialDistributionEnabled,
+  type ChannelConfiguration,
+} from "./config";
 
 /**
  * Distribute one article across the specified channels.
@@ -44,7 +51,33 @@ export async function distributeArticle(
   const startedAt = new Date().toISOString();
   const baseTime = new Date();
 
-  const variants = buildVariants(article, channels);
+  const uniqueChannels = [...new Set(channels)].filter((channel) =>
+    ALL_CHANNELS.includes(channel),
+  );
+  const configuration = uniqueChannels.map((channel) =>
+    channelConfiguration(channel),
+  );
+  const activeChannels = configuration
+    .filter((item) => item.active)
+    .map((item) => item.channel);
+  const variants = buildVariants(article, activeChannels).map((variant) =>
+    hasVerifiedEditorialImage(article)
+      ? variant
+      : { ...variant, imageUrl: undefined },
+  );
+
+  const skippedResults: ChannelResult[] = configuration
+    .filter((item) => !item.active)
+    .map((item) => ({
+      channel: item.channel,
+      via: item.via,
+      ok: false,
+      configured: item.configured,
+      attempted: false,
+      delivered: false,
+      status: "skipped",
+      error: item.reason ?? "Channel is inactive.",
+    }));
 
   // Postiz channels — scheduled at staggered times
   const postizVariants = variants.filter((v) => POSTIZ_CHANNELS.includes(v.channel));
@@ -61,11 +94,25 @@ export async function distributeArticle(
   if (telegramVariant) directPromises.push(postToTelegram(telegramVariant));
   if (discordVariant) directPromises.push(postToDiscord(discordVariant));
 
-  const results = await Promise.all([...postizPromises, ...directPromises]);
+  const attemptedResults = await Promise.all([
+    ...postizPromises,
+    ...directPromises,
+  ]);
+  const resultByChannel = new Map(
+    [...skippedResults, ...attemptedResults].map((result) => [
+      result.channel,
+      result,
+    ]),
+  );
+  const results = uniqueChannels
+    .map((channel) => resultByChannel.get(channel))
+    .filter((result): result is ChannelResult => Boolean(result));
 
   const successCount = results.filter((r) => r.ok).length;
-  const failureCount = results.filter((r) => !r.ok && !r.error?.includes("Skipped")).length;
-  const skippedCount = results.filter((r) => r.error?.includes("Skipped")).length;
+  const failureCount = results.filter((r) => r.status === "failed").length;
+  const skippedCount = results.filter((r) => r.status === "skipped").length;
+  const scheduledCount = results.filter((r) => r.status === "scheduled").length;
+  const deliveredCount = results.filter((r) => r.delivered).length;
 
   return {
     articleSlug: article.slug,
@@ -75,6 +122,8 @@ export async function distributeArticle(
     successCount,
     failureCount,
     skippedCount,
+    scheduledCount,
+    deliveredCount,
   };
 }
 
@@ -94,27 +143,14 @@ export async function distributeBatch(
 export function getActiveChannels(): {
   active: Channel[];
   inactive: Channel[];
+  status: ReturnType<typeof channelConfiguration>[];
 } {
-  const active: Channel[] = [];
-  const inactive: Channel[] = [];
-
-  // Lazy require to avoid circular imports
-  const postizReady = process.env.POSTIZ_BASE_URL && process.env.POSTIZ_API_TOKEN;
-  const tgReady = process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHANNEL_ID;
-  const dcReady = process.env.DISCORD_WEBHOOK_URL;
-
-  for (const c of ALL_CHANNELS) {
-    if (c === "telegram") {
-      (tgReady ? active : inactive).push(c);
-    } else if (c === "discord") {
-      (dcReady ? active : inactive).push(c);
-    } else {
-      // Postiz channel — needs Postiz base + per-channel integration ID
-      const idEnv = `POSTIZ_${c.toUpperCase().replace(/-/g, "_")}_ID`;
-      const hasId = Boolean(process.env[idEnv]);
-      (postizReady && hasId ? active : inactive).push(c);
-    }
-  }
-
-  return { active, inactive };
+  const status = ALL_CHANNELS.map((channel) => channelConfiguration(channel));
+  return {
+    active: status.filter((item) => item.active).map((item) => item.channel),
+    inactive: status
+      .filter((item) => !item.active)
+      .map((item) => item.channel),
+    status,
+  };
 }

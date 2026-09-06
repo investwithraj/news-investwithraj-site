@@ -7,12 +7,10 @@
 // Bot must be an admin of the channel for posting privileges.
 
 import type { ContentVariant, ChannelResult } from "./types";
-
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
+import { channelConfiguration } from "./config";
 
 export function isTelegramConfigured(): boolean {
-  return Boolean(TELEGRAM_BOT_TOKEN && TELEGRAM_CHANNEL_ID);
+  return channelConfiguration("telegram").configured;
 }
 
 /**
@@ -23,19 +21,23 @@ export function isTelegramConfigured(): boolean {
 export async function postToTelegram(
   variant: ContentVariant
 ): Promise<ChannelResult> {
-  if (!isTelegramConfigured()) {
+  const configuration = channelConfiguration("telegram");
+  if (!configuration.active) {
     return {
       channel: "telegram",
       via: "telegram-bot",
       ok: false,
-      error:
-        "Telegram not configured (TELEGRAM_BOT_TOKEN + TELEGRAM_CHANNEL_ID env vars missing). Skipped.",
+      configured: configuration.configured,
+      attempted: false,
+      delivered: false,
+      status: "skipped",
+      error: configuration.reason ?? "Telegram is inactive.",
     };
   }
 
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
   const payload = {
-    chat_id: TELEGRAM_CHANNEL_ID,
+    chat_id: process.env.TELEGRAM_CHANNEL_ID,
     text: variant.text,
     parse_mode: "HTML" as const,
     disable_web_page_preview: false,
@@ -50,6 +52,7 @@ export async function postToTelegram(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!res.ok) {
@@ -58,6 +61,10 @@ export async function postToTelegram(
         channel: "telegram",
         via: "telegram-bot",
         ok: false,
+        configured: true,
+        attempted: true,
+        delivered: false,
+        status: "failed",
         error: `Telegram API returned ${res.status}: ${text.slice(0, 200)}`,
       };
     }
@@ -72,6 +79,10 @@ export async function postToTelegram(
         channel: "telegram",
         via: "telegram-bot",
         ok: false,
+        configured: true,
+        attempted: true,
+        delivered: false,
+        status: "failed",
         error: `Telegram API: ${data.description ?? "unknown"}`,
       };
     }
@@ -80,15 +91,23 @@ export async function postToTelegram(
       channel: "telegram",
       via: "telegram-bot",
       ok: true,
+      configured: true,
+      attempted: true,
+      delivered: true,
+      status: "delivered",
       scheduledFor: new Date().toISOString(),
       externalId: String(data.result?.message_id ?? ""),
     };
-  } catch (e) {
+  } catch {
     return {
       channel: "telegram",
       via: "telegram-bot",
       ok: false,
-      error: e instanceof Error ? e.message : "Unknown Telegram error",
+      configured: true,
+      attempted: true,
+      delivered: false,
+      status: "failed",
+      error: "Telegram request failed or timed out before acceptance.",
     };
   }
 }

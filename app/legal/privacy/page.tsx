@@ -42,7 +42,10 @@ const graph = asGraph(
 );
 
 const optionalServices = [
-  ["Analytics", "Google Analytics 4, Plausible and Microsoft Clarity"],
+  [
+    "Analytics",
+    "Google Analytics 4, Plausible, PostHog, Microsoft Clarity, Vercel Web Analytics and Vercel Speed Insights",
+  ],
   [
     "Advertising",
     "Meta Pixel, LinkedIn Insight, X Pixel and TikTok Pixel",
@@ -130,11 +133,11 @@ export default function PrivacyPage() {
                 browser or user-agent information and diagnostic logs.
               </p>
               <p>
-                The site layout also mounts Vercel Analytics and Speed
-                Insights for deployment analytics and performance diagnosis.
-                Their available measurements and retention follow the active
-                Vercel project configuration. This notice does not claim a
-                configuration that cannot be verified from the public page.
+                Optional Vercel Web Analytics and Speed Insights components
+                remain unloaded until their corresponding analytics choices
+                have been recorded. Hosting and security logs needed to run
+                the service remain governed by the active Vercel project
+                configuration.
               </p>
             </section>
 

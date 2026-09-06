@@ -12,7 +12,7 @@
 import { NextRequest } from "next/server";
 import { isClaudeConfigured } from "@/lib/ai/claude";
 import { fetchAllSources, flattenEntries } from "@/lib/sources/fetchers";
-import { dedupeEntries, similarity } from "@/lib/pipeline/dedupe";
+import { dedupeEntries } from "@/lib/pipeline/dedupe";
 import { clusterAndScore } from "@/lib/pipeline/cluster";
 import { getWhitelistDomains } from "@/lib/sources/registry";
 import {
@@ -22,14 +22,16 @@ import {
   getStorageBackend,
   reserveDraftCluster,
 } from "@/lib/news-review/storage";
-import { draftFromCluster } from "@/lib/news-review/draft-engine";
+import {
+  draftFromCluster,
+  planDraftCandidates,
+} from "@/lib/news-review/draft-engine";
 import { NEWS_ARTICLES } from "@/content/news";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 import { productionFeatureAvailable } from "@/lib/operations/features";
 import {
   authorizeServerMutation,
   privateJson,
-  publicStatusJson,
 } from "@/lib/security/mutation";
 
 export const runtime = "nodejs";
@@ -44,9 +46,15 @@ function isToday(iso: string): boolean {
   return dubaiCalendarDate(iso) === dubaiCalendarDate(new Date());
 }
 
-async function run(req: NextRequest) {
+async function run(req: NextRequest, options: { cronGet?: boolean } = {}) {
   const auth = authorizeServerMutation(req, { allowCronBearer: true });
   if (!auth.ok) return auth.response;
+  if (options.cronGet && auth.credential !== "cron") {
+    return privateJson(
+      { error: "Scheduled GET requires the Vercel Cron bearer credential." },
+      403,
+    );
+  }
   if (!productionFeatureAvailable("ENABLE_NEWS_DRAFT_CRON")) {
     return privateJson({ error: "News drafting cron is disabled." }, 503);
   }
@@ -69,21 +77,27 @@ async function run(req: NextRequest) {
   const clusters = clusterAndScore(deduped, 12).filter((c) => c.score >= MIN_SCORE);
 
   const existing = await getAllDrafts();
-  const draftedIds = new Set(existing.map((d) => d.provenance.clusterId));
-  const coveredTitles = [
-    ...existing.map((d) => d.article.title),
-    ...NEWS_ARTICLES.filter((a) => a.status !== "research" && isToday(a.publishedAt)).map((a) => a.title),
-  ];
-  const candidates = clusters.filter(
-    (c) => !draftedIds.has(c.id) && !coveredTitles.some((t) => similarity(c.topic, t) >= 0.55),
-  );
+  const candidatePlan = planDraftCandidates({
+    clusters,
+    drafts: existing,
+    publishedTitles: NEWS_ARTICLES.filter(
+      (article) => article.status !== "research" && isToday(article.publishedAt),
+    ).map((article) => article.title),
+    minRecoveryAgeHours: parseInt(
+      process.env.AUTO_REDRAFT_MIN_AGE_HOURS ?? "24",
+      10,
+    ),
+  });
+  const candidates = candidatePlan.candidates;
 
   const whitelist = getWhitelistDomains();
   const results: { topic: string; ok: boolean; reason?: string }[] = [];
   let staged = 0;
   let attempts = 0;
+  const maxDrafts = options.cronGet ? 1 : MAX_DRAFTS_PER_RUN;
+  const maxAttempts = options.cronGet ? 1 : MAX_ATTEMPTS;
   for (const cluster of candidates) {
-    if (staged >= MAX_DRAFTS_PER_RUN || attempts >= MAX_ATTEMPTS) break;
+    if (staged >= maxDrafts || attempts >= maxAttempts) break;
     attempts++;
     const reservation = await reserveDraftCluster(
       cluster.id,
@@ -100,8 +114,8 @@ async function run(req: NextRequest) {
     try {
       const r = await draftFromCluster(cluster, whitelist, {
         model: process.env.DRAFT_MODEL ?? "claude-haiku-4-5-20251001",
-        maxSearches: 2,
-        maxTokens: 3000,
+        maxSearches: options.cronGet ? 1 : 2,
+        maxTokens: options.cronGet ? 2_600 : 3_000,
       });
       results.push({
         topic: cluster.topic.slice(0, 80),
@@ -113,6 +127,9 @@ async function run(req: NextRequest) {
           article: r.article,
           provenance: r.provenance,
           reservationToken: reservation.reservation.token,
+          reviewNote: candidatePlan.recoveryDraftIds[cluster.id]
+            ? `Automated recovery draft. The previous held draft ${candidatePlan.recoveryDraftIds[cluster.id]} remains preserved for comparison.`
+            : undefined,
         });
         staged++;
       } else {
@@ -146,19 +163,16 @@ async function run(req: NextRequest) {
     candidatesUndrafted: candidates.length,
     attempted: attempts,
     staged,
+    recoverableHeld: candidatePlan.recoverableHeld,
     results,
     ranAt: new Date().toISOString(),
   });
 }
 
-export function GET() {
-  return publicStatusJson({
-    name: "News drafting cron",
-    mutationMethod: "POST",
-    enabled: productionFeatureAvailable("ENABLE_NEWS_DRAFT_CRON"),
-    storageBackend: getStorageBackend(),
-    publishing: "never; successful output is staged for review",
-  });
+export async function GET(req: NextRequest) {
+  // Vercel Cron invokes GET. Never turn a missing CRON_SECRET into a green
+  // read-only response: an unauthenticated scheduled request must fail loudly.
+  return run(req, { cronGet: true });
 }
 export async function POST(req: NextRequest) {
   return run(req);

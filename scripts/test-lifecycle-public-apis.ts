@@ -144,7 +144,7 @@ assert.doesNotMatch(apiSources.digest, /import \{ NEWS_ARTICLES \}/);
 assert.doesNotMatch(apiSources.distribute, /import \{ NEWS_ARTICLES \}/);
 assert.doesNotMatch(apiSources.queue, /import \{ NEWS_ARTICLES \}/);
 assert.match(apiSources.digest, /INDEXABLE_NEWS_ARTICLES/);
-assert.match(apiSources.distribute, /INDEXABLE_NEWS_ARTICLES/);
+assert.match(apiSources.distribute, /getIndexablePublicNewsArticles/);
 assert.match(apiSources.queue, /validateQueueLifecycleFields/);
 assert.match(apiSources.queueAction, /validateQueueLifecycleFields/);
 assert.match(apiSources.og, /isApprovedPublicLifecycleArticleSlug/);

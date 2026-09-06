@@ -5,9 +5,15 @@ on:
     - cron: "7 9 * * *"
     - cron: "7 15 * * *"
   workflow_dispatch: {}
+concurrency:
+  group: news-cron-production
+  cancel-in-progress: false
+permissions:
+  contents: read
 jobs:
   draft:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,6 +40,8 @@ jobs:
           AUTO_PUBLISH_ORDER: ${{ github.event_name == 'workflow_dispatch' && 'newest' || (github.event.schedule == '7 3 * * *' && 'newest' || 'backlog') }}
           AUTO_BACKLOG_MIN_AGE_HOURS: "12"
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"
+          AUTO_REDRAFT_MIN_AGE_HOURS: "24"
+          NEWS_STALE_AFTER_HOURS: "36"
           # A manual recovery run may retry failed (never processing/staged)
           # reservations immediately after a pipeline fix.
           PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
@@ -45,9 +53,15 @@ jobs:
           PIPELINE_OUTCOMES: ${{ steps.pipeline.outputs.outcomes }}
           PUBLICATION_SHA: ${{ steps.pipeline.outputs.publication_sha }}
           NEWEST_PUBLICATION_AGE_HOURS: ${{ steps.pipeline.outputs.newest_publication_age_hours }}
+          SHOULD_FAIL: ${{ steps.pipeline.outputs.should_fail }}
+          ACTIONABLE_REASONS: ${{ steps.pipeline.outputs.actionable_reasons }}
         run: |
           if [ -z "$PIPELINE_OUTCOME" ]; then
             echo "::error title=Daily news pipeline::The pipeline exited without an outcome receipt."
             exit 1
           fi
-          echo "::notice title=Daily news pipeline::outcome=$PIPELINE_OUTCOME; outcomes=$PIPELINE_OUTCOMES; publication_sha=$PUBLICATION_SHA; newest_age_hours=$NEWEST_PUBLICATION_AGE_HOURS"
+          if [ "$SHOULD_FAIL" = "1" ] || [ "$PIPELINE_OUTCOME" = "failed" ]; then
+            echo "::error title=Daily news pipeline::outcome=$PIPELINE_OUTCOME; outcomes=$PIPELINE_OUTCOMES; publication_sha=$PUBLICATION_SHA; newest_age_hours=$NEWEST_PUBLICATION_AGE_HOURS; action=$ACTIONABLE_REASONS"
+            exit 1
+          fi
+          echo "::notice title=Daily news pipeline::outcome=$PIPELINE_OUTCOME; outcomes=$PIPELINE_OUTCOMES; publication_sha=$PUBLICATION_SHA; newest_age_hours=$NEWEST_PUBLICATION_AGE_HOURS; action=$ACTIONABLE_REASONS"

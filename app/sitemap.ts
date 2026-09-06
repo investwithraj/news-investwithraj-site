@@ -3,10 +3,9 @@ import type { MetadataRoute } from "next";
 import { CLOSING_BELLS } from "@/content/closing-bell";
 import { POWER_LISTS } from "@/content/power-list";
 import { SITE } from "@/lib/constants";
-import { selectDistinctArticles } from "@/lib/news-editorial";
+import { getIndexablePublicNewsArticles } from "@/lib/news-discovery";
 import { isNewsroomLifecycleCutoverEnabled } from "@/lib/news-lifecycle";
 import {
-  getLifecycleProjectedNewsArticles,
   isNewsroomEvidenceHeldArticleSlug,
   isNewsroomEvidenceHoldPreviewEnabled,
   PUBLIC_AREA_RECORDS,
@@ -38,7 +37,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 }
 
 function releasedLifecycleSitemap(): MetadataRoute.Sitemap {
-  const publicArticles = getLifecycleProjectedNewsArticles();
+  const publicArticles = getIndexablePublicNewsArticles();
   const latestNewsUpdate = latestArticleUpdate(publicArticles);
   const entries: MetadataRoute.Sitemap = [
     {
@@ -79,11 +78,7 @@ function releasedLifecycleSitemap(): MetadataRoute.Sitemap {
 
 /** Exact pre-lifecycle public sitemap, retained while cutover is off. */
 function currentPublicSitemap(): MetadataRoute.Sitemap {
-  const allPublicArticles = getLifecycleProjectedNewsArticles();
-  const liveNews = selectDistinctArticles(
-    allPublicArticles,
-    allPublicArticles.length,
-  );
+  const liveNews = getIndexablePublicNewsArticles();
   const latestNewsUpdate = latestArticleUpdate(liveNews);
   const latestAreaUpdate = latestArticleUpdate(
     PUBLIC_AREA_RECORDS.flatMap(({ reports }) => reports),

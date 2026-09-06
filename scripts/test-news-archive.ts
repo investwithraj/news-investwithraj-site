@@ -432,8 +432,18 @@ assert.ok(
 assert.equal(
   pageSource.includes('dynamic = "force-static"'),
   false,
-  "force-static must not blank client useSearchParams in Next 16.",
+  "force-static must not freeze the request-time archive query in Next 16.",
 );
+assert.ok(
+  pageSource.includes("searchParams: Promise<NewsIndexSearchParams>"),
+  "The archive page must read request search params on the server.",
+);
+assert.equal(
+  componentSource.includes("useSearchParams"),
+  false,
+  "The archive body must remain present in initial server-rendered HTML.",
+);
+assert.ok(componentSource.includes("initialParams"));
 assert.ok(componentSource.includes('searchParams.get("desk")'));
 assert.ok(componentSource.includes('searchParams.get("area")'));
 assert.ok(componentSource.includes('searchParams.get("developer")'));

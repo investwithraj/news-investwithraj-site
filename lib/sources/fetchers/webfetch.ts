@@ -63,7 +63,7 @@ export async function fetchWebPage(
  *  Looks for <a> tags whose href contains content path keywords
  *  (/news/, /press/, /releases/, /research/, /insights/, /reports/)
  *  AND whose visible text is at least 20 chars (filters nav links). */
-function extractCandidateLinks(
+export function extractCandidateLinks(
   html: string,
   baseUrl: string,
   sourceName: string,
@@ -99,15 +99,22 @@ function extractCandidateLinks(
       inner = headlineFromUrl(absoluteUrl);
     }
     if (inner.length < 20 || inner.length > 200) continue;
+    const publishedAt = extractCandidatePublicationDate(
+      html,
+      m.index,
+      m.index + m[0].length,
+      absoluteUrl,
+    );
+    // Discovery time is not publication time. An undated link must wait for a
+    // dated feed/index record instead of receiving a fabricated "now" value.
+    if (!publishedAt) continue;
     seen.add(absoluteUrl);
 
     entries.push({
       id: hashUrl(absoluteUrl),
       title: inner,
       url: absoluteUrl,
-      // No reliable publishedAt from arbitrary HTML — use "now" as a
-      // freshness signal that says "found on the index today."
-      publishedAt: new Date().toISOString(),
+      publishedAt,
       summary: `(WebFetch source — full content extracted in-session from ${sourceName})`,
       source: { name: sourceName, tier: sourceTier, domain },
     });
@@ -115,6 +122,76 @@ function extractCandidateLinks(
   }
 
   return entries;
+}
+
+function exactCandidateDate(value: string): string | null {
+  const trimmed = decodeHtmlText(value).trim();
+  const dateOnly = trimmed.match(/^((?:19|20)\d{2})-(0[1-9]|1[0-2])-([012]\d|3[01])$/u);
+  const datePrefix = trimmed.match(
+    /^((?:19|20)\d{2})-(0[1-9]|1[0-2])-([012]\d|3[01])/u,
+  );
+  if (!datePrefix) return null;
+  const sourceYear = Number(datePrefix[1]);
+  const sourceMonth = Number(datePrefix[2]);
+  const sourceDay = Number(datePrefix[3]);
+  const calendarCheck = new Date(
+    Date.UTC(sourceYear, sourceMonth - 1, sourceDay),
+  );
+  if (
+    calendarCheck.getUTCFullYear() !== sourceYear ||
+    calendarCheck.getUTCMonth() !== sourceMonth - 1 ||
+    calendarCheck.getUTCDate() !== sourceDay
+  ) {
+    return null;
+  }
+  const candidate = dateOnly ? calendarCheck.toISOString() : trimmed;
+  if (
+    !dateOnly &&
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/u.test(
+      candidate,
+    )
+  ) {
+    return null;
+  }
+  const milliseconds = Date.parse(candidate);
+  if (!Number.isFinite(milliseconds)) return null;
+  return new Date(milliseconds).toISOString();
+}
+
+/** Extract only explicit publisher dates. URL calendar paths and a unique
+ * semantic <time datetime> in the enclosing card are accepted; collection
+ * time, file modification time and ambiguous prose dates are never used. */
+export function extractCandidatePublicationDate(
+  html: string,
+  linkStart: number,
+  linkEnd: number,
+  absoluteUrl: string,
+): string | null {
+  const urlDate = new URL(absoluteUrl).pathname.match(
+    /\/(?:((?:19|20)\d{2})[/-](0[1-9]|1[0-2])[/-]([012]\d|3[01]))(?:\/|$)/u,
+  );
+  if (urlDate) {
+    const normalized = exactCandidateDate(
+      `${urlDate[1]}-${urlDate[2]}-${urlDate[3]}`,
+    );
+    if (normalized) return normalized;
+  }
+
+  const articleStart = html.lastIndexOf("<article", linkStart);
+  const articleEnd = articleStart >= 0 ? html.indexOf("</article>", linkEnd) : -1;
+  const hasBoundedArticle =
+    articleStart >= 0 && articleEnd >= linkEnd && articleEnd - articleStart <= 12_000;
+  const context = hasBoundedArticle
+    ? html.slice(articleStart, articleEnd + "</article>".length)
+    : html.slice(Math.max(0, linkStart - 600), Math.min(html.length, linkEnd + 600));
+  const dates = new Set<string>();
+  for (const match of context.matchAll(
+    /<time\b[^>]*\bdatetime=["']([^"']+)["'][^>]*>/giu,
+  )) {
+    const normalized = exactCandidateDate(match[1]);
+    if (normalized) dates.add(normalized);
+  }
+  return dates.size === 1 ? [...dates][0] : null;
 }
 
 function normaliseUrl(value: string): string {

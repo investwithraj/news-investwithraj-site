@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo } from "react";
 
 import {
@@ -19,6 +19,10 @@ import {
 import styles from "./NewsArchive.module.css";
 
 type ArchiveQueryKey = (typeof NEWS_ARCHIVE_FILTER_KEYS)[number];
+
+export type NewsArchiveInitialParams = Partial<
+  Record<ArchiveQueryKey, string>
+>;
 
 function freshnessCopy(freshness: NewsArchiveFreshness): string {
   if (freshness.state === "empty" || freshness.ageHours === null) {
@@ -45,14 +49,23 @@ export default function NewsArchive({
   items,
   desks,
   freshness,
+  initialParams = {},
 }: {
   items: NewsArchiveItem[];
   desks: NewsArchiveDesk[];
   freshness: NewsArchiveFreshness;
+  initialParams?: NewsArchiveInitialParams;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const pathname = "/news";
+  const searchParams = useMemo(() => {
+    const params = new URLSearchParams();
+    for (const key of NEWS_ARCHIVE_FILTER_KEYS) {
+      const value = initialParams[key]?.trim();
+      if (value) params.set(key, value);
+    }
+    return params;
+  }, [initialParams]);
 
   const categories = useMemo(
     () =>

@@ -41,6 +41,14 @@ async function main() {
   console.log(
     `\nAUTO-PUBLISH — ${s.published} committed, ${s.held} held, ${s.deferred} deferred, ${s.failed} failed.`,
   );
+  if (s.held > 0) {
+    console.log(`HOLD REASONS — ${JSON.stringify(s.holdReasonCounts)}`);
+  }
+  if (s.failed > 0) {
+    throw new Error(
+      `Auto-publication reported ${s.failed} operational failure(s): ${s.failureMessages.slice(0, 3).join("; ")}`,
+    );
+  }
 }
 
 main().catch((e) => {

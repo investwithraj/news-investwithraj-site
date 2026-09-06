@@ -7,19 +7,17 @@ import { resolveArticleRelations } from "@/lib/article-relations";
 import { SITE } from "@/lib/constants";
 import {
   getNewsArticleLifecycle,
-  isReleasedIndexEligiblePath,
   isRenderableArticleSlug,
 } from "@/lib/news-lifecycle";
 import {
-  displayMarkets,
+  isIndexablePublicNewsArticleSlug,
+} from "@/lib/news-discovery";
+import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
+import { newsArticleMetadata } from "@/lib/news-metadata";
+import {
   hasVerifiedEditorialImage,
   relatedVerticalsForArticle,
-  supportedImageAlt,
 } from "@/lib/news-editorial";
-import {
-  getPublicDiscoveryNewsArticles,
-  isNewsroomEvidenceHeldArticleSlug,
-} from "@/lib/public-content";
 import {
   asGraph,
   BREADCRUMB_PRESETS,
@@ -63,52 +61,7 @@ export async function generateMetadata({
     };
   }
 
-  const url = `${SITE.url}/news/${slug}`;
-  const hasImage = hasVerifiedEditorialImage(article);
-  const indexEligible =
-    isReleasedIndexEligiblePath(`/news/${slug}`) &&
-    !isNewsroomEvidenceHeldArticleSlug(slug);
-  const imageUrl = article.heroImage.src.startsWith("http")
-    ? article.heroImage.src
-    : `${SITE.url}${article.heroImage.src}`;
-
-  return {
-    title: article.title,
-    description: article.metaDescription || article.subtitle,
-    robots: {
-      index: indexEligible,
-      follow: true,
-    },
-    alternates: {
-      canonical: url,
-      types: { "application/rss+xml": `${SITE.url}/rss.xml` },
-    },
-    openGraph: {
-      type: "article",
-      url,
-      title: article.title,
-      description: article.metaDescription || article.subtitle,
-      publishedTime: article.publishedAt,
-      modifiedTime: article.modifiedAt,
-      tags: [article.category, ...displayMarkets(article)],
-      ...(hasImage
-        ? {
-            images: [
-              {
-                url: imageUrl,
-                alt: supportedImageAlt(article),
-              },
-            ],
-          }
-        : {}),
-    },
-    twitter: {
-      card: hasImage ? "summary_large_image" : "summary",
-      title: article.title,
-      description: article.metaDescription || article.subtitle,
-      ...(hasImage ? { images: [imageUrl] } : {}),
-    },
-  };
+  return newsArticleMetadata(article);
 }
 
 export default async function NewsArticlePage({
@@ -129,16 +82,12 @@ export default async function NewsArticlePage({
   }
 
   const articleUrl = `${SITE.url}/news/${article.slug}`;
-  const indexEligible =
-    isReleasedIndexEligiblePath(`/news/${article.slug}`) &&
-    !isNewsroomEvidenceHeldArticleSlug(article.slug);
+  const indexEligible = isIndexablePublicNewsArticleSlug(article.slug);
   const hasImage = hasVerifiedEditorialImage(article);
-  const imageUrl = article.heroImage.src.startsWith("http")
-    ? article.heroImage.src
-    : `${SITE.url}${article.heroImage.src}`;
+  const imageUrl = `${SITE.url}/api/og?slug=${encodeURIComponent(article.slug)}`;
   const graph = indexEligible
     ? asGraph(
-        newsArticleSchema(article),
+        newsArticleSchema(article, imageUrl),
         article.faq.length > 0 ? faqPageSchema(article.faq) : null,
         breadcrumbSchema(
           BREADCRUMB_PRESETS.news({
@@ -146,13 +95,11 @@ export default async function NewsArticlePage({
             title: article.title,
           }),
         ),
-        hasImage
-          ? newsImageObjectSchema({
-              pageUrl: articleUrl,
-              imageUrl,
-              caption: article.heroImage.credit,
-            })
-          : null,
+        newsImageObjectSchema({
+          pageUrl: articleUrl,
+          imageUrl,
+          caption: hasImage ? article.heroImage.credit : article.title,
+        }),
       )
     : null;
 

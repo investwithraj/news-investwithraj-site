@@ -523,15 +523,17 @@ function parseCsv(source: string): CsvRow[] {
 
 function assertPublicNoindexMetadataGates() {
   const articleRoute = read("app/news/[slug]/page.tsx");
+  const articleMetadata = read("lib/news-metadata.ts");
   const areaRoute = read("app/areas/[slug]/page.tsx");
   const developerRoute = read("app/developer/[slug]/page.tsx");
   const terminalRoute = read("app/terminal/page.tsx");
 
   assert.match(
-    articleRoute,
-    /const indexEligible =\s*\n\s*isReleasedIndexEligiblePath\(`\/news\/\$\{slug\}`\) &&\s*\n\s*!isNewsroomEvidenceHeldArticleSlug\(slug\)/,
+    articleMetadata,
+    /index: isIndexablePublicNewsArticleSlug\(article\.slug\)/,
   );
-  assert.match(articleRoute, /index:\s*indexEligible,\s*\n\s*follow:\s*true/);
+  assert.match(articleMetadata, /follow:\s*true/);
+  assert.match(articleRoute, /return newsArticleMetadata\(article\)/);
   assert.match(
     areaRoute,
     /index:\s*isReleasedIndexEligiblePath\(`\/areas\/\$\{slug\}`\)/,

@@ -4,7 +4,7 @@
 
 import { SITE } from "@/lib/constants";
 import { getNewsForGoogleNewsSitemap } from "@/content/news";
-import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
+import { getIndexablePublicNewsArticles } from "@/lib/news-discovery";
 
 export const dynamic = "force-static";
 export const revalidate = 3600; // hourly — must always be fresh per spec
@@ -15,7 +15,7 @@ const PUBLICATION_LANG = "en";
 export function GET(): Response {
   const now = Date.now();
   const publicSlugs = new Set(
-    getPublicDiscoveryNewsArticles().map((article) => article.slug),
+    getIndexablePublicNewsArticles().map((article) => article.slug),
   );
   const articles = getNewsForGoogleNewsSitemap()
     .filter((article) => publicSlugs.has(article.slug))

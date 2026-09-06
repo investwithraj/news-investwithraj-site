@@ -3,13 +3,15 @@
 // Klaro-inspired consent banner. Two-stage: collapsed "Accept/Manage" CTA at
 // bottom of viewport, then expandable per-purpose modal with vendor detail.
 //
-// GDPR strict-opt-in by default for everything except cookieless analytics
-// (Plausible). UAE PDPL compliant — explicit affirmative action required.
+// GDPR/UAE PDPL strict opt-in: every optional provider stays off until an
+// explicit affirmative choice, including cookieless analytics.
 
 import { useEffect, useRef, useState } from "react";
 import {
   PIXELS,
+  defaultConsentSelection,
   getPixelsByPurpose,
+  rejectAllConsentSelection,
   type ConsentPurpose,
 } from "@/lib/consent/types";
 import {
@@ -48,11 +50,8 @@ export function ConsentBanner() {
   const manageButtonRef = useRef<HTMLButtonElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const [selections, setSelections] = useState<Record<string, boolean>>(() =>
-    PIXELS.reduce(
-      (acc, p) => ({ ...acc, [p.name]: p.default }),
-      {} as Record<string, boolean>
-    )
+  const [selections, setSelections] = useState<Record<string, boolean>>(
+    defaultConsentSelection,
   );
 
   useEffect(() => {
@@ -263,15 +262,12 @@ export function ConsentBanner() {
   }
 
   function rejectAll() {
-    const noneExceptCookieless = PIXELS.reduce(
-      (acc, p) => ({ ...acc, [p.name]: p.cookies.length === 0 ? p.default : false }),
-      {} as Record<string, boolean>
-    );
+    const rejected = rejectAllConsentSelection();
     // Also purge any existing cookies from disallowed vendors
     for (const p of PIXELS) {
-      if (!noneExceptCookieless[p.name]) purgeCookies(p.cookies);
+      if (!rejected[p.name]) purgeCookies(p.cookies);
     }
-    saveConsent(noneExceptCookieless);
+    saveConsent(rejected);
     closeBanner();
   }
 

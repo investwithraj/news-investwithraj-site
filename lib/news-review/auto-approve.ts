@@ -5,7 +5,10 @@
 //   1. the 8-gate voice validator passes              (draft.validator.ok)
 //   2. every evidence record proves it was explicitly dated and fresh at the
 //      immutable direct-fetch/staging clock
-//   3. two independent approved canonical parent publishers are present
+//   3. evidence satisfies the risk-based publisher policy: a strictly
+//      attributed official fact may use its one authoritative primary source;
+//      analysis, comparisons, forecasts and recommendations require two
+//      independent approved canonical parent publishers
 //   4. EVERY figure in reader-visible model-controlled text appears in fetched
 //      evidence as the same contextual numeric tuple
 //   5. SAFETY GUARD: a statistical signal the figure parser did not capture
@@ -18,25 +21,150 @@ import type {
   NewsDraft,
   NewsDraftProvenance,
 } from "./types";
-import { findSourceByUrl, type VerifiedSource } from "@/lib/sources/registry";
+import {
+  findSourceByUrl,
+  isOfficialDeveloperUrl,
+  type VerifiedSource,
+} from "@/lib/sources/registry";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
 export const MAX_AUTO_NEWS_SOURCE_AGE_HOURS = 7 * 24;
 
-export type EvidenceLane = "corroborated-analysis";
+export type EvidenceLane = "official-fact" | "corroborated-analysis";
 
 export interface EvidencePolicy {
   lane: EvidenceLane;
-  requiredPublisherCount: 2;
+  requiredPublisherCount: 1 | 2;
   reason: string;
 }
 
 const INVESTMENT_OR_FORECAST_CLAIM_RE =
-  /\b(?:recommend(?:s|ed|ation)?|should\s+(?:buy|sell|avoid)|buy\s+call|sell\s+call|undervalued|overvalued|outperform|underperform|guaranteed|risk[- ]free|forecast(?:s|ed)?|projected\s+return|will\s+(?:rise|fall|increase|decline)\s+by|analysts?\s+(?:expect|predict|forecast)|prices?\s+(?:will|are\s+(?:set|expected)\s+to)\s+(?:rise|fall|increase|decline))\b/i;
+  /\b(?:recommend(?:s|ed|ation)?|should\s+(?:buy|sell|avoid)|buy\s+call|sell\s+call|undervalued|overvalued|outperform|underperform|guaranteed|risk[- ]free|forecast(?:s|ed)?|projected\s+return|will\s+(?:rise|fall|increase|decline)\s+by|(?:is|are|was|were)?\s*(?:expected|forecast|projected|predicted)\s+to\s+(?:rise|fall|increase|decline|grow|drop|double|halve)|analysts?\s+(?:expect|predict|forecast)|prices?\s+(?:will|are\s+(?:set|expected)\s+to)\s+(?:rise|fall|increase|decline))\b/i;
+const PREDICTION_OR_CERTAINTY_CLAIM_RE =
+  /\b(?:(?:certain|sure|bound|destined|poised|set|on\s+track|likely|unlikely|expected|forecast|projected|predicted)\s+to|(?:will|would|could|may|might)\s+(?:be|become|make|deliver|generate|produce|create|drive|boost|increase|decrease|rise|fall|grow|decline|outperform|underperform)|inevitabl(?:e|y)|definite(?:ly)?|undoubtedly|without\s+doubt)\b/i;
+const INVESTMENT_OUTCOME_OR_WEALTH_CLAIM_RE =
+  /\b(?:capital\s+appreciation|wealth\s+creation|financial\s+(?:benefit|freedom|gain)|return\s+on\s+investment|investment\s+(?:return|returns|outcome|outcomes|upside)|roi|profit(?:s|able|ability)?|wealth(?:y|ier)?|richer|make\s+money|money[- ]making|stand\s+to\s+(?:benefit|gain|profit))\b|\b(?:buyers?|investors?|owners?|purchasers?|residents?)\b[\s\S]{0,80}\b(?:benefit(?:s|ed)?|profit(?:s|ed|able|ability)?|gain(?:s|ed)?|return(?:s|ed)?|yield(?:s|ed)?|appreciat(?:e|es|ed|ion)|upside|wealth(?:y|ier)?|richer|prosper(?:ity|ous)?)\b/i;
+const PROMOTIONAL_OR_DESIRABILITY_CLAIM_RE =
+  /\b(?:desirab(?:le|ility)|coveted|sought[- ]after|attractive|appealing|aspirational|elite|exclusive|luxur(?:y|ious)|prestigious|iconic|world[- ]class|best[- ]in[- ]class|unmissable|irresistible|exceptional|extraordinary|outstanding|unique|incomparable|unbeatable|unrivalled|unparalleled|premier|ultimate|ideal|perfect|remarkable|stunning|spectacular|game[- ]changing|transformative|once[- ]in[- ]a[- ]lifetime|must[- ]own)\b/i;
+const SUPERLATIVE_OR_RANKING_CLAIM_RE =
+  /\b(?:(?:the\s+)?(?:most|least|best|worst|finest|greatest|leading|top[- ]ranked|number\s+one|no\.?\s*1)\b|(?:more|less)\s+(?:desirable|attractive|valuable|profitable|affordable|expensive)\b|(?:better|worse|higher|lower|larger|smaller|faster|slower|cheaper|costlier)\s+than\b|(?:outstrip|outstrips|outperform|outperforms|surpass|surpasses|exceed|exceeds)\b)/i;
+const RECOMMENDATION_OR_PROMOTIONAL_ACTION_RE =
+  /\b(?:(?:buyers?|investors?|purchasers?)\s+(?:should|must|need\s+to|ought\s+to)|worth\s+(?:buying|purchasing|investing\s+in)|(?:buy|invest|book|reserve|secure)\s+(?:now|today|before\s+it(?:'|\u2019)?s\s+too\s+late)|not\s+to\s+be\s+missed|smart\s+(?:buy|investment|choice)|wise\s+(?:buy|investment|choice)|investment\s+opportunity)\b/i;
 const DISPUTED_OR_MARKET_WIDE_CLAIM_RE =
-  /\b(?:disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?|challeng(?:e[ds]?|ing)|critics?\s+(?:challeng(?:e[ds]?|ing)|disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?)|deni(?:ed|es|al)|alleg(?:ed|es|ation|ations)|market-wide|across\s+the\s+(?:property|real\s+estate|housing)\s+market|(?:property|real\s+estate|housing)\s+market\s+(?:grew|rose|fell|declined|increased|decreased)|market\s+(?:will|is\s+set\s+to|is\s+expected\s+to))\b/i;
+  /\b(?:disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?|challeng(?:e[ds]?|ing)|question(?:ed|s|ing)?|critics?\s+(?:challeng(?:e[ds]?|ing)|disput(?:e[ds]?|ing)|contest(?:ed|s|ing)?)|deni(?:ed|es|al)|alleg(?:ed|es|ation|ations)|market-wide|across\s+the\s+(?:property|real\s+estate|housing)\s+market|(?:property|real\s+estate|housing)\s+market\s+(?:grew|rose|fell|declined|increased|decreased)|market\s+(?:will|is\s+set\s+to|is\s+expected\s+to))\b/i;
 const AMBIGUOUS_MARKET_OR_THIRD_PARTY_RE =
-  /\b(?:market|macro(?:economic)?|econom(?:y|ic|ics)|sector|industry|analysts?|critics?|commentators?|brokers?|consultants?|investors?|buyers?|sellers?|demand|supply|absorption|prices?|rents?|yields?|valuations?|values?)\b[\s\S]{0,80}\b(?:grew|growth|rose|risen|rise|rising|fell|fallen|falling|declin(?:e|ed|ing)|increas(?:e|ed|ing)|decreas(?:e|ed|ing)|strengthen(?:ed|ing)?|weaken(?:ed|ing)?|climb(?:ed|ing)?|drop(?:ped|ping)?|surge(?:d|ing)?|slow(?:ed|ing)?|accelerat(?:e|ed|ing)|expect(?:s|ed|ing)?|predict(?:s|ed|ing)?|forecast(?:s|ed|ing)?)\b/i;
+  /\b(?:market|macro(?:economic)?|econom(?:y|ic|ics)|inflation|sector|industry|analysts?|critics?|commentators?|brokers?|consultants?|investors?|buyers?|sellers?|demand|supply|absorption|prices?|rents?|yields?|valuations?|values?)\b[\s\S]{0,80}\b(?:grew|growth|rose|risen|rise|rising|fell|fallen|falling|declin(?:e|ed|ing)|increas(?:e|ed|ing)|decreas(?:e|ed|ing)|strengthen(?:ed|ing)?|weaken(?:ed|ing)?|climb(?:ed|ing)?|drop(?:ped|ping)?|surge(?:d|ing)?|slow(?:ed|ing)?|accelerat(?:e|ed|ing)|expect(?:s|ed|ing)?|predict(?:s|ed|ing)?|forecast(?:s|ed|ing)?)\b/i;
+const INTERPRETATION_OR_COMPARISON_RE =
+  /\b(?:we\s+(?:believe|think|expect)|in\s+our\s+view|our\s+(?:view|analysis|assessment)|implication|suggests?|signals?|indicates?|means\s+that|therefore|consequently|however|relative(?:ly)?|versus|vs\.?|compared\s+(?:with|to)|comparison|better|worse|stronger|weaker|more\s+attractive|less\s+attractive|opportunity|risk-reward|premium|discount|outperform|underperform|recommend(?:s|ed|ation)?|should\s+(?:buy|sell|avoid|consider)|buy\s+call|sell\s+call|underlying\s+thesis|investment\s+(?:case|thesis)|read-through)\b|\bestablish(?:es|ed|ing)\b[\s\S]{0,48}\b(?:thesis|mandate|catalyst|opportunity)\b/i;
+
+const OFFICIAL_FACT_CATEGORIES = new Set<DraftArticle["category"]>([
+  "launch",
+  "regulatory",
+  "developer-corporate",
+  "infrastructure",
+  "policy",
+]);
+const ATTRIBUTION_VERB_PATTERN =
+  String.raw`(?:announce(?:d|s)?|confirm(?:ed|s)?|publish(?:ed|es)?|release(?:d|s)?|report(?:ed|s)?|state(?:d|s)?|record(?:ed|s)?|register(?:ed|s)?|disclose(?:d|s)?|approve(?:d|s)?|issue(?:d|s)?|launch(?:ed|es)?|open(?:ed|s)?|complete(?:d|s)?|award(?:ed|s)?|sign(?:ed|s)?|say|says|said)`;
+const ATTRIBUTION_VERB_RE = new RegExp(
+  String.raw`\b${ATTRIBUTION_VERB_PATTERN}\b`,
+  "iu",
+);
+const STRICT_FACT_NOUN_RE =
+  /^(?:regulations?|polic(?:y|ies)|laws?|rules?|guidance|directives?|decrees?|resolutions?|permits?|licen[cs]es?|approvals?|filings?|reports?|records?|registrations?|transactions?|contracts?|agreements?|awards?|appointments?|acquisitions?|mergers?|announcements?|releases?|launch(?:es)?|openings?|completions?|construction|developments?|projects?|phases?|implementations?|terms?|scopes?|timetables?|schedules?|plans?|process(?:es)?|procedures?|units?|homes?|towers?|floors?|bedrooms?|corridors?|hectares?|facilit(?:y|ies)|infrastructure|services?|systems?|programmes?|initiatives?|dates?|deadlines?|fees?|values?|amounts?|prices?|areas?|sizes?|locations?|routes?|stations?|updates?|mandates?|milestones?|payments?|quantit(?:y|ies)|totals?|deliver(?:y|ies)|precincts?)$/iu;
+const STRICT_FACT_DESCRIPTOR_WORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "this",
+  "its",
+  "their",
+  "own",
+  "official",
+  "direct",
+  "directly",
+  "published",
+  "verified",
+  "named",
+  "applicable",
+  "annual",
+  "new",
+  "revised",
+  "amended",
+  "updated",
+  "regulatory",
+  "service",
+  "implementation",
+  "registration",
+  "transaction",
+  "payment",
+  "delivery",
+  "construction",
+  "development",
+  "project",
+  "launch",
+  "opening",
+  "completion",
+  "precinct",
+  "secondary",
+  "market",
+  "phase",
+  "sales",
+  "total",
+  "number",
+  "square",
+  "sq",
+  "km",
+]);
+const STRICT_SCALAR_WORDS = new Set([
+  "aed",
+  "usd",
+  "dhs",
+  "dirham",
+  "dirhams",
+  "thousand",
+  "million",
+  "billion",
+  "percent",
+  "percentage",
+  "sqm",
+  "sqft",
+  "square",
+  "metres",
+  "meters",
+  "feet",
+  "kilometres",
+  "kilometers",
+  "km",
+  "units",
+  "homes",
+  "towers",
+  "floors",
+  "bedrooms",
+  "corridor",
+  "corridors",
+  "hectare",
+  "hectares",
+  "days",
+  "months",
+  "years",
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+]);
+const STRICT_FACT_RELATION_RE =
+  /^(.+?)\s+(?:records?|sets?(?:\s+out)?|specif(?:y|ies|ied)|lists?|covers?|includes?|names?|states?|reports?|confirms?|shows?|contains?|applies?\s+to)\s+(.+)$/iu;
+const EMBEDDED_OFFICIAL_ACT_VERB_PATTERN =
+  String.raw`(?:announce(?:d|s)?|confirm(?:ed|s)?|publish(?:ed|es)?|report(?:ed|s)?|register(?:ed|s)?|approve(?:d|s)?|issue(?:d|s)?|launch(?:ed|es)?|open(?:ed|s)?|complete(?:d|s)?|award(?:ed|s)?|sign(?:ed|s)?)`;
 
 export interface EvidenceRiskClassification {
   requiresCorroboration: boolean;
@@ -117,6 +245,33 @@ export function classifyEvidenceRisk(
       reason: "investment conclusions and forecasts require corroboration",
     };
   }
+  if (INVESTMENT_OUTCOME_OR_WEALTH_CLAIM_RE.test(text)) {
+    return {
+      requiresCorroboration: true,
+      reason: "investment outcomes or buyer-wealth claims require corroboration",
+    };
+  }
+  if (PREDICTION_OR_CERTAINTY_CLAIM_RE.test(text)) {
+    return {
+      requiresCorroboration: true,
+      reason: "predictive or certainty claims require corroboration",
+    };
+  }
+  if (
+    PROMOTIONAL_OR_DESIRABILITY_CLAIM_RE.test(text) ||
+    SUPERLATIVE_OR_RANKING_CLAIM_RE.test(text)
+  ) {
+    return {
+      requiresCorroboration: true,
+      reason: "promotional, desirability or ranking claims require corroboration",
+    };
+  }
+  if (RECOMMENDATION_OR_PROMOTIONAL_ACTION_RE.test(text)) {
+    return {
+      requiresCorroboration: true,
+      reason: "recommendations or promotional calls to action require corroboration",
+    };
+  }
   if (DISPUTED_OR_MARKET_WIDE_CLAIM_RE.test(text)) {
     return {
       requiresCorroboration: true,
@@ -129,7 +284,295 @@ export function classifyEvidenceRisk(
       reason: "market movement or third-party claims require independent corroboration",
     };
   }
+  if (INTERPRETATION_OR_COMPARISON_RE.test(text)) {
+    return {
+      requiresCorroboration: true,
+      reason: "interpretation or comparison requires independent corroboration",
+    };
+  }
   return { requiresCorroboration: false, reason: null };
+}
+
+function normalizedPublisherAliases(identity: ApprovedPublisherIdentity): string[] {
+  const base = identity.name
+    .replace(/\s*[—–-]\s*.*$/u, "")
+    .replace(/\s*\([^)]*\)\s*$/u, "")
+    .trim();
+  const words = base.match(/[A-Za-z0-9]+/gu) ?? [];
+  const initialism = words
+    .filter((word) => !/^(?:and|of|the)$/iu.test(word))
+    .map((word) => word[0])
+    .join("");
+  const aliases = new Set([identity.name, base]);
+  if (initialism.length >= 2) aliases.add(initialism);
+  if (words.length >= 2 && /(?:properties|property|developments|holding)$/iu.test(words.at(-1) ?? "")) {
+    aliases.add(words.slice(0, -1).join(" "));
+  }
+  return [...aliases]
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length >= 2);
+}
+
+function claimUnits(article: DraftArticle): string[] {
+  const fields = articleEvidenceSegments(article)
+    .filter(
+      ({ field }) =>
+        field !== "heroImage.alt" &&
+        !/\.q$/u.test(field) &&
+        field !== "semaform.howIdTradeIt.action",
+    )
+    .flatMap(({ text }) =>
+      text
+        .split(
+          /\n{2,}|(?<=[.!?])\s+|[;\uFF1B]+|\s+[\u2013\u2014]\s+|,\s+(?=(?:making|meaning|ensuring|thereby|thus\s+making|so\s+that|which\s+(?:means|makes))\b)/iu,
+        )
+        .map((value) => value.trim())
+        .filter(Boolean),
+    );
+  return fields.filter((value) => value.length >= 12);
+}
+
+function escapedRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizedClaim(value: string): string {
+  return value
+    .trim()
+    .replace(/^[\s"'\u201c\u2018]+/u, "")
+    .replace(/[\s.!?"'\u201d\u2019]+$/u, "")
+    .trim();
+}
+
+function claimWords(value: string): string[] {
+  return value.match(/[\p{L}\p{M}\p{N}%]+(?:[-'\u2019][\p{L}\p{M}\p{N}%]+)*/gu) ?? [];
+}
+
+function isNumericToken(value: string): boolean {
+  return /^\d+(?:[.,]\d+)*%?$/u.test(value);
+}
+
+function isProperNameToken(value: string): boolean {
+  return /^[\p{Lu}][\p{L}\p{M}\p{N}'\u2019-]*$/u.test(value);
+}
+
+function isStrictScalar(value: string): boolean {
+  const words = claimWords(normalizedClaim(value));
+  return (
+    words.length > 0 &&
+    words.some(isNumericToken) &&
+    words.every(
+      (word) =>
+        isNumericToken(word) || STRICT_SCALAR_WORDS.has(word.toLowerCase()),
+    )
+  );
+}
+
+function isStrictName(value: string): boolean {
+  const words = claimWords(normalizedClaim(value));
+  return (
+    words.length > 0 &&
+    words.length <= 8 &&
+    words.every(
+      (word) =>
+        isProperNameToken(word) ||
+        /^(?:al|bin|bint|of|the)$/iu.test(word) ||
+        isNumericToken(word),
+    )
+  );
+}
+
+function isStrictFactItem(value: string): boolean {
+  const words = claimWords(normalizedClaim(value));
+  const factNoun = words.at(-1);
+  if (!factNoun || !STRICT_FACT_NOUN_RE.test(factNoun)) return false;
+
+  const namedFact =
+    /^(?:announcements?|releases?|launch(?:es)?|openings?|developments?|projects?|phases?|locations?|routes?|stations?|precincts?)$/iu.test(
+      factNoun,
+    );
+  return words.slice(0, -1).every((word) => {
+    return (
+      STRICT_FACT_DESCRIPTOR_WORDS.has(word.toLowerCase()) ||
+      isNumericToken(word) ||
+      (namedFact && isProperNameToken(word))
+    );
+  });
+}
+
+function strictFactList(value: string, depth: number): boolean {
+  const items = value
+    .split(/,\s+|\s+and\s+/iu)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return (
+    items.length > 0 &&
+    items.every((item) => isStrictFactExpression(item, depth + 1))
+  );
+}
+
+function isStrictFactExpression(value: string, depth = 0): boolean {
+  if (depth > 4) return false;
+  const claim = normalizedClaim(value).replace(/^that\s+/iu, "");
+  if (!claim) return false;
+  if (isStrictFactItem(claim) || isStrictScalar(claim)) return true;
+
+  const embeddedAct = claim.match(
+    new RegExp(
+      `^(.+?)\\s+${EMBEDDED_OFFICIAL_ACT_VERB_PATTERN}\\s+(.+)$`,
+      "iu",
+    ),
+  );
+  if (
+    embeddedAct &&
+    isStrictName(embeddedAct[1]) &&
+    isStrictFactExpression(embeddedAct[2], depth + 1)
+  ) {
+    return true;
+  }
+
+  const relation = claim.match(STRICT_FACT_RELATION_RE);
+  if (
+    relation &&
+    isStrictFactItem(relation[1]) &&
+    strictFactList(relation[2], depth)
+  ) {
+    return true;
+  }
+
+  const prepositions = [
+    ...claim.matchAll(/\s+(?:of|in|at|on|for|across|within|from|to|with|by)\s+/giu),
+  ];
+  for (const match of prepositions) {
+    const index = match.index;
+    if (index === undefined) continue;
+    const left = claim.slice(0, index);
+    const right = claim.slice(index + match[0].length);
+    if (
+      (isStrictFactItem(left) &&
+        (isStrictFactItem(right) ||
+          isStrictScalar(right) ||
+          isStrictName(right) ||
+          isStrictFactExpression(right, depth + 1))) ||
+      (isStrictScalar(left) && isStrictFactExpression(right, depth + 1))
+    ) {
+      return true;
+    }
+  }
+
+  const listed = claim.split(/,\s+|\s+and\s+/iu);
+  return (
+    listed.length > 1 &&
+    listed.every((item) => isStrictFactExpression(item, depth + 1))
+  );
+}
+
+function attributedClaimContent(
+  unit: string,
+  aliases: readonly string[],
+): string | null {
+  for (const alias of aliases) {
+    const match = normalizedClaim(unit).match(
+      new RegExp(
+        `^${escapedRegex(alias)}\\s+${ATTRIBUTION_VERB_PATTERN}\\b\\s+(.+)$`,
+        "iu",
+      ),
+    );
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+function isStrictOfficialClaimContent(value: string): boolean {
+  const coordinated = value
+    .split(
+      new RegExp(
+        `,?\\s+(?:and|then)\\s+(?=${ATTRIBUTION_VERB_PATTERN}\\b)`,
+        "iu",
+      ),
+    )
+    .map((part, index) =>
+      index === 0
+        ? part
+        : part.replace(
+            new RegExp(`^${ATTRIBUTION_VERB_PATTERN}\\b\\s+`, "iu"),
+            "",
+          ),
+    );
+  return coordinated.every((part) => isStrictFactExpression(part));
+}
+
+/** The one-source lane is deliberately narrow. The source must be a regulator,
+ * government body or the developer speaking on its own canonical domain; every
+ * reader-visible factual unit must repeat both the official identity and an
+ * attribution verb. Anything interpretive falls back to corroborated analysis. */
+export function strictlyAttributedOfficialFact(
+  article: DraftArticle,
+  evidenceUrls: string[],
+): { ok: boolean; reason: string } {
+  const domains = [...new Set(evidenceUrls.map(approvedPublisherDomain).filter(Boolean))];
+  if (domains.length !== 1) {
+    return {
+      ok: false,
+      reason: "the official-fact lane requires exactly one canonical primary publisher",
+    };
+  }
+  const identity = approvedPublisherIdentity(evidenceUrls[0] ?? "");
+  if (!identity) {
+    return { ok: false, reason: "the cited publisher is not an approved source" };
+  }
+  const authoritative =
+    identity.tier === "government" || isOfficialDeveloperUrl(evidenceUrls[0]);
+  if (!authoritative) {
+    return {
+      ok: false,
+      reason: "the sole publisher is not an authoritative government, regulator or first-party developer source",
+    };
+  }
+  if (!OFFICIAL_FACT_CATEGORIES.has(article.category)) {
+    return {
+      ok: false,
+      reason: `category ${article.category} is not eligible for one-source official facts`,
+    };
+  }
+  const risk = classifyEvidenceRisk(article);
+  if (risk.requiresCorroboration) {
+    return { ok: false, reason: risk.reason ?? "the article requires corroboration" };
+  }
+
+  const aliases = normalizedPublisherAliases(identity);
+  const units = claimUnits(article);
+  if (units.length === 0) {
+    return {
+      ok: false,
+      reason: "the official-fact lane found no complete reader-visible claim",
+    };
+  }
+  const unattributed = units.filter(
+    (unit) =>
+      !ATTRIBUTION_VERB_RE.test(unit) ||
+      attributedClaimContent(unit, aliases) === null,
+  );
+  if (unattributed.length > 0) {
+    return {
+      ok: false,
+      reason: `${unattributed.length} factual unit(s) are not explicitly attributed to ${identity.name}`,
+    };
+  }
+  const outOfScope = units.filter((unit) => {
+    const content = attributedClaimContent(unit, aliases);
+    return content === null || !isStrictOfficialClaimContent(content);
+  });
+  if (outOfScope.length > 0) {
+    return {
+      ok: false,
+      reason: `${outOfScope.length} attributed unit(s) fall outside the narrow official-act and official-record scope`,
+    };
+  }
+  return {
+    ok: true,
+    reason: `strictly attributed official facts from ${identity.name}`,
+  };
 }
 
 /** Canonical publisher identity, based on the approved registry anchor rather
@@ -296,21 +739,29 @@ export function assessStoredEvidenceFreshness(
   };
 }
 
-/** Auto-publication has one deliberately conservative invariant: every article
- * requires two independent approved canonical publishers. Risk classification
- * remains diagnostic only; it can never lower the source threshold. */
+/** Select the smallest safe evidence lane. A single source is allowed only for
+ * strictly attributed facts from that source's own authoritative publication.
+ * All analysis, comparisons, market claims, forecasts and recommendations stay
+ * on the two-independent-publisher lane. */
 export function determineEvidencePolicy(
   article: DraftArticle,
   evidenceUrls: string[],
 ): EvidencePolicy {
-  void evidenceUrls;
   const risk = classifyEvidenceRisk(article);
+  const official = strictlyAttributedOfficialFact(article, evidenceUrls);
+  if (!risk.requiresCorroboration && official.ok) {
+    return {
+      lane: "official-fact",
+      requiredPublisherCount: 1,
+      reason: official.reason,
+    };
+  }
   return {
     lane: "corroborated-analysis",
     requiredPublisherCount: DEFAULT_CORROBORATION_SOURCES,
-    reason: risk.reason
-      ? `${risk.reason}; every auto-published article requires two independent approved canonical publishers`
-      : "every auto-published article requires two independent approved canonical publishers",
+    reason:
+      risk.reason ??
+      `${official.reason}; two independent approved canonical publishers are required`,
   };
 }
 
@@ -325,7 +776,7 @@ export interface AutoApproveAssessment {
   allCitationsWhitelisted: boolean;
   fetchedEvidenceCount: number;
   evidenceLane: EvidenceLane;
-  requiredPublisherCount: 2;
+  requiredPublisherCount: 1 | 2;
   figureCount: number;
   /** Figures present in publishable fields but absent from fetched evidence. */
   amberFigures: string[];
@@ -687,7 +1138,56 @@ export interface AutoApproveSummary {
   deploymentVerified: number;
   pendingVerification: number;
   verificationSkipped: number;
+  postPublishCompleted: number;
+  postPublishPending: number;
+  postPublishFailed: number;
   failureMessages: string[];
+  /** Bounded, stable categories suitable for workflow alerts and dashboards. */
+  holdReasonCounts: Record<string, number>;
+  /** First held records only; the full draft content never enters CI logs. */
+  heldDetails: Array<{ slug: string; reasons: string[] }>;
+}
+
+function holdReasonCategory(reason: string): string {
+  if (/fails gates/iu.test(reason)) return "voice-or-structure-gate";
+  if (/freshness|publication date|timestamp|date-source/iu.test(reason)) {
+    return "source-date-or-freshness";
+  }
+  if (/publisher identity|approved source|authoritative/iu.test(reason)) {
+    return "publisher-identity";
+  }
+  if (/whitelist/iu.test(reason)) return "source-whitelist";
+  if (/publisher domain|citation\(s\).*need|two independent/iu.test(reason)) {
+    return "insufficient-independent-publishers";
+  }
+  if (/fetched source text|independently fetched evidence/iu.test(reason)) {
+    return "missing-fetched-evidence";
+  }
+  if (/unsourced figure/iu.test(reason)) return "unsupported-figure";
+  if (/digit-bearing span|figure parser/iu.test(reason)) {
+    return "unparsed-numeric-claim";
+  }
+  if (/not explicitly attributed/iu.test(reason)) {
+    return "official-attribution";
+  }
+  return "other";
+}
+
+export function summarizeHoldReasons(
+  assessments: AutoApproveAssessment[],
+): Record<string, number> {
+  const counts = new Map<string, number>();
+  for (const assessment of assessments) {
+    for (const category of new Set(assessment.reasons.map(holdReasonCategory))) {
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+  }
+  return Object.fromEntries(
+    [...counts.entries()].sort(
+      ([leftName, leftCount], [rightName, rightCount]) =>
+        rightCount - leftCount || leftName.localeCompare(rightName),
+    ),
+  );
 }
 
 const wait = (milliseconds: number) =>
@@ -704,6 +1204,8 @@ export async function runAutoApprove(opts: {
   backlogMaxAgeDays?: number;
   now?: Date;
   deploymentAttempts?: number;
+  /** Test/worker override; production defaults to the 15-second poll cadence. */
+  deploymentDelayMs?: number;
   log?: (msg: string) => void;
 }): Promise<AutoApproveSummary> {
   const log = opts.log ?? ((m: string) => console.log(m));
@@ -742,6 +1244,7 @@ export async function runAutoApprove(opts: {
   const assessments = eligibleDrafts.map(assessDraft);
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");
+  const holdReasonCounts = summarizeHoldReasons(held);
   const publishLimit = Math.max(1, Math.min(10, opts.publishLimit ?? 1));
   const selected = opts.publish ? approve.slice(0, publishLimit) : [];
   const deferred = opts.publish ? Math.max(0, approve.length - selected.length) : 0;
@@ -755,18 +1258,26 @@ export async function runAutoApprove(opts: {
   log(
     `auto-approve: ${activeDrafts.length} active draft(s) · ${approve.length} pass · ${held.length} held · ` +
       `mode ${opts.publish ? `PUBLISH (${publishOrder}, limit ${publishLimit})` : "REVIEW ONLY"} ` +
-      `(universal two-publisher evidence policy)`,
+      `(risk-based official-fact/corroborated-analysis policy)`,
   );
   for (const a of approve) {
     log(`  ok  ${a.slug}  (${a.evidenceLane} · ${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);
   }
-  for (const a of held) log(`  hold ${a.slug} -> ${a.reasons.join("; ")}`);
+  for (const a of held.slice(0, 20)) {
+    log(`  hold ${a.slug} -> ${a.reasons.join("; ")}`);
+  }
+  if (held.length > 20) {
+    log(`  hold … ${held.length - 20} additional held draft(s); categories ${JSON.stringify(holdReasonCounts)}`);
+  }
 
   let published = 0;
   let failed = 0;
   let deploymentVerified = 0;
   let pendingVerification = 0;
   let verificationSkipped = 0;
+  let postPublishCompleted = 0;
+  let postPublishPending = 0;
+  let postPublishFailed = 0;
   const publicationShas: string[] = [];
   const publishedSlugs: string[] = [];
   const failureMessages: string[] = [];
@@ -794,12 +1305,24 @@ export async function runAutoApprove(opts: {
     }
     const payload = (await response.json().catch(() => ({}))) as {
       error?: string;
+      diagnostic?: {
+        code?: string;
+        stage?: string;
+        operatorAction?: string;
+      };
       claimId?: string;
       commitSha?: string;
       idempotent?: boolean;
     };
     if (!response.ok || !payload.commitSha || !payload.claimId) {
-      const detail = payload.error ?? `publish returned ${response.status}`;
+      const detail = [
+        payload.error ?? `publish returned ${response.status}`,
+        payload.diagnostic?.code,
+        payload.diagnostic?.stage,
+        payload.diagnostic?.operatorAction,
+      ]
+        .filter(Boolean)
+        .join(" · ");
       failed += 1;
       failureMessages.push(`${assessment.slug}: ${detail}`);
       log(`  fail ${assessment.slug} -> ${detail}`);
@@ -822,8 +1345,12 @@ export async function runAutoApprove(opts: {
     }
     let verified = false;
     let lastDeploymentError = "deployment verification timed out";
+    const deploymentDelayMs = Math.max(
+      0,
+      Math.min(60_000, opts.deploymentDelayMs ?? 15_000),
+    );
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      await wait(15_000);
+      await wait(deploymentDelayMs);
       try {
         const deployed = await fetch(
           `${base}/api/news/draft/${encodeURIComponent(assessment.id)}/deployment`,
@@ -840,15 +1367,50 @@ export async function runAutoApprove(opts: {
             }),
           },
         );
-        if (deployed.ok) {
+        const detail = (await deployed.json().catch(() => ({}))) as {
+          error?: string;
+          publicationState?: string;
+          postPublish?: {
+            ok?: boolean;
+            pending?: boolean;
+            code?: string;
+            indexing?: { status?: string } | null;
+            distribution?: { status?: string } | null;
+            operatorAction?: string | null;
+          };
+        };
+        if (deployed.ok || detail.publicationState === "completed") {
           verified = true;
           deploymentVerified += 1;
           log(`  verified ${assessment.slug} on the canonical newsroom`);
+          if (detail.postPublish?.ok === true) {
+            postPublishCompleted += 1;
+          } else {
+            const pending = detail.postPublish?.pending === true;
+            if (pending) postPublishPending += 1;
+            else postPublishFailed += 1;
+            failed += 1;
+            const downstreamDetail = [
+              detail.postPublish?.code ?? "post-publish-receipt-missing",
+              detail.postPublish?.indexing?.status
+                ? `indexing=${detail.postPublish.indexing.status}`
+                : null,
+              detail.postPublish?.distribution?.status
+                ? `distribution=${detail.postPublish.distribution.status}`
+                : null,
+              detail.postPublish?.operatorAction,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            failureMessages.push(
+              `${assessment.slug}: downstream ${downstreamDetail}`,
+            );
+            log(
+              `  ${pending ? "pending" : "fail"} ${assessment.slug} downstream -> ${downstreamDetail}`,
+            );
+          }
           break;
         }
-        const detail = (await deployed.json().catch(() => ({}))) as {
-          error?: string;
-        };
         lastDeploymentError =
           detail.error ?? `deployment verification returned ${deployed.status}`;
       } catch (error) {
@@ -880,6 +1442,14 @@ export async function runAutoApprove(opts: {
     deploymentVerified,
     pendingVerification,
     verificationSkipped,
+    postPublishCompleted,
+    postPublishPending,
+    postPublishFailed,
     failureMessages,
+    holdReasonCounts,
+    heldDetails: held.slice(0, 20).map((assessment) => ({
+      slug: assessment.slug,
+      reasons: assessment.reasons.slice(0, 8),
+    })),
   };
 }

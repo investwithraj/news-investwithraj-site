@@ -1,6 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { IWR_ICON_URL } from "@/lib/brand-icon";
 import { SITE } from "@/lib/constants";
 import { ConsentRoot } from "@/components/consent/ConsentRoot";
@@ -14,8 +12,6 @@ import {
 } from "@/lib/schema";
 import "./brand/brand-tokens.css";
 import "./globals.css";
-
-const IS_VERCEL_RUNTIME = process.env.VERCEL === "1";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -82,12 +78,21 @@ export const metadata: Metadata = {
     siteName: SITE.name,
     title: SITE.name,
     description: SITE.description,
+    images: [
+      {
+        url: `${SITE.url}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: SITE.name,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     site: "@investwithraj",
     title: SITE.name,
     description: SITE.description,
+    images: [`${SITE.url}/api/og`],
   },
   icons: {
     icon: [{ url: IWR_ICON_URL, type: "image/svg+xml", sizes: "any" }],
@@ -152,13 +157,6 @@ export default function RootLayout({
         </div>
 
         <NewsFooter />
-
-        {IS_VERCEL_RUNTIME ? (
-          <>
-            <Analytics />
-            <SpeedInsights />
-          </>
-        ) : null}
 
         <ConsentRoot />
       </body>

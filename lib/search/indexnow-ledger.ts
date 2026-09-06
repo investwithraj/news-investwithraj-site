@@ -1,16 +1,16 @@
 import { createHash, randomBytes } from "node:crypto";
+import type { IndexNowResult } from "./indexnow";
 
 const KV_URL = process.env.KV_REST_API_URL?.trim() ?? "";
 const KV_TOKEN = process.env.KV_REST_API_TOKEN?.trim() ?? "";
 const TTL_SECONDS = 24 * 60 * 60;
 const LEASE_MS = 2 * 60 * 1_000;
 
-export interface StoredIndexNowResult {
-  ok: boolean;
-  statusCode: number;
-  message: string;
-  submittedUrls: number;
+export function isIndexNowLedgerConfigured(): boolean {
+  return Boolean(KV_URL && KV_TOKEN);
 }
+
+export type StoredIndexNowResult = IndexNowResult;
 
 type Claim =
   | { status: "owner"; token: string; payloadDigest: string }
@@ -83,6 +83,7 @@ async function command<T>(parts: unknown[]): Promise<T> {
     },
     body: JSON.stringify(parts),
     cache: "no-store",
+    signal: AbortSignal.timeout(5_000),
   });
   if (!response.ok) throw new Error("IndexNow ledger command failed.");
   const payload = (await response.json()) as { result?: T; error?: string };

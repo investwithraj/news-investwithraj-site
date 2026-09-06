@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: *.vercel-insights.com www.google-analytics.com www.googletagmanager.com plausible.io www.facebook.com *.linkedin.com *.licdn.com analytics.twitter.com t.co analytics.tiktok.com *.clarity.ms",
       "font-src 'self' data: fonts.gstatic.com",
-      "connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms",
+      "connect-src 'self' *.vercel-insights.com *.vercel-analytics.com vitals.vercel-insights.com www.google-analytics.com analytics.google.com plausible.io *.posthog.com www.facebook.com *.linkedin.com analytics.twitter.com analytics.tiktok.com *.clarity.ms",
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
       "frame-src 'self' www.youtube.com www.youtube-nocookie.com",

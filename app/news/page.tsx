@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
-import { Suspense } from "react";
 
 import NewsArchive from "@/components/redesign/NewsArchive";
+import type { NewsArchiveInitialParams } from "@/components/redesign/NewsArchive";
 import { SITE } from "@/lib/constants";
-import { newsArchiveFreshness } from "@/lib/news-archive";
+import {
+  NEWS_ARCHIVE_FILTER_KEYS,
+  newsArchiveFreshness,
+} from "@/lib/news-archive";
 import {
   NEWS_ARCHIVE_DESKS,
   projectNewsArchiveItems,
@@ -38,9 +41,33 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function NewsIndex() {
+type NewsIndexSearchParams = Record<
+  string,
+  string | string[] | undefined
+>;
+
+function archiveInitialParams(
+  values: NewsIndexSearchParams,
+): NewsArchiveInitialParams {
+  const output: NewsArchiveInitialParams = {};
+  for (const key of NEWS_ARCHIVE_FILTER_KEYS) {
+    const raw = values[key];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof value === "string" && value.trim()) {
+      output[key] = value.trim().slice(0, key === "q" ? 120 : 80);
+    }
+  }
+  return output;
+}
+
+export default async function NewsIndex({
+  searchParams,
+}: {
+  searchParams: Promise<NewsIndexSearchParams>;
+}) {
   const live = getPublicDiscoveryNewsArticles();
   const items = projectNewsArchiveItems(live);
+  const initialParams = archiveInitialParams(await searchParams);
   const freshness = await currentArchiveFreshness(
     live[0]?.publishedAt ?? null,
   );
@@ -70,27 +97,12 @@ export default async function NewsIndex() {
           __html: JSON.stringify(graph).replace(/</g, "\\u003c"),
         }}
       />
-      <Suspense
-        fallback={
-          <main
-            id="main"
-            style={{
-              minHeight: "100svh",
-              padding: "10rem 8vw",
-              background: "var(--iwr-ink)",
-              color: "var(--iwr-paper)",
-            }}
-          >
-            Loading the chronological archive…
-          </main>
-        }
-      >
-        <NewsArchive
-          items={items}
-          desks={NEWS_ARCHIVE_DESKS}
-          freshness={freshness}
-        />
-      </Suspense>
+      <NewsArchive
+        items={items}
+        desks={NEWS_ARCHIVE_DESKS}
+        freshness={freshness}
+        initialParams={initialParams}
+      />
     </>
   );
 }

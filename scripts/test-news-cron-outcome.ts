@@ -58,26 +58,22 @@ function input(
 }
 
 async function main(): Promise<void> {
-  const cronStatusResponse = getDraftCronStatus();
-  assert.equal(cronStatusResponse.status, 200);
-  const cronStatus = (await cronStatusResponse.json()) as Record<string, unknown>;
-  assert.equal(cronStatus.name, "News drafting cron");
-  assert.equal(cronStatus.mutationMethod, "POST");
-  assert.equal(
-    cronStatus.publishing,
-    "never; successful output is staged for review",
-  );
-  assert.deepEqual(Object.keys(cronStatus).sort(), [
-    "enabled",
-    "mutationMethod",
-    "name",
-    "publishing",
-    "storageBackend",
-  ]);
-
   const previousPostSecret = process.env.POST_PUBLISH_SECRET;
+  const previousCronSecret = process.env.CRON_SECRET;
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousCronEnabled = process.env.ENABLE_NEWS_DRAFT_CRON;
   process.env.POST_PUBLISH_SECRET = "s".repeat(32);
+  process.env.CRON_SECRET = "c".repeat(32);
   try {
+    const deniedGet = await getDraftCronStatus(
+      new NextRequest("https://news.example.test/api/cron/draft"),
+    );
+    assert.equal(
+      deniedGet.status,
+      401,
+      "A scheduled GET without CRON_SECRET must fail instead of reporting green",
+    );
+
     const denied = await postDraftCron(
       new NextRequest("https://news.example.test/api/cron/draft", {
         method: "POST",
@@ -91,12 +87,42 @@ async function main(): Promise<void> {
       }),
     );
     assert.equal(urlCredential.status, 400, "Cron POST must reject URL credentials");
+
+    const wrongGetCredential = await getDraftCronStatus(
+      new NextRequest("https://news.example.test/api/cron/draft", {
+        headers: { "x-post-publish-secret": "s".repeat(32) },
+      }),
+    );
+    assert.equal(
+      wrongGetCredential.status,
+      403,
+      "Scheduled GET must require CRON_SECRET rather than the publication secret",
+    );
+
+    Reflect.set(process.env, "NODE_ENV", "production");
+    delete process.env.ENABLE_NEWS_DRAFT_CRON;
+    const authenticatedCron = await getDraftCronStatus(
+      new NextRequest("https://news.example.test/api/cron/draft", {
+        headers: { authorization: `Bearer ${"c".repeat(32)}` },
+      }),
+    );
+    assert.equal(
+      authenticatedCron.status,
+      503,
+      "A valid Vercel Cron bearer must reach the feature gate",
+    );
   } finally {
     if (previousPostSecret === undefined) {
       delete process.env.POST_PUBLISH_SECRET;
     } else {
       process.env.POST_PUBLISH_SECRET = previousPostSecret;
     }
+    if (previousCronSecret === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = previousCronSecret;
+    if (previousNodeEnv === undefined) Reflect.deleteProperty(process.env, "NODE_ENV");
+    else Reflect.set(process.env, "NODE_ENV", previousNodeEnv);
+    if (previousCronEnabled === undefined) delete process.env.ENABLE_NEWS_DRAFT_CRON;
+    else process.env.ENABLE_NEWS_DRAFT_CRON = previousCronEnabled;
   }
 
   const observed = await observeNewestPublication({
@@ -147,6 +173,41 @@ async function main(): Promise<void> {
   );
   assert.equal(held.primaryOutcome, "held");
   assert.deepEqual(held.outcomes, ["held"]);
+  assert.equal(held.shouldFail, false, "A fresh feed may tolerate one held-only pass");
+
+  const staleHeld = buildNewsCronRunReport(
+    input({
+      staged: 0,
+      draftHeld: 1,
+      draftHoldReasons: ["source publication date missing"],
+      publication: {
+        ...publication,
+        published: 0,
+        held: 2,
+        deferred: 0,
+        holdReasonCounts: { "source-date-or-freshness": 2 },
+        heldDetails: [
+          { slug: "held-story", reasons: ["source publication date missing"] },
+        ],
+      },
+      observation: {
+        feedState: "stale",
+        newestPublishedAt: "2026-08-22T06:00:00.000Z",
+        ageHours: 48,
+        observedAt: "2026-08-24T06:00:00.000Z",
+      },
+      maxNewestPublicationAgeHours: 36,
+    }),
+  );
+  assert.equal(staleHeld.primaryOutcome, "failed");
+  assert.deepEqual(staleHeld.outcomes, ["held", "failed"]);
+  assert.equal(staleHeld.shouldFail, true);
+  assert.match(staleHeld.operationalFailureReasons[0], /held-only run/u);
+  assert.ok(
+    staleHeld.actionableReasons.some((reason) =>
+      reason.includes("source-date-or-freshness"),
+    ),
+  );
 
   const failed = buildNewsCronRunReport(
     input({
@@ -194,6 +255,7 @@ async function main(): Promise<void> {
     assert.match(output, /^outcome=published$/mu);
     assert.match(output, new RegExp(`^publication_sha=${SHA}$`, "mu"));
     assert.match(output, /^newest_publication_age_hours=1$/mu);
+    assert.match(output, /^should_fail=0$/mu);
     assert.match(summary, /Daily news pipeline receipt/u);
     assert.match(summary, new RegExp(SHA, "u"));
     assert.match(summary, /1 hours/u);

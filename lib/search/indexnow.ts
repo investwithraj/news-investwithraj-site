@@ -1,122 +1,192 @@
-// IndexNow protocol client.
-// IndexNow is a free, open protocol jointly run by Bing + Yandex + Yep
-// + Seznam + Naver + IndexNow.org. One POST submits URLs to all
-// participating engines simultaneously. No API key required beyond
-// the per-site key (verified via a key file at site root).
-//
-// Spec: https://www.indexnow.org/documentation
-//
-// Engines fanned out to:
-//   - Bing (USA + global)
-//   - Yandex (Russia + ex-USSR)
-//   - Yep (DuckDuckGo + Brave Search)
-//   - Seznam (Czech Republic)
-//   - Naver (South Korea)
-//   - IndexNow.org central
-//
-// Why this matters for the news firehose: a freshly committed article
-// goes from "pushed to GitHub" → "indexed in Bing + 4 other engines" in
-// under 60 seconds. That's the difference between an article showing up
-// in SERP today vs in 2-3 days.
+// IndexNow protocol client for the two canonical Invest With Raj hosts.
+// IndexNow keys are deliberately public verification values. Mutation access
+// remains protected by the server secret, production-host guard, feature flag
+// and durable receipt ledger in the route layer.
 
-import { SITE } from "@/lib/constants";
+const INDEXNOW_ENDPOINT = "https://api.indexnow.org/IndexNow";
 
-/** The IndexNow API host — using bing.com is the recommended primary
- *  endpoint (any participating engine forwards to the rest). */
-const INDEXNOW_HOST = "https://api.indexnow.org/IndexNow";
-
-/** Per-site key — must match the contents of /<key>.txt at site root */
 export const INDEXNOW_KEY = "0d6e3835646ccbe5dba5ed6ab2646308";
+export const INDEXNOW_MAIN_KEY = "fa54a88f6758df8bd6eab00d61896015";
+
+const INDEXNOW_HOST_PROFILES = {
+  "news.investwithraj.com": {
+    key: INDEXNOW_KEY,
+    keyLocation: `https://news.investwithraj.com/${INDEXNOW_KEY}.txt`,
+  },
+  "investwithraj.com": {
+    key: INDEXNOW_MAIN_KEY,
+    keyLocation: `https://investwithraj.com/${INDEXNOW_MAIN_KEY}.txt`,
+  },
+} as const;
+
+export const INDEXNOW_ALLOWED_HOSTS = Object.freeze(
+  Object.keys(INDEXNOW_HOST_PROFILES),
+) as readonly (keyof typeof INDEXNOW_HOST_PROFILES)[];
+
+type IndexNowHost = (typeof INDEXNOW_ALLOWED_HOSTS)[number];
+
+export interface IndexNowProviderReceipt {
+  host: IndexNowHost;
+  configured: true;
+  attempted: boolean;
+  accepted: boolean;
+  statusCode: number | null;
+  submittedUrls: number;
+  message: string;
+}
 
 export interface IndexNowResult {
   ok: boolean;
   statusCode: number;
   message: string;
   submittedUrls: number;
+  receipts: IndexNowProviderReceipt[];
 }
 
-/**
- * Submit one or more URLs to IndexNow. All URLs must be on the same host
- * (the host that owns the key file).
- *
- * @param urls   Absolute URLs to submit (https://news.investwithraj.com/news/...)
- *               Max 10,000 per request per spec.
- */
-export async function submitToIndexNow(
-  urls: string[]
-): Promise<IndexNowResult> {
+export type NormalizedIndexNowUrls = Readonly<{
+  urls: string[];
+  rejectedCount: number;
+}>;
+
+/** Accept exact canonical HTTPS hosts only; credentials, fragments and query
+ * tracking are stripped before the provider sees a URL. */
+export function normalizeIndexNowUrls(
+  values: unknown[],
+  max = 1_000,
+): NormalizedIndexNowUrls {
+  const output = new Set<string>();
+  let rejectedCount = 0;
+
+  for (const value of values.slice(0, max)) {
+    if (typeof value !== "string" || value.length > 2_048) {
+      rejectedCount += 1;
+      continue;
+    }
+    try {
+      const url = new URL(value);
+      if (
+        url.protocol !== "https:" ||
+        !INDEXNOW_ALLOWED_HOSTS.includes(url.hostname as IndexNowHost) ||
+        url.port ||
+        url.username ||
+        url.password
+      ) {
+        rejectedCount += 1;
+        continue;
+      }
+      url.hash = "";
+      url.search = "";
+      output.add(url.toString());
+    } catch {
+      rejectedCount += 1;
+    }
+  }
+
+  if (values.length > max) rejectedCount += values.length - max;
+  return {
+    urls: [...output].sort((left, right) => left.localeCompare(right, "en")),
+    rejectedCount,
+  };
+}
+
+/** Submit one provider request per host, as required by the IndexNow protocol. */
+export async function submitToIndexNow(urls: string[]): Promise<IndexNowResult> {
   if (urls.length === 0) {
-    return { ok: true, statusCode: 200, message: "No URLs to submit", submittedUrls: 0 };
+    return {
+      ok: true,
+      statusCode: 200,
+      message: "No URLs to submit",
+      submittedUrls: 0,
+      receipts: [],
+    };
   }
   if (urls.length > 10_000) {
     return {
       ok: false,
       statusCode: 400,
-      message: "IndexNow allows max 10,000 URLs per request",
+      message: "IndexNow allows a maximum of 10,000 URLs per operation",
       submittedUrls: 0,
+      receipts: [],
     };
   }
 
-  // Validate all URLs are on the same host
-  const host = new URL(SITE.url).host;
-  const offHost = urls.filter((u) => {
-    try {
-      return new URL(u).host !== host;
-    } catch {
-      return true;
-    }
-  });
-  if (offHost.length > 0) {
+  const normalized = normalizeIndexNowUrls(urls, 10_000);
+  if (normalized.rejectedCount > 0 || normalized.urls.length !== urls.length) {
     return {
       ok: false,
       statusCode: 400,
-      message: `URLs must be on host ${host}. Off-host: ${offHost.slice(0, 3).join(", ")}`,
+      message: "The request contains a URL outside the canonical host allowlist",
       submittedUrls: 0,
+      receipts: [],
     };
   }
 
-  const body = {
-    host,
-    key: INDEXNOW_KEY,
-    keyLocation: `${SITE.url}/${INDEXNOW_KEY}.txt`,
-    urlList: urls,
+  const groups = new Map<IndexNowHost, string[]>();
+  for (const value of normalized.urls) {
+    const host = new URL(value).hostname as IndexNowHost;
+    const group = groups.get(host) ?? [];
+    group.push(value);
+    groups.set(host, group);
+  }
+
+  const receipts: IndexNowProviderReceipt[] = [];
+  for (const host of INDEXNOW_ALLOWED_HOSTS) {
+    const hostUrls = groups.get(host);
+    if (!hostUrls?.length) continue;
+    const profile = INDEXNOW_HOST_PROFILES[host];
+    try {
+      const response = await fetch(INDEXNOW_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          host,
+          key: profile.key,
+          keyLocation: profile.keyLocation,
+          urlList: hostUrls,
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(8_000),
+      });
+      const accepted = response.ok || response.status === 202;
+      receipts.push({
+        host,
+        configured: true,
+        attempted: true,
+        accepted,
+        statusCode: response.status,
+        submittedUrls: hostUrls.length,
+        message: accepted
+          ? response.status === 202
+            ? "Accepted for processing"
+            : "Accepted"
+          : `Provider rejected the host batch with HTTP ${response.status}`,
+      });
+    } catch {
+      receipts.push({
+        host,
+        configured: true,
+        attempted: true,
+        accepted: false,
+        statusCode: null,
+        submittedUrls: hostUrls.length,
+        message: "Provider outcome could not be confirmed",
+      });
+    }
+  }
+
+  const ok = receipts.length > 0 && receipts.every((receipt) => receipt.accepted);
+  return {
+    ok,
+    statusCode: ok ? 200 : 502,
+    message: ok
+      ? `IndexNow accepted ${normalized.urls.length} canonical URL(s) across ${receipts.length} host batch(es)`
+      : "One or more IndexNow host batches were not accepted",
+    submittedUrls: receipts
+      .filter((receipt) => receipt.accepted)
+      .reduce((total, receipt) => total + receipt.submittedUrls, 0),
+    receipts,
   };
-
-  try {
-    const res = await fetch(INDEXNOW_HOST, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-
-    // IndexNow returns:
-    //   200 OK     — submitted successfully
-    //   202 Accepted — submitted, processing
-    //   400 Bad Request — malformed body
-    //   403 Forbidden  — key not valid (key file missing/wrong)
-    //   422 Unprocessable — URLs invalid
-    //   429 Too Many Requests — rate limited
-    return {
-      ok: res.ok || res.status === 202,
-      statusCode: res.status,
-      message:
-        res.status === 200
-          ? "Submitted successfully"
-          : res.status === 202
-            ? "Accepted, processing"
-            : `IndexNow returned ${res.status}: ${res.statusText}`,
-      submittedUrls: urls.length,
-    };
-  } catch (e) {
-    return {
-      ok: false,
-      statusCode: 0,
-      message: e instanceof Error ? e.message : "Unknown IndexNow error",
-      submittedUrls: 0,
-    };
-  }
 }

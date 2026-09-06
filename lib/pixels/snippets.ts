@@ -4,12 +4,17 @@
 // All snippets are gated server-side: if the relevant env var isn't set,
 // the loader skips even attempting to inject.
 
-export function ga4Snippet(id: string): string {
+export function ga4Snippet(id: string, crossDomainHosts: readonly string[]): string {
+  const domains = JSON.stringify(crossDomainHosts);
   return `
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', '${id}', { anonymize_ip: true });
+    gtag('config', '${id}', {
+      anonymize_ip: true,
+      send_page_view: false,
+      linker: { domains: ${domains}, accept_incoming: true }
+    });
   `;
 }
 

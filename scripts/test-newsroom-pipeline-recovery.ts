@@ -102,9 +102,9 @@ function bodyWithFigure(
 
 function officialBodyWithFigure(figure = "AED 10 million"): string {
   const first =
-    `Dubai Land Department confirmed ${figure} in its own service update, establishing a structural mandate and a clear catalyst for the precinct.`;
+    `Dubai Land Department confirmed ${figure} in its own service update and stated that the regulatory mandate covers the named precinct.`;
   const sentence =
-    "Dubai Land Department stated that its own release describes the mandate, absorption pattern, precinct context and secondary market mechanics in measured terms for readers assessing the underlying thesis.";
+    "Dubai Land Department stated that its official release records the regulatory mandate, precinct scope, implementation timetable, registration process and applicable secondary market procedure.";
   return `${first}\n\n${Array.from({ length: 34 }, () => sentence).join(" ")}`;
 }
 
@@ -192,7 +192,10 @@ function approvalFor(
 async function singleSourceTierA(): Promise<ReadyFixture> {
   let researchCalls = 0;
   let repairCalls = 0;
-  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
+  const result = await draftFromCluster(
+    cluster([OFFICIAL_URL], "regulatory"),
+    WHITELIST,
+    {
     now: NOW,
     dependencies: {
       research: (async () => {
@@ -211,11 +214,12 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
       }) satisfies RepairCall,
       fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
     },
-  });
+    },
+  );
   assert.equal(result.ok, true, result.reason);
   assert.ok(
-    result.diagnostics?.some((entry) => /manual review only/.test(entry)),
-    "one-source drafting must continue with a clear manual-only diagnostic",
+    !result.diagnostics?.some((entry) => /manual review only/.test(entry)),
+    `a narrowly attributed first-party fact should not be held for a redundant second publisher: ${JSON.stringify(result.diagnostics)}`,
   );
   assert.equal(result.article?.citations.length, 1);
   assert.equal(
@@ -252,10 +256,9 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     article: result.article!,
     provenance: result.provenance!,
   };
-  assert.equal(
+  assert.ok(
     approvalFor(fixture),
-    null,
-    "one fresh official publisher may stage a draft but must never mint an auto-publication ledger",
+    "one fresh authoritative first-party source may mint a ledger for strictly attributed official facts",
   );
 
   const [freshEvidence] = fixture.provenance.fetchedEvidence!;
@@ -466,10 +469,6 @@ async function conservativeRiskClaimsRequireCorroboration(
       "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
     ],
     [
-      "dld-reports-emaar-launch",
-      "DLD reported that Emaar launched its own project.",
-    ],
-    [
       "dld-questioned-figures",
       "DLD said its own figures were questioned.",
     ],
@@ -495,7 +494,7 @@ async function conservativeRiskClaimsRequireCorroboration(
           })) satisfies ResearchCall,
           repair: (async () => ({
             ok: false,
-            error: "universal two-publisher policy must hold before repair",
+            error: "risk-based corroboration policy must hold before repair",
           })) satisfies RepairCall,
           fetchArticle: (async (url) =>
             fetched(url, FRESH_DATE, body)) satisfies FetchCall,
@@ -1057,9 +1056,9 @@ async function storageUsesSameEvidencePolicy(
 
     const manualTierA = await stageAndVerify(tierA, "raj-review-session");
     assert.equal(
-      manualTierA?.evidenceApproval,
-      undefined,
-      "manual review must not mint an approval from one publisher",
+      manualTierA?.evidenceApproval?.reviewer,
+      "raj-review-session",
+      "human review may mint approval for a strictly attributed authoritative official fact",
     );
 
     const automatedAnalysis = await stageAndVerify(
@@ -1343,7 +1342,7 @@ async function main(): Promise<void> {
   await generationRetryIsCapped();
   await snippetsNeverBecomeEvidence();
   console.log(
-    "Newsroom recovery regression passed: universal two-publisher approval, manual staging, repair/retry caps, figure safety and publication dates are enforced.",
+    "Newsroom recovery regression passed: narrowly attributed official facts, corroborated analysis, manual staging, repair/retry caps, figure safety and publication dates are enforced.",
   );
 }
 

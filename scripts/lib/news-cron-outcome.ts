@@ -1,6 +1,7 @@
 import { appendFile } from "node:fs/promises";
 
 export const NEWS_FRONT_SCHEMA_VERSION = "front-v1" as const;
+export const DEFAULT_MAX_NEWEST_PUBLICATION_AGE_HOURS = 36;
 
 export type NewsCronOutcome =
   | "published"
@@ -23,7 +24,12 @@ export interface PublicationPassTelemetry {
   deploymentVerified: number;
   pendingVerification: number;
   verificationSkipped: number;
+  postPublishCompleted?: number;
+  postPublishPending?: number;
+  postPublishFailed?: number;
   failureMessages: string[];
+  holdReasonCounts?: Record<string, number>;
+  heldDetails?: Array<{ slug: string; reasons: string[] }>;
 }
 
 export interface NewestPublicationObservation {
@@ -41,10 +47,13 @@ export interface NewsCronRunInput {
   attempts: number;
   staged: number;
   draftHeld: number;
+  draftHoldReasons?: string[];
   technicalFailures: number;
   failureMessages: string[];
   publication: PublicationPassTelemetry | null;
   observation: NewestPublicationObservation | null;
+  /** May tighten or relax alert cadence within a safe 12-72 hour range. */
+  maxNewestPublicationAgeHours?: number;
 }
 
 export interface NewsCronRunReport extends NewsCronRunInput {
@@ -55,6 +64,9 @@ export interface NewsCronRunReport extends NewsCronRunInput {
   failed: number;
   held: number;
   deferred: number;
+  shouldFail: boolean;
+  operationalFailureReasons: string[];
+  actionableReasons: string[];
 }
 
 type FrontFeedFetcher = (
@@ -136,12 +148,40 @@ export function buildNewsCronRunReport(
   input: NewsCronRunInput,
 ): NewsCronRunReport {
   const publication = input.publication;
-  const failed = input.technicalFailures + (publication?.failed ?? 0);
   const held = input.draftHeld + (publication?.held ?? 0);
   const deferred = publication?.deferred ?? 0;
+  const maxAgeHours = Number.isFinite(input.maxNewestPublicationAgeHours)
+    ? Math.max(
+        12,
+        Math.min(72, input.maxNewestPublicationAgeHours as number),
+      )
+    : DEFAULT_MAX_NEWEST_PUBLICATION_AGE_HOURS;
+  const operationalFailureReasons: string[] = [];
+  const published = publication?.published ?? 0;
+  const ageHours = input.observation?.ageHours;
+  const feedPastCadence =
+    input.observation?.feedState === "empty" ||
+    input.observation?.feedState === "stale" ||
+    (typeof ageHours === "number" && ageHours > maxAgeHours);
+  if (!input.observation) {
+    operationalFailureReasons.push(
+      "front-feed freshness could not be observed",
+    );
+  } else if (feedPastCadence) {
+    const age = ageHours === null ? "empty" : `${ageHours}h old`;
+    operationalFailureReasons.push(
+      published === 0 && input.staged === 0 && held > 0
+        ? `held-only run left the public feed ${age}; maximum cadence is ${maxAgeHours}h`
+        : `public feed is ${age}; maximum cadence is ${maxAgeHours}h`,
+    );
+  }
+  const failed =
+    input.technicalFailures +
+    (publication?.failed ?? 0) +
+    operationalFailureReasons.length;
   const outcomes: NewsCronOutcome[] = [];
 
-  if ((publication?.published ?? 0) > 0) outcomes.push("published");
+  if (published > 0) outcomes.push("published");
   if (input.staged > 0) outcomes.push("staged");
   if (held > 0) outcomes.push("held");
   if (deferred > 0) outcomes.push("deferred");
@@ -161,6 +201,21 @@ export function buildNewsCronRunReport(
               ? "deferred"
               : "no-eligible";
 
+  const holdCategories = Object.entries(publication?.holdReasonCounts ?? {})
+    .slice(0, 10)
+    .map(([reason, count]) => `${reason}: ${count}`);
+  const heldDetails = (publication?.heldDetails ?? [])
+    .slice(0, 5)
+    .map(({ slug, reasons }) => `${slug}: ${reasons.slice(0, 3).join("; ")}`);
+  const actionableReasons = [
+    ...operationalFailureReasons,
+    ...input.failureMessages,
+    ...(publication?.failureMessages ?? []),
+    ...(input.draftHoldReasons ?? []).slice(0, 5),
+    ...holdCategories,
+    ...heldDetails,
+  ].filter((reason, index, all) => reason && all.indexOf(reason) === index);
+
   return {
     ...input,
     primaryOutcome,
@@ -170,6 +225,9 @@ export function buildNewsCronRunReport(
     failed,
     held,
     deferred,
+    shouldFail: failed > 0,
+    operationalFailureReasons,
+    actionableReasons,
   };
 }
 
@@ -204,6 +262,17 @@ export async function emitNewsCronRunReport(
     newest_publication_age_hours:
       ageHours === null || ageHours === undefined ? "unknown" : String(ageHours),
     front_feed_state: report.observation?.feedState ?? "unavailable",
+    post_publish_completed: String(report.publication?.postPublishCompleted ?? 0),
+    post_publish_pending: String(report.publication?.postPublishPending ?? 0),
+    post_publish_failed: String(report.publication?.postPublishFailed ?? 0),
+    should_fail: report.shouldFail ? "1" : "0",
+    actionable_reasons:
+      report.actionableReasons
+        .slice(0, 12)
+        .join("; ")
+        .replaceAll("\r", " ")
+        .replaceAll("\n", " ")
+        .slice(0, 4_000) || "none",
   } as const;
 
   if (environment.GITHUB_OUTPUT) {
@@ -217,10 +286,7 @@ export async function emitNewsCronRunReport(
   }
 
   if (environment.GITHUB_STEP_SUMMARY) {
-    const failures = [
-      ...report.failureMessages,
-      ...(report.publication?.failureMessages ?? []),
-    ];
+    const failures = report.actionableReasons;
     const summary = [
       "### Daily news pipeline receipt",
       "",
@@ -234,11 +300,13 @@ export async function emitNewsCronRunReport(
       `| Newest publication | ${markdownValue(newestPublishedAt)} |`,
       `| Newest-publication age | ${ageHours === null || ageHours === undefined ? "unknown" : `${ageHours} hours`} |`,
       `| Front-feed state | ${report.observation?.feedState ?? "unavailable"} |`,
+      `| Post-publish completed / pending / failed | ${report.publication?.postPublishCompleted ?? 0} / ${report.publication?.postPublishPending ?? 0} / ${report.publication?.postPublishFailed ?? 0} |`,
+      `| Workflow must fail | ${report.shouldFail ? "yes" : "no"} |`,
       `| Started / finished | ${markdownValue(report.startedAt)} / ${markdownValue(report.finishedAt)} |`,
       ...(failures.length > 0
         ? [
             "",
-            "#### Failures",
+            "#### Action required",
             ...failures.map((failure) => `- ${markdownValue(failure)}`),
           ]
         : []),
@@ -249,7 +317,7 @@ export async function emitNewsCronRunReport(
 
   const notice = `outcome=${report.primaryOutcome}; outcomes=${report.outcomes.join(",")}; published=${report.publication?.published ?? 0}; staged=${report.staged}; held=${report.held}; deferred=${report.deferred}; failed=${report.failed}; publication_sha=${report.publicationShas[0] ?? "none"}; newest_age_hours=${ageHours ?? "unknown"}`;
   if (environment.GITHUB_ACTIONS === "true") {
-    const command = report.failed > 0 ? "error" : "notice";
+    const command = report.shouldFail ? "error" : "notice";
     console.log(
       `::${command} title=Daily news pipeline::${workflowCommandValue(notice)}`,
     );

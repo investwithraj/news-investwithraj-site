@@ -7,13 +7,17 @@
 
 import { NEWS_ARTICLES } from "../content/news/index.js";
 import { dubaiCalendarDate } from "../lib/dubai-time.js";
-import { draftFromCluster } from "../lib/news-review/draft-engine.js";
+import {
+  draftFromCluster,
+  planDraftCandidates,
+} from "../lib/news-review/draft-engine.js";
+import type { NewsDraft } from "../lib/news-review/types.js";
 import {
   runAutoApprove,
   type AutoApproveSummary,
 } from "../lib/news-review/auto-approve.js";
 import { clusterAndScore } from "../lib/pipeline/cluster.js";
-import { dedupeEntries, similarity } from "../lib/pipeline/dedupe.js";
+import { dedupeEntries } from "../lib/pipeline/dedupe.js";
 import {
   fetchAllSources,
   flattenEntries,
@@ -135,6 +139,7 @@ interface RunState {
   attempts: number;
   staged: number;
   draftHeld: number;
+  draftHoldReasons: string[];
   technicalFailures: number;
   failureMessages: string[];
   publication: AutoApproveSummary | null;
@@ -169,22 +174,13 @@ async function executePipeline(state: RunState): Promise<void> {
     );
   }
   const existing = (await existingResponse.json()) as {
-    drafts?: Array<{
-      provenance: { clusterId: string };
-      article: { title: string };
-    }>;
+    drafts?: NewsDraft[];
   };
   const existingDrafts = existing.drafts ?? [];
-  const draftedIds = new Set(
-    existingDrafts.map((draft) => draft.provenance.clusterId),
-  );
-  const coveredTitles = [
-    ...existingDrafts.map((draft) => draft.article.title),
-    ...NEWS_ARTICLES.filter(
+  const publishedTitles = NEWS_ARTICLES.filter(
       (article) =>
         article.status !== "research" && isToday(article.publishedAt),
-    ).map((article) => article.title),
-  ];
+    ).map((article) => article.title);
 
   const run = await fetchAllSources();
   console.log(summarizeFetchRun(run));
@@ -197,15 +193,18 @@ async function executePipeline(state: RunState): Promise<void> {
   const clusters = clusterAndScore(deduped, CANDIDATE_POOL).filter(
     (cluster) => cluster.score >= MIN_SCORE,
   );
-  const candidates = clusters.filter(
-    (cluster) =>
-      !draftedIds.has(cluster.id) &&
-      !coveredTitles.some(
-        (title) => similarity(cluster.topic, title) >= 0.55,
-      ),
-  );
+  const candidatePlan = planDraftCandidates({
+    clusters,
+    drafts: existingDrafts,
+    publishedTitles,
+    minRecoveryAgeHours: Number.parseInt(
+      process.env.AUTO_REDRAFT_MIN_AGE_HOURS ?? "24",
+      10,
+    ),
+  });
+  const candidates = candidatePlan.candidates;
   console.log(
-    `clusters >= ${MIN_SCORE}: ${clusters.length}; candidates: ${candidates.length}`,
+    `clusters >= ${MIN_SCORE}: ${clusters.length}; candidates: ${candidates.length}; recoverable held drafts: ${candidatePlan.recoverableHeld}`,
   );
   state.candidates = candidates.length;
 
@@ -244,6 +243,7 @@ async function executePipeline(state: RunState): Promise<void> {
       const reason = result.reason ?? "draft did not pass staging";
       await markClusterFailed(cluster.id, reservationToken, reason);
       state.draftHeld += 1;
+      state.draftHoldReasons.push(reason.slice(0, 500));
       console.log(`held: ${reason}`);
       continue;
     }
@@ -258,6 +258,9 @@ async function executePipeline(state: RunState): Promise<void> {
         article: result.article,
         provenance: result.provenance,
         reservationToken,
+        reviewNote: candidatePlan.recoveryDraftIds[cluster.id]
+          ? `Automated recovery draft. The previous held draft ${candidatePlan.recoveryDraftIds[cluster.id]} remains preserved for comparison.`
+          : undefined,
       }),
     });
     if (response.ok) {
@@ -299,6 +302,7 @@ async function main(): Promise<void> {
     attempts: 0,
     staged: 0,
     draftHeld: 0,
+    draftHoldReasons: [],
     technicalFailures: 0,
     failureMessages: [],
     publication: null,
@@ -333,14 +337,18 @@ async function main(): Promise<void> {
     draftingEnabled: process.env.DRAFT_ENABLED !== "0",
     ...state,
     observation,
+    maxNewestPublicationAgeHours: Number.parseInt(
+      process.env.NEWS_STALE_AFTER_HOURS ?? "36",
+      10,
+    ),
   });
   await emitNewsCronRunReport(report);
 
-  if (report.failed > 0) {
+  if (report.shouldFail) {
     throw (
       executionError ??
       new Error(
-        `daily news pipeline reported ${report.failed} operational failure(s)`,
+        `daily news pipeline requires action: ${report.actionableReasons.slice(0, 3).join("; ") || `${report.failed} operational failure(s)`}`,
       )
     );
   }

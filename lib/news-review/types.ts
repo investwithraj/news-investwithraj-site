@@ -12,7 +12,7 @@ import type { ValidationResult } from "@/lib/voice/validator";
 /** Increment whenever publication evidence policy becomes stricter. Stored
  * approvals, publication claims and receipts without this exact version are
  * intentionally manual-only. */
-export const CURRENT_EVIDENCE_POLICY_VERSION = 3 as const;
+export const CURRENT_EVIDENCE_POLICY_VERSION = 4 as const;
 
 /** The article content under review — the full NewsArticle shape minus the
  *  publication-state flag (status is set to "live" only at publish time). */
@@ -142,6 +142,8 @@ export interface NewsDraftInput {
 export interface PublicationReceipt {
   draftId: string;
   evidencePolicyVersion: typeof CURRENT_EVIDENCE_POLICY_VERSION;
+  /** Original publication claim retained so downstream retries reuse one key. */
+  claimId: string;
   slug: string;
   revision: number;
   contentHash: string;

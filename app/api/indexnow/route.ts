@@ -2,15 +2,13 @@ import { NextRequest } from "next/server";
 import { explicitlyEnabled } from "@/lib/operations/features";
 import { operationKey } from "@/lib/operations/idempotency";
 import {
-  canonicalUrls,
-  claimIndexNow,
-  completeIndexNow,
-  markIndexNowDispatched,
-} from "@/lib/search/indexnow-ledger";
-import { submitToIndexNow } from "@/lib/search/indexnow";
+  INDEXNOW_ALLOWED_HOSTS,
+  normalizeIndexNowUrls,
+} from "@/lib/search/indexnow";
+import { executeIndexNowOperation } from "@/lib/search/indexnow-operation";
+import { isIndexNowLedgerConfigured } from "@/lib/search/indexnow-ledger";
 import {
   authorizeServerMutation,
-  normalizeOwnedUrls,
   privateJson,
   publicStatusJson,
   readJsonBody,
@@ -28,10 +26,15 @@ type SubmissionBody = {
 export function GET(request: NextRequest) {
   const rejected = rejectUrlCredentials(request);
   if (rejected) return rejected;
+  const featureEnabled = explicitlyEnabled("ENABLE_INDEXNOW_SUBMISSION");
+  const durableReceiptStoreConfigured = isIndexNowLedgerConfigured();
   return publicStatusJson({
     name: "IndexNow submission",
     mutationMethod: "POST",
-    configured: explicitlyEnabled("ENABLE_INDEXNOW_SUBMISSION"),
+    featureEnabled,
+    durableReceiptStoreConfigured,
+    configured: featureEnabled && durableReceiptStoreConfigured,
+    allowedHosts: INDEXNOW_ALLOWED_HOSTS,
     status:
       "disabled by default; authenticated confirmation is required for a submission",
   });
@@ -47,10 +50,21 @@ export async function POST(request: NextRequest) {
   if (!parsed.ok) return parsed.response;
 
   const rawUrls = Array.isArray(parsed.value.urls) ? parsed.value.urls : [];
-  const urls = canonicalUrls(normalizeOwnedUrls(rawUrls, { max: 1_000 }));
+  const normalized = normalizeIndexNowUrls(rawUrls, 1_000);
+  const urls = normalized.urls;
   if (urls.length === 0) {
     return privateJson(
-      { error: "No valid news.investwithraj.com URLs were supplied." },
+      { error: "No valid canonical Invest With Raj URLs were supplied." },
+      400,
+    );
+  }
+  if (normalized.rejectedCount > 0) {
+    return privateJson(
+      {
+        error:
+          "Every URL must be an absolute HTTPS URL on the canonical host allowlist.",
+        rejectedCount: normalized.rejectedCount,
+      },
       400,
     );
   }
@@ -84,64 +98,59 @@ export async function POST(request: NextRequest) {
   const callerIdentifier =
     request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
     "unknown-production-caller";
-  const claim = await claimIndexNow(key, urls, callerIdentifier);
-  if (claim.status === "conflict") {
+  const operation = await executeIndexNowOperation({
+    idempotencyKey: key,
+    urls,
+    callerIdentifier,
+  });
+  if (operation.status === "conflict") {
     return privateJson(
       { error: "This Idempotency-Key was used for a different URL set." },
       409,
     );
   }
-  if (claim.status === "rate-limited") {
+  if (operation.status === "rate-limited") {
     return privateJson(
       { error: "IndexNow submission quota reached. Retry in the next hour." },
       429,
     );
   }
-  if (claim.status === "unavailable") {
+  if (operation.status === "unavailable") {
     return privateJson(
       { error: "The durable IndexNow submission ledger is unavailable." },
       503,
     );
   }
-  if (claim.status === "completed") {
-    return privateJson({ ...claim.result, duplicate: true, cached: true });
-  }
-  if (claim.status === "dispatched") {
+  if (operation.status === "completed") {
     return privateJson(
       {
-        ok: true,
-        duplicate: true,
-        submitted: false,
-        status: "dispatch-recorded",
+        ...operation.result,
+        duplicate: operation.duplicate,
+        cached: operation.duplicate,
+        receiptPersisted: operation.receiptPersisted,
+      },
+      operation.result.ok ? 200 : 502,
+    );
+  }
+  if (operation.status === "pending") {
+    return privateJson(
+      {
+        ok: false,
+        pending: true,
+        duplicate: operation.duplicate,
+        submitted: operation.attempted,
+        status: operation.reason,
+        receiptPersisted: operation.receiptPersisted,
+        result: operation.result,
       },
       202,
     );
   }
-  if (claim.status === "busy") {
+  if (operation.status === "busy") {
     return privateJson(
       { error: "This exact submission is already being processed." },
       409,
     );
   }
-  if (claim.status !== "owner") {
-    return privateJson(
-      { error: "The IndexNow submission could not be claimed." },
-      503,
-    );
-  }
-
-  const dispatchReserved = await markIndexNowDispatched(
-    key,
-    claim.payloadDigest,
-    claim.token,
-  );
-  if (!dispatchReserved) {
-    return privateJson(
-      { error: "The IndexNow dispatch receipt could not be reserved." },
-      503,
-    );
-  }
-  const result = await submitToIndexNow(urls);
-  await completeIndexNow(key, claim.payloadDigest, claim.token, result);
-  return privateJson(result, result.ok ? 200 : 502);
+  return privateJson({ error: "IndexNow operation failed safely." }, 503);
 }

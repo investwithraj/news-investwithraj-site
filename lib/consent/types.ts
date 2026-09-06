@@ -1,11 +1,13 @@
 // Consent management — GDPR + UAE PDPL compliant.
 //
-// 8-pixel network: GA4, Plausible, Meta Pixel, LinkedIn Insight, X Pixel,
-// TikTok Pixel, Google Ads conversion, Microsoft Clarity.
+// 11-provider network: GA4, Plausible, PostHog, Vercel Analytics, Vercel Speed
+// Insights, Meta Pixel, LinkedIn Insight, X Pixel, TikTok Pixel, Google Ads
+// conversion, Microsoft Clarity.
 //
 // Each pixel is grouped by purpose so the user can grant per-purpose consent
 // rather than per-vendor (GDPR-recommended UX pattern):
-//   - analytics: GA4, Plausible, Microsoft Clarity (session replay)
+//   - analytics: GA4, Plausible, PostHog, Microsoft Clarity (session replay),
+//     Vercel Web Analytics and Vercel Speed Insights
 //   - advertising: Meta, X, TikTok, LinkedIn (retargeting)
 //   - conversion: Google Ads conversion tag (closed-loop attribution)
 
@@ -34,7 +36,7 @@ export interface PixelDefinition {
   order: number;
 }
 
-/** The 8-pixel network. Order matters — banner respects this list. */
+/** The provider network. Order matters — banner respects this list. */
 export const PIXELS: PixelDefinition[] = [
   {
     name: "ga4",
@@ -44,7 +46,7 @@ export const PIXELS: PixelDefinition[] = [
     privacyUrl: "https://policies.google.com/privacy",
     cookies: [/^_ga/, /^_gid$/],
     purpose: "analytics",
-    envVar: "NEXT_PUBLIC_GA4_MEASUREMENT_ID",
+    envVar: "NEXT_PUBLIC_GA_MEASUREMENT_ID",
     required: false,
     default: false,
     order: 1,
@@ -59,8 +61,21 @@ export const PIXELS: PixelDefinition[] = [
     purpose: "analytics",
     envVar: "NEXT_PUBLIC_PLAUSIBLE_DOMAIN",
     required: false,
-    default: true, // cookieless — safe-by-default
+    default: false,
     order: 2,
+  },
+  {
+    name: "posthog",
+    title: "PostHog",
+    description:
+      "Consent-only, anonymous page-view measurement used to understand newsroom navigation. Query strings and reader-entered text are not sent.",
+    privacyUrl: "https://posthog.com/privacy",
+    cookies: [/^ph_/],
+    purpose: "analytics",
+    envVar: "NEXT_PUBLIC_POSTHOG_KEY",
+    required: false,
+    default: false,
+    order: 3,
   },
   {
     name: "clarity",
@@ -73,7 +88,33 @@ export const PIXELS: PixelDefinition[] = [
     envVar: "NEXT_PUBLIC_MS_CLARITY_ID",
     required: false,
     default: false,
-    order: 3,
+    order: 4,
+  },
+  {
+    name: "vercelanalytics",
+    title: "Vercel Web Analytics",
+    description:
+      "Measures aggregate page visits in the Vercel hosting platform. It remains unloaded until you explicitly opt in.",
+    privacyUrl: "https://vercel.com/legal/privacy-policy",
+    cookies: [],
+    purpose: "analytics",
+    envVar: "VERCEL",
+    required: false,
+    default: false,
+    order: 5,
+  },
+  {
+    name: "vercelspeedinsights",
+    title: "Vercel Speed Insights",
+    description:
+      "Measures real-user page performance in the Vercel hosting platform. It remains unloaded until you explicitly opt in.",
+    privacyUrl: "https://vercel.com/legal/privacy-policy",
+    cookies: [],
+    purpose: "analytics",
+    envVar: "VERCEL",
+    required: false,
+    default: false,
+    order: 6,
   },
   {
     name: "meta",
@@ -86,7 +127,7 @@ export const PIXELS: PixelDefinition[] = [
     envVar: "NEXT_PUBLIC_META_PIXEL_ID",
     required: false,
     default: false,
-    order: 4,
+    order: 7,
   },
   {
     name: "linkedin",
@@ -96,10 +137,10 @@ export const PIXELS: PixelDefinition[] = [
     privacyUrl: "https://www.linkedin.com/legal/privacy-policy",
     cookies: [/^li_/, /^lidc$/, /^bcookie$/, /^bscookie$/, /^UserMatchHistory$/],
     purpose: "advertising",
-    envVar: "NEXT_PUBLIC_LINKEDIN_INSIGHT_ID",
+    envVar: "NEXT_PUBLIC_LINKEDIN_PARTNER_ID",
     required: false,
     default: false,
-    order: 5,
+    order: 8,
   },
   {
     name: "x",
@@ -111,7 +152,7 @@ export const PIXELS: PixelDefinition[] = [
     envVar: "NEXT_PUBLIC_X_PIXEL_ID",
     required: false,
     default: false,
-    order: 6,
+    order: 9,
   },
   {
     name: "tiktok",
@@ -123,7 +164,7 @@ export const PIXELS: PixelDefinition[] = [
     envVar: "NEXT_PUBLIC_TIKTOK_PIXEL_ID",
     required: false,
     default: false,
-    order: 7,
+    order: 10,
   },
   {
     name: "googleads",
@@ -136,9 +177,23 @@ export const PIXELS: PixelDefinition[] = [
     envVar: "NEXT_PUBLIC_GOOGLE_ADS_ID",
     required: false,
     default: false,
-    order: 8,
+    order: 11,
   },
 ];
+
+/** Initial choices are strict opt-in for every optional provider. */
+export function defaultConsentSelection(): Record<string, boolean> {
+  return Object.fromEntries(
+    PIXELS.map((provider) => [provider.name, provider.default]),
+  );
+}
+
+/** "Reject all" retains only genuinely required services. */
+export function rejectAllConsentSelection(): Record<string, boolean> {
+  return Object.fromEntries(
+    PIXELS.map((provider) => [provider.name, provider.required]),
+  );
+}
 
 /** Look up a pixel by name. */
 export function getPixel(name: string): PixelDefinition | undefined {
@@ -168,5 +223,5 @@ export interface ConsentState {
 }
 
 /** Current policy version — bump to force re-consent across all users. */
-export const CONSENT_VERSION = 1;
+export const CONSENT_VERSION = 4;
 export const CONSENT_STORAGE_KEY = "iwr-news-consent";

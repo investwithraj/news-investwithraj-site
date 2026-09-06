@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 
 import {
   assessDraft,
+  classifyEvidenceRisk,
   extractFigures,
   findUnsupportedFigures,
   runAutoApprove,
+  strictlyAttributedOfficialFact,
 } from "../lib/news-review/auto-approve.js";
 import type {
   NewsDraft,
@@ -100,6 +102,7 @@ draft.provenance.score = 50;
 const originalFetch = globalThis.fetch;
 const calls: string[] = [];
 let forcePublishFailure = false;
+let deploymentResponseMode: "completed" | "pending" | null = null;
 globalThis.fetch = async (input) => {
   const url = String(input);
   calls.push(url);
@@ -114,9 +117,42 @@ globalThis.fetch = async (input) => {
       {
         claimId: "00000000-0000-4000-8000-000000000000",
         commitSha: "a".repeat(40),
+        url: `https://news.example.test/news/${draft.article.slug}`,
       },
       { status: 202 },
     );
+  }
+  if (/\/api\/news\/draft\/[^/]+\/deployment$/.test(url)) {
+    if (deploymentResponseMode === "completed") {
+      return Response.json({
+        ok: true,
+        publicationState: "completed",
+        postPublish: {
+          ok: true,
+          pending: false,
+          code: "completed",
+          indexing: { status: "completed" },
+          distribution: { status: "not-applicable" },
+        },
+      });
+    }
+    if (deploymentResponseMode === "pending") {
+      return Response.json(
+        {
+          ok: false,
+          publicationState: "completed",
+          postPublish: {
+            ok: false,
+            pending: true,
+            code: "pending",
+            indexing: { status: "pending" },
+            distribution: { status: "pending" },
+            operatorAction: "Do not replay this operation key.",
+          },
+        },
+        { status: 202 },
+      );
+    }
   }
   throw new Error(`Unexpected request: ${url}`);
 };
@@ -171,10 +207,10 @@ async function main() {
       "Dubai Land Department confirms its own regulatory update";
     assert.equal(
       assessDraft(officialDraft).evidenceLane,
-      "corroborated-analysis",
+      "official-fact",
     );
-    assert.equal(assessDraft(officialDraft).requiredPublisherCount, 2);
-    assert.equal(assessDraft(officialDraft).verdict, "manual");
+    assert.equal(assessDraft(officialDraft).requiredPublisherCount, 1);
+    assert.equal(assessDraft(officialDraft).verdict, "auto-approve");
 
     for (const [id, claim] of [
       ["broad-market-growth", "The UAE property market grew 12% last year."],
@@ -191,10 +227,6 @@ async function main() {
       [
         "lowercase-third-party-sentence",
         "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
-      ],
-      [
-        "dld-reports-emaar-launch",
-        "DLD reported that Emaar launched its own project.",
       ],
       [
         "dld-questioned-figures",
@@ -241,10 +273,202 @@ async function main() {
     developerDraft.article.title = "Aldar announces its own project update";
     assert.equal(
       assessDraft(developerDraft).evidenceLane,
-      "corroborated-analysis",
+      "official-fact",
     );
-    assert.equal(assessDraft(developerDraft).requiredPublisherCount, 2);
-    assert.equal(assessDraft(developerDraft).verdict, "manual");
+    assert.equal(assessDraft(developerDraft).requiredPublisherCount, 1);
+    assert.equal(assessDraft(developerDraft).verdict, "auto-approve");
+
+    const nakheelUrl =
+      "https://www.nakheel.com/en/media-centre/news/test";
+    const riskyOfficialClaims = [
+      "Nakheel announced Palm Jebel Ali is certain to become Dubai\u2019s most desirable investment, making buyers wealthier.",
+      "Nakheel announced Palm Jebel Ali as a world-class investment opportunity and an irresistible choice for buyers.",
+      "Nakheel announced Palm Jebel Ali would deliver capital appreciation and profitable returns for purchasers.",
+      "Nakheel announced investors should secure a home now because it is the smart investment choice.",
+      "Nakheel announced Palm Jebel Ali will be more valuable than competing communities.",
+      "Nakheel announced Palm Jebel Ali as Dubai's number one place to buy and the best choice for investors.",
+    ] as const;
+    for (const [index, claim] of riskyOfficialClaims.entries()) {
+      const riskyDeveloperDraft = oneSourceDraft({
+        id: `single-developer-promotional-${index}`,
+        url: nakheelUrl,
+        source: "Nakheel",
+        category: "launch",
+        body: claim,
+      });
+      riskyDeveloperDraft.article.title = claim;
+      riskyDeveloperDraft.article.subtitle = claim;
+      riskyDeveloperDraft.article.metaDescription = claim;
+      riskyDeveloperDraft.article.tldr = [claim, claim, claim];
+      riskyDeveloperDraft.provenance.fetchedEvidence = [
+        evidenceRecord(nakheelUrl, `${claim} ${claim}`),
+      ];
+
+      assert.equal(
+        classifyEvidenceRisk(riskyDeveloperDraft.article)
+          .requiresCorroboration,
+        true,
+        claim,
+      );
+      assert.equal(
+        strictlyAttributedOfficialFact(
+          riskyDeveloperDraft.article,
+          [nakheelUrl],
+        ).ok,
+        false,
+        claim,
+      );
+      const riskyAssessment = assessDraft(riskyDeveloperDraft);
+      assert.equal(riskyAssessment.evidenceLane, "corroborated-analysis", claim);
+      assert.equal(riskyAssessment.requiredPublisherCount, 2, claim);
+      assert.equal(riskyAssessment.verdict, "manual", claim);
+    }
+
+    const failClosedOfficialClaims = [
+      "Nakheel announced the project offers an enviable waterfront lifestyle.",
+      "Nakheel announced the project will redefine coastal living.",
+      "Nakheel announced buyers can build long-term equity through the project.",
+      "Nakheel announced the Palm Jebel Ali launch and the project offers residents a private-island lifestyle.",
+      "Nakheel announced the project creates generational equity for owners.",
+      "Nakheel announced its opening will reshape how families live by the sea.",
+    ] as const;
+    for (const [index, claim] of failClosedOfficialClaims.entries()) {
+      const failClosedDraft = oneSourceDraft({
+        id: `single-developer-positive-grammar-rejection-${index}`,
+        url: nakheelUrl,
+        source: "Nakheel",
+        category: "launch",
+        body: claim,
+      });
+      failClosedDraft.article.title = claim;
+      failClosedDraft.provenance.fetchedEvidence = [
+        evidenceRecord(nakheelUrl, claim),
+      ];
+
+      assert.equal(
+        classifyEvidenceRisk(failClosedDraft.article).requiresCorroboration,
+        false,
+        `the positive grammar, not a phrase deny-list, must reject: ${claim}`,
+      );
+      assert.match(
+        strictlyAttributedOfficialFact(failClosedDraft.article, [nakheelUrl])
+          .reason,
+        /outside the narrow official-act/u,
+        claim,
+      );
+      const assessment = assessDraft(failClosedDraft);
+      assert.equal(assessment.requiredPublisherCount, 2, claim);
+      assert.equal(assessment.verdict, "manual", claim);
+    }
+
+    const permittedOfficialFacts = [
+      "Nakheel announced the Palm Jebel Ali launch.",
+      "Nakheel confirmed the launch location at Dubai Islands.",
+      "Nakheel stated the opening date of 12 August 2026.",
+      "Nakheel confirmed a quantity of 100 units.",
+      "Nakheel stated the price of AED 2 million.",
+      "Nakheel confirmed a payment milestone of 20%.",
+    ] as const;
+    for (const [index, claim] of permittedOfficialFacts.entries()) {
+      const factualDraft = oneSourceDraft({
+        id: `single-developer-positive-grammar-fact-${index}`,
+        url: nakheelUrl,
+        source: "Nakheel",
+        category: "launch",
+        body: claim,
+      });
+      factualDraft.article.title = claim;
+      factualDraft.provenance.fetchedEvidence = [
+        evidenceRecord(nakheelUrl, `${claim} ${claim}`),
+      ];
+
+      assert.equal(
+        strictlyAttributedOfficialFact(factualDraft.article, [nakheelUrl]).ok,
+        true,
+        claim,
+      );
+      const assessment = assessDraft(factualDraft);
+      assert.equal(assessment.requiredPublisherCount, 1, claim);
+      assert.equal(assessment.verdict, "auto-approve", claim);
+    }
+
+    const uncataloguedPromotion = oneSourceDraft({
+      id: "single-developer-uncatalogued-promotion",
+      url: nakheelUrl,
+      source: "Nakheel",
+      category: "launch",
+      body: "Nakheel announced Palm Jebel Ali brings joy to everyone.",
+    });
+    uncataloguedPromotion.article.title =
+      "Nakheel announced Palm Jebel Ali brings joy to everyone";
+    uncataloguedPromotion.provenance.fetchedEvidence = [
+      evidenceRecord(
+        nakheelUrl,
+        "Nakheel announced Palm Jebel Ali brings joy to everyone in its official media statement.",
+      ),
+    ];
+    assert.equal(
+      classifyEvidenceRisk(uncataloguedPromotion.article)
+        .requiresCorroboration,
+      false,
+      "an unknown promotional phrase exercises the separate fail-closed scope gate",
+    );
+    assert.match(
+      strictlyAttributedOfficialFact(
+        uncataloguedPromotion.article,
+        [nakheelUrl],
+      ).reason,
+      /outside the narrow official-act/u,
+    );
+    assert.equal(assessDraft(uncataloguedPromotion).requiredPublisherCount, 2);
+    assert.equal(assessDraft(uncataloguedPromotion).verdict, "manual");
+
+    const semicolonAttributionBleed = oneSourceDraft({
+      id: "single-developer-semicolon-attribution-bleed",
+      url: nakheelUrl,
+      source: "Nakheel",
+      category: "launch",
+      body:
+        "Nakheel announced its Palm Jebel Ali launch; residents received private beach-club access.",
+    });
+    semicolonAttributionBleed.article.title =
+      "Nakheel announced its Palm Jebel Ali launch";
+    semicolonAttributionBleed.provenance.fetchedEvidence = [
+      evidenceRecord(
+        nakheelUrl,
+        "Nakheel announced its Palm Jebel Ali launch; residents received private beach-club access in the official release.",
+      ),
+    ];
+    assert.equal(
+      assessDraft(semicolonAttributionBleed).requiredPublisherCount,
+      2,
+      "attribution before a semicolon must not authorise a separate claim",
+    );
+    assert.equal(assessDraft(semicolonAttributionBleed).verdict, "manual");
+
+    const attributedOfficialThirdPartyFact = {
+      ...officialDraft,
+      id: "dld-reports-emaar-launch",
+      article: {
+        ...officialDraft.article,
+        body:
+          "Dubai Land Department confirmed AED 10 million. DLD reported that Emaar launched its own project.",
+      },
+      provenance: {
+        ...officialDraft.provenance,
+        fetchedEvidence: [
+          evidenceRecord(
+            officialDraft.article.citations[0].url,
+            "Dubai Land Department confirmed AED 10 million. DLD reported that Emaar launched its own project.",
+          ),
+        ],
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(attributedOfficialThirdPartyFact).verdict,
+      "auto-approve",
+      "a regulator's strictly attributed factual statement may use its primary record",
+    );
 
     const institutionalDraft = oneSourceDraft({
       id: "single-institutional-release",
@@ -736,6 +960,48 @@ async function main() {
     assert.ok(calls[1].includes(draft.id), "newest passing draft must publish first");
 
     calls.length = 0;
+    deploymentResponseMode = "completed";
+    const verifiedResult = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: true,
+      publishLimit: 1,
+      deploymentAttempts: 1,
+      deploymentDelayMs: 0,
+      log: () => undefined,
+    });
+    deploymentResponseMode = null;
+    assert.equal(verifiedResult.deploymentVerified, 1);
+    assert.equal(verifiedResult.postPublishCompleted, 1);
+    assert.equal(verifiedResult.postPublishPending, 0);
+    assert.equal(verifiedResult.postPublishFailed, 0);
+    assert.equal(verifiedResult.failed, 0);
+    assert.equal(calls.length, 3);
+    assert.match(calls[2], /\/deployment$/u);
+
+    calls.length = 0;
+    deploymentResponseMode = "pending";
+    const pendingDistribution = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: true,
+      publishLimit: 1,
+      deploymentAttempts: 3,
+      deploymentDelayMs: 0,
+      log: () => undefined,
+    });
+    deploymentResponseMode = null;
+    assert.equal(pendingDistribution.deploymentVerified, 1);
+    assert.equal(pendingDistribution.postPublishPending, 1);
+    assert.equal(pendingDistribution.failed, 1);
+    assert.equal(
+      calls.length,
+      3,
+      "a completed deployment with pending downstream receipts must not replay the same key",
+    );
+    assert.match(pendingDistribution.failureMessages[0] ?? "", /downstream/u);
+
+    calls.length = 0;
     const backlogResult = await runAutoApprove({
       site: "https://news.example.test",
       secret: "s".repeat(32),
@@ -787,7 +1053,7 @@ async function main() {
     assert.equal(noEligibleResult.failed, 0);
     assert.equal(calls.length, 1, "No eligible story must not call the publish endpoint");
     console.log(
-      "Auto-publish regression passed: universal two-publisher, contextual-range and timely-backlog gates are enforced.",
+      "Auto-publish regression passed: narrow official facts, two-publisher analysis, contextual figures and timely backlog gates are enforced.",
     );
   } finally {
     globalThis.fetch = originalFetch;

@@ -51,11 +51,18 @@ export function hasConsented(): boolean {
   return readConsent() !== null;
 }
 
+/** Only the literal boolean true is an opt-in. Missing, malformed and stale
+ * provider values all fail closed. */
+export function hasExplicitConsent(
+  state: ConsentState | null | undefined,
+  serviceName: string,
+): boolean {
+  return state?.consents?.[serviceName] === true;
+}
+
 /** Is a specific service allowed? */
 export function isAllowed(serviceName: string): boolean {
-  const state = readConsent();
-  if (!state) return false;
-  return state.consents[serviceName] === true;
+  return hasExplicitConsent(readConsent(), serviceName);
 }
 
 /** Purge cookies for a withdrawn service. */

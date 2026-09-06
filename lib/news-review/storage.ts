@@ -978,6 +978,7 @@ export async function completeDraftPublication(
   const receipt: PublicationReceipt = {
     draftId: next.id,
     evidencePolicyVersion: CURRENT_EVIDENCE_POLICY_VERSION,
+    claimId,
     slug: next.article.slug,
     revision: next.revision,
     contentHash: next.contentHash,

@@ -232,6 +232,7 @@ async function main() {
     const commitReceipt =
       await storage.getPublicationReceiptByCommitSha(commitSha);
     assert.equal(receipt?.commitSha, commitSha);
+    assert.equal(receipt?.claimId, claimId);
     assert.equal(
       receipt?.evidencePolicyVersion,
       CURRENT_EVIDENCE_POLICY_VERSION,

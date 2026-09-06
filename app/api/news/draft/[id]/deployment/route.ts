@@ -7,6 +7,11 @@
 import { NextRequest } from "next/server";
 import { reassessPublicationEvidence } from "@/lib/news-review/integrity";
 import {
+  notifyVerifiedPostPublish,
+  postPublishCompletionStatus,
+  type VerifiedPostPublishResult,
+} from "@/lib/news-review/post-publish";
+import {
   completeDraftPublication,
   DraftConflictError,
   getPublicationReceipt,
@@ -27,6 +32,13 @@ const FETCH_TIMEOUT_MS = 8_000;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
+}
+
+function postPublishError(result: VerifiedPostPublishResult): string | null {
+  if (result.ok) return null;
+  return result.pending
+    ? "Publication is live, but downstream discovery is pending or unknown."
+    : "Publication is live, but downstream search discovery failed.";
 }
 
 async function readBoundedText(response: Response): Promise<string> {
@@ -113,12 +125,34 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           409,
         );
       }
+      if (priorReceipt.claimId !== claimId) {
+        return privateJson(
+          {
+            error:
+              "The completed receipt does not match this publication claim.",
+          },
+          409,
+        );
+      }
+      const postPublish = await notifyVerifiedPostPublish({
+        origin: new URL(
+          process.env.NEXT_PUBLIC_SITE_URL ??
+            "https://news.investwithraj.com",
+        ).origin,
+        secret: process.env.POST_PUBLISH_SECRET,
+        claimId: priorReceipt.claimId,
+        commitSha: deployedCommitSha,
+        canonicalUrl: priorReceipt.url,
+      });
+      const status = postPublishCompletionStatus(postPublish);
       return privateJson({
-        ok: true,
+        ok: postPublish.ok,
         publicationState: "completed",
         receipt: priorReceipt,
         idempotent: true,
-      });
+        postPublish,
+        error: postPublishError(postPublish) ?? undefined,
+      }, status);
     }
     const draft = await getStoredDraft(id);
     if (!draft) return privateJson({ error: "Draft not found." }, 404);
@@ -194,14 +228,31 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     const completed = await completeDraftPublication(id, claimId);
-    return privateJson({
+    const postPublish = await notifyVerifiedPostPublish({
+      origin: expectedOrigin,
+      secret: process.env.POST_PUBLISH_SECRET,
+      claimId,
+      commitSha: deployedCommitSha,
+      canonicalUrl: canonical.toString(),
+    });
+    const completion = {
       ok: true,
       publicationState: "completed",
       slug: completed.article.slug,
       url: completed.publication?.url,
       commitSha: completed.publication?.commitSha,
       archived: true,
-    });
+      postPublish,
+    };
+    const status = postPublishCompletionStatus(postPublish);
+    return privateJson(
+      {
+        ...completion,
+        ok: postPublish.ok,
+        error: postPublishError(postPublish) ?? undefined,
+      },
+      status,
+    );
   } catch (error) {
     if (error instanceof DraftConflictError) {
       return privateJson({ error: error.message }, 409);

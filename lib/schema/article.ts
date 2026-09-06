@@ -17,7 +17,10 @@ import { newsWebsiteRef } from "./website";
 
 /** NewsArticle JSON-LD — the headliner schema for /news/[slug] pages.
  *  Google News + Top Stories indexing depends on this being correct. */
-export function newsArticleSchema(article: NewsArticle): Record<string, unknown> {
+export function newsArticleSchema(
+  article: NewsArticle,
+  socialImageUrl?: string,
+): Record<string, unknown> {
   const url = `${SITE.url}/news/${article.slug}`;
   const hasImage = hasVerifiedEditorialImage(article);
   return {
@@ -26,7 +29,9 @@ export function newsArticleSchema(article: NewsArticle): Record<string, unknown>
     "@id": `${url}#article`,
     headline: article.title,
     description: article.metaDescription ?? article.subtitle,
-    ...(hasImage ? { image: { "@id": `${url}#primaryimage` } } : {}),
+    ...(socialImageUrl || hasImage
+      ? { image: { "@id": `${url}#primaryimage` } }
+      : {}),
     datePublished: article.publishedAt,
     dateModified: article.modifiedAt,
     author: newsOrgRef,

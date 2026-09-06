@@ -7,7 +7,7 @@
 import { NextRequest } from "next/server";
 
 import { assessDraft } from "@/lib/news-review/auto-approve";
-import { authorizeMutation } from "@/lib/news-review/auth";
+import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import { githubConfigured, publishArticleCommit } from "@/lib/news-review/github";
 import {
   draftContentHash,
@@ -19,9 +19,14 @@ import {
   WITHHELD_MEDIA_APPROVAL_HASH,
 } from "@/lib/news-review/integrity";
 import {
+  publicationFailureDiagnostic,
+  type PublicationStage,
+} from "@/lib/news-review/publication-diagnostic";
+import {
   claimDraftPublication,
   DraftConflictError,
   getDraft,
+  getStorageBackend,
   recordDraftPublicationCommit,
   updateReviewedDraft,
   validateArticle,
@@ -50,6 +55,54 @@ function validHash(value: unknown): value is string {
   return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 }
 
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  const auth = await authorize(req);
+  if (!auth.ok) return privateJson({ error: auth.message }, auth.status ?? 401);
+  const { id } = await params;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+    return privateJson({ error: "Invalid draft ID." }, 400);
+  }
+  try {
+    const draft = await getDraft(id);
+    const assessment = draft ? assessDraft(draft) : null;
+    const blockers: string[] = [];
+    const storageBackend = getStorageBackend();
+    if (!githubConfigured()) blockers.push("github-not-configured");
+    if (process.env.NODE_ENV === "production" && storageBackend !== "vercel-kv") {
+      blockers.push("durable-storage-not-configured");
+    }
+    if (!draft) blockers.push("draft-not-found");
+    if (draft?.publication?.state === "publishing") {
+      blockers.push("publication-already-in-progress");
+    }
+    if (assessment?.verdict === "manual") {
+      blockers.push("evidence-or-validator-hold");
+    }
+    return privateJson({
+      ok: blockers.length === 0,
+      capability: {
+        githubPublicationConfigured: githubConfigured(),
+        durableStorageBackend: storageBackend,
+        draftFound: Boolean(draft),
+        evidenceLane: assessment?.evidenceLane ?? null,
+        requiredPublisherCount: assessment?.requiredPublisherCount ?? null,
+        automatedEvidenceReady: assessment?.verdict === "auto-approve",
+        publicationState: draft?.publication?.state ?? "not-started",
+      },
+      blockers,
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    return privateJson(
+      {
+        error: "Publication capability check could not read the draft store.",
+        diagnostic: publicationFailureDiagnostic(error, "draft-read"),
+      },
+      503,
+    );
+  }
+}
+
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const auth = await authorizeMutation(req);
   if (!auth.ok) {
@@ -58,7 +111,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const automated = auth.credential === "server-secret";
   if (!githubConfigured()) {
     return privateJson(
-      { error: "Publishing is disabled because GitHub is not configured." },
+      {
+        error: "Publishing is disabled because GitHub is not configured.",
+        diagnostic: publicationFailureDiagnostic(
+          new Error("GitHub is not configured."),
+          "github-commit",
+        ),
+      },
       503,
     );
   }
@@ -93,6 +152,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     );
   }
 
+  let stage: PublicationStage = "draft-read";
   try {
     let draft = await getDraft(id);
     if (!draft) return privateJson({ error: "Draft not found." }, 404);
@@ -186,6 +246,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    stage = "integrity-validation";
     const articleResult = validateDraftArticleShape(draft.article);
     if (!articleResult.ok) {
       return privateJson({ error: articleResult.error }, 422);
@@ -223,6 +284,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    stage = "evidence-validation";
     const assessment = assessDraft({ ...draft, validator });
     if (assessment.verdict !== "auto-approve") {
       return privateJson(
@@ -292,6 +354,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    stage = "media-validation";
     if (!draft.mediaApproval && !automated) {
       return privateJson(
         { error: "The immutable UHD media approval ledger is missing." },
@@ -315,6 +378,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    stage = "publication-claim";
     const claim = await claimDraftPublication(id, {
       revision: draft.revision,
       recordVersion: draft.recordVersion,
@@ -362,6 +426,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       throw new DraftConflictError("Publication claim was not persisted.");
     }
     const slug = draft.article.slug;
+    stage = "github-commit";
     const commitSha = await publishArticleCommit(
       slug,
       draft.article,
@@ -369,6 +434,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       draft.contentHash,
     );
     const url = `${NEWS_SITE}/news/${slug}`;
+    stage = "receipt-recording";
     await recordDraftPublicationCommit(
       id,
       publication.claimId,
@@ -396,14 +462,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     if (error instanceof DraftConflictError) {
       return privateJson({ error: error.message }, 409);
     }
+    const diagnostic = publicationFailureDiagnostic(error, stage);
     return privateJson(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Publication could not be committed.",
+        error: `Publication failed during ${stage}.`,
+        diagnostic,
       },
-      502,
+      diagnostic.code === "draft-storage-unavailable" ? 503 : 502,
     );
   }
 }
