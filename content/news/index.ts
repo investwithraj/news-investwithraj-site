@@ -69,8 +69,10 @@ import { article as art_2026_07_28_burtville_launches_405_unit_bab_al_qasr_garde
 import { article as art_2026_08_13_dubai_luxury_segment_posts_aed_87_71bn_as_conviction } from "./2026-08-13-dubai-luxury-segment-posts-aed-87-71bn-as-conviction";
 import { article as art_2026_08_13_omniyat_acquires_36_600_sqm_marjan_beach_plot_in_first_rak } from "./2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak";
 import { article as art_2026_08_20_82_of_uae_residents_plan_waterfront_move_as_values_surge } from "./2026-08-20-82-of-uae-residents-plan-waterfront-move-as-values-surge";
+import { article as art_2026_09_06_aldar_completes_abu_dhabi_s_first_off_plan_mortgage_under } from "./2026-09-06-aldar-completes-abu-dhabi-s-first-off-plan-mortgage-under";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_09_06_aldar_completes_abu_dhabi_s_first_off_plan_mortgage_under,
   art_2026_08_20_82_of_uae_residents_plan_waterfront_move_as_values_surge,
   art_2026_08_13_omniyat_acquires_36_600_sqm_marjan_beach_plot_in_first_rak,
   art_2026_08_13_dubai_luxury_segment_posts_aed_87_71bn_as_conviction,
