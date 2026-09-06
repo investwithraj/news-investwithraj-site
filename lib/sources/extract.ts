@@ -8,6 +8,171 @@ import { safeFetchBytes } from "@/lib/sources/safe-fetch";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const MAX_EXTRACT_CHARS = 50_000;
+// Publisher pages can contain more than a megabyte of client-side application
+// state. The verified AMP representations contain the same article metadata
+// and copy without that payload, so article evidence stays inside a small,
+// explicit memory ceiling instead of continually raising the generic limit.
+const MAX_ARTICLE_RESPONSE_BYTES = 768 * 1024;
+
+function normalisedHostname(value: string): string {
+  return value.toLowerCase().replace(/^www\./, "");
+}
+
+/**
+ * Return bounded, same-publisher representations in fetch order. These are
+ * publisher-owned article URLs, not caches or extraction proxies. The original
+ * URL remains the final fallback and every request still passes through the
+ * HTTPS allowlist, DNS pinning and redirect checks in safe-fetch.
+ */
+export function publisherArticleFetchCandidates(value: string): string[] {
+  let original: URL;
+  try {
+    original = new URL(value);
+  } catch {
+    return [value];
+  }
+
+  const candidates: string[] = [];
+  const host = normalisedHostname(original.hostname);
+  if (host === "khaleejtimes.com") {
+    const amp = new URL(original);
+    amp.searchParams.set("amp", "1");
+    candidates.push(amp.toString());
+  } else if (
+    host === "gulfnews.com" &&
+    !original.pathname.toLowerCase().startsWith("/amp/story/")
+  ) {
+    const amp = new URL(original);
+    amp.pathname = `/amp/story${original.pathname}`;
+    candidates.push(amp.toString());
+  }
+  candidates.push(original.toString());
+  return [...new Set(candidates)];
+}
+
+function normaliseArticleIdentity(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return null;
+    let pathname: string;
+    try {
+      pathname = decodeURIComponent(url.pathname);
+    } catch {
+      pathname = url.pathname;
+    }
+    pathname = pathname.replace(/\/{2,}/g, "/").replace(/\/$/, "") || "/";
+    return `${normalisedHostname(url.hostname)}${pathname}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function normaliseFetchLocation(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return null;
+    url.hash = "";
+    url.hostname = normalisedHostname(url.hostname);
+    url.pathname = url.pathname.replace(/\/{2,}/g, "/").replace(/\/$/, "") || "/";
+    url.searchParams.sort();
+    return url.toString().toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function publisherIdentityTargets(html: string): {
+  canonical: string[];
+  openGraph: string[];
+} {
+  const canonical: string[] = [];
+  const openGraph: string[] = [];
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const attributes = parseAttributes(match[0]);
+    if (!(attributes.rel ?? "").toLowerCase().split(/\s+/).includes("canonical")) {
+      continue;
+    }
+    canonical.push(attributes.href ?? "");
+  }
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const attributes = parseAttributes(match[0]);
+    const key = (attributes.property ?? attributes.name ?? "").toLowerCase();
+    if (key === "og:url") openGraph.push(attributes.content ?? "");
+  }
+  return { canonical, openGraph };
+}
+
+function identitySetMatchesOriginal(
+  targets: string[],
+  baseUrl: string,
+  originalIdentity: string,
+): boolean {
+  if (targets.length === 0) return false;
+  const identities = targets.map((target) => {
+    try {
+      return normaliseArticleIdentity(new URL(target, baseUrl).toString());
+    } catch {
+      return null;
+    }
+  });
+  if (identities.some((identity) => identity === null)) return false;
+  const uniqueIdentities = new Set(identities);
+  return uniqueIdentities.size === 1 && uniqueIdentities.has(originalIdentity);
+}
+
+/**
+ * A synthetic lightweight URL is evidence only when the publisher page itself
+ * declares that it represents the cited canonical article. Requiring this
+ * proof prevents a 200 soft-404, homepage, or unrelated same-domain redirect
+ * from becoming evidence merely because it has readable text and a date.
+ */
+export function publisherRepresentationMatchesCitation(
+  html: string,
+  originalUrl: string,
+  requestedUrl: string,
+  finalUrl: string,
+): boolean {
+  const originalFetchLocation = normaliseFetchLocation(originalUrl);
+  const requestedFetchLocation = normaliseFetchLocation(requestedUrl);
+  if (
+    originalFetchLocation !== null &&
+    requestedFetchLocation === originalFetchLocation
+  ) {
+    // The caller requested the citation itself; retain the pre-existing direct
+    // fetch behavior. Redirect publisher identity is checked by the evidence
+    // gate after this function returns.
+    return true;
+  }
+
+  const originalIdentity = normaliseArticleIdentity(originalUrl);
+  const requestedIdentity = normaliseArticleIdentity(requestedUrl);
+  const finalIdentity = normaliseArticleIdentity(finalUrl);
+  if (
+    originalIdentity === null ||
+    requestedIdentity === null ||
+    finalIdentity === null ||
+    (finalIdentity !== requestedIdentity && finalIdentity !== originalIdentity)
+  ) {
+    return false;
+  }
+
+  const targets = publisherIdentityTargets(html);
+  // rel=canonical is the authoritative publisher identity signal. A matching
+  // og:url must never override a conflicting canonical. Duplicate tags are
+  // tolerated only when they all normalize to the same cited identity.
+  if (targets.canonical.length > 0) {
+    return identitySetMatchesOriginal(
+      targets.canonical,
+      finalUrl,
+      originalIdentity,
+    );
+  }
+  return identitySetMatchesOriginal(
+    targets.openGraph,
+    finalUrl,
+    originalIdentity,
+  );
+}
 
 function decodeEntities(s: string): string {
   return s
@@ -175,21 +340,28 @@ export function extractMainText(html: string, maxChars = 9_000): string {
     [...cleaned.matchAll(/<(?:article|main)\b[^>]*>([\s\S]*?)<\/(?:article|main)>/gi)]
       .map((match) => match[1])
       .sort((left, right) => right.length - left.length)[0] ?? cleaned;
-  const paras = [...articleRegion.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
-    .map((match) =>
-      decodeEntities(match[1].replace(/<[^>]+>/g, " "))
-        .replace(/\s+/g, " ")
-        .trim(),
-    )
-    .filter((paragraph) => paragraph.length > 40);
+  const publisherBodyRegion = [
+    ...cleaned.matchAll(
+      /<(?:div|section)\b[^>]*class\s*=\s*(?:"[^"]*(?:entry-content|article[-_ ]body|story[-_ ]body|article[-_ ]content|story[-_ ]content)[^"]*"|'[^']*(?:entry-content|article[-_ ]body|story[-_ ]body|article[-_ ]content|story[-_ ]content)[^']*')[^>]*>([\s\S]*?)<\/(?:div|section)>/gi,
+    ),
+  ].map((match) => match[1]).join(" ");
+  const paragraphs = (region: string): string =>
+    [...region.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+      .map((match) =>
+        decodeEntities(match[1].replace(/<[^>]+>/g, " "))
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
+      .filter((paragraph) => paragraph.length > 40)
+      .join("  ");
 
-  let text = paras.join("  ");
-  if (text.length < 200) {
-    for (const value of parseJsonLdBlocks(html)) {
-      const articleBody = findJsonLdString(value, "articleBody");
-      if (articleBody && articleBody.length > text.length) {
-        text = decodeEntities(articleBody).replace(/\s+/g, " ").trim();
-      }
+  let text = [paragraphs(articleRegion), paragraphs(publisherBodyRegion)]
+    .sort((left, right) => right.length - left.length)[0] ?? "";
+  for (const value of parseJsonLdBlocks(html)) {
+    const articleBody = findJsonLdString(value, "articleBody");
+    if (articleBody) {
+      const structuredText = decodeEntities(articleBody).replace(/\s+/g, " ").trim();
+      if (structuredText.length > text.length) text = structuredText;
     }
   }
   if (text.length < 200) {
@@ -241,39 +413,97 @@ export async function fetchArticleText(
   url: string,
   options: { allowedDomains: string[]; timeoutMs?: number },
 ): Promise<FetchedArticleText> {
-  try {
-    const result = await safeFetchBytes(url, {
-      allowedDomains: options.allowedDomains,
-      userAgent: UA,
-      accept: "text/html,application/xhtml+xml",
-      allowedContentTypes: /(?:text\/html|application\/xhtml\+xml)/i,
-      maxBytes: 512 * 1024,
-      timeoutMs: options.timeoutMs ?? 9_000,
-      maxRedirects: 3,
-    });
-    const html = result.bytes.toString("utf8");
-    const text = extractMainText(html);
-    const publicationDate = extractPublicationDate(html);
-    return {
-      text,
-      finalUrl: result.finalUrl,
-      publishedAt: publicationDate.publishedAt,
-      publicationDateSource: publicationDate.source,
-      diagnostic: text.trim().length >= 80
-        ? { code: "ok", message: `fetched ${text.length} readable characters` }
-        : {
-            code: "empty-text",
-            message: `fetched HTML but extracted only ${text.trim().length} readable characters`,
+  const timeoutMs = options.timeoutMs ?? 9_000;
+  const deadline = Date.now() + timeoutMs;
+  let bestResult: FetchedArticleText | null = null;
+  let lastError: FetchedArticleText | null = null;
+
+  for (const candidate of publisherArticleFetchCandidates(url)) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs < 1_000) break;
+    try {
+      const result = await safeFetchBytes(candidate, {
+        allowedDomains: options.allowedDomains,
+        userAgent: UA,
+        accept: "text/html,application/xhtml+xml",
+        allowedContentTypes: /(?:text\/html|application\/xhtml\+xml)/i,
+        maxBytes: MAX_ARTICLE_RESPONSE_BYTES,
+        timeoutMs: remainingMs,
+        maxRedirects: 3,
+      });
+      const html = result.bytes.toString("utf8");
+      if (
+        !publisherRepresentationMatchesCitation(
+          html,
+          url,
+          candidate,
+          result.finalUrl,
+        )
+      ) {
+        lastError = {
+          text: "",
+          finalUrl: null,
+          publishedAt: null,
+          publicationDateSource: null,
+          diagnostic: {
+            code: "redirect",
+            message:
+              "Publisher representation does not canonically identify the cited article.",
           },
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown source fetch failure";
-    return {
-      text: "",
-      finalUrl: null,
-      publishedAt: null,
-      publicationDateSource: null,
-      diagnostic: { code: classifyFetchError(message), message },
-    };
+        };
+        continue;
+      }
+      const text = extractMainText(html);
+      const publicationDate = extractPublicationDate(html);
+      const fetched: FetchedArticleText = {
+        text,
+        finalUrl: result.finalUrl,
+        publishedAt: publicationDate.publishedAt,
+        publicationDateSource: publicationDate.source,
+        diagnostic: text.trim().length >= 80
+          ? { code: "ok", message: `fetched ${text.length} readable characters` }
+          : {
+              code: "empty-text",
+              message: `fetched HTML but extracted only ${text.trim().length} readable characters`,
+            },
+      };
+      if (
+        fetched.text.trim().length >= 80 &&
+        fetched.publishedAt !== null &&
+        fetched.publicationDateSource !== null
+      ) {
+        return fetched;
+      }
+      const fetchedScore =
+        Number(fetched.text.trim().length >= 80) +
+        Number(fetched.publishedAt !== null) +
+        Number(fetched.finalUrl !== null);
+      const bestScore = bestResult
+        ? Number(bestResult.text.trim().length >= 80) +
+          Number(bestResult.publishedAt !== null) +
+          Number(bestResult.finalUrl !== null)
+        : -1;
+      if (fetchedScore > bestScore) bestResult = fetched;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown source fetch failure";
+      lastError = {
+        text: "",
+        finalUrl: null,
+        publishedAt: null,
+        publicationDateSource: null,
+        diagnostic: { code: classifyFetchError(message), message },
+      };
+    }
   }
+
+  return bestResult ?? lastError ?? {
+    text: "",
+    finalUrl: null,
+    publishedAt: null,
+    publicationDateSource: null,
+    diagnostic: {
+      code: "timeout",
+      message: "Source fetch timed out before a publisher representation resolved.",
+    },
+  };
 }

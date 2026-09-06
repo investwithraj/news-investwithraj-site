@@ -2,8 +2,6 @@ name: news-cron
 on:
   schedule:
     - cron: "7 3 * * *"
-    - cron: "7 9 * * *"
-    - cron: "7 15 * * *"
   workflow_dispatch: {}
 concurrency:
   group: news-cron-production
@@ -34,10 +32,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AUTO_APPROVE: "1"
           AUTO_PUBLISH_LIMIT: "1"
-          # Morning researches + publishes the latest story. Midday and evening
-          # skip paid drafting and publish the strongest still-timely backlog item.
-          DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && '1' || (github.event.schedule == '7 3 * * *' && '1' || '0') }}
-          AUTO_PUBLISH_ORDER: ${{ github.event_name == 'workflow_dispatch' && 'newest' || (github.event.schedule == '7 3 * * *' && 'newest' || 'backlog') }}
+          # One Dubai-morning run researches and may publish the newest passing
+          # website-news item. Manual recovery runs use the same bounded lane.
+          DRAFT_ENABLED: "1"
+          AUTO_PUBLISH_ORDER: "newest"
           AUTO_BACKLOG_MIN_AGE_HOURS: "12"
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"
           AUTO_REDRAFT_MIN_AGE_HOURS: "24"
