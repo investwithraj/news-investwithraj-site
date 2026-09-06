@@ -2,7 +2,13 @@ name: news-cron
 on:
   schedule:
     - cron: "7 3 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      publication_only:
+        description: "Publish an already staged, evidence-ready draft without researching a new story"
+        required: false
+        default: false
+        type: boolean
 concurrency:
   group: news-cron-production
   cancel-in-progress: false
@@ -34,7 +40,7 @@ jobs:
           AUTO_PUBLISH_LIMIT: "1"
           # One Dubai-morning run researches and may publish the newest passing
           # website-news item. Manual recovery runs use the same bounded lane.
-          DRAFT_ENABLED: "1"
+          DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.publication_only && '0' || '1' }}
           AUTO_PUBLISH_ORDER: "newest"
           AUTO_BACKLOG_MIN_AGE_HOURS: "12"
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"
