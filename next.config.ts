@@ -11,6 +11,21 @@ const nextConfig: NextConfig = {
   compress: true,
   productionBrowserSourceMaps: false, // smaller bundle, hide source
 
+  // Next 16 can omit Sharp's runtime-loaded libvips shared object from a
+  // traced server function even though the JavaScript package is present.
+  // Keep the native files scoped to the only two newsroom routes that may
+  // inspect an approved editorial image.
+  outputFileTracingIncludes: {
+    "/api/news/draft/*/publish": [
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+    "/api/news/draft/*/media-approval": [
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+  },
+
   // ── Image optimization ────────────────────────────────────────────────
   images: {
     // Modern formats. Browsers that support AVIF get it; rest get WebP.

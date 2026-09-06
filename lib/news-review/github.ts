@@ -7,7 +7,6 @@
 
 import { createHash } from "node:crypto";
 
-import { verifyImageBytes } from "@/lib/media/image-integrity";
 import { assertCanonicalNewsSlug } from "@/lib/news-review/integrity";
 import {
   patchArticleRelations,
@@ -123,6 +122,12 @@ export async function inspectEditorialMedia(
   if (bytes.length !== matches[0].size) {
     throw new Error("Editorial cover byte length does not match GitHub.");
   }
+  // Sharp is a native, media-only dependency. Loading it at module startup
+  // makes the entire publication route unavailable when a runtime image is
+  // missing its libvips binary—even for articles whose media is withheld.
+  // Keep the publication path independent and load the decoder only when an
+  // approved editorial image actually needs inspection.
+  const { verifyImageBytes } = await import("@/lib/media/image-integrity");
   const decoded = await verifyImageBytes(bytes);
   if (decoded.width < 3840 || decoded.height < 2160) {
     throw new Error("Editorial cover source is not genuine UHD.");
