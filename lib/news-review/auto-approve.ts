@@ -993,6 +993,160 @@ export function findUnsupportedFigures(
   ];
 }
 
+const NUMERIC_CORE_PATTERNS: Record<NumericSpanKind, RegExp> = {
+  period: new RegExp(
+    String.raw`^${PERIOD_POINT}(?:[ \t]*(?:\/|&|,|-|\band\b|\bto\b)[ \t]*${PERIOD_POINT})*`,
+    "i",
+  ),
+  label: new RegExp(
+    String.raw`^(?:phase|stage|tranche|plot|unit|tower|building|release|version)[ \t]+(?:no\.?[ \t]*)?${UNSIGNED_NUM}`,
+    "i",
+  ),
+  range: new RegExp(
+    String.raw`^${VALUE_ENDPOINT}(?:-|[ \t]+\bto\b[ \t]+)${VALUE_ENDPOINT}`,
+    "i",
+  ),
+  value: new RegExp(
+    String.raw`^${CURRENCY_PREFIX}${VALUE_CORE}(?:[ \t]*${SCALE})?(?:[ \t]*${UNIT})?(?:-${HEAD_WORD})?`,
+    "i",
+  ),
+};
+
+const GENERIC_NUMERIC_CONTEXT_WORDS = new Set([
+  "about",
+  "almost",
+  "amount",
+  "amounts",
+  "approximately",
+  "around",
+  "combined",
+  "current",
+  "currently",
+  "exact",
+  "existing",
+  "figure",
+  "figures",
+  "future",
+  "latest",
+  "metric",
+  "metrics",
+  "more",
+  "nearly",
+  "new",
+  "number",
+  "numbers",
+  "official",
+  "only",
+  "overall",
+  "planned",
+  "proposed",
+  "reported",
+  "requirement",
+  "requirements",
+  "roughly",
+  "same",
+  "total",
+  "value",
+  "values",
+  "verified",
+]);
+
+function numericCoreAndContext(span: NumericSpan, source: string): {
+  core: string;
+  context: Set<string>;
+} | null {
+  const raw = normalizeNumericDashes(source.slice(span.start, span.end));
+  const coreMatch = raw.match(NUMERIC_CORE_PATTERNS[span.kind]);
+  if (!coreMatch?.[0]) return null;
+  const context = new Set(
+    (raw.slice(coreMatch[0].length).match(/[A-Za-z][A-Za-z'\u2019-]*/gu) ?? [])
+      .flatMap((word) => word.toLowerCase().split(/[-'\u2019]+/u))
+      .filter(
+        (word) =>
+          word.length >= 3 && !GENERIC_NUMERIC_CONTEXT_WORDS.has(word),
+      ),
+  );
+  return { core: normNumericEvidence(coreMatch[0]), context };
+}
+
+/**
+ * Repair an over-short or slightly malformed model numeric phrase only by
+ * copying one complete phrase from one fetched source. This is deliberately a
+ * pre-review canonicalizer: it does not alter figure extraction or any
+ * approval gate, and ambiguity leaves the model text untouched.
+ */
+export function canonicalizeEvidenceNumericPhrases(
+  value: string,
+  evidenceText: string | string[],
+): string {
+  const evidenceTexts = Array.isArray(evidenceText)
+    ? evidenceText
+    : [evidenceText];
+  const evidenceAnalyses = evidenceTexts.map((text) => ({
+    text,
+    analysis: analyzeNumericSpans(text),
+  }));
+  const supportedTuples = new Set(
+    evidenceAnalyses.flatMap(({ analysis }) =>
+      analysis.spans.map(numericTupleKey),
+    ),
+  );
+  const modelAnalysis = analyzeNumericSpans(value);
+  const replacements: Array<{ start: number; end: number; value: string }> = [];
+
+  for (const span of modelAnalysis.spans) {
+    if (supportedTuples.has(numericTupleKey(span))) continue;
+    const modelParts = numericCoreAndContext(span, value);
+    if (!modelParts || modelParts.context.size === 0) continue;
+
+    const candidates = new Map<
+      string,
+      { replacement: string; overlap: number }
+    >();
+    for (const { text, analysis } of evidenceAnalyses) {
+      for (const candidate of analysis.spans) {
+        if (candidate.kind !== span.kind) continue;
+        const candidateParts = numericCoreAndContext(candidate, text);
+        if (!candidateParts || candidateParts.core !== modelParts.core) continue;
+        const overlap = [...modelParts.context].filter((word) =>
+          candidateParts.context.has(word),
+        ).length;
+        if (overlap === 0) continue;
+        const key = numericTupleKey(candidate);
+        if (!candidates.has(key)) {
+          candidates.set(key, {
+            replacement: text.slice(candidate.start, candidate.end),
+            overlap,
+          });
+        }
+      }
+    }
+
+    const ranked = [...candidates.values()].sort(
+      (left, right) => right.overlap - left.overlap,
+    );
+    if (
+      ranked.length === 0 ||
+      (ranked[1] && ranked[1].overlap === ranked[0].overlap)
+    ) {
+      continue;
+    }
+    replacements.push({
+      start: span.start,
+      end: span.end,
+      value: ranked[0].replacement,
+    });
+  }
+
+  return replacements
+    .sort((left, right) => right.start - left.start)
+    .reduce(
+      (text, replacement) =>
+        `${text.slice(0, replacement.start)}${replacement.value}${text.slice(replacement.end)}`,
+      value,
+    );
+}
+
 export function assessDraft(
   draft: Pick<NewsDraft, "id" | "article" | "validator" | "provenance">,
 ): AutoApproveAssessment {

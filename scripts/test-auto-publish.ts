@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   assessDraft,
+  canonicalizeEvidenceNumericPhrases,
   classifyEvidenceRisk,
   extractFigures,
   findUnsupportedFigures,
@@ -731,6 +732,52 @@ async function main() {
       "ordinary calendar dates and section/page labels must not become claims",
     );
     assert.deepEqual(findUnsupportedFigures(materialCounts, materialCounts), []);
+    assert.equal(
+      canonicalizeEvidenceNumericPhrases(
+        "The framework requires 50 per cent payment.",
+        "The framework sets a 50 per cent payment threshold.",
+      ),
+      "The framework requires 50 per cent payment threshold.",
+      "a uniquely matching complete evidence phrase may repair an incomplete model span",
+    );
+    assert.equal(
+      canonicalizeEvidenceNumericPhrases(
+        "The framework has a 50 per cent threshold requirement.",
+        "The framework sets a 50 per cent payment threshold.",
+      ),
+      "The framework has a 50 per cent payment threshold.",
+      "generic model wording may be replaced when a distinctive context noun overlaps",
+    );
+    assert.equal(
+      canonicalizeEvidenceNumericPhrases(
+        "The plan includes 7 new schools.",
+        "The plan includes 7 new towers.",
+      ),
+      "The plan includes 7 new schools.",
+      "a shared generic adjective must not bridge different claim nouns",
+    );
+    assert.equal(
+      canonicalizeEvidenceNumericPhrases(
+        "The framework has a 50 per cent payment requirement.",
+        [
+          "The framework sets a 50 per cent payment threshold.",
+          "The framework sets a 50 per cent payment milestone.",
+        ],
+      ),
+      "The framework has a 50 per cent payment requirement.",
+      "equally plausible evidence phrases must remain unchanged",
+    );
+    assert.equal(
+      canonicalizeEvidenceNumericPhrases(
+        "The framework records AED 10 million payment threshold.",
+        [
+          "One source records AED 10 payment threshold.",
+          "Another source mentions million payment threshold.",
+        ],
+      ),
+      "The framework records AED 10 million payment threshold.",
+      "numeric phrases split across evidence sources must never combine",
+    );
     const adversarialDigitSpans =
       "7-tower 405-unit 3-bedroom 7 transactions 10 basis points 10 square metres H1/H2/Q1 2026 3:1 1 in 4 10 to 12% -5% 125bp + 5% - .5% .75% - AED .25 million AED 10-12 million AED 3/4 million 3/4 votes 7 new ultra luxury waterfront residential towers 7 new ultra luxury waterfront residential schools 2026-2027 plan Q1 2026-Q2 2027";
     const adversarialFigures = extractFigures(adversarialDigitSpans);

@@ -1209,6 +1209,41 @@ async function numericComplianceRepairUsesExactEvidencePhrase(): Promise<void> {
   );
 }
 
+async function missingLeadFigureUsesFetchedEvidencePhrase(): Promise<void> {
+  let repairCalls = 0;
+  const numberFreeBody = officialBodyWithFigure("the verified amount");
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
+    now: NOW,
+    dependencies: {
+      research: (async () => ({
+        ok: true,
+        text: draftJson({ body: numberFreeBody, urls: [OFFICIAL_URL] }),
+      })) satisfies ResearchCall,
+      repair: (async () => {
+        repairCalls += 1;
+        return {
+          ok: true,
+          text: draftJson({ body: numberFreeBody, urls: [OFFICIAL_URL] }),
+        };
+      }) satisfies RepairCall,
+      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+    },
+  });
+  assert.equal(result.ok, true, result.reason);
+  assert.equal(repairCalls, 1);
+  assert.match(
+    result.article!.body,
+    /^Dubai Land Department reported AED 10 million\./u,
+  );
+  assert.deepEqual(
+    findUnsupportedFigures(
+      articleEvidenceText(result.article!),
+      result.provenance!.fetchedEvidence!.map((evidence) => evidence.text),
+    ),
+    [],
+  );
+}
+
 async function repairFixesMechanicalGates(): Promise<void> {
   let repairCalls = 0;
   let repairPrompt = "";
@@ -1400,6 +1435,7 @@ async function main(): Promise<void> {
   await staleAndUnknownDatesHold();
   await unsupportedFiguresNeverPass();
   await numericComplianceRepairUsesExactEvidencePhrase();
+  await missingLeadFigureUsesFetchedEvidencePhrase();
   await repairFixesMechanicalGates();
   await generationRetryIsCapped();
   await snippetsNeverBecomeEvidence();

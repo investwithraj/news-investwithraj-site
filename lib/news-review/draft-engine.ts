@@ -27,6 +27,7 @@ import {
   approvedPublisherDomain,
   approvedPublisherIdentity,
   assessDraft,
+  canonicalizeEvidenceNumericPhrases,
   determineEvidencePolicy,
   extractFigures,
   findUnconsumedDigitContexts,
@@ -249,6 +250,114 @@ export function buildProvenance(cluster: Cluster): NewsDraftProvenance {
         summary: (e.summary.trim() || e.title).slice(0, 9_000),
         publishedAt: e.publishedAt,
       })),
+  };
+}
+
+const LEAD_FIGURE_VERB_RE =
+  /\b(?:can|could|will|would|may|might|is|are|was|were|has|have|had|depends?|start(?:s|ed|ing)?|end(?:s|ed|ing)?|whilst|while)\b/iu;
+const LEAD_FIGURE_MEASURE_RE =
+  /(?:\b(?:aed|usd|dhs?|million|billion|thousand|units?|homes?|towers?|floors?|bedrooms?|transactions?|hectares?|sqm|sqft|kilometres?|kilometers?|km|payment|threshold)\b|%|\bper\s+cent\b|\bpercent\b|\bbasis\s+points?\b|\bbps?\b)/iu;
+
+function evidenceLeadSentence(
+  article: DraftArticle,
+  evidence: NonNullable<NewsDraftProvenance["fetchedEvidence"]>,
+): string | null {
+  const candidates = evidence.flatMap((record) => {
+    const citation = article.citations.find(
+      (entry) => entry.url === record.url,
+    );
+    if (!citation) return [];
+    return extractFigures(record.text)
+      .filter((figure) => {
+        const words = figure.match(/[A-Za-z]+(?:-[A-Za-z]+)*/gu) ?? [];
+        if (figure.length > 72 || words.length > 7) return false;
+        if (/^(?:19|20)\d{2}\b/u.test(figure)) return false;
+        if (LEAD_FIGURE_VERB_RE.test(figure)) return false;
+        if (!LEAD_FIGURE_MEASURE_RE.test(figure)) return false;
+        if (/^(?:\d+(?:[.,]\d+)?\s*)?(?:%|per\s+cent|percent)$/iu.test(figure)) {
+          return false;
+        }
+        return true;
+      })
+      .map((figure) => ({
+        source: citation.source,
+        figure,
+        score:
+          (figure.match(/[A-Za-z]+(?:-[A-Za-z]+)*/gu) ?? []).length +
+          (/\b(?:aed|usd|dhs?)\b/iu.test(figure) ? 3 : 0) +
+          (/\b(?:payment|threshold|homes?|units?|towers?|transactions?)\b/iu.test(figure)
+            ? 2
+            : 0),
+      }));
+  });
+  candidates.sort(
+    (left, right) =>
+      right.score - left.score ||
+      left.figure.length - right.figure.length ||
+      left.figure.localeCompare(right.figure),
+  );
+  const selected = candidates[0];
+  if (!selected) return null;
+  const displayFigure = selected.figure
+    .replace(/^aed\b/iu, "AED")
+    .replace(/^usd\b/iu, "USD")
+    .replace(/^dhs?\b/iu, "Dh");
+  const articlePrefix =
+    /^\d+(?:[.,]\d+)?\s*(?:%|per\s+cent|percent)\s+[A-Za-z]/iu.test(
+      displayFigure,
+    )
+      ? "a "
+      : "";
+  return `${selected.source} reported ${articlePrefix}${displayFigure}.`;
+}
+
+function ensureFirstParagraphHasEvidenceFigure(
+  article: DraftArticle,
+  evidence: NonNullable<NewsDraftProvenance["fetchedEvidence"]>,
+): DraftArticle {
+  const firstParagraph = (article.body.split(/\n\n/u)[0] ?? "").trim();
+  if (/\d/u.test(firstParagraph)) return article;
+  const sentence = evidenceLeadSentence(article, evidence);
+  if (!sentence) return article;
+  return {
+    ...article,
+    body: `${sentence} ${article.body.trim()}`,
+  };
+}
+
+function canonicalizeArticleNumericPhrases(
+  article: DraftArticle,
+  evidenceTexts: string[],
+  calendarDate: string,
+): DraftArticle {
+  const title = canonicalizeEvidenceNumericPhrases(
+    article.title,
+    evidenceTexts,
+  );
+  const slug = `${calendarDate}-${slugify(title)}`;
+  return {
+    ...article,
+    title,
+    slug,
+    subtitle: canonicalizeEvidenceNumericPhrases(
+      article.subtitle ?? "",
+      evidenceTexts,
+    ),
+    tldr: [
+      canonicalizeEvidenceNumericPhrases(article.tldr[0] ?? "", evidenceTexts),
+      canonicalizeEvidenceNumericPhrases(article.tldr[1] ?? "", evidenceTexts),
+      canonicalizeEvidenceNumericPhrases(article.tldr[2] ?? "", evidenceTexts),
+    ],
+    body: canonicalizeEvidenceNumericPhrases(article.body, evidenceTexts),
+    faq: article.faq.map((entry) => ({
+      q: canonicalizeEvidenceNumericPhrases(entry.q, evidenceTexts),
+      a: canonicalizeEvidenceNumericPhrases(entry.a, evidenceTexts),
+    })),
+    heroImage: {
+      ...article.heroImage,
+      src: `/news/${slug}/cover.jpg`,
+      alt: title,
+    },
   };
 }
 
@@ -669,6 +778,8 @@ export async function draftFromCluster(
         alt: repairedTitle,
       },
     };
+    article = canonicalizeArticleNumericPhrases(article, evidenceTexts, today);
+    article = ensureFirstParagraphHasEvidenceFigure(article, fetchedEvidence);
     claimTexts = articleEvidenceSegments(article).map(
       (segment) => segment.text,
     );
@@ -735,6 +846,15 @@ export async function draftFromCluster(
           alt: numericTitle,
         },
       };
+      article = canonicalizeArticleNumericPhrases(
+        article,
+        evidenceTexts,
+        today,
+      );
+      article = ensureFirstParagraphHasEvidenceFigure(
+        article,
+        fetchedEvidence,
+      );
       claimTexts = articleEvidenceSegments(article).map(
         (segment) => segment.text,
       );
