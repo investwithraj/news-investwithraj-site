@@ -742,6 +742,22 @@ async function main() {
     );
     assert.equal(
       canonicalizeEvidenceNumericPhrases(
+        "The 50 per cent threshold aligns with prudential lending standards.",
+        "The framework sets a 50 per cent payment threshold.",
+      ),
+      "The 50 per cent payment threshold aligns with prudential lending standards.",
+      "body repair must preserve a trailing finite clause verb",
+    );
+    assert.equal(
+      canonicalizeEvidenceNumericPhrases(
+        "The 50 per cent threshold aligns with UAE Central Bank regulation, according to Aldar.",
+        "Aldar states that the 50 per cent payment threshold is aligned with UAE Central Bank regulations.",
+      ),
+      "The 50 per cent payment threshold aligns with UAE Central Bank regulation, according to Aldar.",
+      "TLDR repair must preserve a trailing finite clause verb",
+    );
+    assert.equal(
+      canonicalizeEvidenceNumericPhrases(
         "The framework has a 50 per cent threshold requirement.",
         "The framework sets a 50 per cent payment threshold.",
       ),

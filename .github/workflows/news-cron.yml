@@ -9,6 +9,11 @@ on:
         required: false
         default: false
         type: boolean
+      retry_failed_research:
+        description: "Retry a previously failed research cluster after a confirmed pipeline repair"
+        required: false
+        default: false
+        type: boolean
 concurrency:
   group: news-cron-production
   cancel-in-progress: false
@@ -46,9 +51,9 @@ jobs:
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"
           AUTO_REDRAFT_MIN_AGE_HOURS: "24"
           NEWS_STALE_AFTER_HOURS: "36"
-          # A manual recovery run may retry failed (never processing/staged)
-          # reservations immediately after a pipeline fix.
-          PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          # Failed research clusters remain quarantined unless an operator
+          # explicitly confirms a repair and requests one bounded retry.
+          PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && inputs.retry_failed_research && '1' || '0' }}
       - name: Surface daily news outcome
         if: always()
         shell: bash
