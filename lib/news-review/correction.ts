@@ -188,6 +188,21 @@ export async function stagePublishedCorrection(
     throw new Error("Correction fails the current article validator.");
   }
 
+  const assessment = assessDraft({
+    id: "correction-assessment",
+    article,
+    validator,
+    provenance,
+  });
+  if (assessment.verdict !== "auto-approve") {
+    const reasons = assessment.reasons
+      .slice(0, 8)
+      .map((reason) => reason.slice(0, 500));
+    throw new Error(
+      `Correction is held by the current evidence policy: ${reasons.join("; ")}`,
+    );
+  }
+
   const revision = original.revision + 1;
   const verifiedSources = article.citations.map((citation) => citation.url);
   const evidenceApproval = evidenceApprovalFor(
@@ -226,12 +241,5 @@ export async function stagePublishedCorrection(
       commitSha: original.publication.commitSha,
     },
   };
-  const assessment = assessDraft(candidate);
-  if (assessment.verdict !== "auto-approve") {
-    throw new Error(
-      `Correction is held by the current evidence policy: ${assessment.reasons.join("; ")}`,
-    );
-  }
-
   return storeCorrectionDraft(candidate);
 }

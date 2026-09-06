@@ -13,6 +13,7 @@ async function main() {
   );
   try {
     process.chdir(testDirectory);
+    const autoApprove = await import("../lib/news-review/auto-approve");
     const integrity = await import("../lib/news-review/integrity");
     const correction = await import("../lib/news-review/correction");
     const { CURRENT_EVIDENCE_POLICY_VERSION } = await import(
@@ -28,17 +29,55 @@ async function main() {
     );
     if (!correctedShape.ok) return;
     const corrected = structuredClone(correctedShape.article);
+    const sourceEvidenceTexts = [
+      [
+        "Buyers who have paid 50 per cent can secure mortgages before the off-plan home is handed over.",
+        "The framework allows buyers who have paid 50 per cent of an eligible off-plan unit's value to mortgage the outstanding amount before construction is complete.",
+        "Banks can fund remaining instalments during construction and the final payment due at handover.",
+        "The 50 per cent payment threshold is aligned with UAE Central Bank regulations, according to Aldar.",
+        "The service is free to customers and provides access to mortgage options from more than six conventional and Islamic banks.",
+      ].join(" "),
+      [
+        "A customer who has paid 50 per cent of the purchase price can arrange a mortgage against their off-plan property, with the bank funding the remaining instalments and the final handover payment.",
+        "This is in line with UAE Central Bank regulation, which requires customers to have paid 50 per cent of the property price to be eligible for off-plan mortgage financing.",
+        "Off-plan financing is available to Aldar customers who have paid 50 per cent or more of the property value at eligible projects.",
+      ].join(" "),
+    ];
+    const correctedClaimTexts = autoApprove
+      .articleEvidenceSegments(corrected)
+      .map((segment) => segment.text);
+    assert.deepEqual(
+      autoApprove.findUnsupportedFigures(
+        correctedClaimTexts,
+        sourceEvidenceTexts,
+      ),
+      [],
+      "the correction must use only numeric tuples present in source-faithful evidence",
+    );
+
+    const unsupportedCorrection = structuredClone(corrected);
+    unsupportedCorrection.tldr[1] =
+      "Eligible buyers who have paid 50 per cent can arrange financing for the outstanding amount before handover.";
+    unsupportedCorrection.body = unsupportedCorrection.body.replace(
+      "50 per cent payment threshold as a blanket approval",
+      "50 per cent threshold as a blanket approval",
+    );
+    assert.deepEqual(
+      autoApprove
+        .findUnsupportedFigures(
+          autoApprove
+            .articleEvidenceSegments(unsupportedCorrection)
+            .map((segment) => segment.text),
+          sourceEvidenceTexts,
+        )
+        .sort(),
+      ["50 per cent can arrange financing", "50 per cent threshold"].sort(),
+      "the prior correction wording must remain held by the numeric evidence gate",
+    );
+
     const originalArticle = structuredClone(corrected);
     delete originalArticle.correction;
     originalArticle.modifiedAt = originalArticle.publishedAt;
-    const evidenceText = [
-      originalArticle.title,
-      originalArticle.subtitle,
-      ...originalArticle.tldr,
-      originalArticle.body,
-      ...originalArticle.faq.flatMap((item) => [item.q, item.a]),
-    ].join("\n\n");
-    const evidenceHash = createHash("sha256").update(evidenceText).digest("hex");
     const sourceUrls = originalArticle.citations.map((citation) => citation.url);
     const provenance = {
       clusterId: "correction-test-cluster",
@@ -50,24 +89,27 @@ async function main() {
         freshness: 24,
         rajAngle: 23,
       },
-      sources: originalArticle.citations.map((citation) => ({
+      sources: originalArticle.citations.map((citation, index) => ({
         name: citation.source,
         tier: citation.tier ?? "national-press",
         url: citation.url,
-        summary: evidenceText,
+        summary: sourceEvidenceTexts[index],
         publishedAt: originalArticle.publishedAt,
       })),
-      fetchedEvidence: originalArticle.citations.map((citation) => ({
-        url: citation.url,
-        finalUrl: citation.url,
-        text: evidenceText,
-        fetchedAt: originalArticle.publishedAt,
-        contentHash: evidenceHash,
-        sourcePublishedAt: originalArticle.publishedAt,
-        sourceDateSource: "meta" as const,
-        freshnessCheckedAt: originalArticle.publishedAt,
-        freshnessMaxAgeHours: 168,
-      })),
+      fetchedEvidence: originalArticle.citations.map((citation, index) => {
+        const text = sourceEvidenceTexts[index];
+        return {
+          url: citation.url,
+          finalUrl: citation.url,
+          text,
+          fetchedAt: originalArticle.publishedAt,
+          contentHash: createHash("sha256").update(text).digest("hex"),
+          sourcePublishedAt: originalArticle.publishedAt,
+          sourceDateSource: "meta" as const,
+          freshnessCheckedAt: originalArticle.publishedAt,
+          freshnessMaxAgeHours: 168,
+        };
+      }),
     };
     const originalHash = integrity.draftContentHash(
       originalArticle,
