@@ -11,6 +11,7 @@ import {
 import {
   articleEvidenceText,
   assessDraft,
+  findUnsupportedFigures,
 } from "../lib/news-review/auto-approve.js";
 import {
   extractMainText,
@@ -1121,7 +1122,7 @@ async function staleAndUnknownDatesHold(): Promise<void> {
 
 async function unsupportedFiguresNeverPass(): Promise<void> {
   let repairCalls = 0;
-  let repairPrompt = "";
+  const repairPrompts: string[] = [];
   const unsupportedBody = officialBodyWithFigure("AED 99 million");
   const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
@@ -1132,7 +1133,7 @@ async function unsupportedFiguresNeverPass(): Promise<void> {
       })) satisfies ResearchCall,
       repair: (async (request) => {
         repairCalls += 1;
-        repairPrompt = String(request.messages[0]?.content ?? "");
+        repairPrompts.push(String(request.messages[0]?.content ?? ""));
         return {
           ok: true,
           text: draftJson({ body: unsupportedBody, urls: [OFFICIAL_URL] }),
@@ -1143,9 +1144,69 @@ async function unsupportedFiguresNeverPass(): Promise<void> {
   });
   assert.equal(result.ok, false);
   assert.match(result.reason ?? "", /retained 1 unsupported figure/);
-  assert.match(repairPrompt, /AED 99 million/i);
-  assert.match(repairPrompt, /AED 10 million/i);
-  assert.equal(repairCalls, 1, "evidence repair must be capped at one call");
+  assert.match(repairPrompts[0] ?? "", /AED 99 million/i);
+  assert.match(repairPrompts[0] ?? "", /AED 10 million/i);
+  assert.match(repairPrompts[1] ?? "", /COPY A COMPLETE LINE VERBATIM/i);
+  assert.equal(
+    repairCalls,
+    2,
+    "an unchanged numeric mismatch may receive one narrow compliance retry only",
+  );
+}
+
+async function numericComplianceRepairUsesExactEvidencePhrase(): Promise<void> {
+  let repairCalls = 0;
+  const mismatchedTitle = "Official update sets an AED 99 million threshold";
+  const compliantTitle = "Dubai Land Department publishes its verified update";
+  const mismatchedBody = officialBodyWithFigure(
+    "AED 10 million threshold framework",
+  );
+  const compliantBody = officialBodyWithFigure("AED 10 million");
+  const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
+    now: NOW,
+    dependencies: {
+      research: (async () => ({
+        ok: true,
+        text: draftJson({
+          body: mismatchedBody,
+          urls: [OFFICIAL_URL],
+          title: mismatchedTitle,
+        }),
+      })) satisfies ResearchCall,
+      repair: (async () => {
+        repairCalls += 1;
+        return {
+          ok: true,
+          text: draftJson({
+            body: repairCalls === 1 ? mismatchedBody : compliantBody,
+            urls: [OFFICIAL_URL],
+            title: repairCalls === 1 ? mismatchedTitle : compliantTitle,
+          }),
+        };
+      }) satisfies RepairCall,
+      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+    },
+  });
+  assert.equal(result.ok, true, result.reason);
+  assert.equal(repairCalls, 2);
+  assert.equal(result.article!.title, compliantTitle);
+  assert.equal(
+    result.article!.slug,
+    "2026-08-16-dubai-land-department-publishes-its-verified-update",
+  );
+  assert.equal(result.article!.heroImage.alt, compliantTitle);
+  assert.equal(
+    result.article!.heroImage.src,
+    "/news/2026-08-16-dubai-land-department-publishes-its-verified-update/cover.jpg",
+  );
+  assert.deepEqual(
+    findUnsupportedFigures(
+      articleEvidenceText(result.article!),
+      result.provenance!.fetchedEvidence!.map((evidence) => evidence.text),
+    ),
+    [],
+    "the second bounded repair must leave only exact source-supported numeric phrases",
+  );
 }
 
 async function repairFixesMechanicalGates(): Promise<void> {
@@ -1338,11 +1399,12 @@ async function main(): Promise<void> {
   await storageUsesSameEvidencePolicy(tierA, analysis);
   await staleAndUnknownDatesHold();
   await unsupportedFiguresNeverPass();
+  await numericComplianceRepairUsesExactEvidencePhrase();
   await repairFixesMechanicalGates();
   await generationRetryIsCapped();
   await snippetsNeverBecomeEvidence();
   console.log(
-    "Newsroom recovery regression passed: narrowly attributed official facts, corroborated analysis, manual staging, repair/retry caps, figure safety and publication dates are enforced.",
+    "Newsroom recovery regression passed: narrowly attributed official facts, corroborated analysis, manual staging, bounded repair retries, figure safety and publication dates are enforced.",
   );
 }
 
