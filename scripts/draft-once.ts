@@ -29,6 +29,7 @@ import {
   emitNewsCronRunReport,
   observeNewestPublication,
 } from "./lib/news-cron-outcome.js";
+import { selectDraftClusters } from "../lib/news-review/manual-candidate.js";
 
 const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
@@ -190,8 +191,11 @@ async function executePipeline(state: RunState): Promise<void> {
     );
   }
   const deduped = dedupeEntries(flattenEntries(run));
-  const clusters = clusterAndScore(deduped, CANDIDATE_POOL).filter(
-    (cluster) => cluster.score >= MIN_SCORE,
+  const requestedCandidate = process.env.PIPELINE_CANDIDATE_KEY ?? "auto";
+  const clusters = selectDraftClusters(
+    clusterAndScore(deduped, CANDIDATE_POOL),
+    MIN_SCORE,
+    requestedCandidate,
   );
   const candidatePlan = planDraftCandidates({
     clusters,
@@ -204,7 +208,7 @@ async function executePipeline(state: RunState): Promise<void> {
   });
   const candidates = candidatePlan.candidates;
   console.log(
-    `clusters >= ${MIN_SCORE}: ${clusters.length}; candidates: ${candidates.length}; recoverable held drafts: ${candidatePlan.recoverableHeld}`,
+    `selected clusters (${requestedCandidate === "auto" ? `score >= ${MIN_SCORE}` : requestedCandidate}): ${clusters.length}; candidates: ${candidates.length}; recoverable held drafts: ${candidatePlan.recoverableHeld}`,
   );
   state.candidates = candidates.length;
 
@@ -264,8 +268,30 @@ async function executePipeline(state: RunState): Promise<void> {
       }),
     });
     if (response.ok) {
+      const stagedPayload = (await response.json().catch(() => ({}))) as {
+        draft?: Pick<NewsDraft, "id" | "revision" | "contentHash">;
+      };
       state.staged += 1;
       console.log(`staged for review: ${result.article.slug}`);
+      if (requestedCandidate !== "auto") {
+        console.log(
+          `manual candidate staged for human review:\n${JSON.stringify(
+            {
+              candidateKey: requestedCandidate,
+              draft: stagedPayload.draft,
+              article: result.article,
+              sources: result.provenance.sources.map((source) => ({
+                name: source.name,
+                tier: source.tier,
+                url: source.url,
+                publishedAt: source.publishedAt,
+              })),
+            },
+            null,
+            2,
+          )}`,
+        );
+      }
       continue;
     }
 

@@ -14,6 +14,14 @@ on:
         required: false
         default: false
         type: boolean
+      candidate_key:
+        description: "Run one reviewed, version-controlled editorial candidate instead of the automatic score queue"
+        required: false
+        default: auto
+        type: choice
+        options:
+          - auto
+          - dld-initial-registration
 concurrency:
   group: news-cron-production
   cancel-in-progress: false
@@ -33,6 +41,8 @@ jobs:
       - run: npm ci
       - run: npx tsx scripts/test-developer-source-registry.ts
       - run: npx tsx scripts/test-news-cron-outcome.ts
+      - run: npx tsx scripts/test-news-candidate-quarantine.ts
+      - run: npx tsx scripts/test-news-manual-candidate.ts
       - run: npx tsx scripts/check-source-health.ts
       - name: Run daily news pipeline
         id: pipeline
@@ -41,7 +51,9 @@ jobs:
           SITE_URL: https://news.investwithraj.com
           POST_PUBLISH_SECRET: ${{ secrets.POST_PUBLISH_SECRET }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AUTO_APPROVE: "1"
+          # Reviewed manual targets stage first so their exact generated copy
+          # can be inspected before a separate publication-only run.
+          AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1' }}
           AUTO_PUBLISH_LIMIT: "1"
           # One Dubai-morning run researches and may publish the newest passing
           # website-news item. Manual recovery runs use the same bounded lane.
@@ -54,6 +66,7 @@ jobs:
           # Failed research clusters remain quarantined unless an operator
           # explicitly confirms a repair and requests one bounded retry.
           PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && inputs.retry_failed_research && '1' || '0' }}
+          PIPELINE_CANDIDATE_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_key || 'auto' }}
       - name: Surface daily news outcome
         if: always()
         shell: bash

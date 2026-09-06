@@ -36,6 +36,10 @@ import {
 } from "./auto-approve";
 import { urlOnApprovedHost } from "@/lib/sources/safe-fetch";
 import type { NewsCategory } from "@/content/news/types";
+import {
+  findNewsClusterQuarantine,
+  type NewsClusterQuarantineHold,
+} from "./candidate-quarantine";
 
 const VALID_CATEGORIES: NewsCategory[] = [
   "market-pulse", "launch", "regulatory", "macro",
@@ -934,6 +938,8 @@ export interface DraftCandidatePlan {
   /** New recovery cluster ID -> preserved draft ID it supersedes. */
   recoveryDraftIds: Record<string, string>;
   recoverableHeld: number;
+  /** Version-controlled editorial holds, with an operator-readable reason. */
+  quarantined: NewsClusterQuarantineHold[];
 }
 
 function exactTime(value: string | undefined): number | null {
@@ -1013,8 +1019,16 @@ export function planDraftCandidates(options: {
   ];
   const recoveryDraftIds: Record<string, string> = {};
   const candidates: Cluster[] = [];
+  const quarantined: NewsClusterQuarantineHold[] = [];
+  const quarantinedClusterIds = new Set<string>();
 
   for (const cluster of options.clusters) {
+    const quarantine = findNewsClusterQuarantine(cluster);
+    if (quarantine) {
+      quarantined.push(quarantine);
+      quarantinedClusterIds.add(cluster.id);
+      continue;
+    }
     const held = recoverable.get(cluster.id);
     if (held) {
       const recoveryId = `${cluster.id}:recovery:${today}`;
@@ -1038,6 +1052,9 @@ export function planDraftCandidates(options: {
   return {
     candidates,
     recoveryDraftIds,
-    recoverableHeld: recoverable.size,
+    recoverableHeld: [...recoverable.keys()].filter(
+      (clusterId) => !quarantinedClusterIds.has(clusterId),
+    ).length,
+    quarantined,
   };
 }
