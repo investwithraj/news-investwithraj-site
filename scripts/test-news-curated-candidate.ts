@@ -416,6 +416,13 @@ assert.match(stageScript, /publication\?\.state === "committed"/u);
 assert.match(stageScript, /recoverCommittedCandidate/u);
 assert.match(stageScript, /verifyDurableProof/u);
 assert.match(stageScript, /draftId: candidate\.draftId/u);
+assert.match(
+  stageScript,
+  /`\/api\/news\/draft\?id=\$\{encodeURIComponent\(id\)\}`/u,
+  "curated staging must request only its deterministic draft record",
+);
+assert.doesNotMatch(stageScript, /DraftListPayload/u);
+assert.doesNotMatch(stageScript, /async function readDrafts/u);
 assert.doesNotMatch(stageScript, /\/api\/news\/draft\/[^"`]+\/publish/u);
 assert.ok(
   stageScript.indexOf('publication?.state === "committed"') <
@@ -457,6 +464,15 @@ const storageScript = readFileSync(
 assert.match(storageScript, /publicationArchiveKey\(draft\.id\)/u);
 assert.match(storageScript, /publicationReceiptKey\(draft\.id\)/u);
 assert.match(storageScript, /item\.id === draft\.id/u);
+
+const draftRoute = readFileSync(
+  new URL("../app/api/news/draft/route.ts", import.meta.url),
+  "utf8",
+);
+assert.match(draftRoute, /requestedIds = req\.nextUrl\.searchParams\.getAll\("id"\)/u);
+assert.match(draftRoute, /auth\.credential !== "server-secret"/u);
+assert.match(draftRoute, /getStoredDraft\(requestedIds\[0\]\)/u);
+assert.match(draftRoute, /DETERMINISTIC_DRAFT_ID\.test\(requestedIds\[0\]\)/u);
 
 const receiptRoute = readFileSync(
   new URL("../app/api/news/draft/[id]/receipt/route.ts", import.meta.url),

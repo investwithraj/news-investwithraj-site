@@ -13,6 +13,7 @@ import {
   DraftCollisionError,
   DraftConflictError,
   getAllDrafts,
+  getStoredDraft,
   getStorageBackend,
 } from "@/lib/news-review/storage";
 import {
@@ -25,10 +26,36 @@ import { privateJson, readJsonBody } from "@/lib/security/mutation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const DETERMINISTIC_DRAFT_ID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
 export async function GET(req: NextRequest) {
   const auth = await authorize(req);
   if (!auth.ok) {
     return privateJson({ error: auth.message }, auth.status);
+  }
+  const requestedIds = req.nextUrl.searchParams.getAll("id");
+  if (requestedIds.length > 0) {
+    if (auth.credential !== "server-secret") {
+      return privateJson(
+        { error: "Exact draft lookup is available only to server automation." },
+        403,
+      );
+    }
+    if (
+      requestedIds.length !== 1 ||
+      [...req.nextUrl.searchParams.keys()].some((key) => key !== "id") ||
+      !DETERMINISTIC_DRAFT_ID.test(requestedIds[0])
+    ) {
+      return privateJson({ error: "A valid exact draft ID is required." }, 400);
+    }
+    try {
+      const draft = await getStoredDraft(requestedIds[0]);
+      if (!draft) return privateJson({ error: "Draft not found." }, 404);
+      return privateJson({ ok: true, draft });
+    } catch {
+      return privateJson({ error: "Draft storage is unavailable." }, 503);
+    }
   }
   try {
     const drafts = await getAllDrafts();

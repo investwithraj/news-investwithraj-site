@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { NextRequest } from "next/server";
 
+import { GET as readDraft } from "../app/api/news/draft/route";
 import {
   parseBoundedJsonResponse,
   readBoundedResponseText,
@@ -260,6 +262,31 @@ async function main(): Promise<void> {
     requestedPaths.every((pathname) => pathname.endsWith("/deployment")),
     "the recovery sequence may call only deployment completion",
   );
+
+  const priorPostSecret = process.env.POST_PUBLISH_SECRET;
+  process.env.POST_PUBLISH_SECRET = "curated-lookup-test-secret-32-bytes-minimum";
+  try {
+    const missingId = "00000000-0000-4000-8000-000000000000";
+    const exactLookup = await readDraft(
+      new NextRequest(
+        `https://news.investwithraj.com/api/news/draft?id=${missingId}`,
+        {
+          headers: {
+            "x-post-publish-secret": process.env.POST_PUBLISH_SECRET,
+          },
+        },
+      ),
+    );
+    assert.equal(exactLookup.status, 404);
+    assert.deepEqual(
+      await parseBoundedJsonResponse<{ error: string }>(exactLookup, 1_024),
+      { error: "Draft not found." },
+      "the exact-ID read returns one bounded private response, not the backlog",
+    );
+  } finally {
+    if (priorPostSecret === undefined) delete process.env.POST_PUBLISH_SECRET;
+    else process.env.POST_PUBLISH_SECRET = priorPostSecret;
+  }
   console.log("curated protected-response transport regression passed");
 }
 

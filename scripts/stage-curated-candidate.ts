@@ -53,8 +53,8 @@ interface ReservationPayload {
   reservation?: { token?: string };
 }
 
-interface DraftListPayload {
-  drafts?: NewsDraft[];
+interface DraftLookupPayload {
+  draft?: NewsDraft;
 }
 
 interface StagePayload {
@@ -153,14 +153,18 @@ function assertCandidateIsReviewOnly(
   }
 }
 
-async function readDrafts(): Promise<NewsDraft[]> {
-  const { response, payload } = await protectedGet<DraftListPayload>(
-    "/api/news/draft",
-  );
-  if (!response.ok || !Array.isArray(payload.drafts)) {
-    throw new Error(`Draft list failed closed (${response.status}).`);
+async function readExactDraft(id: string): Promise<NewsDraft | null> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(id)) {
+    throw new Error("Curated candidate draft ID is invalid.");
   }
-  return payload.drafts;
+  const { response, payload } = await protectedGet<DraftLookupPayload>(
+    `/api/news/draft?id=${encodeURIComponent(id)}`,
+  );
+  if (response.status === 404) return null;
+  if (!response.ok || !payload.draft || payload.draft.id !== id) {
+    throw new Error(`Exact draft lookup failed closed (${response.status}).`);
+  }
+  return payload.draft;
 }
 
 async function post<T>(
@@ -562,8 +566,7 @@ async function main(): Promise<void> {
     provenanceResult.provenance.fetchedEvidence ?? [],
   );
   const published = getNewsBySlug(article.slug);
-  const existing = await readDrafts();
-  const sameIdentity = existing.find((draft) => draft.id === candidate.draftId);
+  const sameIdentity = await readExactDraft(candidate.draftId);
   if (
     sameIdentity &&
     (sameIdentity.article.slug !== article.slug ||
@@ -587,12 +590,11 @@ async function main(): Promise<void> {
     emitAlreadyPublished(candidate);
     return;
   }
-  const identical = existing.find(
-    (draft) =>
-      draft.id === candidate.draftId &&
-      draft.article.slug === article.slug &&
-      fingerprintStoredDraft(draft) === fingerprint,
-  );
+  const identical =
+    sameIdentity?.article.slug === article.slug &&
+    fingerprintStoredDraft(sameIdentity) === fingerprint
+      ? sameIdentity
+      : null;
   if (identical) {
     if (identical.publication) {
       throw new Error(
@@ -607,14 +609,9 @@ async function main(): Promise<void> {
     console.log(`curated candidate already staged: ${identical.article.slug}`);
     return;
   }
-  if (existing.some((draft) => draft.article.slug === article.slug)) {
-    throw new Error(
-      "A different review draft already occupies this curated candidate slug.",
-    );
-  }
-
   // First mutation: all shape, voice, direct-evidence, freshness, publisher
-  // identity and deterministic assessment gates have passed above.
+  // identity and deterministic assessment gates have passed above. The
+  // storage mutation retains the authoritative atomic ID/slug collision gate.
   const reservationToken = await reserveCluster(candidate);
   let staged: NewsDraft | null = null;
   try {
