@@ -26,6 +26,7 @@ import {
   isOfficialDeveloperUrl,
   type VerifiedSource,
 } from "@/lib/sources/registry";
+import { findNewsDraftQuarantine } from "./draft-quarantine";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
 export const MAX_AUTO_NEWS_SOURCE_AGE_HOURS = 7 * 24;
@@ -663,7 +664,11 @@ export function assessStoredEvidenceFreshness(
       detail: "explicit source publication timestamp/date-source missing",
     };
   }
-  if (!(["meta", "json-ld", "time"] as const).includes(evidence.sourceDateSource)) {
+  if (
+    !(["meta", "json-ld", "time", "visible", "publisher-api"] as const).includes(
+      evidence.sourceDateSource,
+    )
+  ) {
     return {
       ok: false,
       status: "invalid-date",
@@ -1154,10 +1159,18 @@ export function canonicalizeEvidenceNumericPhrases(
 }
 
 export function assessDraft(
-  draft: Pick<NewsDraft, "id" | "article" | "validator" | "provenance">,
+  draft: Pick<NewsDraft, "id" | "article" | "validator" | "provenance"> &
+    Partial<Pick<NewsDraft, "contentHash">>,
 ): AutoApproveAssessment {
   const reasons: string[] = [];
   const { article, validator, provenance } = draft;
+
+  const quarantine = findNewsDraftQuarantine(draft);
+  if (quarantine) {
+    reasons.push(
+      `editorial quarantine ${quarantine.ruleId}: ${quarantine.reason}`,
+    );
+  }
 
   // 1 · the 8 gates
   const gatesOk = validator.ok;
@@ -1309,6 +1322,7 @@ export interface AutoApproveSummary {
 }
 
 function holdReasonCategory(reason: string): string {
+  if (/editorial quarantine/iu.test(reason)) return "editorial-quarantine";
   if (/fails gates/iu.test(reason)) return "voice-or-structure-gate";
   if (/freshness|publication date|timestamp|date-source/iu.test(reason)) {
     return "source-date-or-freshness";
@@ -1353,6 +1367,69 @@ export function summarizeHoldReasons(
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
+export interface AutoApproveDraftTarget {
+  id: string;
+  contentHash: string;
+}
+
+const DRAFT_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+const CONTENT_HASH_RE = /^[a-f0-9]{64}$/u;
+
+/** Select the publication set before assessment. A targeted run is bound to
+ * both immutable identifiers and can never fall through to another draft. */
+export function selectAutoApproveEligibleDrafts(
+  activeDrafts: NewsDraft[],
+  opts: {
+    target?: AutoApproveDraftTarget;
+    publishOrder?: "newest" | "backlog";
+    backlogMinAgeHours?: number;
+    backlogMaxAgeDays?: number;
+    now?: Date;
+  } = {},
+): NewsDraft[] {
+  let candidates = [...activeDrafts];
+  if (opts.target) {
+    if (
+      !DRAFT_ID_RE.test(opts.target.id) ||
+      !CONTENT_HASH_RE.test(opts.target.contentHash)
+    ) {
+      throw new Error("The targeted draft ID or content hash is invalid.");
+    }
+    const matched = candidates.find((draft) => draft.id === opts.target?.id);
+    if (!matched) {
+      throw new Error("The targeted draft is absent or no longer active.");
+    }
+    if (matched.contentHash !== opts.target.contentHash) {
+      throw new Error("The targeted draft content hash no longer matches.");
+    }
+    candidates = [matched];
+  }
+
+  const publishOrder = opts.publishOrder ?? "newest";
+  const now = (opts.now ?? new Date()).getTime();
+  const backlogMinAgeMs =
+    Math.max(0, opts.backlogMinAgeHours ?? 12) * 60 * 60 * 1_000;
+  const backlogMaxAgeMs =
+    Math.max(1, opts.backlogMaxAgeDays ?? 21) * 24 * 60 * 60 * 1_000;
+  return candidates
+    .filter((draft) => {
+      if (publishOrder !== "backlog") return true;
+      const publishedAt = Date.parse(draft.article.publishedAt);
+      if (!Number.isFinite(publishedAt)) return false;
+      const age = now - publishedAt;
+      return age >= backlogMinAgeMs && age <= backlogMaxAgeMs;
+    })
+    .sort((left, right) => {
+      if (publishOrder === "backlog") {
+        const scoreDifference =
+          right.provenance.score - left.provenance.score;
+        if (scoreDifference !== 0) return scoreDifference;
+      }
+      return right.article.publishedAt.localeCompare(left.article.publishedAt);
+    });
+}
+
 /** Assess The Desk and, when explicitly enabled, publish a bounded batch. */
 export async function runAutoApprove(opts: {
   site: string;
@@ -1362,6 +1439,10 @@ export async function runAutoApprove(opts: {
   publishOrder?: "newest" | "backlog";
   backlogMinAgeHours?: number;
   backlogMaxAgeDays?: number;
+  /** Optional immutable target for a curated publication run. Both values are
+   * required together; a mismatch fails instead of selecting another draft. */
+  targetDraftId?: string;
+  targetContentHash?: string;
   now?: Date;
   deploymentAttempts?: number;
   /** Test/worker override; production defaults to the 15-second poll cadence. */
@@ -1381,26 +1462,26 @@ export async function runAutoApprove(opts: {
 
   const activeDrafts = drafts.filter((draft) => !draft.publication);
   const publishOrder = opts.publishOrder ?? "newest";
-  const now = (opts.now ?? new Date()).getTime();
-  const backlogMinAgeMs =
-    Math.max(0, opts.backlogMinAgeHours ?? 12) * 60 * 60 * 1_000;
-  const backlogMaxAgeMs =
-    Math.max(1, opts.backlogMaxAgeDays ?? 21) * 24 * 60 * 60 * 1_000;
-  const eligibleDrafts = activeDrafts
-    .filter((draft) => {
-      if (publishOrder !== "backlog") return true;
-      const publishedAt = Date.parse(draft.article.publishedAt);
-      if (!Number.isFinite(publishedAt)) return false;
-      const age = now - publishedAt;
-      return age >= backlogMinAgeMs && age <= backlogMaxAgeMs;
-    })
-    .sort((left, right) => {
-      if (publishOrder === "backlog") {
-        const scoreDifference = right.provenance.score - left.provenance.score;
-        if (scoreDifference !== 0) return scoreDifference;
-      }
-      return right.article.publishedAt.localeCompare(left.article.publishedAt);
-    });
+  const targetConfigured =
+    opts.targetDraftId !== undefined || opts.targetContentHash !== undefined;
+  if (
+    targetConfigured &&
+    (opts.targetDraftId === undefined || opts.targetContentHash === undefined)
+  ) {
+    throw new Error(
+      "Targeted publication requires both draft ID and content hash.",
+    );
+  }
+  const eligibleDrafts = selectAutoApproveEligibleDrafts(activeDrafts, {
+    target:
+      opts.targetDraftId !== undefined && opts.targetContentHash !== undefined
+        ? { id: opts.targetDraftId, contentHash: opts.targetContentHash }
+        : undefined,
+    publishOrder,
+    backlogMinAgeHours: opts.backlogMinAgeHours,
+    backlogMaxAgeDays: opts.backlogMaxAgeDays,
+    now: opts.now,
+  });
   const assessments = eligibleDrafts.map(assessDraft);
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");

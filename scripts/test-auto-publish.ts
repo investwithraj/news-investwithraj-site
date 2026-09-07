@@ -213,6 +213,55 @@ async function main() {
     assert.equal(assessDraft(officialDraft).requiredPublisherCount, 1);
     assert.equal(assessDraft(officialDraft).verdict, "auto-approve");
 
+    const exactQuarantinedDldDraft = {
+      ...draft,
+      id: "f01d5ea6-56b3-45bd-b48c-d67bb567480c",
+      contentHash:
+        "118e1030f017d36619d2d95346722f2ba161e2a42a0a526aa6f660e8872e2dd3",
+      article: {
+        ...draft.article,
+        slug:
+          "2026-09-07-dubai-land-department-launches-unified-registration",
+      },
+    } as NewsDraft;
+    const quarantinedDldAssessment = assessDraft(exactQuarantinedDldDraft);
+    assert.equal(
+      quarantinedDldAssessment.verdict,
+      "manual",
+      "the exact rejected DLD draft version must remain held",
+    );
+    assert.ok(
+      quarantinedDldAssessment.reasons.some((reason) =>
+        reason.includes(
+          "editorial quarantine dld-initial-registration-semantic-overreach-2026-09-07",
+        ),
+      ),
+      "the hold must expose its auditable quarantine rule",
+    );
+
+    const revisedDldDraft = {
+      ...exactQuarantinedDldDraft,
+      contentHash: "f".repeat(64),
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(revisedDldDraft).verdict,
+      "manual",
+      "a changed hash must not bypass the permanent rejected-slug hold",
+    );
+    const correctedDldDraft = {
+      ...revisedDldDraft,
+      article: {
+        ...revisedDldDraft.article,
+        slug:
+          "2026-09-07-dubai-land-department-launches-initial-registration-platform",
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(correctedDldDraft).verdict,
+      "auto-approve",
+      "the separately reviewed corrected slug returns to normal assessment",
+    );
+
     for (const [id, claim] of [
       ["broad-market-growth", "The UAE property market grew 12% last year."],
       ["analyst-forecast", "Analysts expect prices to rise by 12%."],

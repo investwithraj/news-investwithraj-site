@@ -758,8 +758,16 @@ export async function addReservedDraft(
   input: NewsDraftInput & { reservationToken: string },
 ): Promise<NewsDraft> {
   const now = new Date().toISOString();
+  if (
+    input.draftId !== undefined &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      input.draftId,
+    )
+  ) {
+    throw new DraftConflictError("The requested draft ID is invalid.");
+  }
   const draft: NewsDraft = {
-    id: crypto.randomUUID(),
+    id: input.draftId ?? crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
     status: "review",
@@ -779,6 +787,9 @@ local reservationRaw = redis.call("GET", KEYS[2])
 if not reservationRaw then return "reservation" end
 local reservation = cjson.decode(reservationRaw)
 if reservation.token ~= ARGV[4] or reservation.state ~= "processing" then return "reservation" end
+if redis.call("EXISTS", KEYS[3]) == 1 or redis.call("EXISTS", KEYS[4]) == 1 then
+  return "collision"
+end
 local raw = redis.call("GET", KEYS[1])
 local drafts = {}
 if raw then drafts = cjson.decode(raw) end
@@ -797,7 +808,12 @@ return "ok"
 `;
     const state = await kvEval(
       script,
-      [KV_KEY, clusterKey(input.provenance.clusterId)],
+      [
+        KV_KEY,
+        clusterKey(input.provenance.clusterId),
+        publicationArchiveKey(draft.id),
+        publicationReceiptKey(draft.id),
+      ],
       [
         JSON.stringify(draft),
         draft.id,
@@ -809,7 +825,9 @@ return "ok"
       ],
     );
     if (state === "collision") {
-      throw new DraftCollisionError("A draft with this slug already exists.");
+      throw new DraftCollisionError(
+        "A draft with this identity or slug already exists.",
+      );
     }
     if (state === "reservation") {
       throw new DraftConflictError(
@@ -833,8 +851,21 @@ return "ok"
         "A current atomic cluster reservation is required.",
       );
     }
-    if (all.some((item) => item.article.slug === draft.article.slug)) {
-      throw new DraftCollisionError("A draft with this slug already exists.");
+    const [archived, receipt] = await Promise.all([
+      getArchivedPublicationDraft(draft.id),
+      getPublicationReceipt(draft.id),
+    ]);
+    if (
+      archived ||
+      receipt ||
+      all.some(
+        (item) =>
+          item.id === draft.id || item.article.slug === draft.article.slug,
+      )
+    ) {
+      throw new DraftCollisionError(
+        "A draft with this identity or slug already exists.",
+      );
     }
     all.push(draft);
     if (!(await fsSet(all))) throw new Error("Draft storage write failed.");

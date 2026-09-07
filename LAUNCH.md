@@ -16,8 +16,11 @@ already succeeded.
   drafts held by automation.
 - Every cited URL must be represented in the draft's verified-source record
   before publication.
-- Evidence policy v3 requires at least two distinct allowlisted
-  citation URLs with independently fetched source text.
+- Evidence policy v4 permits one source only for a strictly attributed fact
+  from the authoritative government, regulator, or first-party developer
+  speaking on its own canonical domain. Analysis, comparisons, market-wide
+  claims, forecasts, and recommendations require two independent approved
+  canonical publishers. Every counted source needs directly fetched evidence.
 - Model-provided quotations or summaries are not accepted as fetched evidence.
 - Editorial images must be real, licensed or first-party, source-attributed,
   and explicitly verified. Unverified media is omitted.
@@ -165,9 +168,14 @@ production-ready without recorded evidence for that exact deployment:
 `NEWSROOM_LIFECYCLE_CUTOVER=1` is the only enabling value. Treat it as a
 build/release-time switch and keep it off until release-owner sign-off.
 
-- Cutover off: 79 sitemap URLs, 41 public articles, and zero lifecycle
-  redirects.
-- Cutover on: 31 sitemap URLs, 26 public articles, and 31 exact redirects.
+- Frozen lifecycle counts are baselines, not ceilings: each reviewed daily
+  article without an explicit legacy lifecycle row is additive.
+- Cutover off: the sitemap is the frozen 79-path authority plus additive
+  published article paths; public discovery is the frozen 41-article baseline
+  plus those additive publications; lifecycle redirects remain zero.
+- Cutover on: the sitemap is the frozen 31-path KEEP/IMPROVE projection plus
+  additive indexable article paths; public discovery is the frozen 26-article
+  baseline plus those additive publications; the 31 exact redirects remain.
 - Three redirects remain intentionally held because their targets do not yet
   satisfy the recorded content or indexation conditions.
 - Six exact removal candidates return 410 Gone only when the cutover is on.
@@ -184,7 +192,7 @@ deployment, KV, secrets, GitHub, DNS, cron, indexing, or provider connection.
 
 The retained legacy set contains 24 records missing a publication content hash
 and 7 one-source records. They remain visible only because the lifecycle matrix
-retains them; they are not evidence policy v3 certified. Treat this inventory
+retains them; they are not evidence policy v4 certified. Treat this inventory
 as fail-closed release debt and do not claim a complete evidence migration.
 
 `NEWSROOM_EVIDENCE_HOLD_PREVIEW=1` is a separate, non-authorizing preview of
@@ -192,9 +200,15 @@ the exact 24-record noindex hold. It is default off and Production fails closed
 to the existing projection even if the flag is set. In a non-production
 environment only, the held articles stay readable and self-canonical but emit
 no NewsArticle, FAQ, image, or article breadcrumb schema and leave discovery,
-front page, RSS, news-sitemap, and sitemap projections. The resulting counts
-are 55 sitemap URLs / 17 discovery articles with lifecycle cutover off and 7 / 2
-with lifecycle cutover on. Redirects and the six removal responses do not
-change. This preview does not approve the evidence debt or authorize release.
+front page, RSS, news-sitemap, and sitemap projections. Do not certify this
+preview by a fixed total: evidence holds can change near-duplicate selection
+and whether a vertical route remains populated. With lifecycle cutover off,
+public discovery is the published registry minus the exact 24 held slugs, and
+the sitemap's news paths must equal that mode's distinct indexable projection.
+With lifecycle cutover on, preview discovery is exactly the
+evidence-certified indexable set, while its sitemap contains the five released
+static paths plus those certified article paths. Redirects and the six removal
+responses do not change. This preview does not approve the evidence debt or
+authorize release.
 
 Contact and correction address: `office@investwithraj.com`.

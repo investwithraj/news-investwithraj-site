@@ -34,7 +34,7 @@ source registry
 
 There is one bounded automatic-publication branch. It is disabled unless
 `AUTO_APPROVE=1`; the server credential can publish only after evidence policy
-v3 and all normal hard gates pass, and the configured limit is one in the
+v4 and all normal hard gates pass, and the configured limit is one in the
 scheduled workflow. Held drafts require the signed human-review path.
 
 ## Security contracts
@@ -91,11 +91,10 @@ operations.
 configured discovery sources, deduplicates and scores clusters, researches
 candidates, and posts successful drafts to `/api/news/draft`.
 
-The workflow explicitly sets `AUTO_APPROVE` to `1` and
-`AUTO_PUBLISH_LIMIT` to `1`.
-The morning schedule uses `AUTO_PUBLISH_ORDER=newest`; the midday and evening
-schedules use `oldest` to clear the verified backlog without displacing the
-daily current-news lane.
+The scheduled and curated lanes resolve `AUTO_APPROVE` to `1` and always set
+`AUTO_PUBLISH_LIMIT` to `1`; the manual LLM-candidate lane stages for review.
+The single morning schedule uses `AUTO_PUBLISH_ORDER=newest`. Recovery and
+curated-candidate runs are manual and remain bounded to one exact publication.
 
 If `AUTO_APPROVE` is exactly `1`, `runAutoApprove` publishes only drafts that
 pass the validator, allowlisted-source, independently fetched evidence and
@@ -103,16 +102,22 @@ figure-traceability gates. All other drafts remain held.
 
 ### Fail-closed evidence assessment
 
-Evidence policy v3 in `lib/news-review/auto-approve.ts` requires:
+Evidence policy v4 in `lib/news-review/auto-approve.ts` uses two risk-based
+lanes:
 
-- at least two distinct allowlisted citation URLs;
+- one source is permitted only for a strictly attributed fact from an
+  authoritative government, regulator, or first-party developer source on its
+  own canonical domain;
+- analysis, comparisons, market-wide claims, forecasts, and recommendations
+  require two independent approved canonical publishers;
 - independently fetched evidence text for each counted source;
 - a meaningful evidence payload;
 - figure traceability against fetched evidence;
 - the normal validator to pass.
 
 Model-provided cited prose is not accepted as independent evidence. Missing,
-withheld, one-source, or model-only evidence results in a hold.
+withheld, unsupported, or model-only evidence results in a hold; a one-source
+draft passes only when it satisfies the narrow official-fact lane.
 
 ### Human publication
 
@@ -359,7 +364,7 @@ Their presence does not override the production deny rules.
   require separate legal and production verification.
 - The legacy index-candidate inventory contains 24 records missing a
   publication content hash and 7 one-source records. Matrix retention is not
-  evidence policy v3 certification; this remains explicit fail-closed release
+  evidence policy v4 certification; this remains explicit fail-closed release
   debt.
 
 ## Lifecycle release contract
@@ -367,9 +372,14 @@ Their presence does not override the production deny rules.
 `NEWSROOM_LIFECYCLE_CUTOVER=1` is the only enabling value and is evaluated at
 build/release time. The repository defaults to off.
 
-- Off produces 79 sitemap URLs, 41 public articles, and zero lifecycle
-  redirects.
-- On produces 31 sitemap URLs, 26 public articles, and 31 exact redirects.
+- Frozen lifecycle counts are baselines, not ceilings: each reviewed daily
+  article without an explicit legacy lifecycle row is additive.
+- Off produces the frozen 79-path sitemap authority plus additive published
+  article paths and the frozen 41-article discovery baseline plus those
+  additive publications; lifecycle redirects remain zero.
+- On produces the frozen 31-path KEEP/IMPROVE projection plus additive
+  indexable article paths and the frozen 26-article discovery baseline plus
+  those additive publications; the 31 exact redirects remain.
 - Three redirects remain held until their target-specific conditions pass.
 - Six exact removal candidates return 410 Gone only when the cutover is on.
   The request boundary emits no redirect or removed-page metadata and prevents
@@ -383,11 +393,16 @@ mode for the exact checked-in 24-record evidence hold. It is default off and
 Production fails closed to the existing projection even if the flag is set.
 Held article routes remain readable and self-canonical, but are noindex and
 emit no NewsArticle, FAQ, image, or article breadcrumb schema; discovery,
-front-page, RSS, news-sitemap, and sitemap selectors exclude them. The derived
-preview counts are 55 sitemap URLs / 17 discovery articles with lifecycle
-cutover off and 7 / 2 with lifecycle cutover on. Redirects and the six removal
+front-page, RSS, news-sitemap, and sitemap selectors exclude them. Do not
+certify this preview by a fixed total: evidence holds can change near-duplicate
+selection and whether a vertical route remains populated. With lifecycle
+cutover off, public discovery is the published registry minus the exact 24 held
+slugs, and the sitemap's news paths must equal that mode's distinct indexable
+projection. With lifecycle cutover on, preview discovery is exactly the
+evidence-certified indexable set, while its sitemap contains the five released
+static paths plus those certified article paths. Redirects and the six removal
 responses are unchanged. This preview cannot authorize release or certify the
-held records under evidence policy v3.
+held records under evidence policy v4.
 
 `npm run certify:newsroom-release` validates these modes without network
 access and emits deterministic cutover-off/cutover-on route manifests. It does

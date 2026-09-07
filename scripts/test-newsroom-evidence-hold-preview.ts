@@ -6,11 +6,13 @@ import sitemap from "../app/sitemap";
 import { GET as getFront } from "../app/api/front/route";
 import { GET as getNewsSitemap } from "../app/news-sitemap.xml/route";
 import { GET as getRss } from "../app/rss.xml/route";
+import { getIndexablePublicNewsArticles } from "../lib/news-discovery";
 import {
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_HELD_REDIRECTS,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
   NEWSROOM_RELEASE_REMOVAL_CANDIDATES,
+  PRIMARY_NEWSROOM_LIFECYCLE,
   getNewsroomLifecycle,
   getReleasedNewsroomRedirects,
 } from "../lib/news-lifecycle";
@@ -44,6 +46,14 @@ const articlePageSource = readFileSync(
 );
 const developerDirectorySource = readFileSync(
   resolve(process.cwd(), "app/developers/page.tsx"),
+  "utf8",
+);
+const newsDiscoverySource = readFileSync(
+  resolve(process.cwd(), "lib/news-discovery.ts"),
+  "utf8",
+);
+const newsMetadataSource = readFileSync(
+  resolve(process.cwd(), "lib/news-metadata.ts"),
   "utf8",
 );
 
@@ -90,10 +100,26 @@ async function withMode<T>(
 
 function state() {
   return {
-    sitemap: sitemap().length,
-    articles: getPublicDiscoveryNewsArticles().length,
-    redirects: getReleasedNewsroomRedirects().length,
+    sitemapPaths: sitemap()
+      .map((entry) => new URL(entry.url).pathname)
+      .sort(),
+    articleSlugs: getPublicDiscoveryNewsArticles()
+      .map((article) => article.slug)
+      .sort(),
+    indexableArticleSlugs: getIndexablePublicNewsArticles()
+      .map((article) => article.slug)
+      .sort(),
+    redirectSources: getReleasedNewsroomRedirects()
+      .map((redirect) => redirect.source)
+      .sort(),
   };
+}
+
+function newsSlugsFromSitemap(paths: readonly string[]): string[] {
+  return paths
+    .filter((pathname) => pathname.startsWith("/news/"))
+    .map((pathname) => pathname.slice("/news/".length))
+    .sort();
 }
 
 function developerDirectoryCandidateSlugs(): string[] {
@@ -121,6 +147,17 @@ async function main(): Promise<void> {
       INDEXABLE_NEWS_ARTICLES.find((article) => article.slug === slug)
         ?.publicationContentHash === undefined,
     ),
+  );
+  const sortedEvidenceHoldSlugs = [...NEWSROOM_EVIDENCE_HOLD_SLUGS].sort();
+  const missingContentHashSlugs = INDEXABLE_NEWS_ARTICLES.filter(
+    (article) => !article.publicationContentHash,
+  )
+    .map((article) => article.slug)
+    .sort();
+  assert.deepEqual(
+    missingContentHashSlugs,
+    sortedEvidenceHoldSlugs,
+    "Every indexable article without a content hash must be explicitly evidence-held.",
   );
 
   assert.equal(isNewsroomEvidenceHoldPreviewEnabled({}), false);
@@ -151,18 +188,65 @@ async function main(): Promise<void> {
   const additivePublished = PUBLISHED_NEWS_ARTICLES.filter(
     (article) => !getNewsroomLifecycle(`/news/${article.slug}`),
   );
+  const additiveIndexable = INDEXABLE_NEWS_ARTICLES.filter(
+    (article) => !getNewsroomLifecycle(`/news/${article.slug}`),
+  );
   const additiveCertified = EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.filter(
     (article) => !getNewsroomLifecycle(`/news/${article.slug}`),
   );
+  const legacyPublished = PUBLISHED_NEWS_ARTICLES.filter((article) =>
+    getNewsroomLifecycle(`/news/${article.slug}`),
+  );
+  const legacyIndexable = INDEXABLE_NEWS_ARTICLES.filter((article) =>
+    getNewsroomLifecycle(`/news/${article.slug}`),
+  );
+  assert.equal(legacyPublished.length, 41);
+  assert.equal(legacyIndexable.length, 26);
+  assert.deepEqual(
+    additiveCertified.map((article) => article.slug).sort(),
+    additiveIndexable.map((article) => article.slug).sort(),
+    "Every additive index candidate must be evidence-certified.",
+  );
+  const expectedDefaultSitemapPaths = [
+    ...new Set([
+      ...Object.keys(PRIMARY_NEWSROOM_LIFECYCLE),
+      ...additivePublished.map((article) => `/news/${article.slug}`),
+    ]),
+  ].sort();
+  const expectedPublishedSlugs = PUBLISHED_NEWS_ARTICLES.map(
+    (article) => article.slug,
+  ).sort();
+  const expectedPreviewPublishedSlugs = PUBLISHED_NEWS_ARTICLES.filter(
+    (article) => !NEWSROOM_EVIDENCE_HOLD_SLUGS.includes(article.slug),
+  )
+    .map((article) => article.slug)
+    .sort();
+  const expectedCertifiedSlugs =
+    EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.map(
+      (article) => article.slug,
+    ).sort();
+  const expectedPreviewCutoverSitemapPaths = [
+    ...Object.entries(PRIMARY_NEWSROOM_LIFECYCLE)
+      .filter(
+        ([pathname, lifecycle]) =>
+          !pathname.startsWith("/news/") &&
+          (lifecycle.disposition === "KEEP" ||
+            lifecycle.disposition === "IMPROVE"),
+      )
+      .map(([pathname]) => pathname),
+    ...expectedCertifiedSlugs.map((slug) => `/news/${slug}`),
+  ].sort();
   const defaultState = await withMode(
     { evidencePreview: false, lifecycle: false },
     state,
   );
-  assert.deepEqual(defaultState, {
-    sitemap: 79 + additivePublished.length,
-    articles: PUBLISHED_NEWS_ARTICLES.length,
-    redirects: 0,
-  });
+  assert.deepEqual(defaultState.sitemapPaths, expectedDefaultSitemapPaths);
+  assert.deepEqual(defaultState.articleSlugs, expectedPublishedSlugs);
+  assert.deepEqual(
+    newsSlugsFromSitemap(defaultState.sitemapPaths),
+    defaultState.indexableArticleSlugs,
+  );
+  assert.deepEqual(defaultState.redirectSources, []);
   assert.deepEqual(
     await withMode(
       { vercelEnv: "production", evidencePreview: true, lifecycle: false },
@@ -170,38 +254,84 @@ async function main(): Promise<void> {
     ),
     defaultState,
   );
-  assert.deepEqual(
-    await withMode({ vercelEnv: "preview", evidencePreview: true, lifecycle: false }, state),
-    {
-      sitemap: 55 + additivePublished.length,
-      articles:
-        PUBLISHED_NEWS_ARTICLES.length - NEWSROOM_EVIDENCE_HOLD_SLUGS.length,
-      redirects: 0,
-    },
+  const evidencePreviewState = await withMode(
+    { vercelEnv: "preview", evidencePreview: true, lifecycle: false },
+    state,
   );
   assert.deepEqual(
-    await withMode({ vercelEnv: "preview", evidencePreview: true, lifecycle: true }, state),
-    {
-      sitemap: 7 + additiveCertified.length,
-      articles: EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length,
-      redirects: 31,
-    },
+    evidencePreviewState.articleSlugs,
+    expectedPreviewPublishedSlugs,
+  );
+  assert.deepEqual(
+    newsSlugsFromSitemap(evidencePreviewState.sitemapPaths),
+    evidencePreviewState.indexableArticleSlugs,
+  );
+  assert.equal(
+    new Set(evidencePreviewState.sitemapPaths).size,
+    evidencePreviewState.sitemapPaths.length,
+  );
+  assert.ok(
+    evidencePreviewState.sitemapPaths
+      .filter((pathname) => !pathname.startsWith("/news/"))
+      .every((pathname) =>
+        Object.hasOwn(PRIMARY_NEWSROOM_LIFECYCLE, pathname),
+      ),
+  );
+  assert.ok(
+    sortedEvidenceHoldSlugs.every(
+      (slug) =>
+        !evidencePreviewState.sitemapPaths.includes(`/news/${slug}`),
+    ),
+  );
+  assert.deepEqual(evidencePreviewState.redirectSources, []);
+  const evidencePreviewCutoverState = await withMode(
+    { vercelEnv: "preview", evidencePreview: true, lifecycle: true },
+    state,
+  );
+  assert.deepEqual(
+    evidencePreviewCutoverState.sitemapPaths,
+    expectedPreviewCutoverSitemapPaths,
+  );
+  assert.deepEqual(
+    evidencePreviewCutoverState.articleSlugs,
+    expectedCertifiedSlugs,
+  );
+  assert.deepEqual(
+    evidencePreviewCutoverState.indexableArticleSlugs,
+    expectedCertifiedSlugs,
+  );
+  assert.deepEqual(
+    evidencePreviewCutoverState.redirectSources,
+    NEWSROOM_EXACT_REDIRECTS.map((redirect) => redirect.source).sort(),
   );
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
   assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
   assert.match(
     articlePageSource,
-    /import \{[\s\S]*isNewsroomEvidenceHeldArticleSlug,[\s\S]*\} from "@\/lib\/public-content"/u,
+    /import \{[\s\S]*isIndexablePublicNewsArticleSlug,[\s\S]*\} from "@\/lib\/news-discovery"/u,
   );
-  assert.equal(
-    (articlePageSource.match(/!isNewsroomEvidenceHeldArticleSlug\(/gu) ?? [])
-      .length,
-    2,
-    "Metadata and page schema must share the exact evidence-hold decision.",
+  assert.match(
+    articlePageSource,
+    /return newsArticleMetadata\(article\)/u,
   );
-  assert.match(articlePageSource, /robots: \{[\s\S]*index: indexEligible,[\s\S]*follow: true/u);
-  assert.match(articlePageSource, /alternates: \{[\s\S]*canonical: url/u);
+  assert.match(
+    articlePageSource,
+    /const indexEligible = isIndexablePublicNewsArticleSlug\(article\.slug\)/u,
+  );
+  assert.match(
+    newsMetadataSource,
+    /robots: \{[\s\S]*index: isIndexablePublicNewsArticleSlug\(article\.slug\),[\s\S]*follow: true/u,
+  );
+  assert.match(
+    newsMetadataSource,
+    /alternates: \{[\s\S]*canonical: url/u,
+  );
+  assert.match(
+    newsDiscoverySource,
+    /isNewsroomEvidenceHeldArticleSlug\(slug\)/u,
+    "The shared indexability boundary must retain the evidence-hold exclusion.",
+  );
   assert.match(articlePageSource, /const graph = indexEligible[\s\S]*\? asGraph\(/u);
   assert.match(
     developerDirectorySource,
@@ -220,20 +350,49 @@ async function main(): Promise<void> {
     { vercelEnv: "preview", evidencePreview: true, lifecycle: false },
     developerDirectoryCandidateSlugs,
   );
+  const additivePublishedSlugSet = new Set(
+    additivePublished.map((article) => article.slug),
+  );
+  const certifiedSlugSet = new Set(expectedCertifiedSlugs);
+  const defaultLegacyDeveloperCandidates =
+    defaultDeveloperDirectoryCandidates.filter(
+      (slug) => !additivePublishedSlugSet.has(slug),
+    );
   assert.deepEqual(
-    defaultDeveloperDirectoryCandidates,
-    DEFAULT_DEVELOPER_DIRECTORY_CANDIDATES,
-    "The default developer-directory candidate order changed.",
+    defaultLegacyDeveloperCandidates,
+    DEFAULT_DEVELOPER_DIRECTORY_CANDIDATES.slice(
+      0,
+      defaultLegacyDeveloperCandidates.length,
+    ),
+    "Reviewed daily additions may enter the directory, but the surviving legacy candidate order must not drift.",
+  );
+  assert.ok(
+    defaultDeveloperDirectoryCandidates
+      .filter((slug) => additivePublishedSlugSet.has(slug))
+      .every((slug) => certifiedSlugSet.has(slug)),
+    "An additive developer-directory candidate was not evidence-certified.",
   );
   assert.deepEqual(
     productionDeveloperDirectoryCandidates,
-    DEFAULT_DEVELOPER_DIRECTORY_CANDIDATES,
+    defaultDeveloperDirectoryCandidates,
     "Production with the preview flag must preserve developer-directory candidates.",
   );
+  const expectedPreviewDeveloperCandidates = selectDistinctArticles(
+    PUBLIC_DEVELOPER_RECORDS.flatMap(({ reports }) => reports).filter(
+      (article) => certifiedSlugSet.has(article.slug),
+    ),
+    8,
+  ).map((article) => article.slug);
   assert.deepEqual(
     previewDeveloperDirectoryCandidates,
-    [],
-    "Evidence preview must emit zero held developer-directory reports.",
+    expectedPreviewDeveloperCandidates,
+    "Evidence preview must emit exactly the evidence-certified developer reports.",
+  );
+  assert.ok(
+    previewDeveloperDirectoryCandidates.every(
+      (slug) => !NEWSROOM_EVIDENCE_HOLD_SLUGS.includes(slug),
+    ),
+    "Evidence preview emitted a held developer-directory report.",
   );
 
   await withMode(
@@ -295,7 +454,7 @@ async function main(): Promise<void> {
   );
 
   console.log(
-    `Newsroom evidence-hold preview PASS: default/Production ${defaultState.sitemap}/${defaultState.articles}/0; additive daily publications=${additivePublished.length}; 24 readable noindex holds; redirects/removals unchanged.`,
+    `Newsroom evidence-hold preview PASS: default/Production ${defaultState.sitemapPaths.length}/${defaultState.articleSlugs.length}/0; additive daily publications=${additivePublished.length}; 24 readable noindex holds; redirects/removals unchanged.`,
   );
 }
 

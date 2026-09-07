@@ -57,7 +57,12 @@ export interface NewsDraftProvenance {
      * snippet or model-supplied date. Optional only for legacy-record reads;
      * missing metadata fails the immutable publication gate. */
     sourcePublishedAt?: string;
-    sourceDateSource?: "meta" | "json-ld" | "time";
+    sourceDateSource?:
+      | "meta"
+      | "json-ld"
+      | "time"
+      | "visible"
+      | "publisher-api";
     /** Original staging clock and bounded age window. Auto-approval recomputes
      * freshness against this clock, not the later publication-run clock. */
     freshnessCheckedAt?: string;
@@ -142,6 +147,8 @@ export interface NewsDraft {
 
 /** Payload the pipeline / cron posts to create a draft. */
 export interface NewsDraftInput {
+  /** Optional deterministic ID accepted only by authenticated automation. */
+  draftId?: string;
   article: DraftArticle;
   provenance: NewsDraftProvenance;
   reviewNote?: string;

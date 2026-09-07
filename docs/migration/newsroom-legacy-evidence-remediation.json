@@ -1,6 +1,6 @@
 {
   "schemaVersion": "newsroom-legacy-evidence-remediation-v1",
-  "evidencePolicyVersion": 3,
+  "evidencePolicyVersion": 4,
   "status": "preview-hold-implemented-unresolved",
   "authority": {
     "articleRegistry": "content/news/index.ts",

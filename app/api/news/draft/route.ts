@@ -92,6 +92,22 @@ export async function POST(req: NextRequest) {
     /^[0-9a-f-]{36}$/i.test(body.reservationToken)
       ? body.reservationToken
       : "";
+  const draftId =
+    typeof body.draftId === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      body.draftId,
+    )
+      ? body.draftId
+      : undefined;
+  if (
+    body.draftId !== undefined &&
+    (auth.credential !== "server-secret" || !draftId)
+  ) {
+    return privateJson(
+      { error: "A deterministic draft ID is invalid for this caller." },
+      400,
+    );
+  }
   if (auth.credential === "server-secret" && !reservationToken) {
     return privateJson(
       {
@@ -104,6 +120,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const input = {
+      draftId,
       article: articleResult.article,
       provenance: provenanceResult.provenance,
       reviewNote: body.reviewNote,

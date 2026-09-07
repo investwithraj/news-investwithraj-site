@@ -22,6 +22,15 @@ on:
         options:
           - auto
           - dld-initial-registration
+      curated_candidate_key:
+        description: "Stage one human-edited candidate through fresh direct evidence, then run the bounded publication gate"
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - dld-initial-registration-2026-09-07
+          - rak-h1-housing-2026-09-02
 concurrency:
   group: news-cron-production
   cancel-in-progress: false
@@ -42,10 +51,33 @@ jobs:
       - run: npx tsx scripts/test-developer-source-registry.ts
       - run: npx tsx scripts/test-news-cron-outcome.ts
       - run: npx tsx scripts/test-news-candidate-quarantine.ts
+      - run: npx tsx scripts/test-news-draft-quarantine.ts
       - run: npx tsx scripts/test-news-manual-candidate.ts
+      - run: npx tsx scripts/test-news-curated-candidate.ts
+      - run: npx tsx scripts/test-news-curated-transport.ts
       - run: npx tsx scripts/check-source-health.ts
+      - name: Validate curated dispatch
+        if: github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none'
+        shell: bash
+        env:
+          MANUAL_LLM_CANDIDATE: ${{ inputs.candidate_key }}
+          PUBLICATION_ONLY: ${{ inputs.publication_only }}
+        run: |
+          if [ "$MANUAL_LLM_CANDIDATE" != "auto" ] || [ "$PUBLICATION_ONLY" = "true" ]; then
+            echo "::error title=Curated news candidate::Choose either one curated candidate, the manual LLM candidate, or publication-only mode."
+            exit 1
+          fi
+      - name: Stage selected curated candidate
+        id: curated
+        if: github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none'
+        run: npx tsx scripts/stage-curated-candidate.ts
+        env:
+          SITE_URL: https://news.investwithraj.com
+          POST_PUBLISH_SECRET: ${{ secrets.POST_PUBLISH_SECRET }}
+          CURATED_CANDIDATE_KEY: ${{ inputs.curated_candidate_key }}
       - name: Run daily news pipeline
         id: pipeline
+        if: github.event_name != 'workflow_dispatch' || inputs.curated_candidate_key == 'none' || steps.curated.outputs.already_published != '1'
         run: npx tsx scripts/draft-once.ts
         env:
           SITE_URL: https://news.investwithraj.com
@@ -53,11 +85,16 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # Reviewed manual targets stage first so their exact generated copy
           # can be inspected before a separate publication-only run.
-          AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1' }}
+          AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || (github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1') }}
           AUTO_PUBLISH_LIMIT: "1"
+          CURATED_PUBLICATION: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || '0' }}
+          CURATED_CANDIDATE_KEY: ${{ inputs.curated_candidate_key }}
+          AUTO_APPROVE_TARGET_DRAFT_ID: ${{ steps.curated.outputs.draft_id }}
+          AUTO_APPROVE_TARGET_CONTENT_HASH: ${{ steps.curated.outputs.content_hash }}
+          AUTO_APPROVE_TARGET_SLUG: ${{ steps.curated.outputs.slug }}
           # One Dubai-morning run researches and may publish the newest passing
           # website-news item. Manual recovery runs use the same bounded lane.
-          DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.publication_only && '0' || '1' }}
+          DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && (inputs.publication_only || inputs.curated_candidate_key != 'none') && '0' || '1' }}
           AUTO_PUBLISH_ORDER: "newest"
           AUTO_BACKLOG_MIN_AGE_HOURS: "12"
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"
@@ -68,7 +105,7 @@ jobs:
           PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && inputs.retry_failed_research && '1' || '0' }}
           PIPELINE_CANDIDATE_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_key || 'auto' }}
       - name: Surface daily news outcome
-        if: always()
+        if: always() && (github.event_name != 'workflow_dispatch' || inputs.curated_candidate_key == 'none' || steps.curated.outputs.already_published != '1')
         shell: bash
         env:
           PIPELINE_OUTCOME: ${{ steps.pipeline.outputs.outcome }}
@@ -87,3 +124,6 @@ jobs:
             exit 1
           fi
           echo "::notice title=Daily news pipeline::outcome=$PIPELINE_OUTCOME; outcomes=$PIPELINE_OUTCOMES; publication_sha=$PUBLICATION_SHA; newest_age_hours=$NEWEST_PUBLICATION_AGE_HOURS; action=$ACTIONABLE_REASONS"
+      - name: Surface curated no-op
+        if: github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && steps.curated.outputs.already_published == '1'
+        run: echo "::notice title=Curated news candidate::The exact candidate is already published; no draft or publication action was taken."

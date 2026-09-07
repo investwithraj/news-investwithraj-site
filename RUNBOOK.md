@@ -69,14 +69,17 @@ curl -X POST "https://news.investwithraj.com/api/cron/draft" \
 Browser mutations use the signed, HttpOnly review-session cookie and same-origin
 checks. The publication endpoint also accepts the server credential used by the
 scheduled publisher, but it independently re-runs every hard publication gate.
-The server credential cannot bypass evidence policy v3 or publish a held draft.
+The server credential cannot bypass evidence policy v4 or publish a held draft.
 
 ## Draft acceptance and evidence
 
 A staged draft is not an approved article. Before publication, verify:
 
 - the normal validator has no blocking failures;
-- there are at least two distinct allowlisted citation URLs;
+- a strictly attributed official fact has its authoritative government,
+  regulator, or first-party developer source on the source's canonical domain;
+- analysis, comparisons, market-wide claims, forecasts, and recommendations
+  have two independent approved canonical publishers;
 - cited facts are supported by independently fetched evidence text;
 - every citation is represented in `verifiedSources`;
 - figures trace to fetched evidence, not model-supplied prose;
@@ -84,8 +87,8 @@ A staged draft is not an approved article. Before publication, verify:
 - title, subtitle, body, metadata, CTA, and canonical slug are accurate;
 - Raj's identity and contact details contain no unsupported credentials.
 
-If evidence is absent, withheld, contradictory, or source-only, keep the draft
-on hold.
+If evidence is absent, withheld, contradictory, unsupported, or fails the
+applicable evidence lane, keep the draft on hold.
 
 ## Publication
 
@@ -220,8 +223,14 @@ uses `null` when a cover is not verified.
 build/release time and must remain off while release sign-offs or external
 proof are missing.
 
-- Off: 79 sitemap URLs, 41 public articles, and zero lifecycle redirects.
-- On: 31 sitemap URLs, 26 public articles, and 31 exact redirects.
+- Frozen lifecycle counts are baselines, not ceilings: each reviewed daily
+  article without an explicit legacy lifecycle row is additive.
+- Off: the sitemap is the frozen 79-path authority plus additive published
+  article paths; public discovery is the frozen 41-article baseline plus those
+  additive publications; lifecycle redirects remain zero.
+- On: the sitemap is the frozen 31-path KEEP/IMPROVE projection plus additive
+  indexable article paths; public discovery is the frozen 26-article baseline
+  plus those additive publications; the 31 exact redirects remain.
 - Three redirects remain held until their recorded content/indexation
   conditions are satisfied.
 - Six exact removal candidates return 410 Gone when the cutover is on, with
@@ -233,7 +242,7 @@ proof are missing.
 
 The legacy index-candidate inventory contains 24 records missing a publication
 content hash and 7 one-source records. Matrix retention does not certify those
-records under evidence policy v3. Keep this debt fail-closed: do not describe
+records under evidence policy v4. Keep this debt fail-closed: do not describe
 the corpus as fully migrated until each record is repaired, noindexed, or
 otherwise resolved by the release owner.
 
@@ -242,11 +251,16 @@ previews the checked-in 24-record hold when `VERCEL_ENV` is not `production`.
 The flag is default off; Production fails closed to existing behavior even if
 it is set. Held articles remain readable and self-canonical, become noindex,
 emit no NewsArticle, FAQ, image, or article breadcrumb schema, and are removed
-from front-page/discovery, RSS, news-sitemap, and sitemap projections. Expected
-counts are 55 sitemap URLs / 17 discovery articles with lifecycle cutover off
-and 7 / 2 with lifecycle cutover on. Redirect and six-route removal behavior
-is unchanged. The preview is non-authorizing and does not resolve the evidence
-debt, enable lifecycle cutover, or approve deployment.
+from front-page/discovery, RSS, news-sitemap, and sitemap projections. Do not
+certify this preview by a fixed total: evidence holds can change near-duplicate
+selection and whether a vertical route remains populated. With lifecycle
+cutover off, public discovery is the published registry minus the exact 24 held
+slugs, and the sitemap's news paths must equal that mode's distinct indexable
+projection. With lifecycle cutover on, preview discovery is exactly the
+evidence-certified indexable set, while its sitemap contains the five released
+static paths plus those certified article paths. Redirect and six-route removal
+behavior is unchanged. The preview is non-authorizing and does not resolve the
+evidence debt, enable lifecycle cutover, or approve deployment.
 
 ## Verification commands
 

@@ -47,7 +47,55 @@ export function publisherArticleFetchCandidates(value: string): string[] {
     candidates.push(amp.toString());
   }
   candidates.push(original.toString());
+  if (host === "wam.ae") {
+    const match = original.pathname.match(
+      /^\/en\/article\/([a-z0-9]+)-[a-z0-9-]+\/?$/iu,
+    );
+    if (match && !original.search && !original.hash) {
+      const publisherApi = new URL(
+        "/api/app/articles/GetArticleBySlug",
+        original,
+      );
+      publisherApi.searchParams.set(
+        "slug",
+        original.pathname.replace(/^\/en\/article\//u, "").replace(/\/$/u, ""),
+      );
+      candidates.push(publisherApi.toString());
+    }
+  }
   return [...new Set(candidates)];
+}
+
+function wamPublisherApiCandidate(
+  originalUrl: string,
+  candidateUrl: string,
+): { shortCode: string } | null {
+  try {
+    const original = new URL(originalUrl);
+    const candidate = new URL(candidateUrl);
+    const route = original.pathname
+      .replace(/^\/en\/article\//u, "")
+      .replace(/\/$/u, "");
+    const match = route.match(/^([a-z0-9]+)-[a-z0-9-]+$/iu);
+    if (
+      !match ||
+      original.protocol !== "https:" ||
+      normalisedHostname(original.hostname) !== "wam.ae" ||
+      original.search ||
+      original.hash ||
+      candidate.protocol !== "https:" ||
+      candidate.hostname !== original.hostname ||
+      candidate.pathname !== "/api/app/articles/GetArticleBySlug" ||
+      candidate.hash ||
+      candidate.searchParams.size !== 1 ||
+      candidate.searchParams.get("slug") !== route
+    ) {
+      return null;
+    }
+    return { shortCode: match[1].toLowerCase() };
+  } catch {
+    return null;
+  }
 }
 
 function normaliseArticleIdentity(value: string): string | null {
@@ -138,10 +186,13 @@ export function publisherRepresentationMatchesCitation(
     originalFetchLocation !== null &&
     requestedFetchLocation === originalFetchLocation
   ) {
-    // The caller requested the citation itself; retain the pre-existing direct
-    // fetch behavior. Redirect publisher identity is checked by the evidence
-    // gate after this function returns.
-    return true;
+    // A direct request needs no publisher metadata, but a redirect must still
+    // resolve to the same canonical article identity. Merely remaining on the
+    // publisher's domain is not enough.
+    return (
+      normaliseArticleIdentity(finalUrl) ===
+      normaliseArticleIdentity(originalUrl)
+    );
   }
 
   const originalIdentity = normaliseArticleIdentity(originalUrl);
@@ -272,16 +323,231 @@ function normaliseDate(raw: string): string | null {
   return Number.isFinite(milliseconds) ? new Date(milliseconds).toISOString() : null;
 }
 
-export type PublicationDateSource = "meta" | "json-ld" | "time";
+export type PublicationDateSource =
+  | "meta"
+  | "json-ld"
+  | "time"
+  | "visible"
+  | "publisher-api";
 
 export interface ExtractedPublicationDate {
   publishedAt: string | null;
   source: PublicationDateSource | null;
 }
 
+const ENGLISH_MONTH_INDEX = new Map(
+  [
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+  ].map((month, index) => [month, index]),
+);
+
+function normaliseCalendarMarkedDate(value: string): string | null {
+  const match = value
+    .replace(/\s+/g, " ")
+    .trim()
+    .match(/^([0-3]?\d) (January|February|March|April|May|June|July|August|September|October|November|December) ((?:19|20)\d{2})$/i);
+  if (!match) return null;
+  const day = Number.parseInt(match[1], 10);
+  const month = ENGLISH_MONTH_INDEX.get(match[2].toLowerCase());
+  const year = Number.parseInt(match[3], 10);
+  if (month === undefined || day < 1 || day > 31) return null;
+  const date = new Date(Date.UTC(year, month, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return date.toISOString();
+}
+
+/** Some government newsrooms expose the publication date only as a visible,
+ * calendar-marked header value. Accept one unambiguous long-form date from
+ * that explicit UI affordance; an unmarked or conflicting date stays unknown. */
+function extractCalendarMarkedVisibleDate(html: string): string | null {
+  const candidates = new Set<string>();
+  for (const match of html.matchAll(/<small\b[^>]*>([\s\S]*?)<\/small>/gi)) {
+    const region = match[1];
+    const calendarMarked = [...region.matchAll(/<i\b[^>]*>/gi)].some((icon) => {
+      const attributes = parseAttributes(icon[0]);
+      return /(?:^|\s)fa-calendar(?:-alt)?(?:\s|$)/i.test(
+        attributes.class ?? "",
+      );
+    });
+    if (!calendarMarked) continue;
+    const visibleText = decodeEntities(region.replace(/<[^>]+>/g, " "));
+    const publishedAt = normaliseCalendarMarkedDate(visibleText);
+    if (publishedAt) candidates.add(publishedAt);
+  }
+  return candidates.size === 1 ? [...candidates][0] : null;
+}
+
+const DLD_INITIAL_REGISTRATION_PATH =
+  "/en/news-media/dubai-land-department-launches-initial-registration-a-smarter-journey-for-developers-and-greater-efficiency-for-the-real-estate-sector";
+
+function visiblePublicationDateAllowed(sourceUrl?: string): boolean {
+  if (!sourceUrl) return false;
+  try {
+    const url = new URL(sourceUrl);
+    const pathname = url.pathname.replace(/\/+$/u, "") || "/";
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "dubailand.gov.ae" &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      pathname === DLD_INITIAL_REGISTRATION_PATH
+    );
+  } catch {
+    return false;
+  }
+}
+
+function utcFromUaeComponents(input: {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  millisecond: number;
+}): string | null {
+  const { year, month, day, hour, minute, second, millisecond } = input;
+  if (
+    year < 2000 ||
+    year > 2100 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59 ||
+    millisecond < 0 ||
+    millisecond > 999
+  ) {
+    return null;
+  }
+  const localCalendar = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second, millisecond),
+  );
+  if (
+    localCalendar.getUTCFullYear() !== year ||
+    localCalendar.getUTCMonth() !== month - 1 ||
+    localCalendar.getUTCDate() !== day ||
+    localCalendar.getUTCHours() !== hour ||
+    localCalendar.getUTCMinutes() !== minute ||
+    localCalendar.getUTCSeconds() !== second ||
+    localCalendar.getUTCMilliseconds() !== millisecond
+  ) {
+    return null;
+  }
+  return new Date(localCalendar.getTime() - 4 * 60 * 60 * 1_000).toISOString();
+}
+
+/** WAM article timestamps are UAE-local. Parse only its two observed explicit
+ * formats and apply the fixed +04:00 offset without locale-dependent
+ * Date.parse behavior. */
+export function parseWamPublisherArticleDate(value: string): string | null {
+  const uaeDisplay = value.match(
+    /^(\d{2})\/(\d{2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2}) (AM|PM)$/u,
+  );
+  if (uaeDisplay) {
+    const hour12 = Number.parseInt(uaeDisplay[4], 10);
+    if (hour12 < 1 || hour12 > 12) return null;
+    const hour =
+      (hour12 % 12) + (uaeDisplay[7] === "PM" ? 12 : 0);
+    return utcFromUaeComponents({
+      day: Number.parseInt(uaeDisplay[1], 10),
+      month: Number.parseInt(uaeDisplay[2], 10),
+      year: Number.parseInt(uaeDisplay[3], 10),
+      hour,
+      minute: Number.parseInt(uaeDisplay[5], 10),
+      second: Number.parseInt(uaeDisplay[6], 10),
+      millisecond: 0,
+    });
+  }
+
+  const zonedIso = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?\+04:00$/u,
+  );
+  if (!zonedIso) return null;
+  return utcFromUaeComponents({
+    year: Number.parseInt(zonedIso[1], 10),
+    month: Number.parseInt(zonedIso[2], 10),
+    day: Number.parseInt(zonedIso[3], 10),
+    hour: Number.parseInt(zonedIso[4], 10),
+    minute: Number.parseInt(zonedIso[5], 10),
+    second: Number.parseInt(zonedIso[6], 10),
+    millisecond: Number.parseInt((zonedIso[7] ?? "0").padEnd(3, "0"), 10),
+  });
+}
+
+/** WAM serves article pages as a client shell. Its public same-origin API is
+ * accepted only when the request is derived from the cited route and the
+ * response binds the route's immutable short code to an explicit article
+ * date and non-empty article body. */
+export function extractWamPublisherApiArticle(
+  json: string,
+  originalUrl: string,
+  requestedUrl: string,
+  finalUrl: string,
+): {
+  text: string;
+  publishedAt: string;
+  publicationDateSource: "publisher-api";
+} | null {
+  const identity = wamPublisherApiCandidate(originalUrl, requestedUrl);
+  if (!identity || normaliseFetchLocation(requestedUrl) !== normaliseFetchLocation(finalUrl)) {
+    return null;
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.shortCode !== "string" ||
+    record.shortCode.toLowerCase() !== identity.shortCode ||
+    typeof record.title !== "string" ||
+    record.title.trim().length < 12 ||
+    typeof record.body !== "string" ||
+    typeof record.articleDate !== "string"
+  ) {
+    return null;
+  }
+  const publishedAt = parseWamPublisherArticleDate(record.articleDate);
+  const text = extractMainText(`<article>${record.body}</article>`);
+  if (!publishedAt || text.trim().length < 80) return null;
+  return { text, publishedAt, publicationDateSource: "publisher-api" };
+}
+
 /** Extract an explicit publication timestamp. Modified/update timestamps and
  * ambiguous locale-only dates are deliberately rejected. */
-export function extractPublicationDate(html: string): ExtractedPublicationDate {
+export function extractPublicationDate(
+  html: string,
+  sourceUrl?: string,
+): ExtractedPublicationDate {
   const metaKeys = new Set([
     "article:published_time",
     "og:published_time",
@@ -323,8 +589,13 @@ export function extractPublicationDate(html: string): ExtractedPublicationDate {
     else unmarkedTimes.push(publishedAt);
   }
   const timeValue = markedTimes[0] ?? (unmarkedTimes.length === 1 ? unmarkedTimes[0] : null);
-  return timeValue
-    ? { publishedAt: timeValue, source: "time" }
+  if (timeValue) return { publishedAt: timeValue, source: "time" };
+
+  const visibleDate = visiblePublicationDateAllowed(sourceUrl)
+    ? extractCalendarMarkedVisibleDate(html)
+    : null;
+  return visibleDate
+    ? { publishedAt: visibleDate, source: "visible" }
     : { publishedAt: null, source: null };
 }
 
@@ -422,23 +693,38 @@ export async function fetchArticleText(
     const remainingMs = deadline - Date.now();
     if (remainingMs < 1_000) break;
     try {
+      const wamApi = wamPublisherApiCandidate(url, candidate);
       const result = await safeFetchBytes(candidate, {
         allowedDomains: options.allowedDomains,
         userAgent: UA,
-        accept: "text/html,application/xhtml+xml",
-        allowedContentTypes: /(?:text\/html|application\/xhtml\+xml)/i,
+        accept: wamApi
+          ? "application/json"
+          : "text/html,application/xhtml+xml",
+        allowedContentTypes: wamApi
+          ? /application\/json/i
+          : /(?:text\/html|application\/xhtml\+xml)/i,
         maxBytes: MAX_ARTICLE_RESPONSE_BYTES,
         timeoutMs: remainingMs,
         maxRedirects: 3,
       });
       const html = result.bytes.toString("utf8");
+      const apiArticle = wamApi
+        ? extractWamPublisherApiArticle(
+            html,
+            url,
+            candidate,
+            result.finalUrl,
+          )
+        : null;
       if (
-        !publisherRepresentationMatchesCitation(
-          html,
-          url,
-          candidate,
-          result.finalUrl,
-        )
+        (wamApi && !apiArticle) ||
+        (!wamApi &&
+          !publisherRepresentationMatchesCitation(
+            html,
+            url,
+            candidate,
+            result.finalUrl,
+          ))
       ) {
         lastError = {
           text: "",
@@ -453,8 +739,13 @@ export async function fetchArticleText(
         };
         continue;
       }
-      const text = extractMainText(html);
-      const publicationDate = extractPublicationDate(html);
+      const text = apiArticle?.text ?? extractMainText(html);
+      const publicationDate = apiArticle
+        ? {
+            publishedAt: apiArticle.publishedAt,
+            source: apiArticle.publicationDateSource,
+          }
+        : extractPublicationDate(html, url);
       const fetched: FetchedArticleText = {
         text,
         finalUrl: result.finalUrl,

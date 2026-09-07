@@ -7,12 +7,14 @@ import { NextRequest } from "next/server";
 import sitemap from "../app/sitemap";
 import nextConfig from "../next.config";
 import { proxy } from "../proxy";
+import { getIndexablePublicNewsArticles } from "../lib/news-discovery";
 import {
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_HELD_REDIRECTS,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
   NEWSROOM_RELEASE_REMOVAL_CANDIDATES,
   PRIMARY_NEWSROOM_LIFECYCLE,
+  getNewsroomLifecycle,
   getReleasedNewsroomRedirects,
   isNewsroomLifecycleCutoverEnabled,
 } from "../lib/news-lifecycle";
@@ -21,6 +23,7 @@ import {
   INDEXABLE_NEWS_ARTICLES,
   NEWSROOM_EVIDENCE_HOLD_PREVIEW_ENV,
   NEWSROOM_EVIDENCE_HOLD_SLUGS,
+  PUBLISHED_NEWS_ARTICLES,
   getPublicDiscoveryNewsArticles,
   isNewsroomEvidenceHoldPreviewEnabled,
 } from "../lib/public-content";
@@ -28,6 +31,14 @@ import { CURRENT_EVIDENCE_POLICY_VERSION } from "../lib/news-review/types";
 
 const ROOT = process.cwd();
 const AUTHORITY_PATH = "docs/migration/news-url-disposition.csv";
+const CURRENT_EVIDENCE_POLICY_LABEL = new RegExp(
+  `evidence policy v${CURRENT_EVIDENCE_POLICY_VERSION}`,
+  "iu",
+);
+const STALE_EVIDENCE_POLICY_LABEL = new RegExp(
+  `evidence policy v(?!${CURRENT_EVIDENCE_POLICY_VERSION}\\b)\\d+`,
+  "iu",
+);
 
 type Redirect = Readonly<{
   source: string;
@@ -97,6 +108,67 @@ function articleSlugs(): string[] {
   return getPublicDiscoveryNewsArticles()
     .map((article) => article.slug)
     .sort();
+}
+
+function indexableArticleSlugs(): string[] {
+  return getIndexablePublicNewsArticles()
+    .map((article) => article.slug)
+    .sort();
+}
+
+function newsSlugsFromSitemap(paths: readonly string[]): string[] {
+  return paths
+    .filter((pathname) => pathname.startsWith("/news/"))
+    .map((pathname) => pathname.slice("/news/".length))
+    .sort();
+}
+
+function hasExplicitLegacyLifecycleEntry(slug: string): boolean {
+  return getNewsroomLifecycle(`/news/${slug}`) !== null;
+}
+
+function expectedWorkflowAutoApprove(
+  eventName: "schedule" | "workflow_dispatch",
+  curatedCandidateKey: "none" | "reviewed-candidate",
+  candidateKey: "auto" | "manual-candidate",
+): "0" | "1" {
+  if (eventName === "workflow_dispatch" && curatedCandidateKey !== "none") {
+    return "1";
+  }
+  if (eventName === "workflow_dispatch" && candidateKey !== "auto") {
+    return "0";
+  }
+  return "1";
+}
+
+function expectedWorkflowDraftEnabled(
+  eventName: "schedule" | "workflow_dispatch",
+  publicationOnly: boolean,
+  curatedCandidateKey: "none" | "reviewed-candidate",
+): "0" | "1" {
+  return eventName === "workflow_dispatch" &&
+    (publicationOnly || curatedCandidateKey !== "none")
+    ? "0"
+    : "1";
+}
+
+function expectedWorkflowCuratedPublication(
+  eventName: "schedule" | "workflow_dispatch",
+  curatedCandidateKey: "none" | "reviewed-candidate",
+): "0" | "1" {
+  return eventName === "workflow_dispatch" &&
+    curatedCandidateKey !== "none"
+    ? "1"
+    : "0";
+}
+
+function workflowEnvironmentLine(workflow: string, name: string): string {
+  const matches = workflow
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith(`${name}:`));
+  assert.equal(matches.length, 1, `${name} must occur exactly once.`);
+  return matches[0];
 }
 
 async function configuredRedirects(): Promise<Redirect[]> {
@@ -254,6 +326,7 @@ async function main(): Promise<void> {
       withCutover(false, () => ({
         sitemapPaths: sitemapPaths(),
         publicArticleSlugs: articleSlugs(),
+        indexableArticleSlugs: indexableArticleSlugs(),
         lifecycleRedirects: getReleasedNewsroomRedirects(),
       })),
   );
@@ -280,23 +353,166 @@ async function main(): Promise<void> {
   const configuredOff = await redirectsWithCutover(false);
   const configuredOn = await redirectsWithCutover(true);
 
-  assert.equal(cutoverOff.sitemapPaths.length, 79);
-  assert.equal(cutoverOff.publicArticleSlugs.length, 41);
+  const evidenceHoldSlugs = new Set(NEWSROOM_EVIDENCE_HOLD_SLUGS);
+  const sortedEvidenceHoldSlugs = [...evidenceHoldSlugs].sort();
+  const legacyPublishedArticles = PUBLISHED_NEWS_ARTICLES.filter((article) =>
+    hasExplicitLegacyLifecycleEntry(article.slug),
+  );
+  const additivePublishedArticles = PUBLISHED_NEWS_ARTICLES.filter(
+    (article) => !hasExplicitLegacyLifecycleEntry(article.slug),
+  );
+  const legacyIndexableArticles = INDEXABLE_NEWS_ARTICLES.filter((article) =>
+    hasExplicitLegacyLifecycleEntry(article.slug),
+  );
+  const additiveIndexableArticles = INDEXABLE_NEWS_ARTICLES.filter(
+    (article) => !hasExplicitLegacyLifecycleEntry(article.slug),
+  );
+  const legacyEvidenceCertifiedArticles =
+    EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.filter((article) =>
+      hasExplicitLegacyLifecycleEntry(article.slug),
+    );
+  const additiveEvidenceCertifiedArticles =
+    EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.filter(
+      (article) => !hasExplicitLegacyLifecycleEntry(article.slug),
+    );
+  const additivePublishedArticlePaths = additivePublishedArticles.map(
+    (article) => `/news/${article.slug}`,
+  );
+  const additiveIndexableArticlePaths = additiveIndexableArticles.map(
+    (article) => `/news/${article.slug}`,
+  );
+  const currentPublicAuthorityPaths = [
+    ...new Set([
+      ...primaryRows.map((row) => row.current_url),
+      ...additivePublishedArticlePaths,
+    ]),
+  ].sort();
+  const releasedLegacyPaths = primaryRows
+    .filter(
+      (row) => row.disposition === "KEEP" || row.disposition === "IMPROVE",
+    )
+    .map((row) => row.current_url);
+  const releasedAuthorityPaths = [
+    ...new Set([...releasedLegacyPaths, ...additiveIndexableArticlePaths]),
+  ].sort();
+  const expectedPublishedSlugs = PUBLISHED_NEWS_ARTICLES.map(
+    (article) => article.slug,
+  ).sort();
+  const expectedIndexableSlugs = INDEXABLE_NEWS_ARTICLES.map(
+    (article) => article.slug,
+  ).sort();
+  const expectedEvidencePreviewPublishedSlugs = PUBLISHED_NEWS_ARTICLES.filter(
+    (article) => !evidenceHoldSlugs.has(article.slug),
+  )
+    .map((article) => article.slug)
+    .sort();
+  const certifiedArticleSlugs =
+    EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.map(
+      (article) => article.slug,
+    ).sort();
+  const certifiedArticlePaths = certifiedArticleSlugs.map(
+    (slug) => `/news/${slug}`,
+  );
+  const releasedStaticPaths = releasedLegacyPaths.filter(
+    (pathname) => !pathname.startsWith("/news/"),
+  );
+  const evidencePreviewReleasedPaths = [
+    ...releasedStaticPaths,
+    ...certifiedArticlePaths,
+  ].sort();
+
+  assert.equal(
+    legacyPublishedArticles.length,
+    41,
+    "The frozen published legacy-article baseline changed.",
+  );
+  assert.equal(
+    legacyIndexableArticles.length,
+    26,
+    "The frozen indexable legacy-article baseline changed.",
+  );
+  assert.equal(
+    legacyEvidenceCertifiedArticles.length,
+    2,
+    "The frozen evidence-certified legacy-article baseline changed.",
+  );
+  assert.deepEqual(
+    cutoverOff.sitemapPaths,
+    currentPublicAuthorityPaths,
+    "Flag-off sitemap drifted from the frozen legacy authority plus reviewed daily publications.",
+  );
+  assert.equal(
+    cutoverOff.publicArticleSlugs.length,
+    expectedPublishedSlugs.length,
+  );
+  assert.deepEqual(
+    cutoverOff.publicArticleSlugs,
+    expectedPublishedSlugs,
+  );
   assert.equal(cutoverOff.lifecycleRedirects.length, 0);
-  assert.equal(cutoverOn.sitemapPaths.length, 31);
-  assert.equal(cutoverOn.publicArticleSlugs.length, 26);
+  assert.deepEqual(
+    cutoverOn.sitemapPaths,
+    releasedAuthorityPaths,
+    "Cutover sitemap drifted from legacy KEEP/IMPROVE paths plus reviewed daily publications.",
+  );
+  assert.deepEqual(cutoverOn.publicArticleSlugs, expectedIndexableSlugs);
   assert.equal(cutoverOn.lifecycleRedirects.length, 31);
-  assert.equal(evidencePreviewCutoverOff.sitemapPaths.length, 55);
-  assert.equal(evidencePreviewCutoverOff.publicArticleSlugs.length, 17);
+  assert.deepEqual(
+    evidencePreviewCutoverOff.publicArticleSlugs,
+    expectedEvidencePreviewPublishedSlugs,
+  );
+  assert.deepEqual(
+    newsSlugsFromSitemap(evidencePreviewCutoverOff.sitemapPaths),
+    evidencePreviewCutoverOff.indexableArticleSlugs,
+    "Evidence preview sitemap must contain exactly the mode's indexable article projection.",
+  );
+  assert.equal(
+    new Set(evidencePreviewCutoverOff.sitemapPaths).size,
+    evidencePreviewCutoverOff.sitemapPaths.length,
+    "Evidence preview sitemap contains duplicate paths.",
+  );
+  assert.ok(
+    evidencePreviewCutoverOff.sitemapPaths
+      .filter((pathname) => !pathname.startsWith("/news/"))
+      .every((pathname) =>
+        primaryRows.some((row) => row.current_url === pathname),
+      ),
+    "Evidence preview sitemap introduced a non-news path outside the frozen legacy authority.",
+  );
+  assert.ok(
+    sortedEvidenceHoldSlugs.every(
+      (slug) =>
+        !evidencePreviewCutoverOff.sitemapPaths.includes(`/news/${slug}`),
+    ),
+    "Evidence preview sitemap exposed an evidence-held article.",
+  );
   assert.equal(evidencePreviewCutoverOff.lifecycleRedirects.length, 0);
-  assert.equal(evidencePreviewCutoverOn.sitemapPaths.length, 7);
-  assert.equal(evidencePreviewCutoverOn.publicArticleSlugs.length, 2);
+  assert.deepEqual(
+    evidencePreviewCutoverOn.sitemapPaths,
+    evidencePreviewReleasedPaths,
+    "Evidence preview cutover sitemap must contain only released static paths and evidence-certified articles.",
+  );
+  assert.equal(
+    evidencePreviewCutoverOn.publicArticleSlugs.length,
+    certifiedArticleSlugs.length,
+  );
+  assert.deepEqual(
+    evidencePreviewCutoverOn.publicArticleSlugs,
+    certifiedArticleSlugs,
+    "Evidence preview plus lifecycle cutover must expose exactly the evidence-certified article set.",
+  );
   assert.equal(evidencePreviewCutoverOn.lifecycleRedirects.length, 31);
-  assert.equal(productionFailClosed.sitemapPaths.length, 79);
-  assert.equal(productionFailClosed.publicArticleSlugs.length, 41);
-  assert.equal(productionFailClosed.lifecycleRedirects.length, 0);
+  assert.deepEqual(
+    productionFailClosed,
+    cutoverOff,
+    "Production must ignore the preview-only evidence flag and preserve flag-off discovery.",
+  );
   assert.equal(NEWSROOM_EVIDENCE_HOLD_SLUGS.length, 24);
-  assert.equal(EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length, 2);
+  assert.equal(evidenceHoldSlugs.size, 24);
+  assert.equal(
+    EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES.length,
+    2 + additiveEvidenceCertifiedArticles.length,
+  );
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
   assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
@@ -323,19 +539,72 @@ async function main(): Promise<void> {
   )
     .map((article) => article.slug)
     .sort();
-  assert.equal(INDEXABLE_NEWS_ARTICLES.length, 26);
-  assert.equal(missingContentHashSlugs.length, 24);
-  assert.equal(oneSourceSlugs.length, 7);
+  const legacyMissingContentHashSlugs = legacyIndexableArticles.filter(
+    (article) => !article.publicationContentHash,
+  )
+    .map((article) => article.slug)
+    .sort();
+  const additiveMissingContentHashSlugs = additiveIndexableArticles.filter(
+    (article) => !article.publicationContentHash,
+  )
+    .map((article) => article.slug)
+    .sort();
+  const legacyOneSourceSlugs = legacyIndexableArticles.filter(
+    (article) => article.citations.length === 1,
+  )
+    .map((article) => article.slug)
+    .sort();
+  const additiveOneSourceSlugs = additiveIndexableArticles.filter(
+    (article) => article.citations.length === 1,
+  )
+    .map((article) => article.slug)
+    .sort();
+  const additiveEvidenceCertifiedSlugSet = new Set(
+    additiveEvidenceCertifiedArticles.map((article) => article.slug),
+  );
+  assert.equal(
+    INDEXABLE_NEWS_ARTICLES.length,
+    26 + additiveIndexableArticles.length,
+  );
+  assert.equal(legacyMissingContentHashSlugs.length, 24);
+  assert.deepEqual(
+    legacyMissingContentHashSlugs,
+    sortedEvidenceHoldSlugs,
+    "The frozen legacy content-hash debt must match the explicit evidence-hold registry.",
+  );
+  assert.deepEqual(
+    additiveMissingContentHashSlugs,
+    [],
+    "A reviewed additive publication must have a publication content hash.",
+  );
+  assert.deepEqual(
+    missingContentHashSlugs,
+    sortedEvidenceHoldSlugs,
+    "Every indexable article without a content hash must be explicitly evidence-held.",
+  );
+  assert.equal(legacyOneSourceSlugs.length, 7);
+  assert.ok(
+    additiveOneSourceSlugs.every((slug) =>
+      additiveEvidenceCertifiedSlugSet.has(slug),
+    ),
+    "An additive one-source publication must be certified under the current evidence policy.",
+  );
+  assert.equal(
+    oneSourceSlugs.length,
+    legacyOneSourceSlugs.length + additiveOneSourceSlugs.length,
+  );
 
   const launch = source("LAUNCH.md");
   const runbook = source("RUNBOOK.md");
   const backendMap = source("docs/BACKEND-MAP.md");
   const workflow = source(".github/workflows/news-cron.yml");
+  const draftOnce = source("scripts/draft-once.ts");
   const publishRoute = source("app/api/news/draft/[id]/publish/route.ts");
   const lifecycleRelease = source("docs/migration/newsroom-lifecycle-release.md");
   for (const document of [launch, runbook, backendMap]) {
     assert.match(document, /NEWSROOM_LIFECYCLE_CUTOVER=1/u);
-    assert.match(document, /evidence policy v3/iu);
+    assert.match(document, CURRENT_EVIDENCE_POLICY_LABEL);
+    assert.doesNotMatch(document, STALE_EVIDENCE_POLICY_LABEL);
     assert.match(document, /server credential/iu);
     assert.match(document, /24[\s\S]{0,80}?content hash/iu);
     assert.match(document, /7[\s\S]{0,80}?one-source/iu);
@@ -343,15 +612,126 @@ async function main(): Promise<void> {
     assert.match(document, /NEWSROOM_EVIDENCE_HOLD_PREVIEW=1/u);
     assert.match(document, /default[\s\S]{0,60}?off/iu);
     assert.match(document, /production[\s\S]{0,100}?fail(?:s)? closed/iu);
-    assert.match(document, /55[\s\S]{0,40}?17/iu);
-    assert.match(document, /7[\s\S]{0,40}?2/iu);
+    assert.match(document, /baselines, not ceilings[\s\S]{0,100}?additive/iu);
+    assert.match(document, /79-path[\s\S]{0,120}?additive\s+published/iu);
+    assert.match(
+      document,
+      /31-path KEEP\/IMPROVE[\s\S]{0,120}?additive\s+indexable/iu,
+    );
+    assert.match(document, /fixed total[\s\S]{0,160}?near-duplicate/iu);
+    assert.match(document, /published registry[\s\S]{0,100}?24 held/iu);
+    assert.match(
+      document,
+      /evidence-certified indexable set[\s\S]{0,140}?five released[\s\S]{0,30}?static/iu,
+    );
   }
   assert.doesNotMatch(
     `${launch}\n${backendMap}`,
     /server credential can stage content, but it cannot publish|There is no automatic-publish branch/iu,
   );
-  assert.match(workflow, /AUTO_APPROVE:\s*"1"/u);
-  assert.match(workflow, /AUTO_PUBLISH_LIMIT:\s*"1"/u);
+  assert.equal(
+    workflowEnvironmentLine(workflow, "AUTO_APPROVE"),
+    "AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || (github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1') }}",
+    "AUTO_APPROVE must retain the exact bounded scheduled, curated and manual-candidate policy.",
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "DRAFT_ENABLED"),
+    "DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && (inputs.publication_only || inputs.curated_candidate_key != 'none') && '0' || '1' }}",
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "CURATED_PUBLICATION"),
+    "CURATED_PUBLICATION: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || '0' }}",
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "AUTO_PUBLISH_LIMIT"),
+    'AUTO_PUBLISH_LIMIT: "1"',
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "AUTO_APPROVE_TARGET_DRAFT_ID"),
+    "AUTO_APPROVE_TARGET_DRAFT_ID: ${{ steps.curated.outputs.draft_id }}",
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "AUTO_APPROVE_TARGET_CONTENT_HASH"),
+    "AUTO_APPROVE_TARGET_CONTENT_HASH: ${{ steps.curated.outputs.content_hash }}",
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "AUTO_APPROVE_TARGET_SLUG"),
+    "AUTO_APPROVE_TARGET_SLUG: ${{ steps.curated.outputs.slug }}",
+  );
+  assert.equal(
+    workflow
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(
+        (line) =>
+          line ===
+          "CURATED_CANDIDATE_KEY: ${{ inputs.curated_candidate_key }}",
+      ).length,
+    2,
+    "The curated candidate key must bind both staging and publication.",
+  );
+  assert.equal(expectedWorkflowAutoApprove("schedule", "none", "auto"), "1");
+  assert.equal(expectedWorkflowDraftEnabled("schedule", false, "none"), "1");
+  assert.equal(expectedWorkflowCuratedPublication("schedule", "none"), "0");
+  assert.equal(
+    expectedWorkflowAutoApprove(
+      "workflow_dispatch",
+      "reviewed-candidate",
+      "auto",
+    ),
+    "1",
+  );
+  assert.equal(
+    expectedWorkflowDraftEnabled(
+      "workflow_dispatch",
+      false,
+      "reviewed-candidate",
+    ),
+    "0",
+  );
+  assert.equal(
+    expectedWorkflowCuratedPublication(
+      "workflow_dispatch",
+      "reviewed-candidate",
+    ),
+    "1",
+  );
+  assert.equal(
+    expectedWorkflowAutoApprove(
+      "workflow_dispatch",
+      "none",
+      "manual-candidate",
+    ),
+    "0",
+  );
+  assert.equal(
+    expectedWorkflowDraftEnabled("workflow_dispatch", false, "none"),
+    "1",
+  );
+  assert.equal(
+    expectedWorkflowCuratedPublication("workflow_dispatch", "none"),
+    "0",
+  );
+  assert.equal(
+    expectedWorkflowAutoApprove("workflow_dispatch", "none", "auto"),
+    "1",
+  );
+  assert.equal(
+    expectedWorkflowDraftEnabled("workflow_dispatch", true, "none"),
+    "0",
+  );
+  assert.match(
+    draftOnce,
+    /Curated publication requires auto-approval plus an exact candidate key, slug, staged draft ID and content hash/u,
+  );
+  assert.match(
+    draftOnce,
+    /targetDraftId: curatedPublication \? targetDraftId : undefined,[\s\S]{0,100}?targetContentHash: curatedPublication \? targetContentHash : undefined/u,
+  );
+  assert.match(
+    draftOnce,
+    /assertCuratedPublicationOutcome\([\s\S]{0,100}?curatedCandidateKey \?\? "",[\s\S]{0,100}?targetSlug \?\? "",[\s\S]{0,100}?summary/u,
+  );
   assert.match(publishRoute, /const automated = auth\.credential === "server-secret"/u);
   assert.match(lifecycleRelease, /direct 410[\s\S]{0,20}?Gone response/iu);
 
@@ -399,12 +779,11 @@ async function main(): Promise<void> {
     {
       code: "LEGACY_CONTENT_HASH",
       count: missingContentHashSlugs.length,
-      releaseRule:
-        "These matrix-retained articles are not evidence-policy-v3 certified; keep the debt explicit and re-review before claiming full evidence migration.",
+      releaseRule: `These matrix-retained articles are not evidence-policy-v${CURRENT_EVIDENCE_POLICY_VERSION} certified; keep the debt explicit and re-review before claiming full evidence migration.`,
     },
     {
       code: "LEGACY_ONE_SOURCE",
-      count: oneSourceSlugs.length,
+      count: legacyOneSourceSlugs.length,
       releaseRule:
         "These legacy articles require source repair or an explicit noindex decision before claiming universal two-publisher coverage.",
     },
@@ -419,7 +798,7 @@ async function main(): Promise<void> {
   ] as const;
 
   const manifest = {
-    schemaVersion: "newsroom-offline-release-certification-v3",
+    schemaVersion: "newsroom-offline-release-certification-v4",
     status: "offline-contract-valid-live-release-blocked",
     runtimeBehaviorChanged: true,
     authority: {
@@ -491,22 +870,34 @@ async function main(): Promise<void> {
     },
     heldRedirects,
     legacyEvidence: {
-      indexCandidateCount: INDEXABLE_NEWS_ARTICLES.length,
-      policyV3ContentHashCount:
-        INDEXABLE_NEWS_ARTICLES.length - missingContentHashSlugs.length,
-      missingContentHashCount: missingContentHashSlugs.length,
-      missingContentHashSlugs,
-      oneSourceCount: oneSourceSlugs.length,
-      oneSourceSlugs,
-      certification:
-        "legacy matrix retention only; not evidence-policy-v3 certification",
+      indexCandidateCount: legacyIndexableArticles.length,
+      currentPolicyContentHashCount: legacyEvidenceCertifiedArticles.length,
+      missingContentHashCount: legacyMissingContentHashSlugs.length,
+      missingContentHashSlugs: legacyMissingContentHashSlugs,
+      oneSourceCount: legacyOneSourceSlugs.length,
+      oneSourceSlugs: legacyOneSourceSlugs,
+      certification: `legacy matrix retention only; ${legacyMissingContentHashSlugs.length} records remain outside evidence-policy-v${CURRENT_EVIDENCE_POLICY_VERSION} certification`,
+    },
+    additiveEvidence: {
+      publishedCount: additivePublishedArticles.length,
+      publishedSlugs: additivePublishedArticles
+        .map((article) => article.slug)
+        .sort(),
+      indexCandidateCount: additiveIndexableArticles.length,
+      currentPolicyContentHashCount: additiveEvidenceCertifiedArticles.length,
+      missingContentHashCount: additiveMissingContentHashSlugs.length,
+      oneSourceCount: additiveOneSourceSlugs.length,
+      certification: `reviewed daily publications certified under evidence policy v${CURRENT_EVIDENCE_POLICY_VERSION}`,
     },
     blockers: releaseBlockers,
     excludedProof:
       "This offline certificate does not prove KV, secrets, GitHub, DNS, cron, build, deployment, indexing, Search Console, backlinks/referrals, analytics, access logs or provider connectivity.",
   } as const;
 
-  assert.equal(manifest.evidencePolicy.version, 3);
+  assert.equal(
+    manifest.evidencePolicy.version,
+    CURRENT_EVIDENCE_POLICY_VERSION,
+  );
   assert.equal(manifest.status, "offline-contract-valid-live-release-blocked");
   assert.equal(originalCutover, process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV]);
   assert.equal(
@@ -517,7 +908,7 @@ async function main(): Promise<void> {
 
   console.log(JSON.stringify(manifest, null, 2));
   console.error(
-    `Offline newsroom contract valid; live release remains blocked by ${heldRedirects.length} held redirects, ${missingContentHashSlugs.length} missing content hashes, ${oneSourceSlugs.length} one-source legacy records and ${NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length} removal demand checks.`,
+    `Offline newsroom contract valid; live release remains blocked by ${heldRedirects.length} held redirects, ${missingContentHashSlugs.length} missing content hashes, ${legacyOneSourceSlugs.length} one-source legacy records and ${NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length} removal demand checks.`,
   );
 }
 

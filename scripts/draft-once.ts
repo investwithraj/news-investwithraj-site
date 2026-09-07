@@ -30,6 +30,7 @@ import {
   observeNewestPublication,
 } from "./lib/news-cron-outcome.js";
 import { selectDraftClusters } from "../lib/news-review/manual-candidate.js";
+import { assertCuratedPublicationOutcome } from "../lib/news-review/curated-candidates.js";
 
 const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
@@ -109,6 +110,23 @@ async function markClusterFailed(
 }
 
 async function runPublicationPass(): Promise<AutoApproveSummary | null> {
+  const curatedPublication = process.env.CURATED_PUBLICATION === "1";
+  const targetDraftId = process.env.AUTO_APPROVE_TARGET_DRAFT_ID;
+  const targetContentHash = process.env.AUTO_APPROVE_TARGET_CONTENT_HASH;
+  const targetSlug = process.env.AUTO_APPROVE_TARGET_SLUG;
+  const curatedCandidateKey = process.env.CURATED_CANDIDATE_KEY;
+  if (
+    curatedPublication &&
+    (!targetDraftId ||
+      !targetContentHash ||
+      !targetSlug ||
+      !curatedCandidateKey ||
+      process.env.AUTO_APPROVE !== "1")
+  ) {
+    throw new Error(
+      "Curated publication requires auto-approval plus an exact candidate key, slug, staged draft ID and content hash.",
+    );
+  }
   if (process.env.AUTO_APPROVE !== "1") {
     console.log("assessment disabled; all drafts remain in The Desk");
     return null;
@@ -128,10 +146,19 @@ async function runPublicationPass(): Promise<AutoApproveSummary | null> {
       process.env.AUTO_BACKLOG_MAX_AGE_DAYS ?? "21",
       10,
     ),
+    targetDraftId: curatedPublication ? targetDraftId : undefined,
+    targetContentHash: curatedPublication ? targetContentHash : undefined,
   });
   console.log(
     `publication: ${summary.published} committed, ${summary.held} held, ${summary.deferred} deferred, ${summary.failed} failed`,
   );
+  if (curatedPublication) {
+    assertCuratedPublicationOutcome(
+      curatedCandidateKey ?? "",
+      targetSlug ?? "",
+      summary,
+    );
+  }
   return summary;
 }
 

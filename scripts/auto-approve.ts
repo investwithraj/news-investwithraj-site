@@ -37,6 +37,8 @@ async function main() {
       process.env.AUTO_BACKLOG_MAX_AGE_DAYS ?? "21",
       10,
     ),
+    targetDraftId: process.env.AUTO_APPROVE_TARGET_DRAFT_ID,
+    targetContentHash: process.env.AUTO_APPROVE_TARGET_CONTENT_HASH,
   });
   console.log(
     `\nAUTO-PUBLISH — ${s.published} committed, ${s.held} held, ${s.deferred} deferred, ${s.failed} failed.`,

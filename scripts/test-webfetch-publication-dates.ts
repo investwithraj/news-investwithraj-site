@@ -7,6 +7,8 @@ import {
 import {
   extractMainText,
   extractPublicationDate,
+  extractWamPublisherApiArticle,
+  parseWamPublisherArticleDate,
   publisherArticleFetchCandidates,
   publisherRepresentationMatchesCitation,
 } from "../lib/sources/extract.js";
@@ -99,6 +101,88 @@ function main(): void {
     ),
     ["https://www.reuters.com/world/example-article"],
     "unrecognised publishers must not be rewritten",
+  );
+  const wamArticleUrl =
+    "https://www.wam.ae/en/article/c227c90-dubai-land-department-launches-ai-powered-initial";
+  const wamApiUrl =
+    "https://www.wam.ae/api/app/articles/GetArticleBySlug?slug=c227c90-dubai-land-department-launches-ai-powered-initial";
+  assert.deepEqual(publisherArticleFetchCandidates(wamArticleUrl), [
+    wamArticleUrl,
+    wamApiUrl,
+  ]);
+  const wamPayload = JSON.stringify({
+    shortCode: "c227c90",
+    title:
+      "Dubai Land Department launches AI-powered Initial Registration platform",
+    articleDate: "2026-09-03T20:48:55.081+04:00",
+    body:
+      "<p>Dubai Land Department launched the Initial Registration platform for developers, connecting registration and escrow administration in one official workflow.</p>",
+  });
+  assert.deepEqual(
+    extractWamPublisherApiArticle(
+      wamPayload,
+      wamArticleUrl,
+      wamApiUrl,
+      wamApiUrl,
+    ),
+    {
+      text:
+        "Dubai Land Department launched the Initial Registration platform for developers, connecting registration and escrow administration in one official workflow.",
+      publishedAt: "2026-09-03T16:48:55.081Z",
+      publicationDateSource: "publisher-api",
+    },
+  );
+  assert.equal(
+    parseWamPublisherArticleDate("03/09/2026 8:48:55 PM"),
+    "2026-09-03T16:48:55.000Z",
+    "WAM's live dd/MM/yyyy UAE-local value must never be read as a US date",
+  );
+  assert.equal(
+    parseWamPublisherArticleDate("31/02/2026 8:48:55 PM"),
+    null,
+    "an impossible WAM calendar date must fail closed",
+  );
+  assert.equal(
+    parseWamPublisherArticleDate("09/03/2026"),
+    null,
+    "an incomplete locale-ambiguous date must fail closed",
+  );
+  assert.equal(
+    parseWamPublisherArticleDate(
+      "03/09/2026 8:48:55 PM / 04/09/2026 8:48:55 PM",
+    ),
+    null,
+    "conflicting WAM timestamp values must fail closed",
+  );
+  assert.equal(
+    extractWamPublisherApiArticle(
+      wamPayload.replace("c227c90", "wrong99"),
+      wamArticleUrl,
+      wamApiUrl,
+      wamApiUrl,
+    ),
+    null,
+    "a publisher API response with a different short code must fail closed",
+  );
+  assert.equal(
+    extractWamPublisherApiArticle(
+      wamPayload,
+      wamArticleUrl,
+      wamApiUrl,
+      "https://api.wam.ae/api/app/articles/GetArticleBySlug?slug=c227c90-dubai-land-department-launches-ai-powered-initial",
+    ),
+    null,
+    "a cross-origin publisher API response must fail closed",
+  );
+  assert.equal(
+    extractWamPublisherApiArticle(
+      "{not-json",
+      wamArticleUrl,
+      wamApiUrl,
+      wamApiUrl,
+    ),
+    null,
+    "malformed publisher API data must fail closed",
   );
 
   const citedUrl =
@@ -204,6 +288,16 @@ function main(): void {
     true,
     "the originally cited URL keeps direct-fetch behavior without synthetic-proof requirements",
   );
+  assert.equal(
+    publisherRepresentationMatchesCitation(
+      "<html><body>Unrelated publisher article</body></html>",
+      wamArticleUrl,
+      wamArticleUrl,
+      "https://www.wam.ae/en/article/different1-unrelated-article",
+    ),
+    false,
+    "a direct WAM citation redirected to a different same-domain article must fail closed",
+  );
 
   const largePublisherPage = [
     '<script type="application/javascript">',
@@ -218,6 +312,71 @@ function main(): void {
     publishedAt: "2026-09-04T08:24:00.000Z",
     source: "meta",
   });
+
+  const calendarMarkedVisibleDate = `
+    <div class="news-detail-section">
+      <h6>Official market announcement</h6>
+      <small><i class="far fa-calendar-alt me-1"></i>03 September 2026</small>
+      <p>A directly published statement with sufficient article detail.</p>
+    </div>`;
+  const dldInitialRegistrationUrl =
+    "https://dubailand.gov.ae/en/news-media/dubai-land-department-launches-initial-registration-a-smarter-journey-for-developers-and-greater-efficiency-for-the-real-estate-sector/";
+  assert.deepEqual(
+    extractPublicationDate(
+      calendarMarkedVisibleDate,
+      dldInitialRegistrationUrl,
+    ),
+    {
+    publishedAt: "2026-09-03T00:00:00.000Z",
+    source: "visible",
+    },
+  );
+  assert.deepEqual(
+    extractPublicationDate(calendarMarkedVisibleDate),
+    { publishedAt: null, source: null },
+    "calendar-marked visible dates are not accepted without an exact opt-in URL",
+  );
+  assert.deepEqual(
+    extractPublicationDate(
+      calendarMarkedVisibleDate,
+      "https://dubailand.gov.ae/en/events/initial-registration/",
+    ),
+    { publishedAt: null, source: null },
+    "event and other unscoped DLD paths must not inherit the article opt-in",
+  );
+  assert.deepEqual(
+    extractPublicationDate(
+      '<small><i class="fa-calendar-alt"></i>Updated 03 September 2026</small>',
+      dldInitialRegistrationUrl,
+    ),
+    { publishedAt: null, source: null },
+    "an updated label must not be reclassified as a publication date",
+  );
+  assert.deepEqual(
+    extractPublicationDate(
+      "<small>03 September 2026</small>",
+      dldInitialRegistrationUrl,
+    ),
+    { publishedAt: null, source: null },
+    "an unmarked visible date must remain unknown",
+  );
+  assert.deepEqual(
+    extractPublicationDate(
+      '<small><i class="fa-calendar"></i>03 September 2026</small>' +
+        '<small><i class="fa-calendar-alt"></i>04 September 2026</small>',
+      dldInitialRegistrationUrl,
+    ),
+    { publishedAt: null, source: null },
+    "conflicting calendar-marked dates must fail closed",
+  );
+  assert.deepEqual(
+    extractPublicationDate(
+      '<small><i class="fa-calendar-alt"></i>31 February 2026</small>',
+      dldInitialRegistrationUrl,
+    ),
+    { publishedAt: null, source: null },
+    "an impossible calendar-marked date must fail closed",
+  );
   assert.match(
     extractMainText(largePublisherPage),
     /directly published real-estate report/,
