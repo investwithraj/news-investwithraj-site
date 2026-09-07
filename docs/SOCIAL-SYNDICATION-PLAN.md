@@ -1,6 +1,12 @@
-# Social Syndication Plan — news.investwithraj.com → the channels
+# Social Syndication Capability Plan — inactive
 
-*Drafted 24 Jul 2026 · PLAN ONLY (per Raj: "all of that has to be planned") — nothing here is built yet.*
+*Drafted 24 Jul 2026 · status corrected 7 Sep 2026.*
+
+> **Owner decision:** social auto-posting is disabled. This document is a
+> historical capability design only. Do not configure, schedule or send any
+> social post from the newsroom unless Raj separately re-authorises that exact
+> channel and release. Website-news publishing, RSS, sitemaps and IndexNow are
+> independent of this plan.
 
 ## The goal
 
@@ -14,7 +20,7 @@ event, it does not change it.
 
 | Phase | Channel | Handle / surface | Why this order |
 |---|---|---|---|
-| 1 | Instagram | @rajtomar.dxb | Existing audience; card-first format matches our covers |
+| 1 | Instagram | @thedubaiupgrade | Current approved public identity; card-first format matches the channel |
 | 1 | LinkedIn | Raj's profile → later a company page | Where UAE property capital actually reads |
 | 2 | X / Twitter | TBC handle | Headline + link culture fits the desk voice |
 | 2 | WhatsApp Channel | broadcast channel | Direct line to the lead pool; zero-algorithm |
@@ -63,7 +69,7 @@ GitHub Action: syndicate.yml (on push to main, path news/**)
 
 ## What this needs from Raj (the unlock list)
 
-1. Instagram: convert @rajtomar.dxb to a Business account + link a Facebook
+1. Instagram: confirm @thedubaiupgrade is a Business account + link a Facebook
    Page (required by the Graph API). ~15 min.
 2. Meta developer app + review for `instagram_content_publish` (1–2 weeks
    of Meta review — start early).

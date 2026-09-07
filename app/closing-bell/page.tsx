@@ -12,9 +12,9 @@ const canonical = `${SITE.url}/closing-bell`;
 const hasPublishedEntries = CLOSING_BELLS.length > 0;
 
 export const metadata: Metadata = {
-  title: "Closing Bell — a concise UAE property market close",
+  title: "Closing Bell — a concise UAE real estate market close",
   description:
-    "An evidence-led format for what changed, why it matters and what to watch next in UAE property.",
+    "An evidence-led format for what changed, why it matters and what to watch next in UAE real estate.",
   alternates: {
     canonical,
     types: { "application/rss+xml": `${SITE.url}/rss.xml` },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Closing Bell — Invest With Raj",
     description:
-      "An evidence-led format for what changed, why it matters and what to watch next in UAE property.",
+      "An evidence-led format for what changed, why it matters and what to watch next in UAE real estate.",
     type: "website",
     url: canonical,
   },
@@ -40,7 +40,7 @@ export default function ClosingBellPage() {
       <section className={styles.hero}>
         <div className={styles.shell}>
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">Closing Bell</span>
           </nav>
@@ -255,7 +255,7 @@ function buildSchema(entries: typeof CLOSING_BELLS): Record<string, unknown> {
       {
         "@type": "ListItem",
         position: 1,
-        name: "Daily Market Read",
+        name: SITE.name,
         item: SITE.url,
       },
       {
@@ -277,7 +277,7 @@ function buildSchema(entries: typeof CLOSING_BELLS): Record<string, unknown> {
           url: canonical,
           name: "Closing Bell",
           description:
-            "The production slate and publication method for a concise UAE property market close.",
+            "The production slate and publication method for a concise UAE real estate market close.",
           breadcrumb: { "@id": `${canonical}#breadcrumb` },
         },
         breadcrumb,

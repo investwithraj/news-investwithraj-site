@@ -18,7 +18,7 @@ const ADVISORY_URL =
   `${SITE.rootUrl}/engage?utm_source=news.investwithraj.com` +
   "&utm_medium=about&utm_campaign=editorial_to_advisory";
 const DESCRIPTION =
-  "Why Invest With Raj Intelligence exists, who Raj is, and where source-led UAE property reporting ends and personal advisory begins.";
+  "Why Invest With Raj Intelligence exists, who Raj is, and where source-led UAE real estate reporting ends and personal advisory begins.";
 
 export const metadata: Metadata = {
   title: "About the publication and Raj Tomar",
@@ -26,9 +26,19 @@ export const metadata: Metadata = {
   alternates: { canonical: PAGE_URL },
   openGraph: {
     type: "profile",
+    locale: "en_AE",
+    siteName: SITE.name,
     url: PAGE_URL,
     title: "About | Invest With Raj Intelligence",
     description: DESCRIPTION,
+    images: [
+      {
+        url: `${SITE.url}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: `About Raj Tomar and ${SITE.name}`,
+      },
+    ],
   },
 };
 
@@ -86,16 +96,16 @@ export default function AboutPage() {
         <header className={styles.hero}>
           <div className={styles.heroRegister}>
             <span>About the publication</span>
-            <span>Dubai · UAE property intelligence</span>
+            <span>Dubai · UAE real estate intelligence</span>
           </div>
           <h1>
-            Make the property
+            Make the real estate
             <br />
             decision more legible.
           </h1>
           <p className={styles.heroCopy}>
             Invest With Raj Intelligence exists to help buyers and investors
-            understand the evidence around a UAE property decision before they
+            understand the evidence around a UAE real estate decision before they
             enter a sales conversation.
           </p>
         </header>
@@ -123,7 +133,7 @@ export default function AboutPage() {
           <figure className={styles.rajPortrait}>
             <Image
               src="/media/real-uhd/raj-tomar-portrait.webp"
-              alt="Raj Tomar, UAE property advisor and named publisher"
+              alt="Raj Tomar, UAE real estate advisor and named publisher"
               fill
               quality={92}
               sizes="(max-width: 820px) 100vw, 42vw"
@@ -140,16 +150,16 @@ export default function AboutPage() {
             </div>
             <h2 id="raj-title">The human name remains visible.</h2>
             <p>
-              Raj Tomar is the Dubai-based property advisor and named
+              Raj Tomar is the Dubai-based real estate advisor and named
               publisher behind Invest With Raj Intelligence. He is the human
               contact for readers who want to move from a public market report
-              to a private property conversation.
+              to a private real estate conversation.
             </p>
             <p>
               Raj remains visible because editorial accountability should
               have a name. His role here is to set the judgement, keep the
               advisory boundary clear and answer readers who want a human
-              review of a property decision.
+              review of a real estate decision.
             </p>
             <a href={ADVISORY_URL}>Book a working call with Raj ↗</a>
           </div>
@@ -233,7 +243,7 @@ export default function AboutPage() {
 
         <section className={styles.call} aria-labelledby="call-title">
           <p>From public reading to a private decision</p>
-          <h2 id="call-title">Bring the property. Bring the doubt.</h2>
+          <h2 id="call-title">Bring the decision. Bring the doubt.</h2>
           <p>
             The call is a working conversation about what you are trying to
             decide, what the current evidence establishes and what still needs

@@ -13,6 +13,7 @@ import {
 } from "@/lib/news-editorial";
 import { rajPersonRef } from "./person";
 import { newsOrgRef } from "./organization";
+import { newsDeskAuthor } from "./news-desk";
 import { newsWebsiteRef } from "./website";
 
 /** NewsArticle JSON-LD — the headliner schema for /news/[slug] pages.
@@ -34,7 +35,7 @@ export function newsArticleSchema(
       : {}),
     datePublished: article.publishedAt,
     dateModified: article.modifiedAt,
-    author: newsOrgRef,
+    author: newsDeskAuthor,
     publisher: newsOrgRef,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     articleSection: article.category,

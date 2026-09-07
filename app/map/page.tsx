@@ -10,17 +10,27 @@ export const dynamic = "force-static";
 const canonical = `${SITE.url}/map`;
 
 export const metadata: Metadata = {
-  title: "UAE property area atlas — Dubai, Abu Dhabi and Ras Al Khaimah",
+  title: "UAE real estate area atlas — Dubai, Abu Dhabi and Ras Al Khaimah",
   description:
     "An accessible geographic index of published Invest With Raj area guides, using the names, emirates, area types and coordinates in the editorial registry.",
   alternates: { canonical },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "UAE property area atlas — Invest With Raj",
+    title: "UAE real estate area atlas — Invest With Raj Intelligence",
     description:
       "Explore published area guides by emirate, area type and geographic position.",
     type: "website",
+    locale: "en_AE",
+    siteName: SITE.name,
     url: canonical,
+    images: [
+      {
+        url: `${SITE.url}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: `UAE real estate area atlas — ${SITE.name}`,
+      },
+    ],
   },
 };
 
@@ -52,7 +62,7 @@ export default function MapPage() {
       <section className={styles.hero}>
         <div className={styles.shell}>
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">Area atlas</span>
           </nav>
@@ -165,7 +175,7 @@ function buildSchema(areas: AtlasArea[]): Record<string, unknown> {
         "@type": "CollectionPage",
         "@id": `${canonical}#collection`,
         url: canonical,
-        name: "UAE property area atlas",
+        name: "UAE real estate area atlas",
         description:
           "A geographic index of published Invest With Raj area guides.",
         mainEntity: { "@id": `${canonical}#areas` },
@@ -189,7 +199,7 @@ function buildSchema(areas: AtlasArea[]): Record<string, unknown> {
           {
             "@type": "ListItem",
             position: 1,
-            name: "Daily Market Read",
+            name: SITE.name,
             item: SITE.url,
           },
           {

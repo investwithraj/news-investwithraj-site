@@ -6,6 +6,7 @@ import NewsChrome from "@/components/redesign/NewsChrome";
 import NewsFooter from "@/components/redesign/NewsFooter";
 import {
   asGraph,
+  newsDeskSchema,
   newsOrgSchema,
   newsWebsiteSchema,
   rajPersonSchema,
@@ -25,14 +26,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
     default: `${SITE.name}`,
-    template: `%s · Invest With Raj`,
+    template: `%s · ${SITE.name}`,
   },
   description: SITE.description,
   applicationName: SITE.name,
   generator: "Next.js",
   keywords: [
     "UAE real estate news",
-    "Dubai property news",
+    "Dubai real estate news",
     "Abu Dhabi real estate news",
     "DLD transactions",
     "Hudayriyat news",
@@ -50,7 +51,7 @@ export const metadata: Metadata = {
     },
   ],
   creator: "Invest With Raj News Desk",
-  publisher: "Invest With Raj",
+  publisher: SITE.name,
   category: "Real Estate News",
   referrer: "origin-when-cross-origin",
   robots: {
@@ -64,11 +65,6 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
       "max-image-preview": "large",
       "max-snippet": -1,
-    },
-  },
-  alternates: {
-    types: {
-      "application/rss+xml": `${SITE.url}/rss.xml`,
     },
   },
   openGraph: {
@@ -89,7 +85,6 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@investwithraj",
     title: SITE.name,
     description: SITE.description,
     images: [`${SITE.url}/api/og`],
@@ -114,6 +109,7 @@ export const metadata: Metadata = {
 const publicationIdentityGraph = asGraph(
   newsWebsiteSchema,
   newsOrgSchema,
+  newsDeskSchema,
   rajPersonSchema,
 );
 
@@ -136,8 +132,14 @@ export default function RootLayout({
         />
 
         <link rel="dns-prefetch" href="https://investwithraj.com" />
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title={`${SITE.name} RSS`}
+          href={`${SITE.url}/rss.xml`}
+        />
 
-        {/* One linked identity graph: WebSite + publisher + Raj. */}
+        {/* One linked identity graph: WebSite + publisher + News Desk + Raj. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

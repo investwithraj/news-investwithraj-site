@@ -9,6 +9,7 @@ import {
   POST as postBrief,
 } from "@/app/api/brief/route";
 import { GET as getOg } from "@/app/api/og/route";
+import robots from "@/app/robots";
 import { GET as getLlms } from "@/app/llms.txt/route";
 import { GET as getRss } from "@/app/rss.xml/route";
 import { NEWS_ARTICLES } from "@/content/news";
@@ -19,7 +20,7 @@ import {
 } from "@/lib/news-lifecycle";
 import { INDEXABLE_NEWS_ARTICLES } from "@/lib/public-content";
 import { newsArticleSchema } from "@/lib/schema/article";
-import { NEWS_ORG_ID } from "@/lib/schema/organization";
+import { newsDeskAuthor } from "@/lib/schema/news-desk";
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
@@ -51,6 +52,23 @@ assert.ok(
     isApprovedPublicLifecycleArticleSlug(article.slug),
   ),
 );
+
+const robotRules = robots().rules;
+assert.ok(Array.isArray(robotRules));
+for (const rule of robotRules.slice(0, 2)) {
+  const allow = Array.isArray(rule.allow) ? rule.allow : [rule.allow];
+  assert.ok(
+    allow.includes("/api/og"),
+    "Public search crawlers must be able to fetch indexable OG images.",
+  );
+  const disallow = Array.isArray(rule.disallow)
+    ? rule.disallow
+    : [rule.disallow];
+  assert.ok(
+    disallow.includes("/api/"),
+    "Other API routes must remain excluded from public crawling.",
+  );
+}
 
 const briefResponse = getBrief();
 assert.equal(briefResponse.status, 200);
@@ -100,7 +118,23 @@ for (const slug of [removedSlug, redirectSourceSlug, researchSlug]) {
   assert.match(response.headers.get("Cache-Control") ?? "", /no-store/);
 }
 
-for (const slug of [indexableSlug, publicNoindexSlug, heldSlug]) {
+const rootOg = await getOg(
+  new NextRequest("https://news.investwithraj.com/api/og"),
+);
+assert.equal(rootOg.status, 200);
+assert.equal(rootOg.headers.get("X-Robots-Tag"), null);
+assert.match(rootOg.headers.get("Cache-Control") ?? "", /public/);
+
+const indexableOg = await getOg(
+  new NextRequest(
+    "https://news.investwithraj.com/api/og?slug=" + indexableSlug,
+  ),
+);
+assert.equal(indexableOg.status, 200);
+assert.equal(indexableOg.headers.get("X-Robots-Tag"), null);
+assert.match(indexableOg.headers.get("Cache-Control") ?? "", /public/);
+
+for (const slug of [publicNoindexSlug, heldSlug]) {
   const response = await getOg(
     new NextRequest(
       "https://news.investwithraj.com/api/og?slug=" + slug,
@@ -115,6 +149,7 @@ for (const slug of [indexableSlug, publicNoindexSlug, heldSlug]) {
     response.headers.get("X-Robots-Tag"),
     "noindex, nofollow, noarchive",
   );
+  assert.match(response.headers.get("Cache-Control") ?? "", /no-store/);
 }
 
 const malformedOg = await getOg(
@@ -160,7 +195,7 @@ assert.equal(
 const indexable = NEWS_ARTICLES.find((article) => article.slug === indexableSlug);
 assert.ok(indexable);
 const schema = newsArticleSchema(indexable);
-assert.deepEqual(schema.author, { "@id": NEWS_ORG_ID });
+assert.deepEqual(schema.author, newsDeskAuthor);
 
 const articleComponent = read("components/redesign/NewsArticle.tsx");
 const articleRoute = read("app/news/[slug]/page.tsx");

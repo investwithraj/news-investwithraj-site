@@ -5,8 +5,12 @@ import { ImageResponse } from "next/og";
 import { NextRequest, NextResponse } from "next/server";
 import { getNewsBySlug } from "@/content/news";
 import { EDITORIAL, SITE } from "@/lib/constants";
-import { isApprovedPublicLifecycleArticleSlug } from "@/lib/news-lifecycle";
+import {
+  isApprovedPublicLifecycleArticleSlug,
+  isIndexEligibleArticleSlug,
+} from "@/lib/news-lifecycle";
 import { hasVerifiedEditorialImage } from "@/lib/news-editorial";
+import { isNewsroomEvidenceHeldArticleSlug } from "@/lib/public-content";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +23,14 @@ function errorHeaders() {
   return {
     "Cache-Control": "no-store",
     "X-Robots-Tag": X_ROBOTS_TAG,
+  };
+}
+
+function successHeaders(indexable: boolean) {
+  return {
+    "Cache-Control": indexable ? CACHE_CONTROL : "no-store",
+    "X-Content-Type-Options": "nosniff",
+    ...(indexable ? {} : { "X-Robots-Tag": X_ROBOTS_TAG }),
   };
 }
 
@@ -51,6 +63,11 @@ export async function GET(request: NextRequest) {
       { status: 404, headers: errorHeaders() },
     );
   }
+
+  const indexable = article
+    ? isIndexEligibleArticleSlug(article.slug) &&
+      !isNewsroomEvidenceHeldArticleSlug(article.slug)
+    : true;
 
   const title = article?.title ?? SITE.name;
   const category = article?.category ?? "";
@@ -220,11 +237,7 @@ export async function GET(request: NextRequest) {
     {
       width: 1200,
       height: 630,
-      headers: {
-        "Cache-Control": CACHE_CONTROL,
-        "X-Content-Type-Options": "nosniff",
-        "X-Robots-Tag": X_ROBOTS_TAG,
-      },
+      headers: successHeaders(indexable),
     },
   );
 }

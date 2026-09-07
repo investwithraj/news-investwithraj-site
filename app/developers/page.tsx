@@ -28,12 +28,28 @@ export const dynamic = "force-static";
 
 const PAGE_URL = `${SITE.url}/developers`;
 const DESCRIPTION =
-  "A developer-led index of source-linked UAE property reporting, with transparent entity matching and no unsupported ownership or release claims.";
+  "A developer-led index of source-linked UAE real estate reporting, with transparent entity matching and no unsupported ownership or release claims.";
 
 export const metadata: Metadata = {
   title: "Developers — source-linked reporting index",
   description: DESCRIPTION,
   alternates: { canonical: PAGE_URL },
+  openGraph: {
+    type: "website",
+    locale: "en_AE",
+    siteName: SITE.name,
+    url: PAGE_URL,
+    title: "UAE real estate developer reporting index",
+    description: DESCRIPTION,
+    images: [
+      {
+        url: `${SITE.url}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: `UAE real estate developer reporting — ${SITE.name}`,
+      },
+    ],
+  },
 };
 
 export default function DevelopersIndex() {
@@ -94,7 +110,7 @@ export default function DevelopersIndex() {
           </p>
           <h1>Reporting by full identity.</h1>
           <p className={styles.dek}>
-            Track the developers explicitly named in published UAE property
+            Track the developers explicitly named in published UAE real estate
             reporting, then open the underlying stories and source links.
           </p>
           <div className={styles.statusGrid}>

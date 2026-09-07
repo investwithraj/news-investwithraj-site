@@ -65,7 +65,7 @@ export async function generateMetadata({
   const media = getVerifiedAreaMedia(slug);
 
   return {
-    title: `${area.name} property news and market intelligence`,
+    title: `${area.name} real estate news and market intelligence`,
     description: `${reports.length} source-linked reports about ${area.name}, ${area.emirate}, with the latest market developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/areas/${slug}` },
     robots: {
@@ -74,21 +74,28 @@ export async function generateMetadata({
     },
     openGraph: {
       type: "website",
-      title: `${area.name} property intelligence`,
+      locale: "en_AE",
+      siteName: SITE.name,
+      title: `${area.name} real estate intelligence`,
       description: `${reports.length} source-linked reports for ${area.name}, ${area.emirate}.`,
       url: `${SITE.url}/areas/${slug}`,
-      ...(media
-        ? {
-            images: [
-              {
-                url: `${SITE.url}${media.src}`,
-                width: media.width,
-                height: media.height,
-                alt: media.alt,
-              },
-            ],
-          }
-        : {}),
+      images: media
+        ? [
+            {
+              url: `${SITE.url}${media.src}`,
+              width: media.width,
+              height: media.height,
+              alt: media.alt,
+            },
+          ]
+        : [
+            {
+              url: `${SITE.url}/api/og`,
+              width: 1200,
+              height: 630,
+              alt: `${area.name} real estate intelligence — ${SITE.name}`,
+            },
+          ],
     },
   };
 }
@@ -113,7 +120,7 @@ export default async function AreaPage({
   const hasAreaSourcePack = area.citations.length > 0 && area.body.trim().length > 0;
   const decisionHeadline = hasAreaSourcePack
     ? area.oneLiner
-    : `How ${area.name} fits a real property brief.`;
+    : `How ${area.name} fits a real estate brief.`;
   const decisionContext = hasAreaSourcePack
     ? area.excerpt
     : `${area.name} should be compared on use, competing supply, access, operating quality, total holding cost and resale depth—not on a generic area label.`;

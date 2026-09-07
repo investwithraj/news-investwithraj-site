@@ -3,6 +3,12 @@ import { unstable_cache } from "next/cache";
 
 import NewsArchive from "@/components/redesign/NewsArchive";
 import type { NewsArchiveInitialParams } from "@/components/redesign/NewsArchive";
+import {
+  NEWS_ARCHIVE_DESCRIPTION,
+  NEWS_ARCHIVE_PAGE_URL,
+  newsArchiveMetadata,
+  type NewsArchiveSearchParams,
+} from "./metadata";
 import { SITE } from "@/lib/constants";
 import {
   NEWS_ARCHIVE_FILTER_KEYS,
@@ -28,23 +34,21 @@ const currentArchiveFreshness = unstable_cache(
   { revalidate },
 );
 
-const PAGE_URL = `${SITE.url}/news`;
-const DESCRIPTION =
-  "The chronological archive of source-linked UAE and Gulf property reporting from Invest With Raj.";
+const PAGE_URL = NEWS_ARCHIVE_PAGE_URL;
+const DESCRIPTION = NEWS_ARCHIVE_DESCRIPTION;
 
-export const metadata: Metadata = {
-  title: "News — chronological property intelligence archive",
-  description: DESCRIPTION,
-  alternates: {
-    canonical: PAGE_URL,
-    types: { "application/rss+xml": `${SITE.url}/rss.xml` },
-  },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<NewsArchiveSearchParams>;
+}): Promise<Metadata> {
+  return newsArchiveMetadata(
+    await searchParams,
+    getPublicDiscoveryNewsArticles().length,
+  );
+}
 
-type NewsIndexSearchParams = Record<
-  string,
-  string | string[] | undefined
->;
+type NewsIndexSearchParams = NewsArchiveSearchParams;
 
 function archiveInitialParams(
   values: NewsIndexSearchParams,

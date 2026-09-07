@@ -62,7 +62,7 @@ export async function generateMetadata({
 
   return {
     title: `${developer.name} — developer reporting index`,
-    description: `${reports.length} source-linked reports that explicitly mention ${developer.name}, with the latest UAE property developments and direct source access.`,
+    description: `${reports.length} source-linked reports that explicitly mention ${developer.name}, with the latest UAE real estate developments and direct source access.`,
     alternates: { canonical: `${SITE.url}/developer/${slug}` },
     robots: {
       index: isReleasedIndexEligiblePath(`/developer/${slug}`),
@@ -70,21 +70,28 @@ export async function generateMetadata({
     },
     openGraph: {
       type: "website",
+      locale: "en_AE",
+      siteName: SITE.name,
       title: `${developer.name} reporting index`,
       description: `Explicit source-linked reporting for ${developer.name}.`,
       url: `${SITE.url}/developer/${slug}`,
-      ...(media
-        ? {
-            images: [
-              {
-                url: `${SITE.url}${media.src}`,
-                width: media.width,
-                height: media.height,
-                alt: media.alt,
-              },
-            ],
-          }
-        : {}),
+      images: media
+        ? [
+            {
+              url: `${SITE.url}${media.src}`,
+              width: media.width,
+              height: media.height,
+              alt: media.alt,
+            },
+          ]
+        : [
+            {
+              url: `${SITE.url}/api/og`,
+              width: 1200,
+              height: 630,
+              alt: `${developer.name} real estate reporting — ${SITE.name}`,
+            },
+          ],
     },
   };
 }

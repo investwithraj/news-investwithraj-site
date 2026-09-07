@@ -27,10 +27,10 @@ export async function generateMetadata({
   const canonical = `${SITE.url}/power-list/${year}`;
 
   return {
-    title: `Power List research file ${year} — UAE property`,
+    title: `Power List research file ${year} — UAE real estate`,
     description: hasPublishedEntries
       ? edition!.intro
-      : `The research method, evidence standard and nomination route for the ${year} UAE property Power List file.`,
+      : `The research method, evidence standard and nomination route for the ${year} UAE real estate Power List file.`,
     alternates: { canonical },
     robots: { index: hasPublishedEntries, follow: true },
     openGraph: {
@@ -64,7 +64,7 @@ export default async function PowerListPage({
       <section className={styles.hero}>
         <div className={styles.shell}>
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">Power List {year}</span>
           </nav>
@@ -184,7 +184,7 @@ export default async function PowerListPage({
             <p className={styles.kicker}>Your own decision</p>
             <h2>Talk through the market with Raj.</h2>
             <p>
-              For a specific UAE property decision, bring Raj the asset, price
+              For a specific UAE real estate decision, bring Raj the asset, price
               and alternatives you are considering.
             </p>
           </div>
@@ -296,7 +296,7 @@ function buildSchema({
       {
         "@type": "ListItem",
         position: 1,
-        name: "Daily Market Read",
+        name: SITE.name,
         item: SITE.url,
       },
       {

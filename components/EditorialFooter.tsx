@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE } from "@/lib/constants";
 
 const PRACTICE_URL =
   "https://investwithraj.com/?utm_source=news.investwithraj.com&utm_medium=footer&utm_campaign=organic-authority";
@@ -15,10 +16,10 @@ export default function EditorialFooter() {
       <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between md:px-10">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#C9A961]">
-            Invest With Raj · Daily Market Read
+            {SITE.name}
           </p>
           <p className="mt-2 max-w-[52ch] text-sm leading-6 text-[rgba(242,238,231,.62)]">
-            Source-cited UAE property intelligence, connected to Raj&apos;s
+            Source-cited UAE real estate intelligence, connected to Raj&apos;s
             advisory practice.
           </p>
         </div>

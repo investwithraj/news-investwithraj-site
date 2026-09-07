@@ -142,7 +142,7 @@ export default function NewsArticle({
         </div>
 
         <section
-          className={styles.tldr}
+          className={`${styles.tldr} article-tldr`}
           aria-labelledby="signal-title"
           data-news-layer="signal"
         >
@@ -159,7 +159,7 @@ export default function NewsArticle({
 
         <div className={styles.articleGrid} data-news-layer="analysis">
 
-          <div className={styles.body}>
+          <div className={`${styles.body} article-body`}>
             {paragraphs.map((paragraph, index) => (
               <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
             ))}

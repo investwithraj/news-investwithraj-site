@@ -23,7 +23,6 @@ export const newsOrgSchema = {
   founder: { "@id": RAJ_PERSON_ID },
   masthead: `${SITE.url}/about`,
   ethicsPolicy: `${SITE.url}/about/editorial-standards`,
-  diversityPolicy: `${SITE.url}/about/editorial-standards`,
   correctionsPolicy: `${SITE.url}/about/editorial-standards#corrections`,
   verificationFactCheckingPolicy: `${SITE.url}/about/editorial-standards#evidence`,
   missionCoveragePrioritiesPolicy: `${SITE.url}/about`,

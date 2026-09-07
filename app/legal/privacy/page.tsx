@@ -17,9 +17,19 @@ export const metadata: Metadata = {
   alternates: { canonical: PAGE_URL },
   openGraph: {
     type: "website",
+    locale: "en_AE",
+    siteName: SITE.name,
     url: PAGE_URL,
     title: "Privacy | Invest With Raj Intelligence",
     description: DESCRIPTION,
+    images: [
+      {
+        url: `${SITE.url}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: `Privacy and data choices — ${SITE.name}`,
+      },
+    ],
   },
 };
 

@@ -188,6 +188,19 @@ export default function NewsArchive({
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
   }
 
+  function archivePageHref(page: number): string {
+    const params = new URLSearchParams(searchParams);
+
+    if (page <= 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(page));
+    }
+
+    const next = params.toString();
+    return next ? `${pathname}?${next}` : pathname;
+  }
+
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -212,7 +225,7 @@ export default function NewsArchive({
               in order.
             </h1>
             <p className={styles.dek}>
-              Browse source-linked UAE and Gulf property reporting by market,
+              Browse source-linked UAE and Gulf real estate reporting by market,
               report type, related area or developer, or one of five
               editorial desks.
             </p>
@@ -502,27 +515,33 @@ export default function NewsArchive({
 
         {filtered.length > NEWS_ARCHIVE_PAGE_SIZE ? (
           <nav className={styles.pagination} aria-label="Archive pages">
-            <button
-              type="button"
-              disabled={currentPage === 1}
-              onClick={() =>
-                replaceParams({ page: String(currentPage - 1) })
-              }
-            >
-              ← Newer
-            </button>
+            {currentPage > 1 ? (
+              <Link
+                href={archivePageHref(currentPage - 1)}
+                rel="prev"
+                replace
+                scroll={false}
+              >
+                ← Newer
+              </Link>
+            ) : (
+              <span aria-disabled="true">← Newer</span>
+            )}
             <span>
               Page {currentPage} of {pageCount}
             </span>
-            <button
-              type="button"
-              disabled={currentPage === pageCount}
-              onClick={() =>
-                replaceParams({ page: String(currentPage + 1) })
-              }
-            >
-              Older →
-            </button>
+            {currentPage < pageCount ? (
+              <Link
+                href={archivePageHref(currentPage + 1)}
+                rel="next"
+                replace
+                scroll={false}
+              >
+                Older →
+              </Link>
+            ) : (
+              <span aria-disabled="true">Older →</span>
+            )}
           </nav>
         ) : null}
       </section>

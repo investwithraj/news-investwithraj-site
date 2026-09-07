@@ -13,7 +13,7 @@ export const dynamic = "force-static";
 const canonical = `${SITE.url}/spatial`;
 
 export const metadata: Metadata = {
-  title: "Spatial edition — UAE property intelligence",
+  title: "Spatial edition — UAE real estate intelligence",
   description:
     "A progressive spatial-browser edition of Invest With Raj Intelligence with the complete five-desk directory and flat-web fallback.",
   alternates: { canonical },
@@ -43,7 +43,7 @@ export default function SpatialPage() {
       <section className={styles.hero}>
         <div className={styles.frame}>
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">Spatial edition</span>
           </nav>
@@ -168,7 +168,7 @@ export default function SpatialPage() {
           </div>
           <div className={styles.returnLinks}>
             <Link href="/">
-              Open Daily Market Read
+              Open {SITE.name}
               <span aria-hidden>→</span>
             </Link>
             <a
@@ -197,7 +197,7 @@ function JsonLd() {
         url: canonical,
         name: "Invest With Raj Intelligence spatial edition",
         description:
-          "A progressive spatial-browser directory for five UAE property reporting verticals.",
+          "A progressive spatial-browser directory for five UAE real estate reporting verticals.",
         isPartOf: { "@id": `${SITE.url}#website` },
         publisher: { "@id": `${SITE.url}#newsmediaorg` },
       },
@@ -219,7 +219,7 @@ function JsonLd() {
           {
             "@type": "ListItem",
             position: 1,
-            name: "Daily Market Read",
+            name: SITE.name,
             item: SITE.url,
           },
           {

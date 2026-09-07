@@ -12,7 +12,7 @@ export function GET() {
       available: false,
       status: "research",
       message:
-        "No public UAE property sentiment score is currently published.",
+        "No public UAE real estate sentiment score is currently published.",
       methodology: "https://news.investwithraj.com/pulse",
     },
     {

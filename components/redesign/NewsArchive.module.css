@@ -246,7 +246,8 @@
 
 .controls > button,
 .empty button,
-.pagination button {
+.pagination a,
+.pagination > span[aria-disabled="true"] {
   border: 0;
   border-radius: 0;
   padding: 1rem 1.4rem;
@@ -256,6 +257,7 @@
   font-size: 0.65rem;
   font-weight: 680;
   letter-spacing: 0.08em;
+  text-decoration: none;
   text-transform: uppercase;
 }
 
@@ -487,9 +489,14 @@
   text-transform: uppercase;
 }
 
-.pagination button:disabled {
+.pagination > span[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.36;
+}
+
+.pagination a:focus-visible {
+  outline: 3px solid var(--iwr-cobalt-soft);
+  outline-offset: 3px;
 }
 
 @media (max-width: 1000px) {

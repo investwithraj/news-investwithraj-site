@@ -69,10 +69,10 @@ export function GET(): Response {
     <link>${SITE.url}</link>
     <atom:link href="${SITE.url}/rss.xml" rel="self" type="application/rss+xml" />
     <description>${escapeXml(SITE.description)}</description>
-    <language>en-us</language>
+    <language>en-AE</language>
     <copyright>© 2026 Raj Tomar</copyright>
     <managingEditor>${CONTACT.email} (${escapeXml(EDITORIAL.articleByline)})</managingEditor>
-    <webMaster>${CONTACT.email} (Invest With Raj)</webMaster>
+    <webMaster>${CONTACT.email} (${escapeXml(SITE.name)})</webMaster>
     <pubDate>${lastBuild}</pubDate>
     <lastBuildDate>${lastBuild}</lastBuildDate>
     <ttl>60</ttl>

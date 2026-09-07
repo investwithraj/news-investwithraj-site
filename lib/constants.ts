@@ -6,11 +6,11 @@ export const SITE = {
     process.env.NEXT_PUBLIC_SITE_URL ??
     "https://news.investwithraj.com",
   rootUrl: "https://investwithraj.com",
-  name: "Invest With Raj — Daily Market Read",
+  name: "Invest With Raj Intelligence",
   tagline:
-    "UAE real-estate intelligence. Curated. Cited. Read like an analyst.",
+    "UAE real estate intelligence. Curated. Cited. Read like an analyst.",
   description:
-    "Independent UAE real-estate market intelligence covering market movements, launches, regulation, developers and communities across Dubai, Abu Dhabi and Ras Al Khaimah. Written for serious property decisions.",
+    "Independent UAE real estate market intelligence covering market movements, launches, regulation, developers and communities across Dubai, Abu Dhabi and Ras Al Khaimah. Written for serious real estate decisions.",
 };
 
 export const CONTACT = {
@@ -18,8 +18,8 @@ export const CONTACT = {
   whatsappNumber: "+971 58 996 6085",
   whatsappE164: "971589966085",
   linkedin: "https://www.linkedin.com/in/raj-tomar-1470a7242/",
-  instagram: "https://www.instagram.com/rajtomar.dxb",
-  instagramHandle: "@rajtomar.dxb",
+  instagram: "https://www.instagram.com/thedubaiupgrade/",
+  instagramHandle: "@thedubaiupgrade",
   youtube: "https://www.youtube.com/@TheDubaiUpgrade",
   youtubeHandle: "@TheDubaiUpgrade",
   linkedinNewsletter:
@@ -30,7 +30,7 @@ export const CONTACT = {
 /** Public article identity until an individual signed-byline attestation exists. */
 export const EDITORIAL = {
   articleByline: "Invest With Raj News Desk",
-  articleRole: "Source-cited UAE property reporting",
+  articleRole: "Source-cited UAE real estate reporting",
   bylineUrl: `${SITE.url}/about/editorial-standards`,
 } as const;
 

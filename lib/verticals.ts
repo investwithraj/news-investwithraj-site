@@ -158,7 +158,7 @@ export const VERTICALS: Vertical[] = [
     name: "Beyond the Deal",
     tagline: "Longer reads for decisions that need more than a headline.",
     description:
-      "A curated reading room for policy, regulation and macro analysis affecting UAE property decisions. Publication follows the evidence, not a promised schedule.",
+      "A curated reading room for policy, regulation and macro analysis affecting UAE real estate decisions. Publication follows the evidence, not a promised schedule.",
     method:
       "The desk selects analytical articles whose main value is interpretation across policy, regulation, financing, demand or market structure.",
     categories: ["macro", "policy", "regulatory", "market-pulse"],

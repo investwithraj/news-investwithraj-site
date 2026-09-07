@@ -22,12 +22,28 @@ export const dynamic = "force-static";
 
 const PAGE_URL = `${SITE.url}/areas`;
 const DESCRIPTION =
-  "Source-linked UAE property reporting organised by area across Dubai, Abu Dhabi and Ras Al Khaimah.";
+  "Source-linked UAE real estate reporting organised by area across Dubai, Abu Dhabi and Ras Al Khaimah.";
 
 export const metadata: Metadata = {
-  title: "UAE property intelligence by area",
+  title: "UAE real estate intelligence by area",
   description: DESCRIPTION,
   alternates: { canonical: PAGE_URL },
+  openGraph: {
+    type: "website",
+    locale: "en_AE",
+    siteName: SITE.name,
+    url: PAGE_URL,
+    title: "UAE real estate intelligence by area",
+    description: DESCRIPTION,
+    images: [
+      {
+        url: `${SITE.url}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: `UAE real estate intelligence by area — ${SITE.name}`,
+      },
+    ],
+  },
 };
 
 export default function AreasIndex() {
@@ -49,13 +65,13 @@ export default function AreasIndex() {
   ).sort((a, b) => b.localeCompare(a))[0];
   const [collection, itemList] = collectionPageSchemas({
     url: PAGE_URL,
-    name: "UAE property intelligence by area",
+    name: "UAE real estate intelligence by area",
     description: DESCRIPTION,
     dateModified: latestReportingDate,
     items: PUBLIC_AREAS.map((area) => ({
       name: area.name,
       url: `${SITE.url}/areas/${area.slug}`,
-      description: `Published property reporting for ${area.name}, ${area.emirate}.`,
+      description: `Published real estate reporting for ${area.name}, ${area.emirate}.`,
     })),
   });
   const graph = asGraph(
@@ -152,7 +168,7 @@ export default function AreasIndex() {
                             <Link
                               href={areaHref}
                               className={styles.cardImageLink}
-                              aria-label={`Open ${area.name} property intelligence`}
+                              aria-label={`Open ${area.name} real estate intelligence`}
                             >
                               <Image
                                 src={media.src}

@@ -142,7 +142,7 @@ export default function HeroBrandly({
             </a>
             <span aria-hidden="true" style={{ color: "var(--v16-chrome-deep)" }}>·</span>
             <a
-              href="https://instagram.com/rajtomar.dxb"
+              href="https://instagram.com/thedubaiupgrade"
               target="_blank"
               rel="noreferrer noopener"
               style={{ color: "var(--v16-ink-muted)", textDecoration: "none" }}

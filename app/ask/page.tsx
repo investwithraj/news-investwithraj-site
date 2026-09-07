@@ -9,9 +9,9 @@ export const dynamic = "force-static";
 const canonical = `${SITE.url}/ask`;
 
 export const metadata: Metadata = {
-  title: "Ask the automated UAE property desk",
+  title: "Ask the automated UAE real estate desk",
   description:
-    "Generate a source-bounded UAE property brief from published Invest With Raj reporting, then take the decision to Raj for human review.",
+    "Generate a source-bounded UAE real estate brief from published Invest With Raj reporting, then take the decision to Raj for human review.",
   alternates: { canonical },
   robots: { index: false, follow: true },
   openGraph: {
@@ -31,7 +31,7 @@ export default function AskPage() {
       <section className={styles.hero}>
         <div className={styles.frame}>
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">Ask the desk</span>
           </nav>
@@ -156,9 +156,9 @@ function JsonLd() {
         "@type": "WebPage",
         "@id": `${canonical}#webpage`,
         url: canonical,
-        name: "Ask the automated UAE property desk",
+        name: "Ask the automated UAE real estate desk",
         description:
-          "A source-bounded AI writing tool for first-pass UAE property analysis.",
+          "A source-bounded AI writing tool for first-pass UAE real estate analysis.",
         isPartOf: { "@id": `${SITE.url}#website` },
         publisher: { "@id": `${SITE.url}#newsmediaorg` },
       },
@@ -169,7 +169,7 @@ function JsonLd() {
           {
             "@type": "ListItem",
             position: 1,
-            name: "Daily Market Read",
+            name: SITE.name,
             item: SITE.url,
           },
           {

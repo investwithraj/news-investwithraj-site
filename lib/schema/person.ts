@@ -12,9 +12,9 @@ export const rajPersonSchema = {
   "@type": "Person",
   "@id": RAJ_PERSON_ID,
   name: "Raj Tomar",
-  jobTitle: "UAE Property Advisor and Publisher",
+  jobTitle: "UAE Real Estate Advisor and Publisher",
   description:
-    "Dubai-based property advisor and named publisher of Invest With Raj Intelligence.",
+    "Dubai-based real estate advisor and named publisher of Invest With Raj Intelligence.",
   url: SITE.rootUrl,
   email: `mailto:${CONTACT.email}`,
   image: `${SITE.rootUrl}/media/real-uhd/raj-tomar-portrait.webp`,

@@ -24,9 +24,19 @@ export const metadata: Metadata = {
   alternates: { canonical: PAGE_URL },
   openGraph: {
     type: "article",
+    locale: "en_AE",
+    siteName: SITE.name,
     url: PAGE_URL,
     title: "Editorial standards | Invest With Raj Intelligence",
     description: DESCRIPTION,
+    images: [
+      {
+        url: `${SITE.url}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: `Editorial standards — ${SITE.name}`,
+      },
+    ],
   },
 };
 
@@ -126,6 +136,8 @@ export default function EditorialStandardsPage() {
         <div className={styles.policyRegister}>
           <span>Applies to</span>
           <strong>News · analysis · area and developer records · AI briefs</strong>
+          <span>Publication</span>
+          <strong>{SITE.name}</strong>
           <span>Publishing identity</span>
           <strong>Invest With Raj News Desk</strong>
         </div>

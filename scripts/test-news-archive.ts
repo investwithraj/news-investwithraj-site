@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { NEWS_ARCHIVE_PAGE_URL } from "@/app/news/metadata";
 import { NEWS_ARTICLES } from "@/content/news";
 import { planDistinctArticleMedia } from "@/lib/article-display-media";
 import {
@@ -11,6 +12,7 @@ import {
   validateArticleRelationRecords,
   type ArticleRelationRecord,
 } from "@/lib/article-relations";
+import { SITE } from "@/lib/constants";
 import {
   archivePageNumber,
   filterNewsArchiveItems,
@@ -26,6 +28,13 @@ import {
 } from "@/lib/news-archive-projection";
 import { decisionCta, evidenceSummary } from "@/lib/news-editorial";
 import { PUBLISHED_NEWS_ARTICLES } from "@/lib/public-content";
+import {
+  newsArticleSchema,
+  newsDeskAuthor,
+  newsDeskSchema,
+  newsOrgRef,
+  newsOrgSchema,
+} from "@/lib/schema";
 import { getVerticalArticles, VERTICALS } from "@/lib/verticals";
 
 const EXPECTED_DESKS = [
@@ -421,13 +430,19 @@ const terminalShellSource = readFileSync(
   resolve("components/terminal/TerminalShell.tsx"),
   "utf8",
 );
-assert.ok(
-  pageSource.includes('const PAGE_URL = `${SITE.url}/news`;'),
+const articleComponentSource = readFileSync(
+  resolve("components/redesign/NewsArticle.tsx"),
+  "utf8",
+);
+assert.equal(
+  NEWS_ARCHIVE_PAGE_URL,
+  `${SITE.url}/news`,
   "The canonical archive URL must stay rooted at /news.",
 );
+assert.ok(pageSource.includes("const PAGE_URL = NEWS_ARCHIVE_PAGE_URL"));
 assert.ok(
-  pageSource.includes("canonical: PAGE_URL"),
-  "Every client-side filter state must retain the /news canonical.",
+  pageSource.includes("newsArchiveMetadata("),
+  "Archive metadata must apply the tested canonical policy.",
 );
 assert.equal(
   pageSource.includes('dynamic = "force-static"'),
@@ -448,6 +463,41 @@ assert.ok(componentSource.includes('searchParams.get("desk")'));
 assert.ok(componentSource.includes('searchParams.get("area")'));
 assert.ok(componentSource.includes('searchParams.get("developer")'));
 assert.ok(componentSource.includes('data-cta-source="news-archive"'));
+assert.ok(
+  componentSource.includes("new URLSearchParams(searchParams)"),
+  "Archive page links must start with the complete active filter query.",
+);
+assert.ok(
+  componentSource.includes('params.set("page", String(page))'),
+  "Archive page links must change only the page parameter.",
+);
+assert.ok(
+  componentSource.includes("href={archivePageHref(currentPage - 1)}") &&
+    componentSource.includes('rel="prev"'),
+  "The previous archive page must be an SSR-visible Next Link anchor.",
+);
+assert.ok(
+  componentSource.includes("href={archivePageHref(currentPage + 1)}") &&
+    componentSource.includes('rel="next"'),
+  "The next archive page must be an SSR-visible Next Link anchor.",
+);
+assert.equal(
+  componentSource.includes("replaceParams({ page: String(currentPage"),
+  false,
+  "Pagination must not remain dependent on click-only router updates.",
+);
+assert.ok(
+  articleComponentSource.includes(
+    'className={`${styles.tldr} article-tldr`}',
+  ),
+  "The visible summary must expose the stable article-tldr hook.",
+);
+assert.ok(
+  articleComponentSource.includes(
+    'className={`${styles.body} article-body`}',
+  ),
+  "The visible report body must expose the stable article-body hook.",
+);
 assert.ok(
   terminalPageSource.includes("projectNewsArchiveItems(publicArticles)"),
   "Terminal area shortcuts must be derived from the same archive projection.",
@@ -475,6 +525,45 @@ for (const forbidden of [
     false,
     `Explicit relation registry must not use inferred helper ${forbidden}.`,
   );
+}
+
+const representativeArticle = PUBLISHED_NEWS_ARTICLES[0];
+assert.ok(
+  representativeArticle,
+  "One published article is required for schema checks.",
+);
+const representativeSchema = newsArticleSchema(representativeArticle);
+assert.deepEqual(
+  representativeSchema.author,
+  newsDeskAuthor,
+  "News reports must identify the visible News Desk as the author.",
+);
+assert.deepEqual(
+  representativeSchema.publisher,
+  newsOrgRef,
+  "The publication must remain the NewsMediaOrganization publisher.",
+);
+assert.equal(newsDeskSchema["@type"], "Organization");
+assert.equal(
+  newsDeskSchema.url,
+  `${SITE.url}/about/editorial-standards`,
+  "The collective byline must resolve to its public editorial standards page.",
+);
+assert.equal(newsOrgSchema["@type"], "NewsMediaOrganization");
+assert.equal(
+  "diversityPolicy" in newsOrgSchema,
+  false,
+  "The publisher must not claim a diversity policy that is not published.",
+);
+
+for (const article of PUBLISHED_NEWS_ARTICLES) {
+  for (const selector of article.speakableSelector ?? []) {
+    assert.ok(
+      selector.startsWith(".article-tldr") ||
+        selector.startsWith(".article-body"),
+      `${article.slug} speakable selector must target a stable live DOM hook.`,
+    );
+  }
 }
 
 console.log(

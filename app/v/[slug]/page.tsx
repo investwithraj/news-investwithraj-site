@@ -29,7 +29,7 @@ export async function generateMetadata({
 
   const articles = getVerticalArticles(vertical, NEWS_ARTICLES);
   const hasPublishedReports = articles.length > 0;
-  const title = `${vertical.name} — UAE property intelligence`;
+  const title = `${vertical.name} — UAE real estate intelligence`;
 
   return {
     title,
@@ -46,7 +46,17 @@ export async function generateMetadata({
       title,
       description: vertical.description,
       type: "website",
+      locale: "en_AE",
+      siteName: SITE.name,
       url: `${SITE.url}/v/${vertical.slug}`,
+      images: [
+        {
+          url: `${SITE.url}/api/og`,
+          width: 1200,
+          height: 630,
+          alt: `${vertical.name} real estate intelligence — ${SITE.name}`,
+        },
+      ],
     },
   };
 }
@@ -87,7 +97,7 @@ export default async function VerticalPage({
       <section className={styles.hero}>
         <div className={styles.shell}>
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">{vertical.name}</span>
           </nav>
@@ -238,7 +248,7 @@ export default async function VerticalPage({
             <h2>Bring Raj the facts, the alternatives and the downside.</h2>
             <p>
               The call is for buyers and investors who want to pressure-test a
-              UAE property decision with a human advisor.
+              UAE real estate decision with a human advisor.
             </p>
           </div>
           <div className={styles.ctaLinks}>
@@ -288,7 +298,7 @@ function buildSchema({
       {
         "@type": "ListItem",
         position: 1,
-        name: "Daily Market Read",
+        name: SITE.name,
         item: SITE.url,
       },
       {

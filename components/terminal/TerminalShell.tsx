@@ -7,7 +7,7 @@ import type { FxSnapshot } from "@/lib/fx/rates";
 import { CURRENCY_META, type Currency } from "@/lib/fx/rates";
 import { useFx } from "@/components/ticker/FxProvider";
 import { formatAed } from "@/lib/dld/types";
-import { CONTACT, rootCtaUrl } from "@/lib/constants";
+import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
 import styles from "./TerminalShell.module.css";
 
 type PaneKey =
@@ -234,7 +234,7 @@ export function TerminalShell({ reports, areas, bells }: Props) {
       <section className={styles.hero}>
         <div className={styles.frame}>
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">Terminal</span>
           </nav>

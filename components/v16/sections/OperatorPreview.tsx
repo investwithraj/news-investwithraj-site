@@ -38,7 +38,7 @@ export default function OperatorPreview() {
             src="/media/real-uhd/raj-tomar-portrait.webp"
             type="image"
             aspect="3:4"
-            caption="The Operator · @rajtomar.dxb"
+            caption="The Operator · @thedubaiupgrade"
             alt="Portrait of Raj Tomar"
           />
         </div>

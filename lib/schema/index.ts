@@ -9,6 +9,12 @@ export {
   parentOrgRef,
 } from "./organization";
 export {
+  NEWS_DESK_ID,
+  newsDeskAuthor,
+  newsDeskSchema,
+  newsDeskRef,
+} from "./news-desk";
+export {
   NEWS_WEBSITE_ID,
   newsWebsiteSchema,
   newsWebsiteRef,

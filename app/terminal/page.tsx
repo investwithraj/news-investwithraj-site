@@ -16,20 +16,30 @@ const canonical = `${SITE.url}/terminal`;
 
 export function generateMetadata(): Metadata {
   return {
-    title: "UAE property intelligence terminal",
+    title: "UAE real estate intelligence terminal",
     description:
-      "A configurable workspace for cited UAE property reporting, the official DLD pulse, current FX when available, area guides and desk shortcuts.",
+      "A configurable workspace for cited UAE real estate reporting, the official DLD pulse, current FX when available, area guides and desk shortcuts.",
     alternates: { canonical },
     robots: {
       index: isReleasedIndexEligiblePath("/terminal"),
       follow: true,
     },
     openGraph: {
-      title: "UAE property intelligence terminal — Invest With Raj",
+      title: "UAE real estate intelligence terminal — Invest With Raj Intelligence",
       description:
         "A power-user workspace with visible sources, freshness and fallback states.",
       type: "website",
+      locale: "en_AE",
+      siteName: SITE.name,
       url: canonical,
+      images: [
+        {
+          url: `${SITE.url}/api/og`,
+          width: 1200,
+          height: 630,
+          alt: `UAE real estate intelligence terminal — ${SITE.name}`,
+        },
+      ],
     },
   };
 }
@@ -95,7 +105,7 @@ function JsonLd() {
         applicationCategory: "BusinessApplication",
         operatingSystem: "Any modern web browser",
         description:
-          "A configurable workspace for sourced UAE property reporting and market reference data.",
+          "A configurable workspace for sourced UAE real estate reporting and market reference data.",
         isAccessibleForFree: true,
         publisher: { "@id": `${SITE.url}#newsmediaorg` },
       },
@@ -106,7 +116,7 @@ function JsonLd() {
           {
             "@type": "ListItem",
             position: 1,
-            name: "Daily Market Read",
+            name: SITE.name,
             item: SITE.url,
           },
           {

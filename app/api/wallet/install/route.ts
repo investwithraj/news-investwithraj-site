@@ -15,7 +15,7 @@ function statusPayload(platform?: string) {
     message:
       "Signed wallet-pass delivery is not implemented. No pass has been created and no device has been registered.",
     liveAlternative: {
-      label: "Open Daily Market Read",
+      label: "Open Invest With Raj Intelligence",
       href: "/",
     },
   };

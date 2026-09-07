@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/api/og"],
         disallow: ["/internal/", "/api/"],
       },
       // AI-crawler explicit allowlist — the news subdomain is meant to be
@@ -40,7 +40,7 @@ export default function robots(): MetadataRoute.Robots {
           "Amazonbot",
           "Meta-ExternalAgent",
         ],
-        allow: "/",
+        allow: ["/", "/api/og"],
         disallow: ["/internal/", "/api/"],
       },
       // Block low-quality scrapers.

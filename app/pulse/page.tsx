@@ -22,13 +22,13 @@ export function generateMetadata(): Metadata {
   return {
     title: "Pulse methodology — evidence before signal",
     description:
-      "The production method and publication safeguards for a future UAE property evidence register. No public sentiment scores are currently published.",
+      "The production method and publication safeguards for a future UAE real estate evidence register. No public sentiment scores are currently published.",
     alternates: { canonical },
     robots: { index: false, follow: true },
     openGraph: {
       title: "Pulse methodology — Invest With Raj",
       description:
-        "How a future UAE property evidence register will be sourced, reviewed and corrected.",
+        "How a future UAE real estate evidence register will be sourced, reviewed and corrected.",
       type: "website",
       url: canonical,
     },
@@ -80,7 +80,7 @@ export default function PulsePage() {
         url: canonical,
         name: "Pulse methodology",
         description:
-          "Production methodology and publication safeguards for a future UAE property evidence register.",
+          "Production methodology and publication safeguards for a future UAE real estate evidence register.",
         breadcrumb: { "@id": `${canonical}#breadcrumb` },
       },
       {
@@ -90,7 +90,7 @@ export default function PulsePage() {
           {
             "@type": "ListItem",
             position: 1,
-            name: "Daily Market Read",
+            name: SITE.name,
             item: SITE.url,
           },
           {
@@ -116,7 +116,7 @@ export default function PulsePage() {
       <section className={styles.hero}>
         <div className={styles.shell}>
           <nav aria-label="Breadcrumb" className={styles.breadcrumbs}>
-            <Link href="/">Daily Market Read</Link>
+            <Link href="/">{SITE.name}</Link>
             <span aria-hidden>/</span>
             <span aria-current="page">Pulse</span>
           </nav>
