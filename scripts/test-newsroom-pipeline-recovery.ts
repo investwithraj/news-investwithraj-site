@@ -1277,6 +1277,109 @@ async function repairFixesMechanicalGates(): Promise<void> {
   assert.match(repairPrompt, /EXPLICIT SUPPORTED FIGURES[\s\S]*AED 10 million/i);
 }
 
+async function evidenceRepairJsonRetryIsBounded(): Promise<void> {
+  const badBody =
+    "Dubai Land Department announced this amazing release with no quantified opening.";
+  const recoveredRequests: Parameters<RepairCall>[0][] = [];
+  const recovered = await draftFromCluster(
+    cluster([OFFICIAL_URL], "regulatory"),
+    WHITELIST,
+    {
+      now: NOW,
+      dependencies: {
+        research: (async () => ({
+          ok: true,
+          text: draftJson({ body: badBody, urls: [OFFICIAL_URL] }),
+        })) satisfies ResearchCall,
+        repair: (async (request) => {
+          recoveredRequests.push(request);
+          return {
+            ok: true,
+            text:
+              recoveredRequests.length === 1
+                ? "{malformed evidence repair"
+                : draftJson({
+                    body: officialBodyWithFigure(),
+                    urls: [OFFICIAL_URL],
+                  }),
+          };
+        }) satisfies RepairCall,
+        fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      },
+    },
+  );
+  assert.equal(recovered.ok, true, recovered.reason);
+  assert.ok(recovered.article, "the valid bounded retry must return a stageable article");
+  assert.equal(validateDraft(recovered.article).ok, true);
+  assert.deepEqual(
+    findUnsupportedFigures(
+      articleEvidenceText(recovered.article),
+      recovered.provenance!.fetchedEvidence!.map((evidence) => evidence.text),
+    ),
+    [],
+    "the recovered article must still pass the numeric evidence gate",
+  );
+  assert.equal(recoveredRequests.length, 2);
+  assert.equal(
+    recoveredRequests[1].messages[0]?.content,
+    recoveredRequests[0].messages[0]?.content,
+    "the retry must reuse the exact evidence packet and supported-figures prompt",
+  );
+  assert.match(
+    String(recoveredRequests[1].messages[0]?.content ?? ""),
+    /EXPLICIT SUPPORTED FIGURES[\s\S]*AED 10 million[\s\S]*EVIDENCE PACKET/i,
+  );
+  assert.match(
+    String(recoveredRequests[1].messages.at(-1)?.content ?? ""),
+    /Do not search, call tools, add sources/i,
+  );
+  assert.equal(
+    Object.hasOwn(recoveredRequests[1], "maxSearches"),
+    false,
+    "the JSON retry must not acquire a search allowance",
+  );
+  assert.ok(
+    recovered.diagnostics?.includes(
+      "evidence-only repair recovered after 1 bounded JSON retry",
+    ),
+  );
+
+  let persistentCalls = 0;
+  const held = await draftFromCluster(
+    cluster([OFFICIAL_URL], "regulatory"),
+    WHITELIST,
+    {
+      now: NOW,
+      dependencies: {
+        research: (async () => ({
+          ok: true,
+          text: draftJson({ body: badBody, urls: [OFFICIAL_URL] }),
+        })) satisfies ResearchCall,
+        repair: (async () => {
+          persistentCalls += 1;
+          return { ok: true, text: "still not valid article JSON" };
+        }) satisfies RepairCall,
+        fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      },
+    },
+  );
+  assert.equal(held.ok, false);
+  assert.equal(
+    persistentCalls,
+    2,
+    "persistent malformed evidence repair output must receive exactly one retry",
+  );
+  assert.match(
+    held.reason ?? "",
+    /did not return valid JSON after 1 bounded JSON retry/,
+  );
+  assert.ok(
+    held.diagnostics?.includes(
+      "evidence-only repair JSON retry returned no usable article JSON",
+    ),
+  );
+}
+
 async function generationRetryIsCapped(): Promise<void> {
   const requests: Parameters<ResearchCall>[0][] = [];
   const recoveryResponses = [
@@ -1437,6 +1540,7 @@ async function main(): Promise<void> {
   await numericComplianceRepairUsesExactEvidencePhrase();
   await missingLeadFigureUsesFetchedEvidencePhrase();
   await repairFixesMechanicalGates();
+  await evidenceRepairJsonRetryIsBounded();
   await generationRetryIsCapped();
   await snippetsNeverBecomeEvidence();
   console.log(

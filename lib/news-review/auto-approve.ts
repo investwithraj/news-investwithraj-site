@@ -845,6 +845,10 @@ const PERIOD_SPAN_RE = new RegExp(
   String.raw`\b${PERIOD_POINT}(?:[ \t]*(?:\/|&|,|-|\band\b|\bto\b)[ \t]*${PERIOD_POINT})*${HEAD_PHRASE}`,
   "gi",
 );
+// DLD's literal platform name is a numeric identifier, not a quantity. It is
+// still evidence-bound, and the deliberately exact span cannot absorb nearby
+// prose or create a general product-number exemption.
+const PROJECT_360_IDENTIFIER_RE = /\bProject[ \t]+360\b/g;
 const LABELLED_DIGIT_RE = new RegExp(
   String.raw`(?<![-A-Za-z0-9])(?:phase|stage|tranche|plot|unit|tower|building|release|version)[ \t]+(?:no\.?[ \t]*)?${UNSIGNED_NUM}${HEAD_PHRASE}`,
   "gi",
@@ -874,7 +878,7 @@ function claimBearingNumericText(value: string): string {
   );
 }
 
-type NumericSpanKind = "period" | "label" | "range" | "value";
+type NumericSpanKind = "identifier" | "period" | "label" | "range" | "value";
 
 interface NumericSpan {
   start: number;
@@ -894,6 +898,7 @@ const NUMERIC_SPAN_PATTERNS: ReadonlyArray<{
   kind: NumericSpanKind;
   pattern: RegExp;
 }> = [
+  { kind: "identifier", pattern: PROJECT_360_IDENTIFIER_RE },
   { kind: "period", pattern: PERIOD_SPAN_RE },
   { kind: "label", pattern: LABELLED_DIGIT_RE },
   { kind: "range", pattern: FULL_RANGE_RE },
@@ -994,6 +999,7 @@ export function findUnsupportedFigures(
 }
 
 const NUMERIC_CORE_PATTERNS: Record<NumericSpanKind, RegExp> = {
+  identifier: /^Project[ \t]+360\b/,
   period: new RegExp(
     String.raw`^${PERIOD_POINT}(?:[ \t]*(?:\/|&|,|-|\band\b|\bto\b)[ \t]*${PERIOD_POINT})*`,
     "i",

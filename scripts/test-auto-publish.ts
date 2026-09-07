@@ -731,6 +731,49 @@ async function main() {
       [],
       "ordinary calendar dates and section/page labels must not become claims",
     );
+    const project360Claim =
+      "Project 360 gives developers a consolidated view of 80 transactions.";
+    assert.deepEqual(
+      extractFigures(project360Claim),
+      ["project 360", "80 transactions"],
+      "the exact Project 360 identifier and the separate quantity must form independent evidence tuples",
+    );
+    assert.deepEqual(
+      findUnsupportedFigures(
+        project360Claim,
+        "Project 360 gives developers a consolidated view.",
+      ),
+      ["80 transactions"],
+      "evidence for Project 360 must not let another figure in the sentence escape evidence binding",
+    );
+    assert.deepEqual(
+      findUnsupportedFigures(
+        project360Claim,
+        "The platform gives developers a consolidated view of 80 transactions.",
+      ),
+      ["project 360"],
+      "the Project 360 identifier must itself be present in fetched evidence",
+    );
+    assert.deepEqual(
+      findUnsupportedFigures(project360Claim, project360Claim),
+      [],
+      "both independent numeric tuples must pass when exactly evidenced",
+    );
+    assert.equal(
+      extractFigures("Project 360 gives developers a consolidated view.")[0],
+      "project 360",
+      "the dedicated identifier span must stop before trailing verbs and nouns",
+    );
+    assert.notDeepEqual(
+      extractFigures("Project 361 gives developers a consolidated view."),
+      [],
+      "the identifier rule must remain exact and leave other product-number names governed by the ordinary parser",
+    );
+    assert.deepEqual(
+      extractFigures("The project covers 360 units."),
+      ["360 units"],
+      "a lowercase ordinary project quantity must not be mistaken for the branded identifier",
+    );
     assert.deepEqual(findUnsupportedFigures(materialCounts, materialCounts), []);
     assert.equal(
       canonicalizeEvidenceNumericPhrases(

@@ -733,7 +733,7 @@ export async function draftFromCluster(
     const supportedFigures = [
       ...new Set(evidenceTexts.flatMap((text) => extractFigures(text))),
     ];
-    const repair = await repairCall({
+    const evidenceRepairRequest = {
       model: opts.model,
       maxTokens: Math.min(4_600, Math.max(1_200, opts.maxTokens ?? 4_600)),
       temperature: 0.1,
@@ -750,17 +750,56 @@ export async function draftFromCluster(
           })}\n\nEVIDENCE PACKET:\n${evidencePacket}`,
         },
       ],
-    });
-    const repaired = repair.ok && repair.text
+    } satisfies Parameters<RepairCall>[0];
+    let repair = await repairCall(evidenceRepairRequest);
+    let repaired = repair.ok && repair.text
       ? parseDraftJsonResponse(repair.text)
       : null;
     if (!repaired?.body || !Array.isArray(repaired.tldr)) {
-      diagnostics.push("evidence-only repair attempt returned no usable article JSON");
-      return {
-        ok: false,
-        reason: repair.error ?? "evidence-only repair did not return valid JSON",
-        diagnostics,
-      };
+      diagnostics.push("evidence-only repair attempt 1 returned no usable article JSON");
+      let jsonRetryAttempted = false;
+      // A provider failure is held immediately. Only a successful call that
+      // returned an unusable JSON payload receives one format-only retry.
+      // The retry is stateless with respect to the malformed output and gets
+      // the exact same directly fetched evidence packet and supported figures.
+      if (repair.ok) {
+        jsonRetryAttempted = true;
+        repair = await repairCall({
+          ...evidenceRepairRequest,
+          temperature: 0,
+          messages: [
+            ...evidenceRepairRequest.messages,
+            {
+              role: "user",
+              content:
+                "BOUNDED JSON RETRY: the first evidence-only repair output was not usable article JSON. Do not search, call tools, add sources, use the prior malformed output or broaden the evidence. Using only the exact EVIDENCE PACKET and EXPLICIT SUPPORTED FIGURES already supplied above, return exactly one complete JSON object with title, subtitle, tldr (exactly three strings), body and faq. All evidence, numerical and validator constraints remain unchanged.",
+            },
+          ],
+        });
+        repaired = repair.ok && repair.text
+          ? parseDraftJsonResponse(repair.text)
+          : null;
+        if (repaired?.body && Array.isArray(repaired.tldr)) {
+          diagnostics.push(
+            "evidence-only repair recovered after 1 bounded JSON retry",
+          );
+        } else {
+          diagnostics.push(
+            "evidence-only repair JSON retry returned no usable article JSON",
+          );
+        }
+      }
+      if (!repaired?.body || !Array.isArray(repaired.tldr)) {
+        return {
+          ok: false,
+          reason:
+            repair.error ??
+            (jsonRetryAttempted
+              ? "evidence-only repair did not return valid JSON after 1 bounded JSON retry"
+              : "evidence-only repair did not return valid JSON"),
+          diagnostics,
+        };
+      }
     }
     const repairedTitle = repaired.title?.trim().slice(0, 90) || article.title;
     const repairedSlug = `${today}-${slugify(repairedTitle)}`;
