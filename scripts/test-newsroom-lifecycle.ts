@@ -12,8 +12,12 @@ import { SITE } from "@/lib/constants";
 import {
   AUXILIARY_NEWSROOM_LIFECYCLE,
   canonicalNewsroomRedirectDestination,
+  CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION,
+  CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
   CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES,
   CURRENT_RELEASE_NEWSROOM_REDIRECTS,
+  FULL_RELEASE_NEWSROOM_REDIRECTS,
   getReleasedNewsroomRedirects,
   getNewsArticleLifecycle,
   getNewsroomLifecycle,
@@ -73,11 +77,17 @@ const publishedArticlePaths = PUBLISHED_NEWS_ARTICLES.map(
 const additivePublishedArticlePaths = publishedArticlePaths.filter(
   (pathname) => !getNewsroomLifecycle(pathname),
 );
+const additiveIndexableArticlePaths = INDEXABLE_NEWS_ARTICLES.filter(
+  (article) => !getNewsroomLifecycle(`/news/${article.slug}`),
+).map((article) => `/news/${article.slug}`);
 const currentPublicAuthorityPaths = [
   ...new Set([...primaryByUrl.keys(), ...additivePublishedArticlePaths]),
 ].sort();
+const currentReleaseRedirectSources = new Set<string>(
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES,
+);
 const currentReleasePublicAuthorityPaths = currentPublicAuthorityPaths.filter(
-  (pathname) => pathname !== CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  (pathname) => !currentReleaseRedirectSources.has(pathname),
 );
 for (const pathname of additivePublishedArticlePaths) {
   assert.equal(getNewsroomLifecycle(pathname), null);
@@ -128,10 +138,15 @@ assert.deepEqual(CURRENT_RELEASE_NEWSROOM_REDIRECTS, [
       "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
     statusCode: 301,
   },
+  {
+    source: CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
+    destination: CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION,
+    statusCode: 301,
+  },
 ]);
 assert.equal(
   getPublicDiscoveryNewsArticles().length,
-  PUBLISHED_NEWS_ARTICLES.length,
+  PUBLISHED_NEWS_ARTICLES.length - CURRENT_RELEASE_NEWSROOM_REDIRECTS.length,
 );
 const currentPublicSitemapPaths = sitemap()
   .map((entry) => new URL(entry.url).pathname)
@@ -139,12 +154,12 @@ const currentPublicSitemapPaths = sitemap()
 assert.equal(
   currentPublicSitemapPaths.length,
   currentReleasePublicAuthorityPaths.length,
-  "Flag-off discovery must exclude only the released duplicate from the legacy baseline plus reviewed daily publications.",
+  "Flag-off discovery must exclude only the two released duplicates from the legacy baseline plus reviewed daily publications.",
 );
 assert.deepEqual(
   currentPublicSitemapPaths,
   currentReleasePublicAuthorityPaths,
-  "Flag-off discovery drifted beyond the single released duplicate.",
+  "Flag-off discovery drifted beyond the two released duplicates.",
 );
 assert.equal(
   isRenderableArticleSlug(
@@ -162,7 +177,9 @@ assert.match(
 
 process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
 assert.equal(isNewsroomLifecycleCutoverEnabled(), true);
-assert.equal(getReleasedNewsroomRedirects().length, 31);
+assert.equal(getReleasedNewsroomRedirects().length, 32);
+assert.equal(FULL_RELEASE_NEWSROOM_REDIRECTS.length, 32);
+assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
 assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
 assert.deepEqual(
   [...NEWSROOM_RELEASE_REMOVAL_CANDIDATES].sort(),
@@ -199,7 +216,7 @@ const releasedLegacyPaths = primaryRows
   .filter((row) => row.disposition === "KEEP" || row.disposition === "IMPROVE")
   .map((row) => row.current_url);
 const releasedAuthorityPaths = [
-  ...new Set([...releasedLegacyPaths, ...additivePublishedArticlePaths]),
+  ...new Set([...releasedLegacyPaths, ...additiveIndexableArticlePaths]),
 ].sort();
 assert.equal(
   getPublicDiscoveryNewsArticles().length,
@@ -359,23 +376,18 @@ async function main() {
 process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "0";
 const currentPublicRedirects = await configuredRedirects();
 const currentPublicLifecycleRedirects = currentPublicRedirects.filter(
-  ({ source }) =>
-    NEWSROOM_EXACT_REDIRECTS.some(
-      (lifecycleRedirect) => lifecycleRedirect.source === source,
-    ),
+  ({ source }) => currentReleaseRedirectSources.has(source),
 );
 assert.deepEqual(
   currentPublicLifecycleRedirects,
-  [
-    {
-      source: CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
-      destination: canonicalNewsroomRedirectDestination(
-        CURRENT_RELEASE_NEWSROOM_REDIRECTS[0].destination,
-      ),
-      statusCode: 301,
-    },
-  ],
-  "Flag-off configuration must contain only the verified one-hop duplicate redirect.",
+  CURRENT_RELEASE_NEWSROOM_REDIRECTS.map(
+    ({ source, destination, statusCode }) => ({
+      source,
+      destination: canonicalNewsroomRedirectDestination(destination),
+      statusCode,
+    }),
+  ),
+  "Flag-off configuration must contain only the two verified one-hop duplicate redirects.",
 );
 process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
 const redirects = await configuredRedirects();
@@ -395,6 +407,15 @@ const configuredRedirectBySource = new Map(
 
 assert.equal(lifecycleRedirectRows.length, 34);
 assert.equal(redirectBySource.size, 31);
+assert.equal(
+  redirects.filter(({ source }) =>
+    FULL_RELEASE_NEWSROOM_REDIRECTS.some(
+      (candidate) => candidate.source === source,
+    ),
+  ).length,
+  32,
+  "Full cutover must configure the frozen 31 legacy redirects plus the additive Aldar redirect.",
+);
 for (const row of lifecycleRedirectRows) {
   const redirect = redirectBySource.get(row.current_url);
   if (isHeldRedirect(row.current_url)) {
@@ -422,16 +443,19 @@ for (const row of lifecycleRedirectRows) {
   );
 }
 
-const exactSources = new Set(NEWSROOM_EXACT_REDIRECTS.map(({ source }) => source));
-for (const { source, destination } of NEWSROOM_EXACT_REDIRECTS) {
+const fullReleaseSources = new Set(
+  FULL_RELEASE_NEWSROOM_REDIRECTS.map(({ source }) => source),
+);
+for (const { source, destination } of FULL_RELEASE_NEWSROOM_REDIRECTS) {
   const destinationUrl = new URL(destination, SITE.url);
   assert.ok(
-    destinationUrl.origin !== SITE.url || !exactSources.has(destinationUrl.pathname),
+    destinationUrl.origin !== SITE.url ||
+      !fullReleaseSources.has(destinationUrl.pathname),
     `${source} redirects through another retired newsroom URL.`,
   );
 }
 for (const redirect of redirects.filter((candidate) =>
-  exactSources.has(candidate.source),
+  fullReleaseSources.has(candidate.source),
 )) {
   assert.ok(
     redirect.destination.startsWith("https://"),
@@ -482,7 +506,7 @@ if (originalCutover === undefined) {
 console.log(
   `Newsroom lifecycle PASS: 79-route legacy authority + ${additivePublishedArticlePaths.length} daily publication(s) -> ${releasedAuthorityPaths.length} indexable; ` +
     "12 matrix noindex + 3 held redirects retained, 5 article removals gated, " +
-    `31 exact lifecycle redirects, ${PUBLISHED_NEWS_ARTICLES.length} live records preserved, feeds/archive/front clean; ` +
+    `31 frozen legacy redirects + 1 additive current redirect, ${PUBLISHED_NEWS_ARTICLES.length} live records preserved, feeds/archive/front clean; ` +
     "two fact-preservation gaps and Wynn target indexability held; www DNS remains external.",
 );
 }
@@ -676,6 +700,30 @@ async function assertDiscoveryExclusions() {
     frontPayload.items.every((item) => !excludedSlugs.has(item.slug)),
     "/api/front exposed a retired or noindex article.",
   );
+  assert.ok(
+    frontPayload.items.some(
+      (item) =>
+        item.slug ===
+        CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION.slice("/news/".length),
+    ),
+    "/api/front failed to restore the corrected Aldar report.",
+  );
+
+  const archiveSlugs = projectNewsArchiveItems(
+    getPublicDiscoveryNewsArticles(),
+  ).map((item) => item.slug);
+  assert.ok(
+    !archiveSlugs.includes(
+      CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE.slice("/news/".length),
+    ),
+    "The archive exposed the retired Aldar duplicate.",
+  );
+  assert.ok(
+    archiveSlugs.includes(
+      CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION.slice("/news/".length),
+    ),
+    "The archive failed to restore the corrected Aldar report.",
+  );
 
   const rss = await getRss().text();
   const rssSlugs = [
@@ -697,6 +745,12 @@ async function assertDiscoveryExclusions() {
     ].map((match) => match[1]);
     assert.ok(newsSlugs.length > 0);
     assert.ok(newsSlugs.every((slug) => !excludedSlugs.has(slug)));
+    assert.ok(
+      newsSlugs.includes(
+        CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION.slice("/news/".length),
+      ),
+      "The News sitemap failed to restore the corrected Aldar report.",
+    );
   } finally {
     Date.now = originalNow;
   }
@@ -706,6 +760,10 @@ async function assertDiscoveryExclusions() {
   assert.ok(!llms.includes(`${SITE.url}/developers:`));
   assert.ok(llms.includes(`${SITE.url}/news?area={area-slug}`));
   assert.ok(llms.includes(`${SITE.url}/news?developer={developer-slug}`));
+  assert.ok(!llms.includes(`${SITE.url}${CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE}`));
+  assert.ok(
+    llms.includes(`${SITE.url}${CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION}`),
+  );
 }
 
 function assertDuplicateResolution() {
@@ -729,6 +787,23 @@ function assertDuplicateResolution() {
     assert.equal(actualSitemapPaths.includes(source), false);
     assert.equal(actualSitemapPaths.includes(destination), true);
   }
+
+  const releasedAldar = CURRENT_RELEASE_NEWSROOM_REDIRECTS.find(
+    ({ source }) => source === CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
+  );
+  assert.equal(
+    releasedAldar?.destination,
+    CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION,
+  );
+  assert.equal(releasedAldar?.statusCode, 301);
+  assert.equal(
+    actualSitemapPaths.includes(CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE),
+    false,
+  );
+  assert.equal(
+    actualSitemapPaths.includes(CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION),
+    true,
+  );
 }
 
 function assertHeldRoutes() {

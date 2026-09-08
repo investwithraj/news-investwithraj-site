@@ -128,10 +128,10 @@ const nextConfig: NextConfig = {
     );
 
     return [
-      // The verified Flexi Rent duplicate is released immediately. The wider
-      // lifecycle set remains behind its explicit cutover flag. Absolute
-      // destinations keep retired www URLs to one hop if the currently absent DNS
-      // is added later.
+      // Individually verified duplicate redirects are released immediately.
+      // The wider legacy lifecycle set remains behind its explicit cutover
+      // flag. Absolute destinations keep retired www URLs to one hop if the
+      // currently absent DNS is added later.
       ...lifecycleRedirects,
       {
         source: "/:path*",

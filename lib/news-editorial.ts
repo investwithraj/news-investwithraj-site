@@ -222,8 +222,19 @@ export function areNearDuplicate(
   first: NewsArticle,
   second: NewsArticle,
 ): boolean {
-  const a = titleTokens(first.title);
-  const b = titleTokens(second.title);
+  return areNearDuplicateTitles(first.title, second.title);
+}
+
+/**
+ * The public-news headline rule, exposed for publication-time duplicate
+ * protection so discovery and the automated publisher cannot drift apart.
+ */
+export function areNearDuplicateTitles(
+  firstTitle: string,
+  secondTitle: string,
+): boolean {
+  const a = titleTokens(firstTitle);
+  const b = titleTokens(secondTitle);
   if (a.size === 0 || b.size === 0) return false;
 
   const shared = [...a].filter((token) => b.has(token)).length;

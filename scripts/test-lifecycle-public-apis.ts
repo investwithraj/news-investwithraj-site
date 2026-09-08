@@ -15,6 +15,7 @@ import { GET as getRss } from "@/app/rss.xml/route";
 import { NEWS_ARTICLES } from "@/content/news";
 import { EDITORIAL } from "@/lib/constants";
 import {
+  CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
   isApprovedPublicLifecycleArticleSlug,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
 } from "@/lib/news-lifecycle";
@@ -39,6 +40,8 @@ const removedSlug =
   "2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop";
 const redirectSourceSlug =
   "2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl";
+const additiveRedirectSourceSlug =
+  CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE.slice("/news/".length);
 const researchSlug = "2026-05-26-dld-21b-week";
 
 assert.equal(isApprovedPublicLifecycleArticleSlug(indexableSlug), true);
@@ -46,6 +49,10 @@ assert.equal(isApprovedPublicLifecycleArticleSlug(publicNoindexSlug), true);
 assert.equal(isApprovedPublicLifecycleArticleSlug(heldSlug), true);
 assert.equal(isApprovedPublicLifecycleArticleSlug(removedSlug), false);
 assert.equal(isApprovedPublicLifecycleArticleSlug(redirectSourceSlug), false);
+assert.equal(
+  isApprovedPublicLifecycleArticleSlug(additiveRedirectSourceSlug),
+  false,
+);
 assert.equal(isApprovedPublicLifecycleArticleSlug(researchSlug), false);
 assert.ok(
   INDEXABLE_NEWS_ARTICLES.every((article) =>
@@ -104,7 +111,12 @@ assert.match(
   /no-store/,
 );
 
-for (const slug of [removedSlug, redirectSourceSlug, researchSlug]) {
+for (const slug of [
+  removedSlug,
+  redirectSourceSlug,
+  additiveRedirectSourceSlug,
+  researchSlug,
+]) {
   const response = await getOg(
     new NextRequest(
       "https://news.investwithraj.com/api/og?slug=" + slug,

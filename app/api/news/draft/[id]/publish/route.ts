@@ -6,10 +6,15 @@
 
 import { NextRequest } from "next/server";
 
+import { NEWS_ARTICLES } from "@/content/news";
 import { assessDraft } from "@/lib/news-review/auto-approve";
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import { assertPublishedCorrectionLineage } from "@/lib/news-review/correction";
 import { githubConfigured, publishArticleCommit } from "@/lib/news-review/github";
+import {
+  findRecentLiveArticleDuplicate,
+  NewsDuplicateHoldError,
+} from "@/lib/news-review/duplicate-guard";
 import {
   draftContentHash,
   mediaApprovalHash,
@@ -79,6 +84,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     if (assessment?.verdict === "manual") {
       blockers.push("evidence-or-validator-hold");
     }
+    const duplicateHold = draft
+      ? findRecentLiveArticleDuplicate(draft.article, NEWS_ARTICLES)
+      : null;
+    if (duplicateHold) blockers.push("recent-live-duplicate");
     return privateJson({
       ok: blockers.length === 0,
       capability: {
@@ -90,6 +99,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         automatedEvidenceReady: assessment?.verdict === "auto-approve",
         publicationState: draft?.publication?.state ?? "not-started",
       },
+      duplicateHold,
       blockers,
       checkedAt: new Date().toISOString(),
     });
@@ -268,6 +278,20 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     ) {
       return privateJson(
         { error: "Stored draft content does not match its integrity hash." },
+        409,
+      );
+    }
+
+    const duplicateHold = findRecentLiveArticleDuplicate(
+      articleResult.article,
+      NEWS_ARTICLES,
+    );
+    if (duplicateHold) {
+      return privateJson(
+        {
+          error: duplicateHold.reason,
+          duplicate: duplicateHold,
+        },
         409,
       );
     }
@@ -462,6 +486,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       202,
     );
   } catch (error) {
+    if (error instanceof NewsDuplicateHoldError) {
+      return privateJson(
+        {
+          error: error.hold.reason,
+          duplicate: error.hold,
+        },
+        409,
+      );
+    }
     if (error instanceof DraftConflictError) {
       return privateJson({ error: error.message }, 409);
     }

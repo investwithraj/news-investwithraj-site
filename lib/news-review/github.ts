@@ -7,7 +7,13 @@
 
 import { createHash } from "node:crypto";
 
+import type { NewsArticle } from "@/content/news/types";
 import { assertCanonicalNewsSlug } from "@/lib/news-review/integrity";
+import {
+  assertNoRecentLiveArticleDuplicate,
+  parseSerializedNewsArticle,
+  recentRegisteredNewsSlugs,
+} from "@/lib/news-review/duplicate-guard";
 import {
   patchArticleRelations,
   patchIndex,
@@ -62,6 +68,41 @@ async function ghOptional<T>(path: string): Promise<T | null> {
     throw new Error(`GitHub GET ${path} failed (${res.status}).`);
   }
   return (await res.json()) as T;
+}
+
+async function readRecentLiveArticlesFromBranch(
+  base: string,
+  indexSource: string,
+  candidateSlug: string,
+): Promise<NewsArticle[]> {
+  const slugs = recentRegisteredNewsSlugs(indexSource, {
+    excludeSlug: candidateSlug,
+  });
+  return Promise.all(
+    slugs.map(async (slug) => {
+      const encodedPath = `content/news/${slug}.ts`
+        .split("/")
+        .map((segment) => encodeURIComponent(segment))
+        .join("/");
+      const file = await ghOptional<{
+        content?: string;
+        encoding?: string;
+      }>(`${base}/contents/${encodedPath}?ref=${encodeURIComponent(BRANCH)}`);
+      if (file?.encoding !== "base64" || !file.content) {
+        throw new Error(
+          `Registered recent article ${slug} is unavailable for duplicate review.`,
+        );
+      }
+      const source = Buffer.from(file.content, "base64").toString("utf8");
+      const article = parseSerializedNewsArticle(source);
+      if (!article || article.slug !== slug) {
+        throw new Error(
+          `Registered recent article ${slug} cannot be parsed for duplicate review.`,
+        );
+      }
+      return article;
+    }),
+  );
 }
 
 export interface InspectedEditorialMedia {
@@ -222,6 +263,12 @@ export async function publishArticleCommit(
     relationFile.content,
     "base64",
   ).toString("utf-8");
+  const recentLiveArticles = await readRecentLiveArticlesFromBranch(
+    base,
+    currentIndex,
+    slug,
+  );
+  assertNoRecentLiveArticleDuplicate(article, recentLiveArticles);
   const nextIndex = patchIndex(currentIndex, slug);
   const nextRelations = patchArticleRelations(currentRelations, slug);
 

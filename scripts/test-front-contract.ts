@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 
 import { GET, OPTIONS, revalidate } from "@/app/api/front/route";
-import { NEWS_ARTICLES, sortNewsArticles } from "@/content/news";
+import { NEWS_ARTICLES } from "@/content/news";
 import {
   displayMarkets,
   evidenceSummary,
   hasVerifiedEditorialImage,
   selectDistinctArticles,
 } from "@/lib/news-editorial";
+import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
 
 const SITE = "https://news.investwithraj.com";
 const FRONT_SCHEMA_VERSION = "front-v1";
@@ -90,9 +91,7 @@ async function getFrontAt(nowMs: number) {
 
 function expectedItems(): FrontItem[] {
   return selectDistinctArticles(
-    sortNewsArticles(NEWS_ARTICLES).filter(
-      (article) => article.status !== "research",
-    ),
+    getPublicDiscoveryNewsArticles(),
     6,
   ).map((article) => {
     const evidence = evidenceSummary(article);

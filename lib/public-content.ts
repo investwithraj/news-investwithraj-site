@@ -10,6 +10,7 @@ import {
 import {
   isIndexEligibleArticleSlug,
   isNewsroomLifecycleCutoverEnabled,
+  isRenderableArticleSlug,
 } from "@/lib/news-lifecycle";
 
 /**
@@ -76,14 +77,17 @@ export const EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES: NewsArticle[] =
   );
 
 /**
- * Public discovery is release-aware. Before explicit cutover, all existing
- * live records keep their current discoverability. Once the single lifecycle
- * flag is enabled, only the approved KEEP + IMPROVE projection is emitted.
+ * Public discovery is release-aware. Before explicit legacy cutover, existing
+ * live records stay discoverable except for individually released duplicate
+ * redirects. Once the single lifecycle flag is enabled, only the approved
+ * KEEP + IMPROVE projection is emitted.
  */
 export function getLifecycleProjectedNewsArticles(): NewsArticle[] {
   return isNewsroomLifecycleCutoverEnabled()
     ? INDEXABLE_NEWS_ARTICLES
-    : PUBLISHED_NEWS_ARTICLES;
+    : PUBLISHED_NEWS_ARTICLES.filter((article) =>
+        isRenderableArticleSlug(article.slug),
+      );
 }
 
 export function getPublicDiscoveryNewsArticles(): NewsArticle[] {
@@ -111,9 +115,17 @@ export type PublicDeveloperRecord = {
   reports: NewsArticle[];
 };
 
+/**
+ * Area/developer directory metadata must use the same release projection as
+ * every other discovery surface. Otherwise a preserved redirect-source record
+ * can still inflate report counts and last-modified timestamps after its public
+ * article has been retired.
+ */
+const PUBLIC_OVERVIEW_NEWS_ARTICLES = getPublicDiscoveryNewsArticles();
+
 export const PUBLIC_AREA_RECORDS: PublicAreaRecord[] = AREAS.map((area) => ({
   area,
-  reports: PUBLISHED_NEWS_ARTICLES.filter((article) =>
+  reports: PUBLIC_OVERVIEW_NEWS_ARTICLES.filter((article) =>
     articleMentionsArea(article, area),
   ),
 })).filter(({ reports }) => reports.length > 0);
@@ -125,7 +137,7 @@ export const PUBLIC_AREAS: AreaPage[] = PUBLIC_AREA_RECORDS.map(
 export const PUBLIC_DEVELOPER_RECORDS: PublicDeveloperRecord[] = DEVELOPERS.map(
   (developer) => ({
     developer,
-    reports: PUBLISHED_NEWS_ARTICLES.filter((article) =>
+    reports: PUBLIC_OVERVIEW_NEWS_ARTICLES.filter((article) =>
       articleMentionsDeveloper(article, developer),
     ),
   }),

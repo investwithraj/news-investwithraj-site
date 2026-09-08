@@ -10,8 +10,12 @@ import { proxy } from "../proxy";
 import { getIndexablePublicNewsArticles } from "../lib/news-discovery";
 import {
   canonicalNewsroomRedirectDestination,
+  CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION,
+  CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
   CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES,
   CURRENT_RELEASE_NEWSROOM_REDIRECTS,
+  FULL_RELEASE_NEWSROOM_REDIRECTS,
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_HELD_REDIRECTS,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
@@ -393,8 +397,11 @@ async function main(): Promise<void> {
       ...additivePublishedArticlePaths,
     ]),
   ].sort();
+  const currentReleaseRedirectSources = new Set<string>(
+    CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES,
+  );
   const defaultReleasePublicAuthorityPaths = currentPublicAuthorityPaths.filter(
-    (pathname) => pathname !== CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+    (pathname) => !currentReleaseRedirectSources.has(pathname),
   );
   const releasedLegacyPaths = primaryRows
     .filter(
@@ -404,16 +411,23 @@ async function main(): Promise<void> {
   const releasedAuthorityPaths = [
     ...new Set([...releasedLegacyPaths, ...additiveIndexableArticlePaths]),
   ].sort();
-  const expectedPublishedSlugs = PUBLISHED_NEWS_ARTICLES.map(
-    (article) => article.slug,
-  ).sort();
-  const currentReleaseRedirectSourceSlug =
-    CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE.slice("/news/".length);
+  const expectedPublishedSlugs = PUBLISHED_NEWS_ARTICLES.filter(
+    (article) =>
+      !currentReleaseRedirectSources.has(`/news/${article.slug}`),
+  )
+    .map((article) => article.slug)
+    .sort();
+  const currentReleaseRedirectSourceSlugs =
+    CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES.map((source) =>
+      source.slice("/news/".length),
+    );
   const expectedIndexableSlugs = INDEXABLE_NEWS_ARTICLES.map(
     (article) => article.slug,
   ).sort();
   const expectedEvidencePreviewPublishedSlugs = PUBLISHED_NEWS_ARTICLES.filter(
-    (article) => !evidenceHoldSlugs.has(article.slug),
+    (article) =>
+      !evidenceHoldSlugs.has(article.slug) &&
+      !currentReleaseRedirectSources.has(`/news/${article.slug}`),
   )
     .map((article) => article.slug)
     .sort();
@@ -461,8 +475,10 @@ async function main(): Promise<void> {
     expectedPublishedSlugs,
   );
   assert.ok(
-    !cutoverOff.indexableArticleSlugs.includes(currentReleaseRedirectSourceSlug),
-    "The released redirect source must be excluded from central discovery.",
+    currentReleaseRedirectSourceSlugs.every(
+      (slug) => !cutoverOff.indexableArticleSlugs.includes(slug),
+    ),
+    "Both released redirect sources must be excluded from central discovery.",
   );
   assert.ok(
     expectedIndexableSlugs.every((slug) =>
@@ -479,13 +495,18 @@ async function main(): Promise<void> {
   assert.deepEqual(
     cutoverOff.lifecycleRedirects,
     CURRENT_RELEASE_NEWSROOM_REDIRECTS,
-    "The default release must expose only the reviewed duplicate redirect.",
+    "The default release must expose only the two reviewed duplicate redirects.",
   );
   assert.deepEqual(CURRENT_RELEASE_NEWSROOM_REDIRECTS, [
     {
       source: CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
       destination:
         "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+      statusCode: 301,
+    },
+    {
+      source: CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
+      destination: CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION,
       statusCode: 301,
     },
   ]);
@@ -495,7 +516,8 @@ async function main(): Promise<void> {
     "Cutover sitemap drifted from legacy KEEP/IMPROVE paths plus reviewed daily publications.",
   );
   assert.deepEqual(cutoverOn.publicArticleSlugs, expectedIndexableSlugs);
-  assert.equal(cutoverOn.lifecycleRedirects.length, 31);
+  assert.equal(cutoverOn.lifecycleRedirects.length, 32);
+  assert.equal(FULL_RELEASE_NEWSROOM_REDIRECTS.length, 32);
   assert.deepEqual(
     evidencePreviewCutoverOff.publicArticleSlugs,
     expectedEvidencePreviewPublishedSlugs,
@@ -543,7 +565,7 @@ async function main(): Promise<void> {
     certifiedArticleSlugs,
     "Evidence preview plus lifecycle cutover must expose exactly the evidence-certified article set.",
   );
-  assert.equal(evidencePreviewCutoverOn.lifecycleRedirects.length, 31);
+  assert.equal(evidencePreviewCutoverOn.lifecycleRedirects.length, 32);
   assert.deepEqual(
     productionFailClosed,
     cutoverOff,
@@ -558,33 +580,29 @@ async function main(): Promise<void> {
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
   assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
-  const configuredDefaultLifecycleRedirects = configuredOff.filter((redirect) =>
-    NEWSROOM_EXACT_REDIRECTS.some(
-      (candidate) => candidate.source === redirect.source,
+  const configuredDefaultLifecycleRedirects = configuredOff.filter(
+    (redirect) => currentReleaseRedirectSources.has(redirect.source),
+  );
+  assert.deepEqual(
+    configuredDefaultLifecycleRedirects,
+    CURRENT_RELEASE_NEWSROOM_REDIRECTS.map(
+      ({ source, destination, statusCode }) => ({
+        source,
+        destination: canonicalNewsroomRedirectDestination(destination),
+        statusCode,
+      }),
     ),
   );
-  const currentReleaseCanonicalDestination =
-    canonicalNewsroomRedirectDestination(
-      CURRENT_RELEASE_NEWSROOM_REDIRECTS[0].destination,
+  for (const redirect of configuredDefaultLifecycleRedirects) {
+    const destination = new URL(redirect.destination);
+    assert.equal(destination.origin, "https://news.investwithraj.com");
+    assert.ok(
+      !FULL_RELEASE_NEWSROOM_REDIRECTS.some(
+        ({ source }) => source === destination.pathname,
+      ),
+      `${redirect.source} must reach its final canonical destination in one hop.`,
     );
-  assert.deepEqual(configuredDefaultLifecycleRedirects, [
-    {
-      source: CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
-      destination: currentReleaseCanonicalDestination,
-      statusCode: 301,
-    },
-  ]);
-  assert.equal(
-    new URL(currentReleaseCanonicalDestination).origin,
-    "https://news.investwithraj.com",
-  );
-  assert.ok(
-    !NEWSROOM_EXACT_REDIRECTS.some(
-      ({ source }) =>
-        source === new URL(currentReleaseCanonicalDestination).pathname,
-    ),
-    "The default lifecycle redirect must reach its final canonical destination in one hop.",
-  );
+  }
   assert.equal(
     NEWSROOM_EXACT_REDIRECTS.filter(
       ({ source }) => source !== CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
@@ -613,6 +631,14 @@ async function main(): Promise<void> {
       NEWSROOM_EXACT_REDIRECTS.some((candidate) => candidate.source === redirect.source),
     ).length,
     31,
+  );
+  assert.equal(
+    configuredOn.filter((redirect) =>
+      FULL_RELEASE_NEWSROOM_REDIRECTS.some(
+        (candidate) => candidate.source === redirect.source,
+      ),
+    ).length,
+    32,
   );
 
   const missingContentHashSlugs = INDEXABLE_NEWS_ARTICLES.filter(

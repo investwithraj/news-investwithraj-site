@@ -26,8 +26,8 @@ import {
   draftFromCluster,
   planDraftCandidates,
 } from "@/lib/news-review/draft-engine";
+import { findRecentLiveArticleDuplicate } from "@/lib/news-review/duplicate-guard";
 import { NEWS_ARTICLES } from "@/content/news";
-import { dubaiCalendarDate } from "@/lib/dubai-time";
 import { productionFeatureAvailable } from "@/lib/operations/features";
 import {
   authorizeServerMutation,
@@ -42,11 +42,8 @@ const MIN_SCORE = parseInt(process.env.PIPELINE_MIN_SCORE ?? "45", 10);
 const MAX_DRAFTS_PER_RUN = parseInt(process.env.PIPELINE_CAP ?? "1", 10);
 const MAX_ATTEMPTS = parseInt(process.env.PIPELINE_MAX_ATTEMPTS ?? "1", 10);
 
-function isToday(iso: string): boolean {
-  return dubaiCalendarDate(iso) === dubaiCalendarDate(new Date());
-}
-
 async function run(req: NextRequest, options: { cronGet?: boolean } = {}) {
+  const runNow = new Date();
   const auth = authorizeServerMutation(req, { allowCronBearer: true });
   if (!auth.ok) return auth.response;
   if (options.cronGet && auth.credential !== "cron") {
@@ -80,9 +77,8 @@ async function run(req: NextRequest, options: { cronGet?: boolean } = {}) {
   const candidatePlan = planDraftCandidates({
     clusters,
     drafts: existing,
-    publishedTitles: NEWS_ARTICLES.filter(
-      (article) => article.status !== "research" && isToday(article.publishedAt),
-    ).map((article) => article.title),
+    publishedArticles: NEWS_ARTICLES,
+    now: runNow,
     minRecoveryAgeHours: parseInt(
       process.env.AUTO_REDRAFT_MIN_AGE_HOURS ?? "24",
       10,
@@ -117,12 +113,25 @@ async function run(req: NextRequest, options: { cronGet?: boolean } = {}) {
         maxSearches: options.cronGet ? 1 : 2,
         maxTokens: options.cronGet ? 2_600 : 3_000,
       });
-      results.push({
-        topic: cluster.topic.slice(0, 80),
-        ok: r.ok,
-        reason: r.reason,
-      });
       if (r.ok && r.article && r.provenance) {
+        const duplicateHold = findRecentLiveArticleDuplicate(
+          r.article,
+          NEWS_ARTICLES,
+          { now: runNow },
+        );
+        if (duplicateHold) {
+          await failDraftCluster(
+            cluster.id,
+            reservation.reservation.token,
+            duplicateHold.reason,
+          );
+          results.push({
+            topic: cluster.topic.slice(0, 80),
+            ok: false,
+            reason: duplicateHold.reason,
+          });
+          continue;
+        }
         await addReservedDraft({
           article: r.article,
           provenance: r.provenance,
@@ -132,7 +141,16 @@ async function run(req: NextRequest, options: { cronGet?: boolean } = {}) {
             : undefined,
         });
         staged++;
+        results.push({
+          topic: cluster.topic.slice(0, 80),
+          ok: true,
+        });
       } else {
+        results.push({
+          topic: cluster.topic.slice(0, 80),
+          ok: false,
+          reason: r.reason,
+        });
         await failDraftCluster(
           cluster.id,
           reservation.reservation.token,

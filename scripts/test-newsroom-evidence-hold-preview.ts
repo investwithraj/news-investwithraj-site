@@ -8,6 +8,8 @@ import { GET as getNewsSitemap } from "../app/news-sitemap.xml/route";
 import { GET as getRss } from "../app/rss.xml/route";
 import { getIndexablePublicNewsArticles } from "../lib/news-discovery";
 import {
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES,
+  FULL_RELEASE_NEWSROOM_REDIRECTS,
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_HELD_REDIRECTS,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
@@ -207,16 +209,31 @@ async function main(): Promise<void> {
     additiveIndexable.map((article) => article.slug).sort(),
     "Every additive index candidate must be evidence-certified.",
   );
+  const currentReleaseSourceSlugs = new Set(
+    CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES.map((source) =>
+      source.slice("/news/".length),
+    ),
+  );
+  const expectedPublishedArticles = PUBLISHED_NEWS_ARTICLES.filter(
+    (article) => !currentReleaseSourceSlugs.has(article.slug),
+  );
   const expectedDefaultSitemapPaths = [
     ...new Set([
-      ...Object.keys(PRIMARY_NEWSROOM_LIFECYCLE),
-      ...additivePublished.map((article) => `/news/${article.slug}`),
+      ...Object.keys(PRIMARY_NEWSROOM_LIFECYCLE).filter(
+        (pathname) =>
+          !CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES.includes(
+            pathname as (typeof CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES)[number],
+          ),
+      ),
+      ...additivePublished
+        .filter((article) => !currentReleaseSourceSlugs.has(article.slug))
+        .map((article) => `/news/${article.slug}`),
     ]),
   ].sort();
-  const expectedPublishedSlugs = PUBLISHED_NEWS_ARTICLES.map(
+  const expectedPublishedSlugs = expectedPublishedArticles.map(
     (article) => article.slug,
   ).sort();
-  const expectedPreviewPublishedSlugs = PUBLISHED_NEWS_ARTICLES.filter(
+  const expectedPreviewPublishedSlugs = expectedPublishedArticles.filter(
     (article) => !NEWSROOM_EVIDENCE_HOLD_SLUGS.includes(article.slug),
   )
     .map((article) => article.slug)
@@ -246,7 +263,10 @@ async function main(): Promise<void> {
     newsSlugsFromSitemap(defaultState.sitemapPaths),
     defaultState.indexableArticleSlugs,
   );
-  assert.deepEqual(defaultState.redirectSources, []);
+  assert.deepEqual(
+    defaultState.redirectSources,
+    [...CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES].sort(),
+  );
   assert.deepEqual(
     await withMode(
       { vercelEnv: "production", evidencePreview: true, lifecycle: false },
@@ -283,7 +303,10 @@ async function main(): Promise<void> {
         !evidencePreviewState.sitemapPaths.includes(`/news/${slug}`),
     ),
   );
-  assert.deepEqual(evidencePreviewState.redirectSources, []);
+  assert.deepEqual(
+    evidencePreviewState.redirectSources,
+    [...CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES].sort(),
+  );
   const evidencePreviewCutoverState = await withMode(
     { vercelEnv: "preview", evidencePreview: true, lifecycle: true },
     state,
@@ -302,9 +325,10 @@ async function main(): Promise<void> {
   );
   assert.deepEqual(
     evidencePreviewCutoverState.redirectSources,
-    NEWSROOM_EXACT_REDIRECTS.map((redirect) => redirect.source).sort(),
+    FULL_RELEASE_NEWSROOM_REDIRECTS.map((redirect) => redirect.source).sort(),
   );
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
+  assert.equal(FULL_RELEASE_NEWSROOM_REDIRECTS.length, 32);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
   assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
   assert.match(
@@ -413,8 +437,7 @@ async function main(): Promise<void> {
           .map((match) => match[1]).length,
         Math.min(
           30,
-          PUBLISHED_NEWS_ARTICLES.length -
-            NEWSROOM_EVIDENCE_HOLD_SLUGS.length,
+          expectedPreviewPublishedSlugs.length,
         ),
       );
 
@@ -454,7 +477,7 @@ async function main(): Promise<void> {
   );
 
   console.log(
-    `Newsroom evidence-hold preview PASS: default/Production ${defaultState.sitemapPaths.length}/${defaultState.articleSlugs.length}/0; additive daily publications=${additivePublished.length}; 24 readable noindex holds; redirects/removals unchanged.`,
+    `Newsroom evidence-hold preview PASS: default/Production ${defaultState.sitemapPaths.length}/${defaultState.articleSlugs.length}/${defaultState.redirectSources.length}; additive daily publications=${additivePublished.length}; 24 readable noindex holds; frozen legacy redirects/removals unchanged.`,
   );
 }
 

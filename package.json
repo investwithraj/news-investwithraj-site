@@ -36,6 +36,7 @@
     "test:auto-publish": "tsx scripts/test-auto-publish.ts",
     "test:news-cron-outcome": "tsx scripts/test-news-cron-outcome.ts",
     "test:news-draft-recovery": "tsx scripts/test-news-draft-recovery.ts",
+    "test:news-cross-day-duplicate": "tsx scripts/test-news-cross-day-duplicate.ts",
     "test:news-publication-capability": "tsx scripts/test-news-publication-capability.ts",
     "test:webfetch-publication-dates": "tsx scripts/test-webfetch-publication-dates.ts",
     "test:news-publication-registries": "tsx scripts/test-news-publication-registries.ts",

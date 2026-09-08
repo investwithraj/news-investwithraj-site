@@ -35,11 +35,12 @@ import {
   MAX_AUTO_NEWS_SOURCE_AGE_HOURS,
 } from "./auto-approve";
 import { urlOnApprovedHost } from "@/lib/sources/safe-fetch";
-import type { NewsCategory } from "@/content/news/types";
+import type { NewsArticle, NewsCategory } from "@/content/news/types";
 import {
   findNewsClusterQuarantine,
   type NewsClusterQuarantineHold,
 } from "./candidate-quarantine";
+import { findRecentLiveArticleDuplicate } from "./duplicate-guard";
 
 const VALID_CATEGORIES: NewsCategory[] = [
   "market-pulse", "launch", "regulatory", "macro",
@@ -1000,7 +1001,7 @@ function exactTime(value: string | undefined): number | null {
 export function planDraftCandidates(options: {
   clusters: Cluster[];
   drafts: NewsDraft[];
-  publishedTitles?: string[];
+  publishedArticles?: readonly NewsArticle[];
   now?: Date;
   minRecoveryAgeHours?: number;
 }): DraftCandidatePlan {
@@ -1051,7 +1052,6 @@ export function planDraftCandidates(options: {
     [...recoverable.values()].map((draft) => draft.id),
   );
   const blockedTitles = [
-    ...(options.publishedTitles ?? []),
     ...options.drafts
       .filter((draft) => !recoverableIds.has(draft.id))
       .map((draft) => draft.article.title),
@@ -1066,6 +1066,19 @@ export function planDraftCandidates(options: {
     if (quarantine) {
       quarantined.push(quarantine);
       quarantinedClusterIds.add(cluster.id);
+      continue;
+    }
+    if (
+      findRecentLiveArticleDuplicate(
+        {
+          slug: cluster.id,
+          title: cluster.topic,
+          citations: cluster.entries.map(({ url }) => ({ url })),
+        },
+        options.publishedArticles ?? [],
+        { now },
+      )
+    ) {
       continue;
     }
     const held = recoverable.get(cluster.id);

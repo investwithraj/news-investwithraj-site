@@ -5,7 +5,7 @@
 // article only goes live via the /publish route after Raj approves.
 
 import { NextRequest } from "next/server";
-import { getNewsBySlug } from "@/content/news";
+import { getNewsBySlug, NEWS_ARTICLES } from "@/content/news";
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import {
   addDraft,
@@ -21,6 +21,7 @@ import {
   validateProvenanceShape,
 } from "@/lib/news-review/integrity";
 import type { NewsDraftInput } from "@/lib/news-review/types";
+import { findRecentLiveArticleDuplicate } from "@/lib/news-review/duplicate-guard";
 import { privateJson, readJsonBody } from "@/lib/security/mutation";
 
 export const runtime = "nodejs";
@@ -107,6 +108,19 @@ export async function POST(req: NextRequest) {
   );
   if (!provenanceResult.ok) {
     return privateJson({ error: provenanceResult.error }, 400);
+  }
+  const duplicateHold = findRecentLiveArticleDuplicate(
+    articleResult.article,
+    NEWS_ARTICLES,
+  );
+  if (duplicateHold) {
+    return privateJson(
+      {
+        error: duplicateHold.reason,
+        duplicate: duplicateHold,
+      },
+      409,
+    );
   }
   if (
     body.reviewNote !== undefined &&

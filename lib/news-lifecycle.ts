@@ -466,6 +466,7 @@ export function isIndexEligibleDisposition(
 }
 
 export function isIndexEligiblePath(pathname: string): boolean {
+  if (isCurrentReleaseNewsroomRedirectSource(pathname)) return false;
   const lifecycle = pathname.startsWith("/news/")
     ? getNewsArticleLifecycle(pathname.slice("/news/".length))
     : getNewsroomLifecycle(pathname);
@@ -484,6 +485,7 @@ export function isIndexEligibleArticleSlug(slug: string): boolean {
  * PRIVATE, research or redirect-source records.
  */
 export function isApprovedPublicLifecyclePath(pathname: string): boolean {
+  if (isCurrentReleaseNewsroomRedirectSource(pathname)) return false;
   const lifecycle = pathname.startsWith("/news/")
     ? getNewsArticleLifecycle(pathname.slice("/news/".length))
     : getNewsroomLifecycle(pathname);
@@ -511,17 +513,32 @@ export function isHeldRedirectPath(pathname: string): boolean {
 }
 
 /**
- * One verified duplicate is safe to retire ahead of the wider lifecycle
- * cutover. Keep this release boundary exact so every other lifecycle route
- * continues to follow the existing feature gate.
+ * Individually reviewed duplicates that are safe to retire ahead of the
+ * wider legacy lifecycle cutover. Keep this release boundary exact so every
+ * other legacy route continues to follow the existing feature gate.
  */
 export const CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE =
   "/news/2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl";
 
+export const CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE =
+  "/news/2026-09-07-aldar-closes-abu-dhabi-s-first-off-plan-mortgage-under";
+
+export const CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION =
+  "/news/2026-09-06-aldar-completes-abu-dhabi-s-first-off-plan-mortgage-under";
+
+export const CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES = [
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
+] as const;
+
+const currentReleaseNewsroomRedirectSources = new Set<string>(
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES,
+);
+
 export function isCurrentReleaseNewsroomRedirectSource(
   pathname: string,
 ): boolean {
-  return pathname === CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE;
+  return currentReleaseNewsroomRedirectSources.has(pathname);
 }
 
 export function isRenderableArticleSlug(slug: string): boolean {
@@ -571,16 +588,38 @@ export const NEWSROOM_EXACT_REDIRECTS = Object.entries(NEWSROOM_LIFECYCLE)
     statusCode: 301 as const,
   }));
 
-export const CURRENT_RELEASE_NEWSROOM_REDIRECTS =
-  NEWSROOM_EXACT_REDIRECTS.filter(
+export type NewsroomRedirect = Readonly<{
+  source: string;
+  destination: string;
+  statusCode: 301;
+}>;
+
+/** Additive current redirects are not written into the frozen legacy matrix. */
+export const ADDITIVE_CURRENT_RELEASE_NEWSROOM_REDIRECTS = [
+  {
+    source: CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE,
+    destination: CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION,
+    statusCode: 301 as const,
+  },
+] as const satisfies readonly NewsroomRedirect[];
+
+export const CURRENT_RELEASE_NEWSROOM_REDIRECTS = [
+  ...NEWSROOM_EXACT_REDIRECTS.filter(
     ({ source }) => source === CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
-  );
+  ),
+  ...ADDITIVE_CURRENT_RELEASE_NEWSROOM_REDIRECTS,
+] as const satisfies readonly NewsroomRedirect[];
+
+export const FULL_RELEASE_NEWSROOM_REDIRECTS = [
+  ...NEWSROOM_EXACT_REDIRECTS,
+  ...ADDITIVE_CURRENT_RELEASE_NEWSROOM_REDIRECTS,
+] as const satisfies readonly NewsroomRedirect[];
 
 export function getReleasedNewsroomRedirects(
   environment: LifecycleEnvironment = process.env,
-): typeof NEWSROOM_EXACT_REDIRECTS {
+): readonly NewsroomRedirect[] {
   return isNewsroomLifecycleCutoverEnabled(environment)
-    ? NEWSROOM_EXACT_REDIRECTS
+    ? FULL_RELEASE_NEWSROOM_REDIRECTS
     : CURRENT_RELEASE_NEWSROOM_REDIRECTS;
 }
 

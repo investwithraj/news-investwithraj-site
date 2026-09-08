@@ -6,11 +6,11 @@
 // server draft store. AUTO_APPROVE=1 enables the bounded publication pass.
 
 import { NEWS_ARTICLES } from "../content/news/index.js";
-import { dubaiCalendarDate } from "../lib/dubai-time.js";
 import {
   draftFromCluster,
   planDraftCandidates,
 } from "../lib/news-review/draft-engine.js";
+import { findRecentLiveArticleDuplicate } from "../lib/news-review/duplicate-guard.js";
 import type { NewsDraft } from "../lib/news-review/types.js";
 import {
   runAutoApprove,
@@ -49,10 +49,6 @@ interface ReservationResponse {
   acquired?: boolean;
   reservation?: { token?: string };
   error?: string;
-}
-
-function isToday(iso: string): boolean {
-  return dubaiCalendarDate(iso) === dubaiCalendarDate(new Date());
 }
 
 async function reserveCluster(
@@ -178,6 +174,7 @@ function errorMessage(error: unknown): string {
 }
 
 async function executePipeline(state: RunState): Promise<void> {
+  const runNow = new Date();
   if (new TextEncoder().encode(SECRET).byteLength < 32) {
     throw new Error("A strong POST_PUBLISH_SECRET is required.");
   }
@@ -205,11 +202,6 @@ async function executePipeline(state: RunState): Promise<void> {
     drafts?: NewsDraft[];
   };
   const existingDrafts = existing.drafts ?? [];
-  const publishedTitles = NEWS_ARTICLES.filter(
-      (article) =>
-        article.status !== "research" && isToday(article.publishedAt),
-    ).map((article) => article.title);
-
   const run = await fetchAllSources();
   console.log(summarizeFetchRun(run));
   if (run.okCount === 0) {
@@ -227,7 +219,8 @@ async function executePipeline(state: RunState): Promise<void> {
   const candidatePlan = planDraftCandidates({
     clusters,
     drafts: existingDrafts,
-    publishedTitles,
+    publishedArticles: NEWS_ARTICLES,
+    now: runNow,
     minRecoveryAgeHours: Number.parseInt(
       process.env.AUTO_REDRAFT_MIN_AGE_HOURS ?? "24",
       10,
@@ -276,6 +269,23 @@ async function executePipeline(state: RunState): Promise<void> {
       state.draftHeld += 1;
       state.draftHoldReasons.push(reason.slice(0, 500));
       console.log(`held: ${reason}`);
+      continue;
+    }
+
+    const duplicateHold = findRecentLiveArticleDuplicate(
+      result.article,
+      NEWS_ARTICLES,
+      { now: runNow },
+    );
+    if (duplicateHold) {
+      await markClusterFailed(
+        cluster.id,
+        reservationToken,
+        duplicateHold.reason,
+      );
+      state.draftHeld += 1;
+      state.draftHoldReasons.push(duplicateHold.reason);
+      console.log(`held: ${duplicateHold.reason}`);
       continue;
     }
 
