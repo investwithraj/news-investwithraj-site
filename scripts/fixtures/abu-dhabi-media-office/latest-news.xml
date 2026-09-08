@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Abu Dhabi Media Office - Latest News</title>
+    <link>https://www.mediaoffice.abudhabi/</link>
+    <atom:link rel="self" href="https://www.mediaoffice.abudhabi/en/latest-news/rss/" type="application/rss+xml" />
+    <item>
+      <title>ADGM reinforces Abu Dhabi’s position as global financial hub</title>
+      <link>https://www.mediaoffice.abudhabi/en/economy/adgm-reinforces-abu-dhabis-position-as-global-financial-hub/</link>
+      <guid>https://www.mediaoffice.abudhabi/en/economy/adgm-reinforces-abu-dhabis-position-as-global-financial-hub/</guid>
+      <pubDate>Tue, 8 Sep 2026 00:00:00 +0400</pubDate>
+      <description>
+        ADGM, the international financial centre of Abu Dhabi, delivered strong growth in the first half of 2026, with assets under management (AUM) rising 54 per cent year on year and its workforce reaching 49,027 professionals.
+      </description>
+      <enclosure url="https://www.mediaoffice.abudhabi/assets/resized/sm/upload/0v/u0/wp/6j/adgm-h1.webp" type="application/octet-stream" />
+    </item>
+    <item>
+      <title>An undated publisher item must not become today’s news</title>
+      <link>https://www.mediaoffice.abudhabi/en/economy/undated-item/</link>
+      <description>This deliberately undated fixture must fail closed.</description>
+    </item>
+    <item>
+      <title>A dated cross-host item must remain outside this source</title>
+      <link>https://example.com/en/economy/cross-host-item/</link>
+      <pubDate>Tue, 8 Sep 2026 00:00:00 +0400</pubDate>
+      <description>This deliberately mismatched publisher URL must fail closed.</description>
+    </item>
+  </channel>
+</rss>

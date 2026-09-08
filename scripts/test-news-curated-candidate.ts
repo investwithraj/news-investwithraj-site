@@ -13,6 +13,7 @@ import {
 } from "../lib/news-review/curated-candidates";
 import {
   approvedPublisherIdentity,
+  determineEvidencePolicy,
   selectAutoApproveEligibleDrafts,
 } from "../lib/news-review/auto-approve";
 import {
@@ -35,6 +36,7 @@ import {
 assert.deepEqual(CURATED_NEWS_CANDIDATE_KEYS, [
   "dld-initial-registration-2026-09-07",
   "rak-h1-housing-2026-09-02",
+  "adgm-h1-growth-2026-09-08",
 ]);
 
 const expectedSources = new Map<string, string[]>([
@@ -51,6 +53,13 @@ const expectedSources = new Map<string, string[]>([
     [
       "https://gulfnews.com/business/property/ras-al-khaimah-property-prices-rise-in-h1-2026-13800-homes-due-by-2028-1.500660431",
       "https://www.khaleejtimes.com/business/ras-al-khaimah-rents-rise-in-h1-2026-but-apartment-rates-drop-in-q2",
+    ],
+  ],
+  [
+    "adgm-h1-growth-2026-09-08",
+    [
+      "https://www.mediaoffice.abudhabi/en/economy/adgm-reinforces-abu-dhabis-position-as-global-financial-hub/",
+      "https://gulfnews.com/business/markets/adgm-assets-jump-54-workforce-nears-50000-1.500666929",
     ],
   ],
 ]);
@@ -94,6 +103,26 @@ for (const key of CURATED_NEWS_CANDIDATE_KEYS) {
   candidate.article.title = "mutated test copy";
   assert.notEqual(getCuratedNewsCandidate(key).article.title, candidate.article.title);
 }
+
+const adgmCandidate = getCuratedNewsCandidate(
+  "adgm-h1-growth-2026-09-08",
+);
+const adgmEvidencePolicy = determineEvidencePolicy(
+  adgmCandidate.article,
+  adgmCandidate.article.citations.map((citation) => citation.url),
+);
+assert.equal(
+  adgmEvidencePolicy.lane,
+  "corroborated-analysis",
+  "the ADGM results read must stay on the two-publisher lane",
+);
+assert.equal(adgmEvidencePolicy.requiredPublisherCount, 2);
+assert.deepEqual(adgmCandidate.article.distribution, {});
+assert.doesNotMatch(
+  adgmCandidate.article.body,
+  /(?:office|residential)\s+(?:rent|rents|value|values)\s+(?:rose|fell|increased|decreased)|(?:buy|sell|invest)\s+(?:now|today)/iu,
+  "the ADGM institutional results must not invent a real-estate value signal",
+);
 
 assert.throws(
   () => getCuratedNewsCandidate("unreviewed-candidate"),

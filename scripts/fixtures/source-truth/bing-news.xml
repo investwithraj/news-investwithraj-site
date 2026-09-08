@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Bing News wrapper fixture</title>
+    <item>
+      <title>Exact legacy wrapper remains discoverable</title>
+      <link>http://www.bing.com/news/apiclick.aspx?ref=FexRss&amp;url=https%3A%2F%2Fexample.com%2Farticle</link>
+      <guid>bing-exact</guid>
+      <pubDate>Tue, 08 Sep 2026 08:00:00 +0400</pubDate>
+      <description>Exact Bing wrapper summary.</description>
+    </item>
+    <item>
+      <title>Different Bing path stays blocked</title>
+      <link>http://www.bing.com/news/other.aspx?url=https%3A%2F%2Fexample.com%2Farticle</link>
+      <guid>bing-other-path</guid>
+      <pubDate>Tue, 08 Sep 2026 07:00:00 +0400</pubDate>
+      <description>Wrong path.</description>
+    </item>
+    <item>
+      <title>Lookalike host stays blocked</title>
+      <link>http://bing.com.attacker.invalid/news/apiclick.aspx?url=https%3A%2F%2Fexample.com%2Farticle</link>
+      <guid>bing-lookalike</guid>
+      <pubDate>Tue, 08 Sep 2026 06:00:00 +0400</pubDate>
+      <description>Wrong host.</description>
+    </item>
+    <item>
+      <title>Non-default port stays blocked</title>
+      <link>http://www.bing.com:8080/news/apiclick.aspx?url=https%3A%2F%2Fexample.com%2Farticle</link>
+      <guid>bing-port</guid>
+      <pubDate>Tue, 08 Sep 2026 05:00:00 +0400</pubDate>
+      <description>Wrong port.</description>
+    </item>
+  </channel>
+</rss>

@@ -31,6 +31,7 @@ on:
           - none
           - dld-initial-registration-2026-09-07
           - rak-h1-housing-2026-09-02
+          - adgm-h1-growth-2026-09-08
 concurrency:
   group: news-cron-production
   cancel-in-progress: false
@@ -49,6 +50,9 @@ jobs:
           node-version: "22"
       - run: npm ci
       - run: npx tsx scripts/test-developer-source-registry.ts
+      - run: npx tsx scripts/test-abu-dhabi-media-office-source.ts
+      - run: npx tsx scripts/test-source-truth-reporting.ts
+      - run: npx tsx scripts/test-cluster-relevance.ts
       - run: npx tsx scripts/test-news-cron-outcome.ts
       - run: npx tsx scripts/test-news-candidate-quarantine.ts
       - run: npx tsx scripts/test-news-draft-quarantine.ts

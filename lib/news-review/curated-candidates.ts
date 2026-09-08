@@ -14,6 +14,7 @@ import {
 export const CURATED_NEWS_CANDIDATE_KEYS = [
   "dld-initial-registration-2026-09-07",
   "rak-h1-housing-2026-09-02",
+  "adgm-h1-growth-2026-09-08",
 ] as const;
 
 export type CuratedNewsCandidateKey =
@@ -239,12 +240,107 @@ The next release should be tested against the same baselines. The useful questio
   },
 };
 
+const adgmH1Growth: CuratedNewsCandidate = {
+  key: "adgm-h1-growth-2026-09-08",
+  draftId: "ad6d0908-2026-4090-8090-800000000003",
+  topic: "ADGM H1 2026 capital, licence, entity and workforce results",
+  reviewNote:
+    "Human-edited candidate. Stage only after the Abu Dhabi Media Office and Gulf News pages pass fresh direct-evidence, date, identity, voice, duplicate and deterministic publication gates.",
+  article: {
+    slug: "2026-09-08-adgm-h1-2026-aum-licences-workforce",
+    title: "ADGM H1 2026: AUM rises 54% as active licences reach 13,974",
+    subtitle:
+      "Abu Dhabi Media Office and Gulf News separate the centre's capital, licence, entity and workforce measures",
+    publishedAt: "2026-09-08T11:15:00.000Z",
+    modifiedAt: "2026-09-08T11:15:00.000Z",
+    displayDate: "08 Sept 2026",
+    author: "raj-tomar",
+    tier: "news",
+    category: "regulatory",
+    market: ["Abu Dhabi"],
+    tldr: [
+      "Abu Dhabi Media Office and Gulf News report that AUM within ADGM rose 54% in H1 2026 from H1 2025.",
+      "Both sources report 13,974 active licences and 49,027 professionals; the operational-entity count reached 3,986.",
+      "Both sources identify more than US$2.1 trillion as global AUM overseen by managers entering ADGM in H1 2026.",
+    ],
+    body: `Abu Dhabi Media Office and Gulf News report that assets under management within ADGM rose 54% in H1 2026 from H1 2025. Both publications use H1 2025 as the comparison period. Neither publication provides the absolute amount of AUM held within ADGM, so the confirmed rate of change is 54% — not a local dollar total.
+
+Abu Dhabi Media Office and Gulf News report that the fund and asset manager count in ADGM reached 190. Both sources report an increase of 23% from 154 in H1 2025, with 11 managers added in the second quarter. Both sources also report that the number of funds managed from ADGM reached 276. The reported annual increase was 32% from 209. These are three distinct measures: manager count, fund count and the reported rate of change in AUM.
+
+Abu Dhabi Media Office and Gulf News report 13,974 active licences at the end of H1 2026. Both sources report that 1,814 licences were issued during the half year. Both sources separately report that operational entities reached 3,986. The reported increase was 34% from 2,972 at the end of H1 2025. The two measures should not be collapsed into a single company count because the publications present licences and operational entities as separate categories.
+
+Abu Dhabi Media Office and Gulf News report a workforce of 49,027 professionals across Al Maryah Island and Al Reem Island at the end of H1 2026. Both sources report that the workforce increased by 4,688 during the half year. The reported year-on-year increase was 34%. The stated total spans the combined ADGM jurisdiction across both island precincts; neither publication describes it as a finance-only headcount.
+
+Abu Dhabi Media Office and Gulf News report that the financial-services entity count in ADGM reached 392. Both sources report an increase of 27% from 308 a year earlier. Both publications report that the Financial Services Regulatory Authority issued 50 In-Principle Approvals and granted 45 new Financial Services Permissions during the period. An approval, a permission, a financial-services entity and an active licence are reported as different records and should remain different in any comparison.
+
+Abu Dhabi Media Office and Gulf News report that asset managers established operations in ADGM during H1 2026. Both sources report that those managers collectively oversee more than US$2.1 trillion in global assets under management. Both sources define that figure as the worldwide AUM of those incoming managers. It is not presented as the amount managed within ADGM, and it should not be added to or substituted for the separate AUM rate of 54%.
+
+Abu Dhabi Media Office and Gulf News also report more than US$100 billion in AI-focused investment held by entities established in ADGM. Both sources identify MGX as one part of that concentration. The publications do not describe the US$100 billion as ADGM's own spending. They separately report an ADGM technology roadmap of more than AED400 million through 2029.
+
+Abu Dhabi Media Office and Gulf News report that the first phase of ADGM's internal AI programme introduced 25 business functions with AI across licensing, supervision and customer service. Both sources report that the programme reduced manual workload by more than 5,000 staff hours annually and resolved about 25% of customer enquiries immediately through digital channels. Those figures describe ADGM's own operating programme; they do not measure operations elsewhere in the jurisdiction.
+
+For real estate and business readers, the scope boundary is important. Neither the Abu Dhabi Media Office report nor the Gulf News report provides office take-up, vacancy, rents, residential prices, transaction values or secondary market data. Both publications cover H1 2026. Their results document the scale of ADGM's regulated business community and workforce, but they do not measure a change in the value of any building, island precinct or home.
+
+The evidence supports a precise summary. Abu Dhabi Media Office and Gulf News report 54% year-on-year AUM growth, 190 fund and asset managers, 276 funds, 13,974 active licences, 3,986 operational entities and a workforce of 49,027. The sources provide year-on-year comparisons for AUM, managers, funds, operational entities, financial-services entities and workforce; they present active licences as a period-end total rather than a year-on-year growth measure. Keeping those definitions intact is the clearest way to read the update without turning an institutional results release into a real estate investment mandate.`,
+    faq: [
+      {
+        q: "What increased by 54%?",
+        a: "Abu Dhabi Media Office and Gulf News report that AUM within ADGM increased 54% year on year in H1 2026.",
+      },
+      {
+        q: "Are active licences the same as operating companies?",
+        a: "Abu Dhabi Media Office and Gulf News report 13,974 active licences. Both sources separately report that operational entities reached 3,986. Neither source presents the measures as interchangeable.",
+      },
+      {
+        q: "Is US$2.1 trillion the amount managed inside ADGM?",
+        a: "Abu Dhabi Media Office and Gulf News identify it as the global AUM overseen by asset managers that established ADGM operations during H1 2026, not the absolute AUM held within ADGM.",
+      },
+      {
+        q: "What workforce figure was reported?",
+        a: "Abu Dhabi Media Office and Gulf News report 49,027 professionals across Al Maryah Island and Al Reem Island at the end of H1 2026. Both sources report an annual increase of 34%.",
+      },
+      {
+        q: "Does the release establish a change in Abu Dhabi real estate values?",
+        a: "Neither Abu Dhabi Media Office nor Gulf News reports office rents, vacancy, residential prices or transaction values in its coverage of H1 2026.",
+      },
+    ],
+    citations: [
+      {
+        source: "Abu Dhabi Media Office",
+        url: "https://www.mediaoffice.abudhabi/en/economy/adgm-reinforces-abu-dhabis-position-as-global-financial-hub/",
+        accessedAt: "2026-09-08T11:10:00.000Z",
+        tier: "government",
+      },
+      {
+        source: "Gulf News — Property",
+        url: "https://gulfnews.com/business/markets/adgm-assets-jump-54-workforce-nears-50000-1.500666929",
+        accessedAt: "2026-09-08T11:10:00.000Z",
+        tier: "national-press",
+      },
+    ],
+    heroImage: {
+      src: "/news/2026-09-08-adgm-h1-2026-aum-licences-workforce/cover.jpg",
+      alt: "ADGM institutional results coverage",
+      credit: "Verified editorial image withheld pending UHD rights approval",
+    },
+    cta: {
+      href: "https://investwithraj.com/engage?utm_source=news&utm_medium=internal&utm_campaign=adgm_h1_2026&utm_content=article-cta",
+      label: "Open your Abu Dhabi real estate decision",
+    },
+    distribution: {},
+    metaDescription:
+      "Abu Dhabi Media Office and Gulf News report that AUM rose 54% in H1 2026, with 13,974 active licences and 49,027 professionals across ADGM.",
+    speakableSelector: [".article-tldr", ".article-body > p:first-child"],
+  },
+};
+
 const CURATED_NEWS_CANDIDATES: Record<
   CuratedNewsCandidateKey,
   CuratedNewsCandidate
 > = {
   "dld-initial-registration-2026-09-07": dldInitialRegistration,
   "rak-h1-housing-2026-09-02": rakH1Housing,
+  "adgm-h1-growth-2026-09-08": adgmH1Growth,
 };
 
 export function isCuratedNewsCandidateKey(

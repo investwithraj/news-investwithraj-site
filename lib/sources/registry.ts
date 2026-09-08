@@ -34,13 +34,28 @@ export interface VerifiedSource {
   citable?: boolean;
 }
 
+/** Abu Dhabi Media Office exposes this feed from the canonical Latest News
+ * listing via `<link rel="alternate" type="application/rss+xml">`. Each item
+ * carries the publisher article URL, an explicit `pubDate` and a first-party
+ * summary, so releases do not have to wait for aggregator indexing. */
+export const ABU_DHABI_MEDIA_OFFICE_SOURCE: VerifiedSource = {
+  name: "Abu Dhabi Media Office",
+  url: "https://www.mediaoffice.abudhabi",
+  tier: "government",
+  market: ["Abu Dhabi", "UAE"],
+  fetchType: "rss",
+  rssUrl: "https://www.mediaoffice.abudhabi/en/latest-news/rss/",
+  notes:
+    "Official Latest News RSS advertised by the canonical listing; article detail pages expose canonical identity, NewsArticle body and datePublished.",
+};
+
 /**
  * Verified-source whitelist for the news firehose pipeline.
  * Ordered by tier weight (government first). Use the exported array lengths in
  * operational copy rather than hard-coding a count.
  */
 export const SOURCE_WHITELIST: VerifiedSource[] = [
-  /* ─── Tier 1 · Government / regulator (7) ──────────────────────── */
+  /* ─── Tier 1 · Government / regulator (8) ──────────────────────── */
   {
     name: "Dubai Land Department",
     url: "https://dubailand.gov.ae",
@@ -97,6 +112,7 @@ export const SOURCE_WHITELIST: VerifiedSource[] = [
     fetchType: "webfetch",
     notes: "DIFC newsroom.",
   },
+  ABU_DHABI_MEDIA_OFFICE_SOURCE,
 
   /* ─── Tier 2 · National press (4) ──────────────────────────────── */
   {
@@ -341,6 +357,12 @@ export const DEVELOPER_DIRECT_FEEDS: VerifiedSource[] = SOURCE_WHITELIST.filter(
   (source) => source.fetchType === "webfetch" && source.directFetchEnabled === true,
 );
 
+/** First-party feeds checked separately from aggregator discovery. */
+export const OFFICIAL_DIRECT_FEEDS: VerifiedSource[] = [
+  ABU_DHABI_MEDIA_OFFICE_SOURCE,
+  ...DEVELOPER_DIRECT_FEEDS,
+];
+
 const OFFICIAL_DEVELOPER_HOSTS = new Set([
   "emaar.com",
   "nakheel.com",
@@ -382,12 +404,13 @@ export const REDDIT_FEEDS: VerifiedSource[] = [
   { name: "Reddit · r/dubai", url: "https://www.reddit.com/r/dubai", tier: "industry-portal", market: ["Dubai"], fetchType: "reddit", rssUrl: "https://www.reddit.com/r/dubai/search.json?q=real%20estate%20OR%20property&restrict_sr=1&sort=new&t=week&limit=15", citable: false },
 ];
 
-/** What the orchestrator pulls each run: both aggregators + AGBI. Claude
- *  web-search supplies full-text depth at draft time (see the cron). */
+/** What the orchestrator pulls each run: aggregators plus first-party feeds.
+ *  Claude web-search and the protected article fetch supply full-text depth at
+ *  draft time (see the cron). */
 export const FETCH_SOURCES: VerifiedSource[] = [
   ...DISCOVERY_FEEDS,
   AGBI,
-  ...DEVELOPER_DIRECT_FEEDS,
+  ...OFFICIAL_DIRECT_FEEDS,
 ];
 
 /** Per-tier weight for ranking which articles to draft first.

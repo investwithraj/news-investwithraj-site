@@ -50,4 +50,10 @@ export interface FetchRun {
   /** How many sources errored vs succeeded */
   okCount: number;
   errorCount: number;
+  /** Explicit alias for okCount: the source transport completed without an error. */
+  transportOkCount: number;
+  /** Sources that returned at least one entry with a parseable publication date. */
+  datedEntrySourceCount: number;
+  /** Successful transports that returned no dated entries. */
+  emptySourceCount: number;
 }

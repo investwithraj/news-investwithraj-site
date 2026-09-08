@@ -3,7 +3,10 @@
 // extraction is reliable + faster than pulling in fast-xml-parser.
 
 import type { RawEntry, FetchResult } from "./types";
-import type { VerifiedSource } from "@/lib/sources/registry";
+import {
+  findSourceByUrl,
+  type VerifiedSource,
+} from "@/lib/sources/registry";
 import {
   safeFetchBytes,
   urlOnApprovedHost,
@@ -63,12 +66,76 @@ function hashUrl(url: string): string {
   return Math.abs(h).toString(36);
 }
 
-/** Try to parse a date string into ISO. Falls back to "now" if unparseable. */
-function toIso(s: string | null): string {
-  if (!s) return new Date().toISOString();
+/** Parse an explicit publisher timestamp. Discovery time must never be used as
+ * publication time: an undated or malformed feed item fails closed. */
+function toIso(s: string | null): string | null {
+  if (!s) return null;
   const d = new Date(s);
-  if (isNaN(d.getTime())) return new Date().toISOString();
+  if (isNaN(d.getTime())) return null;
   return d.toISOString();
+}
+
+/** Parse one already-fetched RSS/Atom document. Exported so source fixtures can
+ * exercise the exact production parser without making network requests. */
+export function parseRssDocument(
+  xml: string,
+  source: VerifiedSource,
+  limit = 30,
+): RawEntry[] {
+  const domain = new URL(source.url).hostname.replace(/^www\./, "");
+  const isAtom = /<feed[\s>]/i.test(xml);
+  const isGoogleNews = domain === "news.google.com";
+  const isBingNews = domain === "bing.com";
+  const unverifiedAggregatorTier: VerifiedSource["tier"] =
+    isGoogleNews || isBingNews ? "industry-portal" : source.tier;
+  const entries = isAtom
+    ? parseAtomEntries(
+        xml,
+        source.name,
+        unverifiedAggregatorTier,
+        domain,
+        limit,
+      )
+    : parseRssItems(
+        xml,
+        source.name,
+        source.tier,
+        domain,
+        limit,
+        isGoogleNews,
+        isBingNews,
+      );
+  return entries.filter((entry) => urlOnApprovedHost(entry.url, [domain]));
+}
+
+/** Bing still emits this one legacy HTTP wrapper in its RSS. Upgrade only the
+ * exact same-host wrapper path before the normal HTTPS boundary is applied.
+ * Every other HTTP URL remains unchanged and is rejected by urlOnApprovedHost. */
+export function normalizeKnownBingNewsLink(
+  value: string,
+  feedDomain: string,
+): string {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (
+      feedDomain === "bing.com" &&
+      url.protocol === "http:" &&
+      host === "bing.com" &&
+      url.pathname === "/news/apiclick.aspx" &&
+      !url.username &&
+      !url.password &&
+      (!url.port || url.port === "80") &&
+      !url.hash
+    ) {
+      url.protocol = "https:";
+      url.port = "";
+      return url.toString();
+    }
+  } catch {
+    // The existing HTTPS/host validator rejects malformed values below.
+  }
+  return value;
 }
 
 /** Fetch + parse a single RSS or Atom feed. */
@@ -104,20 +171,7 @@ export async function fetchRssFeed(
     });
 
     const xml = res.bytes.toString("utf8");
-    const domain = new URL(source.url).hostname.replace("www.", "");
-    const isAtom = /<feed[\s>]/i.test(xml);
-    const isGoogleNews = domain === "news.google.com";
-
-    let entries: RawEntry[];
-
-    if (isAtom) {
-      entries = parseAtomEntries(xml, source.name, source.tier, domain, limit);
-    } else {
-      entries = parseRssItems(xml, source.name, source.tier, domain, limit, isGoogleNews);
-    }
-    entries = entries.filter((entry) =>
-      urlOnApprovedHost(entry.url, [domain]),
-    );
+    const entries = parseRssDocument(xml, source, limit);
 
     return {
       source,
@@ -143,6 +197,7 @@ function parseRssItems(
   domain: string,
   limit: number,
   isGoogleNews = false,
+  isBingNews = false,
 ): RawEntry[] {
   const itemBlocks = xml
     .split(/<item[\s>]/i)
@@ -152,7 +207,10 @@ function parseRssItems(
   const entries: RawEntry[] = [];
   for (const block of itemBlocks.slice(0, limit)) {
     let title = extract(/<title[^>]*>([\s\S]*?)<\/title>/, block);
-    const link = extract(/<link[^>]*>([\s\S]*?)<\/link>/, block);
+    const rawLink = extract(/<link[^>]*>([\s\S]*?)<\/link>/, block);
+    const link = rawLink && isBingNews
+      ? normalizeKnownBingNewsLink(rawLink, domain)
+      : rawLink;
     const guid = extract(/<guid[^>]*>([\s\S]*?)<\/guid>/, block);
     const pubDate = extract(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/, block);
     const descriptionRaw =
@@ -169,29 +227,48 @@ function parseRssItems(
     // and strip the " - Publisher" suffix Google appends to the headline.
     let entryName = sourceName;
     let entryDomain = domain;
+    let entryTier: VerifiedSource["tier"] =
+      isGoogleNews || isBingNews ? "industry-portal" : sourceTier;
     if (isGoogleNews) {
       const sm = block.match(/<source[^>]*url="([^"]+)"[^>]*>([\s\S]*?)<\/source>/i);
       if (sm) {
         const pubName = decodeXml(sm[2]);
+        const registeredPublisher = findSourceByUrl(sm[1]);
         try {
-          entryDomain = new URL(sm[1]).hostname.replace("www.", "");
+          entryDomain = new URL(sm[1]).hostname
+            .toLowerCase()
+            .replace(/^www\./, "");
         } catch {
           /* keep aggregator domain */
         }
-        entryName = pubName || sourceName;
+        if (registeredPublisher) {
+          entryName = registeredPublisher.name;
+          entryTier = registeredPublisher.tier;
+          entryDomain = new URL(registeredPublisher.url).hostname.replace(
+            /^www\./,
+            "",
+          );
+        } else {
+          // Unknown Google publishers remain useful for discovery, but cannot
+          // inherit the aggregator source's national-press ranking authority.
+          entryName = pubName || sourceName;
+        }
         if (pubName && title.endsWith(` - ${pubName}`)) {
           title = title.slice(0, -(` - ${pubName}`.length)).trim();
         }
       }
     }
 
+    const publishedAt = toIso(pubDate);
+    if (!publishedAt) continue;
+
     entries.push({
       id: guid || hashUrl(link),
       title,
       url: link,
-      publishedAt: toIso(pubDate),
+      publishedAt,
       summary: stripHtml(descriptionRaw).slice(0, 600),
-      source: { name: entryName, tier: sourceTier, domain: entryDomain },
+      source: { name: entryName, tier: entryTier, domain: entryDomain },
       categories: categories.length > 0 ? categories : undefined,
     });
   }
@@ -228,11 +305,14 @@ function parseAtomEntries(
 
     if (!title || !link) continue;
 
+    const publishedAt = toIso(published);
+    if (!publishedAt) continue;
+
     entries.push({
       id: id || hashUrl(link),
       title,
       url: link,
-      publishedAt: toIso(published),
+      publishedAt,
       summary: stripHtml(summaryRaw).slice(0, 600),
       source: { name: sourceName, tier: sourceTier, domain },
     });

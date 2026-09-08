@@ -49,6 +49,22 @@ const KNOWN_DEVELOPERS = [
   "Union Properties",
 ];
 
+/** Match a maintained entity as a complete name/token. Plain substring
+ * matching made short brands such as MAG appear inside unrelated words such
+ * as "magazine", which could manufacture a developer signature and let an
+ * off-desk story through the relevance gate. */
+function hasKnownEntity(text: string, entity: string): boolean {
+  const escapedEntity = entity
+    .trim()
+    .split(/\s+/u)
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("\\s+");
+  return new RegExp(
+    `(?:^|[^\\p{L}\\p{N}])${escapedEntity}(?=$|[^\\p{L}\\p{N}])`,
+    "iu",
+  ).test(text);
+}
+
 // SPECIFIC places only — generic emirate names live in GENERIC_PLACES below
 // and are deliberately NOT used as clustering signatures (they'd collapse
 // every Dubai story into one mega-bucket).
@@ -69,6 +85,7 @@ const KNOWN_PLACES = [
   "JVT",
   "Jumeirah Village Triangle",
   "DIFC",
+  "ADGM",
   "Sheikh Zayed Road",
   "Dubai Hills",
   "Dubai Hills Estate",
@@ -177,10 +194,10 @@ function extractEntities(entries: RawEntry[]): ClusterEntities {
     .join("\n")
     .toLowerCase();
 
-  const developers = KNOWN_DEVELOPERS.filter((d) =>
-    text.includes(d.toLowerCase())
+  const developers = KNOWN_DEVELOPERS.filter((developer) =>
+    hasKnownEntity(text, developer)
   );
-  const places = KNOWN_PLACES.filter((p) => text.includes(p.toLowerCase()));
+  const places = KNOWN_PLACES.filter((place) => hasKnownEntity(text, place));
 
   // Money figures — match "AED 4.25M", "$3.9B", "AED 11.97 billion" patterns
   const figureRe = /(AED|aed|USD|usd|\$|€)\s*\d+(?:[.,]\d+)?\s*(?:M|B|K|million|billion|thousand)\b/g;
@@ -205,9 +222,9 @@ function signatureFor(entry: RawEntry): string | null {
   // mega-cluster (the "place--dubai" bug).
   for (const place of KNOWN_PLACES) {
     if (GENERIC_PLACES.has(place.toLowerCase())) continue;
-    if (text.includes(place.toLowerCase())) {
+    if (hasKnownEntity(text, place)) {
       for (const dev of KNOWN_DEVELOPERS) {
-        if (text.includes(dev.toLowerCase())) {
+        if (hasKnownEntity(text, dev)) {
           return `${dev.toLowerCase().replace(/\s+/g, "-")}--${place
             .toLowerCase()
             .replace(/\s+/g, "-")}`;
@@ -219,7 +236,7 @@ function signatureFor(entry: RawEntry): string | null {
 
   // Fallback: developer alone
   for (const dev of KNOWN_DEVELOPERS) {
-    if (text.includes(dev.toLowerCase())) {
+    if (hasKnownEntity(text, dev)) {
       return `dev--${dev.toLowerCase().replace(/\s+/g, "-")}`;
     }
   }
@@ -314,6 +331,7 @@ const RE_TOPIC_TERMS = [
   "per sqft", "sq ft", "dld", "land department", "rera", "golden visa", "yield",
   "residences", "homebuyer", "home sales", "property market", "real estate market",
   "transactions worth", "sales value", "house price", "housing",
+  "residential project", "residential development", "construction contract",
 ];
 function topicIsRealEstate(topic: string): boolean {
   const t = topic.toLowerCase();
@@ -400,7 +418,11 @@ export function clusterAndScore(
     // Composite — weighted average (UHNW + Raj angle weighted highest), plus a
     // headline real-estate bonus so genuine property stories outrank tangential
     // macro/lifestyle pieces that ride press-tier + freshness.
-    const reBonus = topicFitsPropertyDesk(groupEntries[0].title) ? 15 : 0;
+    const reBonus = groupEntries.some((entry) =>
+      topicFitsPropertyDesk(entry.title)
+    )
+      ? 15
+      : 0;
     const score = Math.min(
       100,
       Math.round(

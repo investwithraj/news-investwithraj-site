@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Google News source-truth fixture</title>
+    <item>
+      <title>Dubai office demand strengthens - Gulf News</title>
+      <link>https://news.google.com/rss/articles/known-publisher?oc=5</link>
+      <guid>google-known</guid>
+      <pubDate>Tue, 08 Sep 2026 08:00:00 +0400</pubDate>
+      <description>Known publisher summary.</description>
+      <source url="https://gulfnews.com/business/property">Gulf News</source>
+    </item>
+    <item>
+      <title>Waterfront launch announced - Example Wire</title>
+      <link>https://news.google.com/rss/articles/unknown-publisher?oc=5</link>
+      <guid>google-unknown</guid>
+      <pubDate>Tue, 08 Sep 2026 07:00:00 +0400</pubDate>
+      <description>Unknown publisher summary.</description>
+      <source url="https://example-wire.invalid">Example Wire</source>
+    </item>
+    <item>
+      <title>Aggregator item without publisher identity</title>
+      <link>https://news.google.com/rss/articles/missing-publisher?oc=5</link>
+      <guid>google-missing</guid>
+      <pubDate>Tue, 08 Sep 2026 06:00:00 +0400</pubDate>
+      <description>Missing publisher summary.</description>
+    </item>
+  </channel>
+</rss>
