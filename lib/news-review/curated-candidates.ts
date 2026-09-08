@@ -281,7 +281,7 @@ Abu Dhabi Media Office and Gulf News report that the first phase of ADGM's inter
 
 For real estate and business readers, the scope boundary is important. Neither the Abu Dhabi Media Office report nor the Gulf News report provides office take-up, vacancy, rents, residential prices, transaction values or secondary market data. Both publications cover H1 2026. Their results document the scale of ADGM's regulated business community and workforce, but they do not measure a change in the value of any building, island precinct or home.
 
-The evidence supports a precise summary. Abu Dhabi Media Office and Gulf News report 54% year-on-year AUM growth, 190 fund and asset managers, 276 funds, 13,974 active licences, 3,986 operational entities and a workforce of 49,027. The sources provide year-on-year comparisons for AUM, managers, funds, operational entities, financial-services entities and workforce; they present active licences as a period-end total rather than a year-on-year growth measure. Keeping those definitions intact is the clearest way to read the update without turning an institutional results release into a real estate investment mandate.`,
+The evidence supports a precise summary. Abu Dhabi Media Office and Gulf News keep AUM, manager count, fund count, active licences, operational entities, financial-services entities and workforce as separate measures. The reports present active licences as a period-end total and do not attach a year-on-year percentage to that measure. Keeping those definitions intact is the clearest way to read the update without turning an institutional results release into a real estate investment mandate.`,
     faq: [
       {
         q: "What increased by 54%?",
