@@ -12,6 +12,8 @@ import { SITE } from "@/lib/constants";
 import {
   AUXILIARY_NEWSROOM_LIFECYCLE,
   canonicalNewsroomRedirectDestination,
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  CURRENT_RELEASE_NEWSROOM_REDIRECTS,
   getReleasedNewsroomRedirects,
   getNewsArticleLifecycle,
   getNewsroomLifecycle,
@@ -74,6 +76,9 @@ const additivePublishedArticlePaths = publishedArticlePaths.filter(
 const currentPublicAuthorityPaths = [
   ...new Set([...primaryByUrl.keys(), ...additivePublishedArticlePaths]),
 ].sort();
+const currentReleasePublicAuthorityPaths = currentPublicAuthorityPaths.filter(
+  (pathname) => pathname !== CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+);
 for (const pathname of additivePublishedArticlePaths) {
   assert.equal(getNewsroomLifecycle(pathname), null);
   assert.deepEqual(
@@ -111,11 +116,19 @@ assert.equal(
   false,
   "Only the exact value 1 may activate cutover.",
 );
-assert.equal(
-  getReleasedNewsroomRedirects().length,
-  0,
-  "Default release state must not activate lifecycle redirects.",
+assert.deepEqual(
+  getReleasedNewsroomRedirects(),
+  CURRENT_RELEASE_NEWSROOM_REDIRECTS,
+  "Default release state must expose only the verified duplicate redirect.",
 );
+assert.deepEqual(CURRENT_RELEASE_NEWSROOM_REDIRECTS, [
+  {
+    source: CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+    destination:
+      "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+    statusCode: 301,
+  },
+]);
 assert.equal(
   getPublicDiscoveryNewsArticles().length,
   PUBLISHED_NEWS_ARTICLES.length,
@@ -125,13 +138,13 @@ const currentPublicSitemapPaths = sitemap()
   .sort();
 assert.equal(
   currentPublicSitemapPaths.length,
-  currentPublicAuthorityPaths.length,
-  "Flag-off discovery must preserve the legacy baseline plus reviewed daily publications.",
+  currentReleasePublicAuthorityPaths.length,
+  "Flag-off discovery must exclude only the released duplicate from the legacy baseline plus reviewed daily publications.",
 );
 assert.deepEqual(
   currentPublicSitemapPaths,
-  currentPublicAuthorityPaths,
-  "Flag-off discovery drifted from the legacy baseline plus reviewed daily publications.",
+  currentReleasePublicAuthorityPaths,
+  "Flag-off discovery drifted beyond the single released duplicate.",
 );
 assert.equal(
   isRenderableArticleSlug(
@@ -345,12 +358,24 @@ assert.ok(
 async function main() {
 process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "0";
 const currentPublicRedirects = await configuredRedirects();
-assert.ok(
-  NEWSROOM_EXACT_REDIRECTS.every(
-    ({ source }) =>
-      !currentPublicRedirects.some((redirect) => redirect.source === source),
-  ),
-  "Flag-off configuration must not contain any lifecycle redirect source.",
+const currentPublicLifecycleRedirects = currentPublicRedirects.filter(
+  ({ source }) =>
+    NEWSROOM_EXACT_REDIRECTS.some(
+      (lifecycleRedirect) => lifecycleRedirect.source === source,
+    ),
+);
+assert.deepEqual(
+  currentPublicLifecycleRedirects,
+  [
+    {
+      source: CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+      destination: canonicalNewsroomRedirectDestination(
+        CURRENT_RELEASE_NEWSROOM_REDIRECTS[0].destination,
+      ),
+      statusCode: 301,
+    },
+  ],
+  "Flag-off configuration must contain only the verified one-hop duplicate redirect.",
 );
 process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
 const redirects = await configuredRedirects();

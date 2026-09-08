@@ -9,6 +9,9 @@ import nextConfig from "../next.config";
 import { proxy } from "../proxy";
 import { getIndexablePublicNewsArticles } from "../lib/news-discovery";
 import {
+  canonicalNewsroomRedirectDestination,
+  CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  CURRENT_RELEASE_NEWSROOM_REDIRECTS,
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_HELD_REDIRECTS,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
@@ -17,6 +20,7 @@ import {
   getNewsroomLifecycle,
   getReleasedNewsroomRedirects,
   isNewsroomLifecycleCutoverEnabled,
+  isReleasedNewsroomRemovalPath,
 } from "../lib/news-lifecycle";
 import {
   EVIDENCE_CERTIFIED_INDEXABLE_NEWS_ARTICLES,
@@ -303,6 +307,7 @@ async function main(): Promise<void> {
     withCutover(false, () => ({
       sitemapPaths: sitemapPaths(),
       publicArticleSlugs: articleSlugs(),
+      indexableArticleSlugs: indexableArticleSlugs(),
       lifecycleRedirects: getReleasedNewsroomRedirects(),
     })),
   );
@@ -347,6 +352,7 @@ async function main(): Promise<void> {
       withCutover(false, () => ({
         sitemapPaths: sitemapPaths(),
         publicArticleSlugs: articleSlugs(),
+        indexableArticleSlugs: indexableArticleSlugs(),
         lifecycleRedirects: getReleasedNewsroomRedirects(),
       })),
   );
@@ -387,6 +393,9 @@ async function main(): Promise<void> {
       ...additivePublishedArticlePaths,
     ]),
   ].sort();
+  const defaultReleasePublicAuthorityPaths = currentPublicAuthorityPaths.filter(
+    (pathname) => pathname !== CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  );
   const releasedLegacyPaths = primaryRows
     .filter(
       (row) => row.disposition === "KEEP" || row.disposition === "IMPROVE",
@@ -398,6 +407,8 @@ async function main(): Promise<void> {
   const expectedPublishedSlugs = PUBLISHED_NEWS_ARTICLES.map(
     (article) => article.slug,
   ).sort();
+  const currentReleaseRedirectSourceSlug =
+    CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE.slice("/news/".length);
   const expectedIndexableSlugs = INDEXABLE_NEWS_ARTICLES.map(
     (article) => article.slug,
   ).sort();
@@ -438,8 +449,8 @@ async function main(): Promise<void> {
   );
   assert.deepEqual(
     cutoverOff.sitemapPaths,
-    currentPublicAuthorityPaths,
-    "Flag-off sitemap drifted from the frozen legacy authority plus reviewed daily publications.",
+    defaultReleasePublicAuthorityPaths,
+    "Default-release sitemap drifted from the frozen legacy authority plus reviewed daily publications minus the released duplicate.",
   );
   assert.equal(
     cutoverOff.publicArticleSlugs.length,
@@ -449,7 +460,35 @@ async function main(): Promise<void> {
     cutoverOff.publicArticleSlugs,
     expectedPublishedSlugs,
   );
-  assert.equal(cutoverOff.lifecycleRedirects.length, 0);
+  assert.ok(
+    !cutoverOff.indexableArticleSlugs.includes(currentReleaseRedirectSourceSlug),
+    "The released redirect source must be excluded from central discovery.",
+  );
+  assert.ok(
+    expectedIndexableSlugs.every((slug) =>
+      cutoverOff.indexableArticleSlugs.includes(slug),
+    ),
+    "Default central discovery must retain every lifecycle-approved indexable article.",
+  );
+  assert.ok(
+    cutoverOff.indexableArticleSlugs.every((slug) =>
+      defaultReleasePublicAuthorityPaths.includes(`/news/${slug}`),
+    ),
+    "Default central discovery must remain inside the exact default-release authority.",
+  );
+  assert.deepEqual(
+    cutoverOff.lifecycleRedirects,
+    CURRENT_RELEASE_NEWSROOM_REDIRECTS,
+    "The default release must expose only the reviewed duplicate redirect.",
+  );
+  assert.deepEqual(CURRENT_RELEASE_NEWSROOM_REDIRECTS, [
+    {
+      source: CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+      destination:
+        "/news/2026-06-23-dubai-launches-flexi-rent-12-landlords-offer-monthly-instalm",
+      statusCode: 301,
+    },
+  ]);
   assert.deepEqual(
     cutoverOn.sitemapPaths,
     releasedAuthorityPaths,
@@ -486,7 +525,10 @@ async function main(): Promise<void> {
     ),
     "Evidence preview sitemap exposed an evidence-held article.",
   );
-  assert.equal(evidencePreviewCutoverOff.lifecycleRedirects.length, 0);
+  assert.deepEqual(
+    evidencePreviewCutoverOff.lifecycleRedirects,
+    CURRENT_RELEASE_NEWSROOM_REDIRECTS,
+  );
   assert.deepEqual(
     evidencePreviewCutoverOn.sitemapPaths,
     evidencePreviewReleasedPaths,
@@ -516,11 +558,55 @@ async function main(): Promise<void> {
   assert.equal(NEWSROOM_EXACT_REDIRECTS.length, 31);
   assert.equal(NEWSROOM_RELEASE_REMOVAL_CANDIDATES.length, 6);
   assert.equal(Object.keys(NEWSROOM_HELD_REDIRECTS).length, 3);
+  const configuredDefaultLifecycleRedirects = configuredOff.filter((redirect) =>
+    NEWSROOM_EXACT_REDIRECTS.some(
+      (candidate) => candidate.source === redirect.source,
+    ),
+  );
+  const currentReleaseCanonicalDestination =
+    canonicalNewsroomRedirectDestination(
+      CURRENT_RELEASE_NEWSROOM_REDIRECTS[0].destination,
+    );
+  assert.deepEqual(configuredDefaultLifecycleRedirects, [
+    {
+      source: CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+      destination: currentReleaseCanonicalDestination,
+      statusCode: 301,
+    },
+  ]);
   assert.equal(
-    configuredOff.filter((redirect) =>
-      NEWSROOM_EXACT_REDIRECTS.some((candidate) => candidate.source === redirect.source),
+    new URL(currentReleaseCanonicalDestination).origin,
+    "https://news.investwithraj.com",
+  );
+  assert.ok(
+    !NEWSROOM_EXACT_REDIRECTS.some(
+      ({ source }) =>
+        source === new URL(currentReleaseCanonicalDestination).pathname,
+    ),
+    "The default lifecycle redirect must reach its final canonical destination in one hop.",
+  );
+  assert.equal(
+    NEWSROOM_EXACT_REDIRECTS.filter(
+      ({ source }) => source !== CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
     ).length,
-    0,
+    30,
+  );
+  assert.ok(
+    NEWSROOM_EXACT_REDIRECTS.filter(
+      ({ source }) => source !== CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+    ).every(
+      ({ source }) =>
+        !configuredDefaultLifecycleRedirects.some(
+          (redirect) => redirect.source === source,
+        ),
+    ),
+    "Every other lifecycle redirect must remain behind the wider cutover gate.",
+  );
+  assert.ok(
+    NEWSROOM_RELEASE_REMOVAL_CANDIDATES.every(
+      (pathname) => !isReleasedNewsroomRemovalPath(pathname, {}),
+    ),
+    "Every lifecycle removal must remain behind the wider cutover gate.",
   );
   assert.equal(
     configuredOn.filter((redirect) =>

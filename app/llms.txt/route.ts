@@ -1,5 +1,6 @@
 import { SITE, CONTACT, EDITORIAL } from "@/lib/constants";
 import { getIndexablePublicNewsArticles } from "@/lib/news-discovery";
+import { isNewsroomLifecycleCutoverEnabled } from "@/lib/news-lifecycle";
 
 export const dynamic = "force-static";
 export const revalidate = 86400;
@@ -14,6 +15,11 @@ export function GET(): Response {
         `- ${oneLine(article.title)} -> ${SITE.url}/news/${article.slug}: ${oneLine(article.subtitle)}`,
     )
     .join("\n");
+  const legacyHubDiscoveryLines = isNewsroomLifecycleCutoverEnabled()
+    ? ""
+    : `- Area index -> ${SITE.url}/areas: Published reporting grouped by UAE area.
+- Developer index -> ${SITE.url}/developers: Published reporting grouped by developer.
+`;
   const body = `# ${SITE.name}
 > Source-cited UAE real estate reporting from the ${EDITORIAL.articleByline}.
 
@@ -22,9 +28,7 @@ Invest With Raj Intelligence covers material real estate changes in Dubai, Abu D
 ## Discovery
 - Home -> ${SITE.url}/: Latest reporting and market desks.
 - News archive -> ${SITE.url}/news: All canonical published reporting.
-- Area index -> ${SITE.url}/areas: Published reporting grouped by UAE area.
-- Developer index -> ${SITE.url}/developers: Published reporting grouped by developer.
-- Area filters -> ${SITE.url}/news?area={area-slug}: Related published reporting.
+${legacyHubDiscoveryLines}- Area filters -> ${SITE.url}/news?area={area-slug}: Related published reporting.
 - Developer filters -> ${SITE.url}/news?developer={developer-slug}: Related published reporting.
 - Desk filters -> ${SITE.url}/news?desk={desk-slug}: One of five editorial desk views.
 - About the publication -> ${SITE.url}/about

@@ -510,11 +510,26 @@ export function isHeldRedirectPath(pathname: string): boolean {
   return Object.hasOwn(NEWSROOM_HELD_REDIRECTS, pathname);
 }
 
+/**
+ * One verified duplicate is safe to retire ahead of the wider lifecycle
+ * cutover. Keep this release boundary exact so every other lifecycle route
+ * continues to follow the existing feature gate.
+ */
+export const CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE =
+  "/news/2026-06-28-dubai-mandates-monthly-rent-option-across-12-landlords-in-fl";
+
+export function isCurrentReleaseNewsroomRedirectSource(
+  pathname: string,
+): boolean {
+  return pathname === CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE;
+}
+
 export function isRenderableArticleSlug(slug: string): boolean {
   const pathname = `/news/${slug}`;
   const disposition = getNewsArticleLifecycle(slug)?.disposition;
   return Boolean(
     disposition &&
+      !isCurrentReleaseNewsroomRedirectSource(pathname) &&
       (isNewsroomLifecycleCutoverEnabled()
         ? isApprovedPublicLifecyclePath(pathname)
         : disposition !== "PRIVATE"),
@@ -524,7 +539,13 @@ export function isRenderableArticleSlug(slug: string): boolean {
 /** A route remains at its current URL until the explicit cutover is enabled. */
 export function isRenderableLifecyclePath(pathname: string): boolean {
   const lifecycle = getNewsroomLifecycle(pathname);
-  if (!lifecycle || lifecycle.disposition === "PRIVATE") return false;
+  if (
+    !lifecycle ||
+    lifecycle.disposition === "PRIVATE" ||
+    isCurrentReleaseNewsroomRedirectSource(pathname)
+  ) {
+    return false;
+  }
   return isNewsroomLifecycleCutoverEnabled()
     ? isApprovedPublicLifecyclePath(pathname)
     : true;
@@ -532,6 +553,7 @@ export function isRenderableLifecyclePath(pathname: string): boolean {
 
 /** Current public pages remain indexable before cutover; the matrix wins after it. */
 export function isReleasedIndexEligiblePath(pathname: string): boolean {
+  if (isCurrentReleaseNewsroomRedirectSource(pathname)) return false;
   return isNewsroomLifecycleCutoverEnabled()
     ? isIndexEligiblePath(pathname)
     : isRenderableLifecyclePath(pathname);
@@ -549,12 +571,17 @@ export const NEWSROOM_EXACT_REDIRECTS = Object.entries(NEWSROOM_LIFECYCLE)
     statusCode: 301 as const,
   }));
 
+export const CURRENT_RELEASE_NEWSROOM_REDIRECTS =
+  NEWSROOM_EXACT_REDIRECTS.filter(
+    ({ source }) => source === CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCE,
+  );
+
 export function getReleasedNewsroomRedirects(
   environment: LifecycleEnvironment = process.env,
 ): typeof NEWSROOM_EXACT_REDIRECTS {
   return isNewsroomLifecycleCutoverEnabled(environment)
     ? NEWSROOM_EXACT_REDIRECTS
-    : [];
+    : CURRENT_RELEASE_NEWSROOM_REDIRECTS;
 }
 
 /**

@@ -128,9 +128,10 @@ const nextConfig: NextConfig = {
     );
 
     return [
-      // Disabled by default. When the one release flag is explicitly enabled,
-      // absolute destinations keep retired www URLs to one hop if the
-      // currently absent DNS is added later.
+      // The verified Flexi Rent duplicate is released immediately. The wider
+      // lifecycle set remains behind its explicit cutover flag. Absolute
+      // destinations keep retired www URLs to one hop if the currently absent DNS
+      // is added later.
       ...lifecycleRedirects,
       {
         source: "/:path*",
