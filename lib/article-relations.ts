@@ -35,6 +35,11 @@ export type ResolvedArticleDeveloper = Readonly<{
  */
 export const ARTICLE_RELATION_RECORDS = [
   {
+    articleSlug: "2026-09-08-adgm-h1-2026-aum-licences-workforce",
+    areaSlugs: [],
+    developerSlugs: [],
+  },
+  {
     articleSlug: "2026-09-07-aldar-closes-abu-dhabi-s-first-off-plan-mortgage-under",
     areaSlugs: [],
     developerSlugs: [],
