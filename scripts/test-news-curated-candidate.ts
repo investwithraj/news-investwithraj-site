@@ -378,7 +378,8 @@ const workflow = readFileSync(
   new URL("../.github/workflows/news-cron.yml", import.meta.url),
   "utf8",
 );
-assert.match(workflow, /cron: "7 3 \* \* \*"/u);
+assert.match(workflow, /cron: "37 1 \* \* \*"/u);
+assert.match(workflow, /cron: "17 5 \* \* \*"/u);
 assert.match(workflow, /candidate_key:/u);
 assert.match(workflow, /- dld-initial-registration/u);
 assert.match(workflow, /curated_candidate_key:/u);

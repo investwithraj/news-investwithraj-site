@@ -63,8 +63,9 @@ export interface NewsDraftProvenance {
       | "time"
       | "visible"
       | "publisher-api";
-    /** Original staging clock and bounded age window. Auto-approval recomputes
-     * freshness against this clock, not the later publication-run clock. */
+    /** Original staging clock and bounded age window. Staging freshness is
+     * recomputed against this clock; unattended publication also checks these
+     * immutable timestamps against its actual publication clock. */
     freshnessCheckedAt?: string;
     freshnessMaxAgeHours?: number;
   }[];

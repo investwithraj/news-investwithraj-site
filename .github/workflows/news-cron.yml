@@ -1,9 +1,17 @@
 name: news-cron
 on:
   schedule:
-    - cron: "7 3 * * *"
+    # GitHub schedules are UTC. Dubai has no DST: 01:37 UTC = 05:37 GST,
+    # and 05:17 UTC = 09:17 GST. The second run is a recovery window.
+    - cron: "37 1 * * *"
+    - cron: "17 5 * * *"
   workflow_dispatch:
     inputs:
+      morning_date:
+        description: "Internal watchdog retry date (YYYY-MM-DD, Asia/Dubai); leave empty for manual runs"
+        required: false
+        default: ""
+        type: string
       publication_only:
         description: "Publish an already staged, evidence-ready draft without researching a new story"
         required: false
@@ -59,6 +67,7 @@ jobs:
       - run: npx tsx scripts/test-news-manual-candidate.ts
       - run: npx tsx scripts/test-news-curated-candidate.ts
       - run: npx tsx scripts/test-news-curated-transport.ts
+      - run: npx tsx scripts/test-news-scheduler.ts
       - run: npx tsx scripts/check-source-health.ts
       - name: Validate curated dispatch
         if: github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none'
@@ -96,6 +105,11 @@ jobs:
           AUTO_APPROVE_TARGET_DRAFT_ID: ${{ steps.curated.outputs.draft_id }}
           AUTO_APPROVE_TARGET_CONTENT_HASH: ${{ steps.curated.outputs.content_hash }}
           AUTO_APPROVE_TARGET_SLUG: ${{ steps.curated.outputs.slug }}
+          # Scheduled runs and the Vercel watchdog share one Dubai-day lane.
+          # Ordinary workflow_dispatch and curated/manual paths remain outside
+          # this guard and keep their existing behaviour.
+          AUTOMATED_MORNING_LANE: ${{ github.event_name == 'schedule' && '1' || (inputs.morning_date != '' && '1' || '0') }}
+          MORNING_DATE: ${{ inputs.morning_date || '' }}
           # One Dubai-morning run researches and may publish the newest passing
           # website-news item. Manual recovery runs use the same bounded lane.
           DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && (inputs.publication_only || inputs.curated_candidate_key != 'none') && '0' || '1' }}

@@ -88,34 +88,37 @@ function cluster(urls: string[], category: Cluster["suggestedCategory"] = "marke
   };
 }
 
-function bodyWithFigure(
-  figure = "AED 10 million",
-  analytical = false,
-  attribution = "Reuters reported",
-): string {
-  const first = analytical
-    ? `${attribution} ${figure} in verified transactions, and we recommend investors buy only where the structural mandate remains intact.`
-    : `${attribution} ${figure} in verified transactions, establishing a structural mandate and a clear catalyst for this precinct.`;
-  const sentence =
-    "The release describes the mandate, absorption pattern, precinct context and secondary market mechanics in measured terms for readers assessing the underlying thesis.";
-  return `${first}\n\n${Array.from({ length: 45 }, () => sentence).join(" ")}`;
-}
-
 function officialBodyWithFigure(figure = "AED 10 million"): string {
   const first =
-    `Dubai Land Department confirmed ${figure} in its own service update and stated that the regulatory mandate covers the named precinct.`;
+    `Dubai Land Department confirmed ${figure} in its own service update. Dubai Land Department stated that the regulatory mandate covers the precinct.`;
   const sentence =
-    "Dubai Land Department stated that its official release records the regulatory mandate, precinct scope, implementation timetable, registration process and applicable secondary market procedure.";
+    "Dubai Land Department stated that Dubai Land Department's official release records the regulatory mandate, precinct scope, implementation timetable, registration process and applicable secondary market procedure.";
   return `${first}\n\n${Array.from({ length: 34 }, () => sentence).join(" ")}`;
+}
+
+function officialEvidenceForGeneratedFixture(
+  figure = "AED 10 million",
+): string {
+  return [
+    `Dubai Land Department confirmed ${figure} for its official service update record.`,
+    "Dubai Land Department stated that the regulatory mandate directly covers the defined precinct.",
+    "Dubai Land Department stated that the official release from Dubai Land Department shows the regulatory mandate, registration process, precinct scope, implementation timetable and applicable secondary market procedure.",
+    "Dubai Land Department confirmed a service announcement that it published directly in the record.",
+    "Dubai Land Department published the official service announcement through its direct channel.",
+    "DLD published its own release through the direct channel.",
+    "DLD stated the official implementation terms within its own publication.",
+  ].join(" ");
 }
 
 function draftJson(input: {
   body: string;
   urls?: string[];
   title?: string;
+  officialFraming?: boolean;
 }): string {
   const urls = input.urls ?? [REUTERS_URL];
-  const officialOnly = urls.length === 1 && urls[0] === OFFICIAL_URL;
+  const officialOnly =
+    input.officialFraming ?? (urls.length === 1 && urls[0] === OFFICIAL_URL);
   return JSON.stringify({
     skip: false,
     title:
@@ -124,7 +127,7 @@ function draftJson(input: {
         ? "Dubai Land Department confirms its own service update"
         : "Verified UAE property update"),
     subtitle: officialOnly
-      ? "Dubai Land Department confirms its own directly published service announcement."
+      ? "Dubai Land Department published its direct announcement."
       : "A factual update based on directly fetched reporting.",
     tldr: officialOnly
       ? [
@@ -213,11 +216,20 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
         repairCalls += 1;
         return { ok: false, error: "repair should not run" };
       }) satisfies RepairCall,
-      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      fetchArticle: (async (url) =>
+        fetched(
+          url,
+          FRESH_DATE,
+          officialEvidenceForGeneratedFixture(),
+        )) satisfies FetchCall,
     },
     },
   );
-  assert.equal(result.ok, true, result.reason);
+  assert.equal(
+    result.ok,
+    true,
+    `${result.reason ?? "unknown"}; ${(result.diagnostics ?? []).join(" | ")}`,
+  );
   assert.ok(
     !result.diagnostics?.some((entry) => /manual review only/.test(entry)),
     `a narrowly attributed first-party fact should not be held for a redundant second publisher: ${JSON.stringify(result.diagnostics)}`,
@@ -335,8 +347,15 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     "a cross-publisher redirect cannot mint evidence for the cited publisher",
   );
 
-  const countEvidenceText =
-    "Dubai Land Department confirmed AED 10 million across 7 towers in Phase 2, with 12 floors, 3 bedrooms, a 5 km corridor and 40 hectares. Dubai Land Department scheduled delivery in 2029.";
+  const countEvidenceText = [
+    officialEvidenceForGeneratedFixture(),
+    "Dubai Land Department plans to publish a report covering 7 towers.",
+    "Dubai Land Department confirmed the development plan for Phase 2 with 12 floors.",
+    "Dubai Land Department confirmed 3 bedrooms for the towers in its plan.",
+    "Dubai Land Department confirmed a 5 km corridor in the precinct plan.",
+    "Dubai Land Department confirmed delivery in 2029 under its own plan schedule.",
+    "DLD confirmed 40 hectares for its own development plan.",
+  ].join(" ");
   const secondCitation = {
     source: "The National — Business",
     url: NATIONAL_URL,
@@ -347,7 +366,7 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
     article: {
       ...fixture.article,
       citations: [...fixture.article.citations, secondCitation],
-      title: "Dubai Land Department publishes its plan for 7 towers",
+      title: "Both sources report a plan covering 7 towers",
       subtitle:
         "Dubai Land Department confirmed Phase 2 with 12 floors in its own plan.",
       tldr: [
@@ -453,36 +472,86 @@ async function singleSourceTierA(): Promise<ReadyFixture> {
 async function conservativeRiskClaimsRequireCorroboration(
   officialFixture: ReadyFixture,
 ): Promise<void> {
-  for (const [id, claim] of [
-    ["broad-market-growth", "The UAE property market grew 12% last year."],
-    ["analyst-price-forecast", "Analysts expect prices to rise by 12%."],
-    ["challenged-developer-claim", "Critics challenged the developer claim."],
-    [
-      "institutional-report-forecast",
-      "Knight Frank published its own report. It expects prices to climb 12% next year.",
-    ],
-    [
-      "unattributed-official-market-movement",
-      "Dubai Land Department confirmed its annual report. Demand strengthened across Dubai and prices climbed.",
-    ],
-    [
-      "lowercase-third-party-sentence",
-      "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
-    ],
-    [
-      "dld-questioned-figures",
-      "DLD said its own figures were questioned.",
-    ],
-    [
-      "dld-forecast-double",
-      "DLD said its own registrations are expected to double next year.",
-    ],
-    [
-      "macro-inflation",
-      "Dubai inflation increased across the wider economy.",
-    ],
+  for (const testCase of [
+    {
+      id: "broad-market-growth",
+      claim: "The UAE property market grew 12% last year.",
+      evidence:
+        "The UAE property market activity grew by 12% last year across the measured period.",
+      oneSourceReady: true,
+      twoSourceReady: true,
+    },
+    {
+      id: "analyst-price-forecast",
+      claim: "Analysts expect prices to rise by 12%.",
+      evidence:
+        "Analysts in the market expect prices to increase by 12% in the forecast.",
+      oneSourceReady: false,
+      twoSourceReady: true,
+    },
+    {
+      id: "challenged-developer-claim",
+      claim: "Critics challenged the developer claim.",
+      evidence:
+        "Critics from the market challenged a claim made by the developer.",
+      oneSourceReady: false,
+      twoSourceReady: false,
+    },
+    {
+      id: "institutional-report-forecast",
+      claim:
+        "Knight Frank published its own report. It expects prices to climb 12% next year.",
+      evidence:
+        "Knight Frank published the report through its own research channel. Knight Frank expects prices to increase by 12% next year.",
+      oneSourceReady: false,
+      twoSourceReady: false,
+    },
+    {
+      id: "unattributed-official-market-movement",
+      claim:
+        "Dubai Land Department confirmed its annual report. Demand strengthened across Dubai and prices climbed.",
+      evidence:
+        "Dubai Land Department confirmed its latest annual publication as the official report. Demand across Dubai was stronger as prices climbed.",
+      oneSourceReady: true,
+      twoSourceReady: true,
+    },
+    {
+      id: "lowercase-third-party-sentence",
+      claim:
+        "Dubai Land Department announced its own service update. a contractor opened an unrelated sales centre.",
+      evidence:
+        "Dubai Land Department announced an update for its official service. a contractor opened a separate unrelated centre for sales.",
+      oneSourceReady: true,
+      twoSourceReady: true,
+    },
+    {
+      id: "dld-questioned-figures",
+      claim: "DLD said its own figures were questioned.",
+      evidence:
+        "DLD reported that reviewers questioned the figures in its publication.",
+      oneSourceReady: true,
+      twoSourceReady: true,
+    },
+    {
+      id: "dld-forecast-double",
+      claim: "DLD registrations are expected to double next year.",
+      evidence:
+        "DLD registrations are expected to double during the next year.",
+      oneSourceReady: false,
+      twoSourceReady: true,
+    },
+    {
+      id: "macro-inflation",
+      claim: "Dubai inflation increased across the wider economy.",
+      evidence:
+        "Dubai inflation increased throughout the wider economy.",
+      oneSourceReady: true,
+      twoSourceReady: true,
+    },
   ] as const) {
+    const { id, claim, evidence: claimEvidence } = testCase;
     const body = `${officialBodyWithFigure()}\n\n${claim}`;
+    const sourceEvidence = `${officialEvidenceForGeneratedFixture()} ${claimEvidence}`;
     const oneSource = await draftFromCluster(
       cluster([OFFICIAL_URL]),
       WHITELIST,
@@ -498,15 +567,28 @@ async function conservativeRiskClaimsRequireCorroboration(
             error: "risk-based corroboration policy must hold before repair",
           })) satisfies RepairCall,
           fetchArticle: (async (url) =>
-            fetched(url, FRESH_DATE, body)) satisfies FetchCall,
+            fetched(url, FRESH_DATE, sourceEvidence)) satisfies FetchCall,
         },
       },
     );
-    assert.equal(oneSource.ok, true, `${id}: ${oneSource.reason}`);
-    assert.ok(
-      oneSource.diagnostics?.some((entry) => /manual review only/.test(entry)),
-      `${id} must be staged with an explicit manual-only diagnostic`,
+    assert.equal(
+      oneSource.ok,
+      testCase.oneSourceReady,
+      `${id}: ${oneSource.reason}; ${(oneSource.diagnostics ?? []).join(" | ")}`,
     );
+    if (testCase.oneSourceReady) {
+      assert.ok(
+        oneSource.diagnostics?.some((entry) => /manual review only/.test(entry)),
+        `${id} must be staged with an explicit manual-only diagnostic`,
+      );
+    } else {
+      assert.ok(
+        oneSource.diagnostics?.some((entry) =>
+          /claim-support repair invoked/.test(entry),
+        ),
+        `${id} must fail closed through the claim-support repair path`,
+      );
+    }
 
     const onePublisherLedger = {
       article: { ...officialFixture.article, body },
@@ -534,6 +616,7 @@ async function conservativeRiskClaimsRequireCorroboration(
             text: draftJson({
               body,
               urls: [OFFICIAL_URL, NATIONAL_URL],
+              officialFraming: true,
             }),
           })) satisfies ResearchCall,
           repair: (async () => ({
@@ -541,18 +624,31 @@ async function conservativeRiskClaimsRequireCorroboration(
             error: "repair should not run with supported evidence",
           })) satisfies RepairCall,
           fetchArticle: (async (url) =>
-            fetched(url, FRESH_DATE, body)) satisfies FetchCall,
+            fetched(url, FRESH_DATE, sourceEvidence)) satisfies FetchCall,
         },
       },
     );
-    assert.equal(twoSource.ok, true, `${id}: ${twoSource.reason}`);
-    assert.ok(
-      approvalFor({
-        article: twoSource.article!,
-        provenance: twoSource.provenance!,
-      }),
-      `${id} must mint only with two independent publishers`,
+    assert.equal(
+      twoSource.ok,
+      testCase.twoSourceReady,
+      `${id}: ${twoSource.reason}; ${(twoSource.diagnostics ?? []).join(" | ")}`,
     );
+    if (testCase.twoSourceReady) {
+      assert.ok(
+        approvalFor({
+          article: twoSource.article!,
+          provenance: twoSource.provenance!,
+        }),
+        `${id} must mint only with two independent publishers`,
+      );
+    } else {
+      assert.ok(
+        twoSource.diagnostics?.some((entry) =>
+          /claim-support repair invoked/.test(entry),
+        ),
+        `${id} must remain held when publisher count cannot cure the unsupported clause`,
+      );
+    }
   }
 }
 
@@ -561,21 +657,32 @@ async function analysisRequiresTwoDomains(): Promise<{
   twoSources: ReadyFixture;
   samePublisher: ReadyFixture;
 }> {
-  const analyticalBody = bodyWithFigure("AED 10 million", true);
+  const repeatedAnalysisSentence =
+    "The release describes the mandate, absorption pattern, precinct context and secondary market mechanics in measured terms for readers assessing the underlying thesis.";
+  const analyticalBody =
+    `Apartment sale prices were higher than villa sale prices at AED 10 million.\n\n${Array.from({ length: 45 }, () => repeatedAnalysisSentence).join(" ")}`;
+  const analyticalEvidence = [
+    officialEvidenceForGeneratedFixture(),
+    "Apartment sale prices were higher than villa sale prices, with the price figure at AED 10 million during the measured period.",
+    "The report describes the precinct context, structural mandate, secondary-market mechanics and absorption pattern in measured language for readers assessing the underlying thesis.",
+  ].join(" ");
   const oneSource = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => ({
         ok: true,
-        text: draftJson({ body: analyticalBody }),
+        text: draftJson({ body: analyticalBody, officialFraming: true }),
       })) satisfies ResearchCall,
       repair: (async () => ({ ok: false, error: "must fail before repair" })) satisfies RepairCall,
-      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      fetchArticle: (async (url) =>
+        fetched(url, FRESH_DATE, analyticalEvidence)) satisfies FetchCall,
     },
   });
-  assert.equal(oneSource.ok, true, oneSource.reason);
+  assert.equal(oneSource.ok, false, oneSource.reason);
   assert.ok(
-    oneSource.diagnostics?.some((entry) => /manual review only/.test(entry)),
+    oneSource.diagnostics?.some((entry) =>
+      /claim-support repair invoked/.test(entry),
+    ),
   );
 
   const samePublisherUrl = "https://graphics.reuters.com/property/test-source";
@@ -590,16 +697,20 @@ async function analysisRequiresTwoDomains(): Promise<{
           text: draftJson({
             body: analyticalBody,
             urls: [REUTERS_URL, samePublisherUrl],
+            officialFraming: true,
           }),
         })) satisfies ResearchCall,
         repair: (async () => ({ ok: false, error: "must fail before repair" })) satisfies RepairCall,
-        fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+        fetchArticle: (async (url) =>
+          fetched(url, FRESH_DATE, analyticalEvidence)) satisfies FetchCall,
       },
     },
   );
-  assert.equal(samePublisher.ok, true, samePublisher.reason);
+  assert.equal(samePublisher.ok, false, samePublisher.reason);
   assert.ok(
-    samePublisher.diagnostics?.some((entry) => /manual review only/.test(entry)),
+    samePublisher.diagnostics?.some((entry) =>
+      /claim-support repair invoked/.test(entry),
+    ),
   );
 
   const twoSources = await draftFromCluster(
@@ -613,14 +724,20 @@ async function analysisRequiresTwoDomains(): Promise<{
           text: draftJson({
             body: analyticalBody,
             urls: [REUTERS_URL, NATIONAL_URL],
+            officialFraming: true,
           }),
         })) satisfies ResearchCall,
         repair: (async () => ({ ok: false, error: "repair should not run" })) satisfies RepairCall,
-        fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+        fetchArticle: (async (url) =>
+          fetched(url, FRESH_DATE, analyticalEvidence)) satisfies FetchCall,
       },
     },
   );
-  assert.equal(twoSources.ok, true, twoSources.reason);
+  assert.equal(
+    twoSources.ok,
+    true,
+    `${twoSources.reason}; ${(twoSources.diagnostics ?? []).join(" | ")}`,
+  );
   assert.equal(twoSources.provenance?.fetchedEvidence?.length, 2);
 
   const twoSourceFixture = {
@@ -872,22 +989,33 @@ function evidencePolicyVersionsFailClosed(fixture: ReadyFixture): void {
 }
 
 async function disputedMarketClaimsRequireTwoDomains(): Promise<void> {
-  const disputedBody = bodyWithFigure().replace(
-    "establishing a structural mandate and a clear catalyst for this precinct",
-    "while the market-wide claim remains disputed, despite the structural mandate and catalyst for this precinct",
-  );
+  const repeatedSentence =
+    "The release describes the mandate, absorption pattern, precinct context and secondary market mechanics in measured terms for readers assessing the underlying thesis.";
+  const disputedBody =
+    `Reuters reported AED 10 million transaction value. Reporting described the market-wide AED 10 million claim as disputed.\n\n${Array.from({ length: 45 }, () => repeatedSentence).join(" ")}`;
+  const disputedEvidence = [
+    officialEvidenceForGeneratedFixture(),
+    "Reuters reported AED 10 million transaction value across independently verified records.",
+    "The available record describes the market-wide AED 10 million claim as disputed.",
+    "The report describes the precinct context, structural mandate, secondary-market mechanics and absorption pattern in measured language for readers assessing the underlying thesis.",
+  ].join(" ");
   const oneSource = await draftFromCluster(cluster([REUTERS_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
       research: (async () => ({
         ok: true,
-        text: draftJson({ body: disputedBody }),
+        text: draftJson({ body: disputedBody, officialFraming: true }),
       })) satisfies ResearchCall,
       repair: (async () => ({ ok: false, error: "must fail before repair" })) satisfies RepairCall,
-      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      fetchArticle: (async (url) =>
+        fetched(url, FRESH_DATE, disputedEvidence)) satisfies FetchCall,
     },
   });
-  assert.equal(oneSource.ok, true, oneSource.reason);
+  assert.equal(
+    oneSource.ok,
+    true,
+    `${oneSource.reason ?? "unknown"}; ${(oneSource.diagnostics ?? []).join(" | ")}`,
+  );
   assert.ok(
     oneSource.diagnostics?.some((entry) => /manual review only/.test(entry)),
   );
@@ -903,10 +1031,12 @@ async function disputedMarketClaimsRequireTwoDomains(): Promise<void> {
           text: draftJson({
             body: disputedBody,
             urls: [REUTERS_URL, NATIONAL_URL],
+            officialFraming: true,
           }),
         })) satisfies ResearchCall,
         repair: (async () => ({ ok: false, error: "repair should not run" })) satisfies RepairCall,
-        fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+        fetchArticle: (async (url) =>
+          fetched(url, FRESH_DATE, disputedEvidence)) satisfies FetchCall,
       },
     },
   );
@@ -991,7 +1121,11 @@ async function fetchCompletionClockIsStored(): Promise<void> {
       })) satisfies ResearchCall,
       repair: (async () => ({ ok: false, error: "repair should not run" })) satisfies RepairCall,
       fetchArticle: (async (url) =>
-        fetched(url, sourcePublished)) satisfies FetchCall,
+        fetched(
+          url,
+          sourcePublished,
+          officialEvidenceForGeneratedFixture(),
+        )) satisfies FetchCall,
     },
   });
   assert.equal(result.ok, true, result.reason);
@@ -1157,7 +1291,7 @@ async function unsupportedFiguresNeverPass(): Promise<void> {
 async function numericComplianceRepairUsesExactEvidencePhrase(): Promise<void> {
   let repairCalls = 0;
   const mismatchedTitle = "Official update sets an AED 99 million threshold";
-  const compliantTitle = "Dubai Land Department publishes its verified update";
+  const compliantTitle = "Dubai Land Department confirms its own service update";
   const mismatchedBody = officialBodyWithFigure(
     "AED 10 million threshold framework",
   );
@@ -1184,7 +1318,12 @@ async function numericComplianceRepairUsesExactEvidencePhrase(): Promise<void> {
           }),
         };
       }) satisfies RepairCall,
-      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      fetchArticle: (async (url) =>
+        fetched(
+          url,
+          FRESH_DATE,
+          officialEvidenceForGeneratedFixture(),
+        )) satisfies FetchCall,
     },
   });
   assert.equal(result.ok, true, result.reason);
@@ -1192,12 +1331,12 @@ async function numericComplianceRepairUsesExactEvidencePhrase(): Promise<void> {
   assert.equal(result.article!.title, compliantTitle);
   assert.equal(
     result.article!.slug,
-    "2026-08-16-dubai-land-department-publishes-its-verified-update",
+    "2026-08-16-dubai-land-department-confirms-its-own-service-update",
   );
   assert.equal(result.article!.heroImage.alt, compliantTitle);
   assert.equal(
     result.article!.heroImage.src,
-    "/news/2026-08-16-dubai-land-department-publishes-its-verified-update/cover.jpg",
+    "/news/2026-08-16-dubai-land-department-confirms-its-own-service-update/cover.jpg",
   );
   assert.deepEqual(
     findUnsupportedFigures(
@@ -1211,7 +1350,12 @@ async function numericComplianceRepairUsesExactEvidencePhrase(): Promise<void> {
 
 async function missingLeadFigureUsesFetchedEvidencePhrase(): Promise<void> {
   let repairCalls = 0;
-  const numberFreeBody = officialBodyWithFigure("the verified amount");
+  const numberFreeBody = officialBodyWithFigure("the documented service value");
+  const officialEvidence = [
+    "Dubai Land Department reported AED 10 million.",
+    "Dubai Land Department confirmed its service update's documented value in the official record.",
+    officialEvidenceForGeneratedFixture(),
+  ].join(" ");
   const result = await draftFromCluster(cluster([OFFICIAL_URL]), WHITELIST, {
     now: NOW,
     dependencies: {
@@ -1226,7 +1370,8 @@ async function missingLeadFigureUsesFetchedEvidencePhrase(): Promise<void> {
           text: draftJson({ body: numberFreeBody, urls: [OFFICIAL_URL] }),
         };
       }) satisfies RepairCall,
-      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      fetchArticle: (async (url) =>
+        fetched(url, FRESH_DATE, officialEvidence)) satisfies FetchCall,
     },
   });
   assert.equal(result.ok, true, result.reason);
@@ -1265,7 +1410,12 @@ async function repairFixesMechanicalGates(): Promise<void> {
           text: draftJson({ body: repairedBody, urls: [OFFICIAL_URL] }),
         };
       }) satisfies RepairCall,
-      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      fetchArticle: (async (url) =>
+        fetched(
+          url,
+          FRESH_DATE,
+          officialEvidenceForGeneratedFixture(),
+        )) satisfies FetchCall,
     },
   });
   assert.equal(result.ok, true, result.reason);
@@ -1304,7 +1454,12 @@ async function evidenceRepairJsonRetryIsBounded(): Promise<void> {
                   }),
           };
         }) satisfies RepairCall,
-        fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+        fetchArticle: (async (url) =>
+          fetched(
+            url,
+            FRESH_DATE,
+            officialEvidenceForGeneratedFixture(),
+          )) satisfies FetchCall,
       },
     },
   );
@@ -1397,7 +1552,12 @@ async function generationRetryIsCapped(): Promise<void> {
         return recoveryResponses.shift() ?? { ok: false, error: "unexpected third call" };
       }) satisfies ResearchCall,
       repair: (async () => ({ ok: false, error: "repair should not run" })) satisfies RepairCall,
-      fetchArticle: (async (url) => fetched(url)) satisfies FetchCall,
+      fetchArticle: (async (url) =>
+        fetched(
+          url,
+          FRESH_DATE,
+          officialEvidenceForGeneratedFixture(),
+        )) satisfies FetchCall,
     },
   });
   assert.equal(recovered.ok, true, recovered.reason);
@@ -1510,14 +1670,14 @@ function publicationDateExtraction(): void {
 async function protectedFetchDiagnostics(): Promise<void> {
   const insecure = await fetchArticleText("http://www.reuters.com/article", {
     allowedDomains: ["reuters.com"],
-    timeoutMs: 1_000,
+    timeoutMs: 2_000,
   });
   assert.equal(insecure.diagnostic.code, "blocked-url");
   assert.match(insecure.diagnostic.message, /approved HTTPS host boundary/);
 
   const privateAddress = await fetchArticleText("https://127.0.0.1/article", {
     allowedDomains: ["127.0.0.1"],
-    timeoutMs: 1_000,
+    timeoutMs: 2_000,
   });
   assert.equal(privateAddress.diagnostic.code, "blocked-url");
   assert.match(privateAddress.diagnostic.message, /non-public address/);

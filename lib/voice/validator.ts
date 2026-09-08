@@ -144,6 +144,11 @@ export interface DraftArticle {
   citations: Array<{ source: string; url: string; accessedAt?: string }>;
   /** "news" | "insight" | "area" */
   tier: "news" | "insight" | "area";
+  /** Governed market labels used only to derive an exact contextual CTA. */
+  market?: readonly string[];
+  /** Reader-visible CTA copy. It is checked for voice and pressure tactics,
+   * but it is not treated as a factual claim requiring source entailment. */
+  cta?: { label?: string };
 }
 
 export interface ValidationResult {
@@ -168,11 +173,80 @@ export interface ValidationFailure {
   severity: "block" | "warn";
 }
 
+export interface CtaLabelValidation {
+  ok: boolean;
+  bannedHits: string[];
+  forbiddenReasons: string[];
+}
+
+const CTA_PRESSURE_PATTERN =
+  /\b(?:buy|invest|book|reserve|secure|act|enquire|register|sign\s+up)\s+(?:now|today|immediately)\b/iu;
+
+export const CANONICAL_SOURCE_FREE_CTA_LABELS = [
+  "Keep in view",
+  "Add to decision",
+  "Open my decision",
+  "Work with Raj",
+  "Discuss your real estate decision with Raj",
+  "Get the institutional read — work with Raj",
+] as const;
+
+/** Validate only the promotional/voice surface of a CTA label. Generic
+ * navigation copy is deliberately not sent through factual-source matching. */
+export function validateCtaLabel(
+  label: unknown,
+  markets: readonly string[] = [],
+): CtaLabelValidation {
+  if (label === undefined) {
+    return { ok: true, bannedHits: [], forbiddenReasons: [] };
+  }
+  if (typeof label !== "string" || label.trim().length < 1 || label.length > 240) {
+    return {
+      ok: false,
+      bannedHits: [],
+      forbiddenReasons: ["CTA label must contain 1-240 characters"],
+    };
+  }
+
+  const text = label.trim();
+  const lower = text.toLowerCase();
+  const allowedLabels = new Set<string>(CANONICAL_SOURCE_FREE_CTA_LABELS);
+  for (const market of markets) {
+    if (typeof market !== "string" || market.trim() !== market || !market) continue;
+    allowedLabels.add(`Discuss your ${market} real estate decision with Raj`);
+    allowedLabels.add(`Open your ${market} real estate decision`);
+  }
+  const bannedHits = BANNED_LEXICON.filter((word) =>
+    lower.includes(word.toLowerCase()),
+  );
+  const forbiddenReasons = FORBIDDEN_PATTERNS.filter(({ pattern }) =>
+    pattern.test(text),
+  ).map(({ reason }) => reason);
+  if (text !== label || !allowedLabels.has(text)) {
+    forbiddenReasons.push("CTA label is outside the approved source-free product language");
+  }
+  if (CTA_PRESSURE_PATTERN.test(text)) {
+    forbiddenReasons.push("Transactional urgency in CTA label");
+  }
+
+  return {
+    ok: bannedHits.length === 0 && forbiddenReasons.length === 0,
+    bannedHits: [...bannedHits],
+    forbiddenReasons: [...new Set(forbiddenReasons)],
+  };
+}
+
 /* ─── The gates ─────────────────────────────────────────────────────── */
 
 export function validateDraft(article: DraftArticle): ValidationResult {
   const failures: ValidationFailure[] = [];
-  const allText = [article.title, article.subtitle ?? "", article.body]
+  const ctaValidation = validateCtaLabel(article.cta?.label, article.market);
+  const allText = [
+    article.title,
+    article.subtitle ?? "",
+    article.body,
+    article.cta?.label ?? "",
+  ]
     .join("\n\n")
     .toLowerCase();
   const bodyLower = article.body.toLowerCase();
@@ -185,6 +259,14 @@ export function validateDraft(article: DraftArticle): ValidationResult {
       gate: 1,
       name: "Banned lexicon",
       detail: `Found banned term(s): ${bannedHits.join(", ")}`,
+      severity: "block",
+    });
+  }
+  if (ctaValidation.forbiddenReasons.length > 0) {
+    failures.push({
+      gate: 6,
+      name: "CTA voice and safety",
+      detail: ctaValidation.forbiddenReasons.join(", "),
       severity: "block",
     });
   }

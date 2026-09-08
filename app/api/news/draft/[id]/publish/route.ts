@@ -7,6 +7,7 @@
 import { NextRequest } from "next/server";
 
 import { NEWS_ARTICLES } from "@/content/news";
+import { dubaiCalendarDate } from "@/lib/dubai-time";
 import { assessDraft } from "@/lib/news-review/auto-approve";
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import { assertPublishedCorrectionLineage } from "@/lib/news-review/correction";
@@ -37,6 +38,11 @@ import {
   updateReviewedDraft,
   validateArticle,
 } from "@/lib/news-review/storage";
+import { validatedDubaiMorningDate } from "@/lib/news-scheduler/day";
+import {
+  KvAutomatedPublicationDayLedger,
+  type AutomatedPublicationDayIdentity,
+} from "@/lib/news-scheduler/publication-day-ledger";
 import { privateJson, readJsonBody } from "@/lib/security/mutation";
 
 export const runtime = "nodejs";
@@ -55,6 +61,8 @@ interface PublishRequest {
   expectedContentHash?: unknown;
   mediaApprovalHash?: unknown;
   evidenceApprovalHash?: unknown;
+  automatedMorningLane?: unknown;
+  requiredPublishedDubaiDate?: unknown;
 }
 
 function validHash(value: unknown): value is string {
@@ -70,7 +78,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
   try {
     const draft = await getDraft(id);
-    const assessment = draft ? assessDraft(draft) : null;
+    const assessment = draft
+      ? assessDraft(draft, { autoPublicationAt: new Date() })
+      : null;
     const blockers: string[] = [];
     const storageBackend = getStorageBackend();
     if (!githubConfigured()) blockers.push("github-not-configured");
@@ -120,6 +130,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return privateJson({ error: auth.message }, auth.status ?? 401);
   }
   const automated = auth.credential === "server-secret";
+  const autoPublicationAt = automated ? new Date() : undefined;
   if (!githubConfigured()) {
     return privateJson(
       {
@@ -143,6 +154,60 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   });
   if (!parsed.ok) return parsed.response;
   const body = parsed.value;
+  if (
+    !automated &&
+    (body.automatedMorningLane !== undefined ||
+      body.requiredPublishedDubaiDate !== undefined)
+  ) {
+    return privateJson(
+      { error: "Automated morning publication fields require server authentication." },
+      400,
+    );
+  }
+  if (
+    automated &&
+    body.automatedMorningLane !== undefined &&
+    typeof body.automatedMorningLane !== "boolean"
+  ) {
+    return privateJson(
+      { error: "automatedMorningLane must be a boolean when supplied." },
+      400,
+    );
+  }
+  let automatedMorningDate: string | null = null;
+  if (automated && body.automatedMorningLane === true) {
+    if (typeof body.requiredPublishedDubaiDate !== "string") {
+      return privateJson(
+        {
+          error:
+            "The automated morning lane requires requiredPublishedDubaiDate.",
+        },
+        400,
+      );
+    }
+    try {
+      automatedMorningDate = validatedDubaiMorningDate(
+        body.requiredPublishedDubaiDate,
+        autoPublicationAt,
+      );
+    } catch {
+      return privateJson(
+        {
+          error:
+            "The automated morning publication date must match the current Dubai calendar date.",
+        },
+        409,
+      );
+    }
+  } else if (body.requiredPublishedDubaiDate !== undefined) {
+    return privateJson(
+      {
+        error:
+          "requiredPublishedDubaiDate is valid only for the automated morning lane.",
+      },
+      400,
+    );
+  }
   if (!automated && (
     typeof body.expectedRevision !== "number" ||
     !Number.isSafeInteger(body.expectedRevision) ||
@@ -164,9 +229,37 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   }
 
   let stage: PublicationStage = "draft-read";
+  let automatedDay:
+    | {
+        ledger: KvAutomatedPublicationDayLedger;
+        identity: AutomatedPublicationDayIdentity;
+        token: string;
+      }
+    | undefined;
+  let automatedCommitBoundaryCrossed = false;
   try {
     let draft = await getDraft(id);
     if (!draft) return privateJson({ error: "Draft not found." }, 404);
+    if (automatedMorningDate) {
+      let articleDubaiDate: string;
+      try {
+        articleDubaiDate = dubaiCalendarDate(draft.article.publishedAt);
+      } catch {
+        return privateJson(
+          { error: "The automated draft has an invalid publication timestamp." },
+          422,
+        );
+      }
+      if (articleDubaiDate !== automatedMorningDate) {
+        return privateJson(
+          {
+            error:
+              "The automated draft does not belong to the required Dubai publication date.",
+          },
+          409,
+        );
+      }
+    }
     await assertPublishedCorrectionLineage(draft);
     const existingPublication = draft.publication;
     if (
@@ -243,7 +336,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         );
         if (!revised) return privateJson({ error: "Draft not found." }, 404);
 
-        const revisedAssessment = assessDraft(revised);
+        const revisedAssessment = assessDraft(revised, { autoPublicationAt });
         if (revisedAssessment.verdict !== "auto-approve") {
           return privateJson(
             {
@@ -311,7 +404,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     stage = "evidence-validation";
-    const assessment = assessDraft({ ...draft, validator });
+    const assessment = assessDraft(
+      { ...draft, validator },
+      { autoPublicationAt },
+    );
     if (assessment.verdict !== "auto-approve") {
       return privateJson(
         {
@@ -404,6 +500,54 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    if (automatedMorningDate) {
+      const identity: AutomatedPublicationDayIdentity = {
+        morningDate: automatedMorningDate,
+        draftId: draft.id,
+        revision: draft.revision,
+        contentHash: draft.contentHash,
+      };
+      const ledger = new KvAutomatedPublicationDayLedger(process.env);
+      const dayClaim = await ledger.claim(identity);
+      if (dayClaim.status === "unavailable") {
+        return privateJson(
+          {
+            error:
+              "Automated publication is disabled because its durable Dubai-day ledger is unavailable.",
+          },
+          503,
+        );
+      }
+      if (dayClaim.status === "conflict") {
+        return privateJson(
+          {
+            error:
+              "An automated morning publication is already reserved for this Dubai date.",
+          },
+          409,
+        );
+      }
+      if (dayClaim.status === "busy") {
+        return privateJson(
+          {
+            error:
+              "This exact automated morning publication already has an active owner.",
+          },
+          409,
+        );
+      }
+      if (dayClaim.status === "completed") {
+        return privateJson(
+          {
+            error:
+              "This automated morning publication is already complete for the Dubai date.",
+          },
+          409,
+        );
+      }
+      automatedDay = { ledger, identity, token: dayClaim.token };
+    }
+
     stage = "publication-claim";
     const claim = await claimDraftPublication(id, {
       revision: draft.revision,
@@ -422,6 +566,40 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         existing.commitSha &&
         existing.url
       ) {
+        let automatedDayCompleted: boolean | null = null;
+        if (automatedDay) {
+          const idempotentCommitStart =
+            await automatedDay.ledger.markCommitStarted(
+              automatedDay.identity,
+              automatedDay.token,
+            );
+          if (idempotentCommitStart !== "started") {
+            return privateJson(
+              {
+                error:
+                  idempotentCommitStart === "unavailable"
+                    ? "Automated publication stopped because its durable Dubai-day commit barrier is unavailable."
+                    : "Automated publication stopped because its Dubai-day reservation ownership expired.",
+              },
+              idempotentCommitStart === "unavailable" ? 503 : 409,
+            );
+          }
+          // The exact immutable draft is already committed. Close this day's
+          // reservation with that real receipt before returning idempotently.
+          automatedCommitBoundaryCrossed = true;
+          automatedDayCompleted = await automatedDay.ledger.complete(
+            automatedDay.identity,
+            automatedDay.token,
+            {
+              draftId: claim.draft.id,
+              slug: claim.draft.article.slug,
+              claimId: existing.claimId,
+              commitSha: existing.commitSha,
+              url: existing.url,
+              completedAt: new Date().toISOString(),
+            },
+          );
+        }
         return privateJson({
           ok: true,
           slug: draft.article.slug,
@@ -430,6 +608,14 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           claimId: existing.claimId,
           publicationState: "committed-awaiting-deployment-verification",
           idempotent: true,
+          automatedMorningPublication: automatedDay
+            ? {
+                date: automatedDay.identity.morningDate,
+                state: automatedDayCompleted
+                  ? "completed"
+                  : "commit-started",
+              }
+            : null,
         });
       }
       const startedAt = Date.parse(existing?.startedAt ?? "");
@@ -452,6 +638,26 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       throw new DraftConflictError("Publication claim was not persisted.");
     }
     const slug = draft.article.slug;
+    if (automatedDay) {
+      const commitStart = await automatedDay.ledger.markCommitStarted(
+        automatedDay.identity,
+        automatedDay.token,
+      );
+      if (commitStart !== "started") {
+        return privateJson(
+          {
+            error:
+              commitStart === "unavailable"
+                ? "Automated publication stopped because its durable Dubai-day commit barrier is unavailable."
+                : "Automated publication stopped because its Dubai-day reservation ownership expired.",
+          },
+          commitStart === "unavailable" ? 503 : 409,
+        );
+      }
+      // Never release the day after this point. A GitHub error can be an
+      // ambiguous response to a commit that actually succeeded.
+      automatedCommitBoundaryCrossed = true;
+    }
     stage = "github-commit";
     const commitSha = await publishArticleCommit(
       slug,
@@ -468,6 +674,20 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       commitSha,
       url,
     );
+    const automatedDayCompleted = automatedDay
+      ? await automatedDay.ledger.complete(
+          automatedDay.identity,
+          automatedDay.token,
+          {
+            draftId: draft.id,
+            slug,
+            claimId: publication.claimId,
+            commitSha,
+            url,
+            completedAt: new Date().toISOString(),
+          },
+        )
+      : null;
 
     return privateJson(
       {
@@ -477,6 +697,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         commitSha,
         claimId: publication.claimId,
         publicationState: "committed-awaiting-deployment-verification",
+        automatedMorningPublication: automatedDay
+          ? {
+              date: automatedDay.identity.morningDate,
+              state: automatedDayCompleted ? "completed" : "commit-started",
+            }
+          : null,
         searchSubmission: {
           state: "pending-explicit-operation",
           message:
@@ -506,5 +732,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       },
       diagnostic.code === "draft-storage-unavailable" ? 503 : 502,
     );
+  } finally {
+    if (automatedDay && !automatedCommitBoundaryCrossed) {
+      await automatedDay.ledger.releaseBeforeCommit(
+        automatedDay.identity,
+        automatedDay.token,
+        `pre-commit-${stage}`,
+      );
+    }
   }
 }

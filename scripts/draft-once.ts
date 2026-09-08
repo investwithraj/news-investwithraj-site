@@ -31,6 +31,7 @@ import {
 } from "./lib/news-cron-outcome.js";
 import { selectDraftClusters } from "../lib/news-review/manual-candidate.js";
 import { assertCuratedPublicationOutcome } from "../lib/news-review/curated-candidates.js";
+import { guardAutomatedMorningPublication } from "../lib/news-scheduler/coverage.js";
 
 const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
@@ -105,7 +106,9 @@ async function markClusterFailed(
   }
 }
 
-async function runPublicationPass(): Promise<AutoApproveSummary | null> {
+async function runPublicationPass(
+  requiredPublishedDubaiDate?: string,
+): Promise<AutoApproveSummary | null> {
   const curatedPublication = process.env.CURATED_PUBLICATION === "1";
   const targetDraftId = process.env.AUTO_APPROVE_TARGET_DRAFT_ID;
   const targetContentHash = process.env.AUTO_APPROVE_TARGET_CONTENT_HASH;
@@ -144,6 +147,8 @@ async function runPublicationPass(): Promise<AutoApproveSummary | null> {
     ),
     targetDraftId: curatedPublication ? targetDraftId : undefined,
     targetContentHash: curatedPublication ? targetContentHash : undefined,
+    requiredPublishedDubaiDate,
+    automatedMorningLane: requiredPublishedDubaiDate !== undefined,
   });
   console.log(
     `publication: ${summary.published} committed, ${summary.held} held, ${summary.deferred} deferred, ${summary.failed} failed`,
@@ -175,12 +180,31 @@ function errorMessage(error: unknown): string {
 
 async function executePipeline(state: RunState): Promise<void> {
   const runNow = new Date();
+  const morningGuard = await guardAutomatedMorningPublication({
+    environment: process.env,
+    now: runNow,
+    site: SITE,
+    repositoryArticles: NEWS_ARTICLES,
+  });
+  if (morningGuard.automated && morningGuard.covered) {
+    console.log(
+      `automated morning lane already covered for ${morningGuard.morningDate}; paid research and publication skipped`,
+    );
+    return;
+  }
+  if (morningGuard.automated) {
+    console.log(
+      `automated morning lane open for ${morningGuard.morningDate}; one evidence-gated publication remains permitted`,
+    );
+  }
   if (new TextEncoder().encode(SECRET).byteLength < 32) {
     throw new Error("A strong POST_PUBLISH_SECRET is required.");
   }
   if (process.env.DRAFT_ENABLED === "0") {
     console.log("publication-only run: paid drafting and source ingestion skipped");
-    state.publication = await runPublicationPass();
+    state.publication = await runPublicationPass(
+      morningGuard.automated ? morningGuard.morningDate : undefined,
+    );
     return;
   }
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -355,7 +379,24 @@ async function executePipeline(state: RunState): Promise<void> {
     `done: ${state.staged} staged from ${state.attempts} attempt(s)`,
   );
 
-  state.publication = await runPublicationPass();
+  if (morningGuard.automated) {
+    const finalMorningGuard = await guardAutomatedMorningPublication({
+      environment: process.env,
+      now: new Date(),
+      site: SITE,
+      repositoryArticles: NEWS_ARTICLES,
+    });
+    if (finalMorningGuard.automated && finalMorningGuard.covered) {
+      console.log(
+        `automated morning lane became covered for ${finalMorningGuard.morningDate}; publication skipped after final coverage check`,
+      );
+      return;
+    }
+  }
+
+  state.publication = await runPublicationPass(
+    morningGuard.automated ? morningGuard.morningDate : undefined,
+  );
 }
 
 async function main(): Promise<void> {

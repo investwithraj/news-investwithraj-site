@@ -711,6 +711,13 @@ async function main(): Promise<void> {
   const backendMap = source("docs/BACKEND-MAP.md");
   const workflow = source(".github/workflows/news-cron.yml");
   const draftOnce = source("scripts/draft-once.ts");
+  const vercelConfig = source("vercel.json");
+  const watchdogRoute = source("app/api/cron/news-watchdog/route.ts");
+  const schedulerLedger = source("lib/news-scheduler/ledger.ts");
+  const schedulerWatchdog = source("lib/news-scheduler/watchdog.ts");
+  const publicationDayLedger = source(
+    "lib/news-scheduler/publication-day-ledger.ts",
+  );
   const publishRoute = source("app/api/news/draft/[id]/publish/route.ts");
   const lifecycleRelease = source("docs/migration/newsroom-lifecycle-release.md");
   for (const document of [launch, runbook, backendMap]) {
@@ -757,6 +764,14 @@ async function main(): Promise<void> {
   assert.equal(
     workflowEnvironmentLine(workflow, "AUTO_PUBLISH_LIMIT"),
     'AUTO_PUBLISH_LIMIT: "1"',
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "AUTOMATED_MORNING_LANE"),
+    "AUTOMATED_MORNING_LANE: ${{ github.event_name == 'schedule' && '1' || (inputs.morning_date != '' && '1' || '0') }}",
+  );
+  assert.equal(
+    workflowEnvironmentLine(workflow, "MORNING_DATE"),
+    "MORNING_DATE: ${{ inputs.morning_date || '' }}",
   );
   assert.equal(
     workflowEnvironmentLine(workflow, "AUTO_APPROVE_TARGET_DRAFT_ID"),
@@ -844,7 +859,93 @@ async function main(): Promise<void> {
     draftOnce,
     /assertCuratedPublicationOutcome\([\s\S]{0,100}?curatedCandidateKey \?\? "",[\s\S]{0,100}?targetSlug \?\? "",[\s\S]{0,100}?summary/u,
   );
+  assert.equal(
+    (workflow.match(/cron: "37 1 \* \* \*"/gu) ?? []).length,
+    1,
+    "The primary GitHub run must remain at 05:37 Asia/Dubai.",
+  );
+  assert.equal(
+    (workflow.match(/cron: "17 5 \* \* \*"/gu) ?? []).length,
+    1,
+    "The recovery GitHub run must remain at 09:17 Asia/Dubai.",
+  );
+  assert.match(workflow, /group: news-cron-production/u);
+  assert.match(workflow, /morning_date:[\s\S]{0,260}?type: string/u);
+  assert.match(workflow, /npx tsx scripts\/test-news-scheduler\.ts/u);
+  assert.doesNotMatch(workflow, /cron: "7 3 \* \* \*"/u);
+  assert.deepEqual(JSON.parse(vercelConfig).crons, [
+    { path: "/api/cron/news-watchdog", schedule: "17 3 * * *" },
+  ]);
+  assert.match(
+    watchdogRoute,
+    /authorizeServerMutation\(request, \{ allowCronBearer: true \}\)/u,
+  );
+  assert.match(watchdogRoute, /auth\.credential !== "cron"/u);
+  assert.match(schedulerWatchdog, /ENABLE_NEWS_WATCHDOG === "1"/u);
+  assert.match(schedulerWatchdog, /GITHUB_ACTIONS_DISPATCH_TOKEN/u);
+  assert.match(
+    schedulerWatchdog,
+    /inputs: \{ morning_date: input\.morningDate \}/u,
+  );
+  assert.match(schedulerWatchdog, /ref: NEWS_WORKFLOW_REF/u);
+  assert.match(schedulerLedger, /status = "dispatched"/u);
+  assert.match(schedulerLedger, /status = "completed"/u);
+  assert.match(schedulerLedger, /status = "retryable"/u);
+  assert.match(publicationDayLedger, /current\.status == "committing"/u);
+  assert.match(publicationDayLedger, /current\.status = "retryable"/u);
+  assert.match(publicationDayLedger, /current\.status = "completed"/u);
+  assert.match(
+    publicationDayLedger,
+    /if current\.status == "completed" then return 2 end/u,
+    "A completed Dubai-day receipt must remain immutable.",
+  );
+  assert.match(draftOnce, /guardAutomatedMorningPublication/u);
+  assert.match(draftOnce, /repositoryArticles: NEWS_ARTICLES/u);
+  assert.equal(
+    (draftOnce.match(/guardAutomatedMorningPublication\(/gu) ?? []).length,
+    2,
+    "The automated lane must recheck coverage immediately before publication.",
+  );
+  assert.match(
+    draftOnce,
+    /morningGuard\.automated && morningGuard\.covered[\s\S]{0,220}?return;/u,
+  );
+  assert.match(
+    draftOnce,
+    /const finalMorningGuard = await guardAutomatedMorningPublication\([\s\S]{0,300}?repositoryArticles: NEWS_ARTICLES[\s\S]{0,300}?finalMorningGuard\.automated && finalMorningGuard\.covered[\s\S]{0,220}?return;/u,
+  );
+  assert.match(
+    draftOnce,
+    /runAutoApprove\(\{[\s\S]{0,900}?requiredPublishedDubaiDate,/u,
+  );
   assert.match(publishRoute, /const automated = auth\.credential === "server-secret"/u);
+  const dayClaimIndex = publishRoute.indexOf("await ledger.claim(identity)");
+  const draftClaimIndex = publishRoute.indexOf("await claimDraftPublication(id");
+  const idempotentBranchIndex = publishRoute.indexOf(
+    "claimedEvidence &&",
+    draftClaimIndex,
+  );
+  const idempotentCompletionIndex = publishRoute.indexOf(
+    "automatedDayCompleted = await automatedDay.ledger.complete",
+    idempotentBranchIndex,
+  );
+  const commitBarrierIndex = publishRoute.indexOf(
+    "await automatedDay.ledger.markCommitStarted",
+    idempotentCompletionIndex,
+  );
+  const githubCommitIndex = publishRoute.indexOf("await publishArticleCommit(");
+  assert.ok(dayClaimIndex >= 0);
+  assert.ok(draftClaimIndex > dayClaimIndex);
+  assert.ok(idempotentBranchIndex > draftClaimIndex);
+  assert.ok(idempotentCompletionIndex > idempotentBranchIndex);
+  assert.ok(commitBarrierIndex > draftClaimIndex);
+  assert.ok(githubCommitIndex > commitBarrierIndex);
+  assert.match(publishRoute, /dayClaim\.status === "busy"[\s\S]{0,260}?409/u);
+  assert.match(
+    publishRoute,
+    /finally \{[\s\S]{0,180}?automatedDay && !automatedCommitBoundaryCrossed[\s\S]{0,220}?releaseBeforeCommit/u,
+    "Only a definite pre-GitHub failure may reopen the immutable draft reservation.",
+  );
   assert.match(lifecycleRelease, /direct 410[\s\S]{0,20}?Gone response/iu);
 
   process.env[NEWSROOM_LIFECYCLE_CUTOVER_ENV] = "1";
@@ -958,6 +1059,19 @@ async function main(): Promise<void> {
       automatedPublication:
         "server-secret permitted only after the deterministic evidence policy passes",
       liveReleaseClaim: "blocked until external infrastructure and deployment are separately proven",
+    },
+    morningScheduler: {
+      enabledByDefault: false,
+      enableEnvironment: "ENABLE_NEWS_WATCHDOG=1",
+      githubUtcSchedules: ["37 1 * * *", "17 5 * * *"],
+      dubaiSchedules: ["05:37", "09:17"],
+      vercelWatchdogUtcSchedule: "17 3 * * *",
+      vercelWatchdogDubaiSchedule: "07:17",
+      heavyExecution: "GitHub Actions only",
+      maxWebsitePublicationsPerAutomatedDubaiDay: 1,
+      publishBoundaryEnforcement:
+        "atomic durable Dubai-day owner lease and commit-start barrier",
+      socialDistribution: false,
     },
     cutoverOff: {
       sitemapCount: cutoverOff.sitemapPaths.length,

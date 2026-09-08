@@ -5,13 +5,15 @@
 //   1. the 8-gate voice validator passes              (draft.validator.ok)
 //   2. every evidence record proves it was explicitly dated and fresh at the
 //      immutable direct-fetch/staging clock
-//   3. evidence satisfies the risk-based publisher policy: a strictly
+//   3. every unattended publication rechecks draft and evidence recency at its
+//      actual publication clock, without silently refetching or rewriting it
+//   4. evidence satisfies the risk-based publisher policy: a strictly
 //      attributed official fact may use its one authoritative primary source;
 //      analysis, comparisons, forecasts and recommendations require two
 //      independent approved canonical parent publishers
-//   4. EVERY figure in reader-visible model-controlled text appears in fetched
+//   5. EVERY figure in reader-visible model-controlled text appears in fetched
 //      evidence as the same contextual numeric tuple
-//   5. SAFETY GUARD: a statistical signal the figure parser did not capture
+//   6. SAFETY GUARD: a statistical signal the figure parser did not capture
 //      holds the draft rather than permitting a vacuous pass.
 // Anything that fails any check → "manual". Deliberately conservative: a figure
 // we cannot match is a reason to hold the draft.
@@ -26,7 +28,10 @@ import {
   isOfficialDeveloperUrl,
   type VerifiedSource,
 } from "@/lib/sources/registry";
+import { validateCtaLabel } from "@/lib/voice/validator";
 import { findNewsDraftQuarantine } from "./draft-quarantine";
+import { assessClaimSupport } from "./claim-support";
+import { dubaiCalendarDate } from "@/lib/dubai-time";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
 export const MAX_AUTO_NEWS_SOURCE_AGE_HOURS = 7 * 24;
@@ -294,7 +299,7 @@ export function classifyEvidenceRisk(
   return { requiresCorroboration: false, reason: null };
 }
 
-function normalizedPublisherAliases(identity: ApprovedPublisherIdentity): string[] {
+export function normalizedPublisherAliases(identity: ApprovedPublisherIdentity): string[] {
   const base = identity.name
     .replace(/\s*[—–-]\s*.*$/u, "")
     .replace(/\s*\([^)]*\)\s*$/u, "")
@@ -652,8 +657,87 @@ function exactIsoMilliseconds(value: unknown): number | null {
     : null;
 }
 
-/** Recompute the immutable staging-time freshness decision. Current publish
- * time is intentionally absent so a held-but-valid backlog does not age out. */
+export interface AutoPublicationRecency {
+  ok: boolean;
+  reasons: string[];
+}
+
+/** Re-evaluate recency at the actual automated publication clock without
+ * refetching. A source that was fresh when staged may no longer be fresh when
+ * an unattended run reaches it, so both the draft and its immutable evidence
+ * timestamps must remain inside the existing evidence-policy window. */
+export function assessAutoPublicationRecency(
+  draft: Pick<NewsDraft, "article" | "provenance"> &
+    Partial<Pick<NewsDraft, "createdAt">>,
+  publicationAt: Date,
+): AutoPublicationRecency {
+  const reasons: string[] = [];
+  const publicationMilliseconds = publicationAt.getTime();
+  if (!Number.isFinite(publicationMilliseconds)) {
+    return {
+      ok: false,
+      reasons: ["auto-publication clock is invalid"],
+    };
+  }
+
+  const checkAge = (
+    label: string,
+    value: unknown,
+    maxAgeHours: number,
+  ): void => {
+    const timestamp = exactIsoMilliseconds(value);
+    if (timestamp === null) {
+      reasons.push(`${label} timestamp is missing or invalid`);
+      return;
+    }
+    const ageHours = (publicationMilliseconds - timestamp) / 3_600_000;
+    if (ageHours < 0) {
+      reasons.push(
+        `${label} timestamp is ${Math.abs(ageHours).toFixed(1)}h after the auto-publication clock`,
+      );
+      return;
+    }
+    if (ageHours > maxAgeHours) {
+      reasons.push(
+        `${label} is ${ageHours.toFixed(1)}h old at auto-publication (maximum ${maxAgeHours}h)`,
+      );
+    }
+  };
+
+  checkAge(
+    "draft creation",
+    draft.createdAt,
+    MAX_AUTO_NEWS_SOURCE_AGE_HOURS,
+  );
+  checkAge(
+    "article publication",
+    draft.article.publishedAt,
+    MAX_AUTO_NEWS_SOURCE_AGE_HOURS,
+  );
+
+  for (const evidence of draft.provenance.fetchedEvidence ?? []) {
+    const storedFreshness = assessStoredEvidenceFreshness(evidence);
+    if (!storedFreshness.ok) continue;
+    const maxAgeHours = evidence.freshnessMaxAgeHours as number;
+    const identity = (evidence.finalUrl ?? evidence.url).slice(0, 180);
+    checkAge(
+      `source publication for ${identity}`,
+      evidence.sourcePublishedAt,
+      maxAgeHours,
+    );
+    checkAge(
+      `direct-fetched evidence for ${identity}`,
+      evidence.fetchedAt,
+      maxAgeHours,
+    );
+  }
+
+  return { ok: reasons.length === 0, reasons };
+}
+
+/** Recompute the immutable staging-time freshness decision. Automated
+ * publication adds a separate current-clock check through
+ * assessAutoPublicationRecency; manual review can still inspect an old packet. */
 export function assessStoredEvidenceFreshness(
   evidence: StoredEvidence,
 ): StoredEvidenceFreshness {
@@ -783,6 +867,9 @@ export interface AutoApproveAssessment {
   evidenceLane: EvidenceLane;
   requiredPublisherCount: 1 | 2;
   figureCount: number;
+  claimSupportCheckedClauseCount: number;
+  unsupportedClaimCount: number;
+  unusedEvidenceCount: number;
   /** Figures present in publishable fields but absent from fetched evidence. */
   amberFigures: string[];
   /** Human-readable reasons a draft was held for manual review (empty = approve). */
@@ -1160,7 +1247,8 @@ export function canonicalizeEvidenceNumericPhrases(
 
 export function assessDraft(
   draft: Pick<NewsDraft, "id" | "article" | "validator" | "provenance"> &
-    Partial<Pick<NewsDraft, "contentHash">>,
+    Partial<Pick<NewsDraft, "contentHash" | "createdAt">>,
+  opts: { autoPublicationAt?: Date } = {},
 ): AutoApproveAssessment {
   const reasons: string[] = [];
   const { article, validator, provenance } = draft;
@@ -1173,13 +1261,32 @@ export function assessDraft(
   }
 
   // 1 · the 8 gates
-  const gatesOk = validator.ok;
+  const ctaValidation = validateCtaLabel(article.cta?.label, article.market);
+  const gatesOk = validator.ok && ctaValidation.ok;
   if (!gatesOk) {
-    const blocked = validator.failures
-      .filter((f) => f.severity === "block")
-      .map((f) => f.name)
-      .join(", ");
+    const blocked = [
+      ...validator.failures
+        .filter((f) => f.severity === "block")
+        .map((f) => f.name),
+      ...(ctaValidation.ok
+        ? []
+        : [
+            `CTA voice and safety (${[
+              ...ctaValidation.bannedHits.map((hit) => `banned term: ${hit}`),
+              ...ctaValidation.forbiddenReasons,
+            ].join(", ")})`,
+          ]),
+    ].join(", ");
     reasons.push(`fails gates: ${blocked || "unknown"}`);
+  }
+
+  if (opts.autoPublicationAt) {
+    const recency = assessAutoPublicationRecency(draft, opts.autoPublicationAt);
+    reasons.push(
+      ...recency.reasons.map(
+        (reason) => `auto-publication freshness failed: ${reason}`,
+      ),
+    );
   }
 
   const citationUrls = new Set(article.citations.map((citation) => citation.url));
@@ -1251,6 +1358,44 @@ export function assessDraft(
   const claimTexts = articleEvidenceSegments(article).map(
     (segment) => segment.text,
   );
+  const claimSupport = assessClaimSupport({
+    segments: articleEvidenceSegments(article).filter(
+      ({ field }) => !/\.q$/u.test(field),
+    ),
+    evidence: fetchedEvidence.map((evidence) => {
+      const finalUrl = evidence.finalUrl ?? evidence.url;
+      const identity =
+        approvedPublisherIdentity(finalUrl) ??
+        approvedPublisherIdentity(evidence.url);
+      return {
+        url: evidence.url,
+        text: evidence.text,
+        publisher: identity?.name ?? finalUrl,
+        publisherDomain:
+          approvedEvidencePublisherDomain(evidence.url, evidence.finalUrl) ??
+          `invalid:${evidence.url}`,
+        publisherAliases: identity ? normalizedPublisherAliases(identity) : [],
+      };
+    }),
+  });
+  if (claimSupport.failures.length > 0) {
+    reasons.push(
+      `${claimSupport.failures.length} factual/editorial clause(s) are not anchor-supported: ${claimSupport.failures
+        .slice(0, 6)
+        .map(
+          (failure) =>
+            `${failure.field} [${failure.code}] ${failure.detail}: ${failure.clause}`,
+        )
+        .join(" · ")}`,
+    );
+  }
+  if (claimSupport.unusedEvidenceUrls.length > 0) {
+    reasons.push(
+      `${claimSupport.unusedEvidenceUrls.length} cited fetched-evidence source(s) support no factual clause: ${claimSupport.unusedEvidenceUrls
+        .slice(0, 5)
+        .join(" · ")}`,
+    );
+  }
   const figures = [
     ...new Set(claimTexts.flatMap((text) => extractFigures(text))),
   ];
@@ -1293,6 +1438,9 @@ export function assessDraft(
     evidenceLane: policy.lane,
     requiredPublisherCount: policy.requiredPublisherCount,
     figureCount: figures.length,
+    claimSupportCheckedClauseCount: claimSupport.checkedClauseCount,
+    unsupportedClaimCount: claimSupport.failures.length,
+    unusedEvidenceCount: claimSupport.unusedEvidenceUrls.length,
     amberFigures,
     reasons,
   };
@@ -1341,6 +1489,8 @@ function holdReasonCategory(reason: string): string {
   if (/digit-bearing span|figure parser/iu.test(reason)) {
     return "unparsed-numeric-claim";
   }
+  if (/not anchor-supported/iu.test(reason)) return "unsupported-factual-claim";
+  if (/support no factual clause/iu.test(reason)) return "unused-cited-evidence";
   if (/not explicitly attributed/iu.test(reason)) {
     return "official-attribution";
   }
@@ -1385,6 +1535,9 @@ export function selectAutoApproveEligibleDrafts(
     publishOrder?: "newest" | "backlog";
     backlogMinAgeHours?: number;
     backlogMaxAgeDays?: number;
+    /** Automated morning lane only: publish drafts carrying this exact Dubai
+     * calendar date. Omitted for curated/manual reconciliation. */
+    requiredPublishedDubaiDate?: string;
     now?: Date;
   } = {},
 ): NewsDraft[] {
@@ -1404,6 +1557,28 @@ export function selectAutoApproveEligibleDrafts(
       throw new Error("The targeted draft content hash no longer matches.");
     }
     candidates = [matched];
+  }
+
+  if (opts.requiredPublishedDubaiDate !== undefined) {
+    const requiredDate = opts.requiredPublishedDubaiDate;
+    const parsedRequiredDate = /^\d{4}-\d{2}-\d{2}$/u.test(requiredDate)
+      ? new Date(`${requiredDate}T00:00:00.000Z`)
+      : new Date(Number.NaN);
+    if (
+      !Number.isFinite(parsedRequiredDate.getTime()) ||
+      parsedRequiredDate.toISOString().slice(0, 10) !== requiredDate
+    ) {
+      throw new Error(
+        "The required published Dubai date must be an exact YYYY-MM-DD calendar date.",
+      );
+    }
+    candidates = candidates.filter((draft) => {
+      try {
+        return dubaiCalendarDate(draft.article.publishedAt) === requiredDate;
+      } catch {
+        return false;
+      }
+    });
   }
 
   const publishOrder = opts.publishOrder ?? "newest";
@@ -1439,6 +1614,12 @@ export async function runAutoApprove(opts: {
   publishOrder?: "newest" | "backlog";
   backlogMinAgeHours?: number;
   backlogMaxAgeDays?: number;
+  /** Restricts unattended publication to drafts published on one exact Dubai
+   * calendar date. Curated/manual callers remain unchanged when omitted. */
+  requiredPublishedDubaiDate?: string;
+  /** Marks the bounded scheduled/watchdog lane so the publish endpoint can
+   * atomically enforce one automated publication for the Dubai day. */
+  automatedMorningLane?: boolean;
   /** Optional immutable target for a curated publication run. Both values are
    * required together; a mismatch fails instead of selecting another draft. */
   targetDraftId?: string;
@@ -1449,6 +1630,14 @@ export async function runAutoApprove(opts: {
   deploymentDelayMs?: number;
   log?: (msg: string) => void;
 }): Promise<AutoApproveSummary> {
+  if (
+    opts.automatedMorningLane === true &&
+    opts.requiredPublishedDubaiDate === undefined
+  ) {
+    throw new Error(
+      "The automated morning lane requires an exact published Dubai date.",
+    );
+  }
   const log = opts.log ?? ((m: string) => console.log(m));
   const base = opts.site.replace(/\/$/, "");
   const authHeaders = { "x-post-publish-secret": opts.secret };
@@ -1480,9 +1669,13 @@ export async function runAutoApprove(opts: {
     publishOrder,
     backlogMinAgeHours: opts.backlogMinAgeHours,
     backlogMaxAgeDays: opts.backlogMaxAgeDays,
+    requiredPublishedDubaiDate: opts.requiredPublishedDubaiDate,
     now: opts.now,
   });
-  const assessments = eligibleDrafts.map(assessDraft);
+  const autoPublicationAt = opts.now ?? new Date();
+  const assessments = eligibleDrafts.map((draft) =>
+    assessDraft(draft, { autoPublicationAt }),
+  );
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");
   const holdReasonCounts = summarizeHoldReasons(held);
@@ -1533,7 +1726,15 @@ export async function runAutoApprove(opts: {
             ...authHeaders,
             "content-type": "application/json",
           },
-          body: "{}",
+          body: JSON.stringify(
+            opts.automatedMorningLane === true
+              ? {
+                  automatedMorningLane: true,
+                  requiredPublishedDubaiDate:
+                    opts.requiredPublishedDubaiDate,
+                }
+              : {},
+          ),
         },
       );
     } catch (error) {

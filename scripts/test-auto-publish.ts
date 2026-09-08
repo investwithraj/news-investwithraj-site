@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 
 import {
+  articleEvidenceSegments,
   assessDraft,
+  assessAutoPublicationRecency,
   canonicalizeEvidenceNumericPhrases,
   classifyEvidenceRisk,
   extractFigures,
@@ -13,6 +15,7 @@ import type {
   NewsDraft,
   NewsDraftProvenance,
 } from "../lib/news-review/types.js";
+import { validateDraft } from "../lib/voice/validator.js";
 
 const sourceA = "https://www.reuters.com/world/middle-east/source-a";
 const sourceB =
@@ -20,7 +23,7 @@ const sourceB =
 const sourcePublishedAt = "2026-08-11T08:00:00.000Z";
 const freshnessCheckedAt = "2026-08-12T10:00:00.000Z";
 const evidence =
-  "The verified transaction value was AED 10 million according to the official record.";
+  "The record officially reported the transaction value at AED 10 million for the period.";
 
 type EvidenceRecord = NonNullable<
   NewsDraftProvenance["fetchedEvidence"]
@@ -46,14 +49,22 @@ function evidenceRecord(
 
 const draft = {
   id: "auto-publish-regression",
+  createdAt: "2026-08-12T10:00:00.000Z",
+  updatedAt: "2026-08-12T10:00:00.000Z",
   article: {
     slug: "2026-08-12-auto-publish-regression",
-    title: "Auto-publish regression",
-    body: "The verified transaction value was AED 10 million.",
+    title: "Transaction value record",
+    tier: "news",
+    market: ["Dubai"],
+    body: "The official record reported the transaction value at AED 10 million.",
     citations: [
       { source: "Source A", url: sourceA },
       { source: "Source B", url: sourceB },
     ],
+    cta: {
+      href: "https://investwithraj.com/engage?utm_source=news",
+      label: "Open my decision",
+    },
   },
   validator: {
     ok: true,
@@ -74,6 +85,8 @@ const draft = {
 const olderDraft = {
   ...draft,
   id: "auto-publish-regression-older",
+  createdAt: "2026-08-11T10:00:00.000Z",
+  updatedAt: "2026-08-11T10:00:00.000Z",
   article: {
     ...draft.article,
     slug: "2026-08-11-auto-publish-regression-older",
@@ -87,6 +100,8 @@ const olderDraft = {
 const staleDraft = {
   ...draft,
   id: "auto-publish-regression-stale",
+  createdAt: "2026-07-01T10:00:00.000Z",
+  updatedAt: "2026-07-01T10:00:00.000Z",
   article: {
     ...draft.article,
     slug: "2026-07-01-auto-publish-regression-stale",
@@ -102,15 +117,19 @@ draft.provenance.score = 50;
 
 const originalFetch = globalThis.fetch;
 const calls: string[] = [];
+const publishRequestBodies: Array<Record<string, unknown>> = [];
 let forcePublishFailure = false;
 let deploymentResponseMode: "completed" | "pending" | null = null;
-globalThis.fetch = async (input) => {
+globalThis.fetch = async (input, init) => {
   const url = String(input);
   calls.push(url);
   if (url.endsWith("/api/news/draft")) {
     return Response.json({ drafts: [staleDraft, olderDraft, draft] });
   }
   if (/\/api\/news\/draft\/[^/]+\/publish$/.test(url)) {
+    publishRequestBodies.push(
+      JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+    );
     if (forcePublishFailure) {
       return Response.json({ error: "simulated publication failure" }, { status: 503 });
     }
@@ -205,13 +224,20 @@ async function main() {
       body: "Dubai Land Department confirmed its own verified transaction value of AED 10 million.",
     });
     officialDraft.article.title =
-      "Dubai Land Department confirms its own regulatory update";
+      "Dubai Land Department confirms its registration service update";
+    officialDraft.provenance.fetchedEvidence![0].text =
+      "Dubai Land Department confirmed an updated registration service framework in its official record. Dubai Land Department confirmed the verified transaction value at AED 10 million in its own official record.";
     assert.equal(
       assessDraft(officialDraft).evidenceLane,
       "official-fact",
     );
     assert.equal(assessDraft(officialDraft).requiredPublisherCount, 1);
-    assert.equal(assessDraft(officialDraft).verdict, "auto-approve");
+    const officialAssessment = assessDraft(officialDraft);
+    assert.equal(
+      officialAssessment.verdict,
+      "auto-approve",
+      officialAssessment.reasons.join("; "),
+    );
 
     const exactQuarantinedDldDraft = {
       ...draft,
@@ -256,10 +282,11 @@ async function main() {
           "2026-09-07-dubai-land-department-launches-initial-registration-platform",
       },
     } as NewsDraft;
+    const correctedDldAssessment = assessDraft(correctedDldDraft);
     assert.equal(
-      assessDraft(correctedDldDraft).verdict,
+      correctedDldAssessment.verdict,
       "auto-approve",
-      "the separately reviewed corrected slug returns to normal assessment",
+      `the separately reviewed corrected slug returns to normal assessment: ${correctedDldAssessment.reasons.join("; ")}`,
     );
 
     for (const [id, claim] of [
@@ -320,13 +347,20 @@ async function main() {
       category: "launch",
       body: "Aldar announced its own verified transaction value of AED 10 million.",
     });
-    developerDraft.article.title = "Aldar announces its own project update";
+    developerDraft.article.title = "Aldar announces its project release";
+    developerDraft.provenance.fetchedEvidence![0].text =
+      "Aldar announced the official project release. Aldar announced a new launch within its official project record. Aldar announced the verified transaction value at AED 10 million in its own record.";
     assert.equal(
       assessDraft(developerDraft).evidenceLane,
       "official-fact",
     );
     assert.equal(assessDraft(developerDraft).requiredPublisherCount, 1);
-    assert.equal(assessDraft(developerDraft).verdict, "auto-approve");
+    const developerAssessment = assessDraft(developerDraft);
+    assert.equal(
+      developerAssessment.verdict,
+      "auto-approve",
+      developerAssessment.reasons.join(" | "),
+    );
 
     const nakheelUrl =
       "https://www.nakheel.com/en/media-centre/news/test";
@@ -412,14 +446,36 @@ async function main() {
     }
 
     const permittedOfficialFacts = [
-      "Nakheel announced the Palm Jebel Ali launch.",
-      "Nakheel confirmed the launch location at Dubai Islands.",
-      "Nakheel stated the opening date of 12 August 2026.",
-      "Nakheel confirmed a quantity of 100 units.",
-      "Nakheel stated the price of AED 2 million.",
-      "Nakheel confirmed a payment milestone of 20%.",
+      {
+        claim: "Nakheel announced the Palm Jebel Ali launch.",
+        evidence: "Nakheel announced an official Palm Jebel Ali project launch.",
+      },
+      {
+        claim: "Nakheel confirmed the launch location at Dubai Islands.",
+        evidence:
+          "Nakheel confirmed Dubai Islands as the specified location for the development launch.",
+      },
+      {
+        claim: "Nakheel stated the opening date of 12 August 2026.",
+        evidence:
+          "Nakheel stated the opening date as 12 August 2026 in the project record.",
+      },
+      {
+        claim: "Nakheel confirmed a quantity of 100 units.",
+        evidence: "Nakheel confirmed the project quantity at 100 units.",
+      },
+      {
+        claim: "Nakheel stated the applicable price of AED 2 million.",
+        evidence:
+          "Nakheel stated the project terms, including an applicable price of AED 2 million.",
+      },
+      {
+        claim: "Nakheel confirmed a payment milestone of 20%.",
+        evidence: "Nakheel confirmed the project payment milestone at 20%.",
+      },
     ] as const;
-    for (const [index, claim] of permittedOfficialFacts.entries()) {
+    for (const [index, fixture] of permittedOfficialFacts.entries()) {
+      const { claim, evidence: claimEvidence } = fixture;
       const factualDraft = oneSourceDraft({
         id: `single-developer-positive-grammar-fact-${index}`,
         url: nakheelUrl,
@@ -429,7 +485,10 @@ async function main() {
       });
       factualDraft.article.title = claim;
       factualDraft.provenance.fetchedEvidence = [
-        evidenceRecord(nakheelUrl, `${claim} ${claim}`),
+        evidenceRecord(
+          nakheelUrl,
+          `${claimEvidence} The company published the supporting project record through its official media centre.`,
+        ),
       ];
 
       assert.equal(
@@ -439,7 +498,11 @@ async function main() {
       );
       const assessment = assessDraft(factualDraft);
       assert.equal(assessment.requiredPublisherCount, 1, claim);
-      assert.equal(assessment.verdict, "auto-approve", claim);
+      assert.equal(
+        assessment.verdict,
+        "auto-approve",
+        `${claim}: ${assessment.reasons.join(" | ")}`,
+      );
     }
 
     const uncataloguedPromotion = oneSourceDraft({
@@ -502,22 +565,25 @@ async function main() {
       article: {
         ...officialDraft.article,
         body:
-          "Dubai Land Department confirmed AED 10 million. DLD reported that Emaar launched its own project.",
+          "Dubai Land Department confirmed its applicable transaction value of AED 10 million. DLD reported that Emaar launched its own project.",
       },
       provenance: {
         ...officialDraft.provenance,
         fetchedEvidence: [
           evidenceRecord(
             officialDraft.article.citations[0].url,
-            "Dubai Land Department confirmed AED 10 million. DLD reported that Emaar launched its own project.",
+            "Dubai Land Department confirmed an updated registration service framework in its official record. Dubai Land Department confirmed the official applicable transaction value of AED 10 million for the record. DLD reported that Emaar officially launched the development project.",
           ),
         ],
       },
     } as NewsDraft;
+    const attributedOfficialAssessment = assessDraft(
+      attributedOfficialThirdPartyFact,
+    );
     assert.equal(
-      assessDraft(attributedOfficialThirdPartyFact).verdict,
+      attributedOfficialAssessment.verdict,
       "auto-approve",
-      "a regulator's strictly attributed factual statement may use its primary record",
+      `a regulator's strictly attributed factual statement may use its primary record: ${attributedOfficialAssessment.reasons.join(" | ")}`,
     );
 
     const institutionalDraft = oneSourceDraft({
@@ -592,42 +658,58 @@ async function main() {
       id: "two-source-disputed-market-claim",
       article: {
         ...draft.article,
+        title: "Reuters reports the disputed market claim",
         body:
-          "Reuters reported that the market-wide AED 10 million claim remains disputed.",
+          "Both sources report that the market-wide AED 10 million claim remains disputed.",
       },
       provenance: {
         ...draft.provenance,
         fetchedEvidence: [
-          evidenceRecord(sourceA, `${"Reuters reported that the market-wide AED 10 million claim remains disputed."} The full report supplies direct context.`),
-          evidenceRecord(sourceB, `${"Reuters reported that the market-wide AED 10 million claim remains disputed."} Independent reporting supplies direct context.`),
+          evidenceRecord(sourceA, "Reuters reported the market claim as disputed in its coverage. The market-wide AED 10 million claim remains disputed. The full report supplies direct context."),
+          evidenceRecord(sourceB, `${"The market-wide AED 10 million claim remains disputed."} Independent reporting supplies direct context.`),
         ],
       },
     } as NewsDraft;
     const disputedTwoSourceAssessment = assessDraft(disputedTwoSourceDraft);
     assert.equal(disputedTwoSourceAssessment.requiredPublisherCount, 2);
     assert.equal(disputedTwoSourceAssessment.fetchedEvidenceCount, 2);
-    assert.equal(disputedTwoSourceAssessment.verdict, "auto-approve");
+    assert.equal(
+      disputedTwoSourceAssessment.verdict,
+      "auto-approve",
+      disputedTwoSourceAssessment.reasons.join("; "),
+    );
 
     const corroboratedAnalysisDraft = {
       ...draft,
       id: "two-source-analysis",
       article: {
         ...draft.article,
+        title: "Reuters reported apartment and villa prices",
         body:
-          "We recommend investors buy after the verified transaction value reached AED 10 million.",
+          "Apartment sale prices were higher than villa sale prices.",
       },
       provenance: {
         ...draft.provenance,
         fetchedEvidence: [
-          evidenceRecord(sourceA, "We recommend investors buy after the verified transaction value reached AED 10 million. The full report supplies direct context."),
-          evidenceRecord(sourceB, "We recommend investors buy after the verified transaction value reached AED 10 million. Independent reporting supplies direct context."),
+          evidenceRecord(
+            sourceA,
+            "Reuters reported prices for apartments and villas in its market coverage. Apartment sale prices during the measured period were higher than villa sale prices.",
+          ),
+          evidenceRecord(
+            sourceB,
+            "Apartment sale prices during the measured period were higher than villa sale prices. The publication supplies direct market context.",
+          ),
         ],
       },
     } as NewsDraft;
     const corroboratedAssessment = assessDraft(corroboratedAnalysisDraft);
     assert.equal(corroboratedAssessment.requiredPublisherCount, 2);
     assert.equal(corroboratedAssessment.fetchedEvidenceCount, 2);
-    assert.equal(corroboratedAssessment.verdict, "auto-approve");
+    assert.equal(
+      corroboratedAssessment.verdict,
+      "auto-approve",
+      corroboratedAssessment.reasons.join("; "),
+    );
 
     const samePublisherDraft = {
       ...draft,
@@ -635,7 +717,7 @@ async function main() {
       article: {
         ...draft.article,
         body:
-          "We recommend investors buy after the verified transaction value reached AED 10 million.",
+          "Apartment sale prices were higher than villa sale prices.",
         citations: [
           { source: "Reuters", url: sourceA },
           {
@@ -757,6 +839,132 @@ async function main() {
       heldBacklogAssessment.verdict,
       "auto-approve",
       `freshness must use the stored staging clock, not the later publication-run clock: ${heldBacklogAssessment.reasons.join("; ")}`,
+    );
+
+    const boundaryEvidenceDraft = {
+      ...draft,
+      provenance: {
+        ...draft.provenance,
+        fetchedEvidence: [sourceA, sourceB].map((url) =>
+          evidenceRecord(url, evidence, {
+            sourcePublishedAt: "2026-08-12T10:00:00.000Z",
+            fetchedAt: "2026-08-12T10:00:00.000Z",
+            freshnessCheckedAt: "2026-08-12T10:00:00.000Z",
+          }),
+        ),
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessAutoPublicationRecency(
+        boundaryEvidenceDraft,
+        new Date("2026-08-19T10:00:00.000Z"),
+      ).ok,
+      true,
+      "the exact existing 168-hour policy boundary must remain eligible",
+    );
+    const expiredAtPublication = assessDraft(boundaryEvidenceDraft, {
+      autoPublicationAt: new Date("2026-08-19T10:00:00.001Z"),
+    });
+    assert.equal(expiredAtPublication.verdict, "manual");
+    assert.ok(
+      expiredAtPublication.reasons.some((reason) =>
+        /old at auto-publication/.test(reason),
+      ),
+      "a draft/evidence packet one millisecond beyond policy must fail closed",
+    );
+
+    const genericCtaDraft = {
+      ...boundaryEvidenceDraft,
+      id: "generic-cta-stays-out-of-evidence-entailment",
+      article: {
+        ...boundaryEvidenceDraft.article,
+        cta: {
+          ...boundaryEvidenceDraft.article.cta,
+          label: "Keep in view",
+        },
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(genericCtaDraft).verdict,
+      "auto-approve",
+      "generic CTA navigation must not require verbatim source entailment",
+    );
+    assert.equal(
+      articleEvidenceSegments(genericCtaDraft.article).some(({ field }) =>
+        field.startsWith("cta"),
+      ),
+      false,
+      "CTA copy must remain outside the factual evidence projection",
+    );
+    const contextualCtaDraft = {
+      ...genericCtaDraft,
+      id: "market-derived-cta-pass",
+      article: {
+        ...genericCtaDraft.article,
+        cta: {
+          ...genericCtaDraft.article.cta,
+          label: "Discuss your Dubai real estate decision with Raj",
+        },
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(contextualCtaDraft).verdict,
+      "auto-approve",
+      "an exact CTA derived from an article market must remain source-free",
+    );
+    const wrongMarketCtaDraft = {
+      ...contextualCtaDraft,
+      id: "wrong-market-cta-held",
+      article: {
+        ...contextualCtaDraft.article,
+        cta: {
+          ...contextualCtaDraft.article.cta,
+          label: "Open your Abu Dhabi real estate decision",
+        },
+      },
+    } as NewsDraft;
+    assert.equal(assessDraft(wrongMarketCtaDraft).verdict, "manual");
+
+    const factualCtaDraft = {
+      ...genericCtaDraft,
+      id: "arbitrary-factual-cta-held",
+      article: {
+        ...genericCtaDraft.article,
+        cta: {
+          ...genericCtaDraft.article.cta,
+          label: "Open the AED 10 million opportunity",
+        },
+      },
+    } as NewsDraft;
+    assert.equal(
+      assessDraft(factualCtaDraft).verdict,
+      "manual",
+      "an arbitrary factual or outcome CTA must not inherit the source-free exception",
+    );
+    const pressuredCtaDraft = {
+      ...genericCtaDraft,
+      id: "pressured-cta-held",
+      article: {
+        ...genericCtaDraft.article,
+        cta: {
+          ...genericCtaDraft.article.cta,
+          label: "Buy now — guaranteed return",
+        },
+      },
+    } as NewsDraft;
+    const pressuredCtaAssessment = assessDraft(pressuredCtaDraft);
+    assert.equal(pressuredCtaAssessment.verdict, "manual");
+    assert.ok(
+      pressuredCtaAssessment.reasons.some((reason) =>
+        /CTA voice and safety/.test(reason),
+      ),
+      "promotional pressure in a visible CTA must fail the voice/safety gate",
+    );
+    assert.ok(
+      validateDraft(pressuredCtaDraft.article).failures.some(
+        (failure) => failure.name === "CTA voice and safety",
+      ),
+      "the canonical voice validator must inspect the reader-visible CTA label",
     );
 
     const materialCounts =
@@ -1010,22 +1218,35 @@ async function main() {
     );
 
     const supportedCountsText =
-      `The verified transaction value was AED 10 million and the plan covers ${materialCounts.replace("The plan covers ", "")}`;
+      "The verified transaction value was AED 10 million. The plan covers 7 towers in Phase 2. The plan includes 12 floors and 3 bedrooms. The plan includes a 5 km corridor and 40 hectares for delivery in 2029.";
     const supportedCountsDraft = {
       ...draft,
       id: "supported-material-counts",
       article: {
         ...draft.article,
+        title: "Reuters reported transaction figures",
         body: supportedCountsText,
       },
       provenance: {
         ...draft.provenance,
-        fetchedEvidence: [sourceA, sourceB].map((url) =>
-          evidenceRecord(url, supportedCountsText),
-        ),
+        fetchedEvidence: [
+          evidenceRecord(
+            sourceA,
+            "Reuters reported transaction figures from the development record. The official record confirmed that the transaction value was AED 10 million for the period. The plan covers a tower programme of 7 towers in Phase 2 of the release. The plan includes a building configuration with 12 floors and a residential mix of 3 bedrooms. The plan includes land comprising a 5 km corridor, together with 40 hectares for delivery during 2029.",
+          ),
+          evidenceRecord(
+            sourceB,
+            "The publication reported verified transaction figures from the available record. The official record confirmed that the transaction value was AED 10 million for the period. The plan covers a tower programme of 7 towers in Phase 2 of the release. The plan includes a building configuration with 12 floors and a residential mix of 3 bedrooms. The plan includes land comprising a 5 km corridor, together with 40 hectares for delivery during 2029.",
+          ),
+        ],
       },
     } as NewsDraft;
-    assert.equal(assessDraft(supportedCountsDraft).verdict, "auto-approve");
+    const supportedCountsAssessment = assessDraft(supportedCountsDraft);
+    assert.equal(
+      supportedCountsAssessment.verdict,
+      "auto-approve",
+      supportedCountsAssessment.reasons.join("; "),
+    );
 
     const unsupportedCountsDraft = {
       ...supportedCountsDraft,
@@ -1068,27 +1289,29 @@ async function main() {
       ...draft,
       article: {
         ...draft.article,
+        title: "Reuters reports construction contract figures",
         body:
-          "The contracts total AED3.5 billion, cover 8,000 homes and represent 30 per cent of the programme.",
+          "The contracts total AED3.5 billion and cover 8,000 homes. The construction awards represent 30 per cent of the programme.",
       },
       provenance: {
         ...draft.provenance,
         fetchedEvidence: [
           evidenceRecord(
             sourceA,
-            "The official release states that contracts total AED 3.5 billion and cover 8000 homes across the verified development programme.",
+            "Reuters reported construction contract figures in its market coverage. In the official release, the contracts total AED 3.5 billion and cover 8000 homes across the verified development programme.",
           ),
           evidenceRecord(
             sourceB,
-            "Independent reporting says the awards represent 30% of the programme and confirms the same construction mandate in its full report.",
+            "During the programme review, the construction awards represent 30% of the programme.",
           ),
         ],
       },
     } as NewsDraft;
+    const typographyAssessment = assessDraft(typographyVariantDraft);
     assert.equal(
-      assessDraft(typographyVariantDraft).verdict,
+      typographyAssessment.verdict,
       "auto-approve",
-      "equivalent currency, comma and percentage typography must verify",
+      `equivalent currency, comma and percentage typography must verify: ${typographyAssessment.reasons.join("; ")}`,
     );
 
     const result = await runAutoApprove({
@@ -1097,13 +1320,15 @@ async function main() {
       publish: true,
       publishLimit: 1,
       deploymentAttempts: 0,
+      now: new Date("2026-08-12T12:00:00.000Z"),
       log: () => undefined,
     });
-    assert.equal(result.approved, 3);
+    assert.equal(result.approved, 2);
     assert.equal(result.published, 1);
     assert.equal(result.failed, 0);
-    assert.equal(result.held, 0);
-    assert.equal(result.deferred, 2);
+    assert.equal(result.held, 1);
+    assert.equal(result.deferred, 1);
+    assert.equal(result.holdReasonCounts["source-date-or-freshness"], 1);
     assert.deepEqual(result.publicationShas, ["a".repeat(40)]);
     assert.deepEqual(result.publishedSlugs, [draft.article.slug]);
     assert.equal(result.deploymentVerified, 0);
@@ -1113,6 +1338,85 @@ async function main() {
     assert.equal(calls.length, 2);
     assert.match(calls[1], /\/publish$/);
     assert.ok(calls[1].includes(draft.id), "newest passing draft must publish first");
+    assert.deepEqual(
+      publishRequestBodies.at(-1),
+      {},
+      "ordinary server publication must not opt into the automated morning ledger",
+    );
+
+    calls.length = 0;
+    publishRequestBodies.length = 0;
+    const automatedMorning = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: true,
+      publishLimit: 1,
+      requiredPublishedDubaiDate: "2026-08-12",
+      automatedMorningLane: true,
+      deploymentAttempts: 0,
+      now: new Date("2026-08-12T12:00:00.000Z"),
+      log: () => undefined,
+    });
+    assert.equal(automatedMorning.published, 1);
+    assert.deepEqual(publishRequestBodies, [
+      {
+        automatedMorningLane: true,
+        requiredPublishedDubaiDate: "2026-08-12",
+      },
+    ]);
+    await assert.rejects(
+      runAutoApprove({
+        site: "https://news.example.test",
+        secret: "s".repeat(32),
+        publish: true,
+        automatedMorningLane: true,
+        log: () => undefined,
+      }),
+      /requires an exact published Dubai date/u,
+    );
+
+    calls.length = 0;
+    const dateScopedReview = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: false,
+      requiredPublishedDubaiDate: "2026-08-12",
+      now: new Date("2026-08-12T12:00:00.000Z"),
+      log: () => undefined,
+    });
+    assert.equal(dateScopedReview.total, 3);
+    assert.equal(dateScopedReview.eligible, 1);
+    assert.equal(dateScopedReview.approved, 1);
+    assert.equal(calls.length, 1);
+
+    calls.length = 0;
+    const emptyDateScopedReview = await runAutoApprove({
+      site: "https://news.example.test",
+      secret: "s".repeat(32),
+      publish: true,
+      requiredPublishedDubaiDate: "2026-08-13",
+      now: new Date("2026-08-13T08:00:00.000Z"),
+      deploymentAttempts: 0,
+      log: () => undefined,
+    });
+    assert.equal(emptyDateScopedReview.eligible, 0);
+    assert.equal(emptyDateScopedReview.published, 0);
+    assert.equal(
+      calls.length,
+      1,
+      "a Dubai-date mismatch must not call the publish endpoint",
+    );
+
+    await assert.rejects(
+      runAutoApprove({
+        site: "https://news.example.test",
+        secret: "s".repeat(32),
+        publish: false,
+        requiredPublishedDubaiDate: "2026-02-31",
+        log: () => undefined,
+      }),
+      /exact YYYY-MM-DD/u,
+    );
 
     calls.length = 0;
     deploymentResponseMode = "completed";
@@ -1123,6 +1427,7 @@ async function main() {
       publishLimit: 1,
       deploymentAttempts: 1,
       deploymentDelayMs: 0,
+      now: new Date("2026-08-12T12:00:00.000Z"),
       log: () => undefined,
     });
     deploymentResponseMode = null;
@@ -1143,6 +1448,7 @@ async function main() {
       publishLimit: 1,
       deploymentAttempts: 3,
       deploymentDelayMs: 0,
+      now: new Date("2026-08-12T12:00:00.000Z"),
       log: () => undefined,
     });
     deploymentResponseMode = null;
@@ -1183,6 +1489,7 @@ async function main() {
       publish: true,
       publishLimit: 1,
       deploymentAttempts: 0,
+      now: new Date("2026-08-12T12:00:00.000Z"),
       log: () => undefined,
     });
     forcePublishFailure = false;
@@ -1208,7 +1515,7 @@ async function main() {
     assert.equal(noEligibleResult.failed, 0);
     assert.equal(calls.length, 1, "No eligible story must not call the publish endpoint");
     console.log(
-      "Auto-publish regression passed: narrow official facts, two-publisher analysis, contextual figures and timely backlog gates are enforced.",
+      "Auto-publish regression passed: evidence policy, publication-time recency, CTA safety and bounded newest/backlog selection are enforced.",
     );
   } finally {
     globalThis.fetch = originalFetch;
