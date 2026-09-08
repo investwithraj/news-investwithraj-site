@@ -11,6 +11,7 @@ import {
   isIndexEligibleArticleSlug,
   isNewsroomLifecycleCutoverEnabled,
   isRenderableArticleSlug,
+  isRenderableLifecyclePath,
 } from "@/lib/news-lifecycle";
 
 /**
@@ -128,7 +129,11 @@ export const PUBLIC_AREA_RECORDS: PublicAreaRecord[] = AREAS.map((area) => ({
   reports: PUBLIC_OVERVIEW_NEWS_ARTICLES.filter((article) =>
     articleMentionsArea(article, area),
   ),
-})).filter(({ reports }) => reports.length > 0);
+})).filter(
+  ({ area, reports }) =>
+    reports.length > 0 &&
+    isRenderableLifecyclePath(`/areas/${area.slug}`),
+);
 
 export const PUBLIC_AREAS: AreaPage[] = PUBLIC_AREA_RECORDS.map(
   ({ area }) => area,
@@ -141,7 +146,11 @@ export const PUBLIC_DEVELOPER_RECORDS: PublicDeveloperRecord[] = DEVELOPERS.map(
       articleMentionsDeveloper(article, developer),
     ),
   }),
-).filter(({ reports }) => reports.length > 0);
+).filter(
+  ({ developer, reports }) =>
+    reports.length > 0 &&
+    isRenderableLifecyclePath(`/developer/${developer.slug}`),
+);
 
 export const PUBLIC_DEVELOPERS: DeveloperProfile[] =
   PUBLIC_DEVELOPER_RECORDS.map(({ developer }) => developer);

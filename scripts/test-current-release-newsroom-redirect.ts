@@ -27,6 +27,7 @@ import {
   getReleasedNewsroomRedirects,
   isReleasedIndexEligiblePath,
   isRenderableArticleSlug,
+  isRenderableLifecyclePath,
   NEWSROOM_EXACT_REDIRECTS,
   NEWSROOM_LIFECYCLE_CUTOVER_ENV,
 } from "@/lib/news-lifecycle";
@@ -136,13 +137,19 @@ async function main() {
       reports: overviewArticles
         .filter((article) => articleMentionsArea(article, area))
         .map(overviewReportMetadata),
-    })).filter(({ reports }) => reports.length > 0);
+    })).filter(
+      ({ slug, reports }) =>
+        reports.length > 0 && isRenderableLifecyclePath(`/areas/${slug}`),
+    );
     const expectedDeveloperOverview = DEVELOPERS.map((developer) => ({
       slug: developer.slug,
       reports: overviewArticles
         .filter((article) => articleMentionsDeveloper(article, developer))
         .map(overviewReportMetadata),
-    })).filter(({ reports }) => reports.length > 0);
+    })).filter(
+      ({ slug, reports }) =>
+        reports.length > 0 && isRenderableLifecyclePath(`/developer/${slug}`),
+    );
     assert.deepEqual(
       PUBLIC_AREA_RECORDS.map(({ area, reports }) => ({
         slug: area.slug,

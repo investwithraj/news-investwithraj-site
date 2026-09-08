@@ -9,6 +9,7 @@ import {
   PUBLIC_DEVELOPER_RECORDS,
   PUBLIC_DEVELOPERS,
 } from "@/lib/public-content";
+import { isRenderableLifecyclePath } from "@/lib/news-lifecycle";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -27,12 +28,20 @@ assert(
 
 for (const { area, reports } of PUBLIC_AREA_RECORDS) {
   assert(reports.length > 0, `Public area ${area.slug} has no published report.`);
+  assert(
+    isRenderableLifecyclePath(`/areas/${area.slug}`),
+    `Public area ${area.slug} resolves to a non-renderable lifecycle path.`,
+  );
 }
 
 for (const { developer, reports } of PUBLIC_DEVELOPER_RECORDS) {
   assert(
     reports.length > 0,
     `Public developer ${developer.slug} has no published report.`,
+  );
+  assert(
+    isRenderableLifecyclePath(`/developer/${developer.slug}`),
+    `Public developer ${developer.slug} resolves to a non-renderable lifecycle path.`,
   );
 }
 
