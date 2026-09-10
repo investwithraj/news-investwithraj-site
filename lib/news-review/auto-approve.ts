@@ -626,7 +626,7 @@ export function approvedPublisherIdentity(
   const source = findSourceByUrl(url);
   const domain = approvedPublisherDomain(url);
   return source && source.citable !== false && domain
-    ? { domain, name: source.name, tier: source.tier }
+    ? { domain, name: source.publisherName ?? source.name, tier: source.tier }
     : null;
 }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
-import { draftFromCluster, draftSystemPrompt, type DraftOpts } from "../lib/news-review/draft-engine.js";
-import { assessDraft } from "../lib/news-review/auto-approve.js";
+import { buildCitations, draftFromCluster, draftSystemPrompt, type DraftOpts } from "../lib/news-review/draft-engine.js";
+import { approvedPublisherIdentity, assessDraft } from "../lib/news-review/auto-approve.js";
 import { draftContentHash, evidenceApprovalFor, validateDraftArticleShape } from "../lib/news-review/integrity.js";
 import { serializeArticle } from "../lib/news-review/serialize.js";
 import type { DraftArticle } from "../lib/news-review/types.js";
@@ -59,8 +59,9 @@ const cluster: Cluster = {
   suggestedCategory: "regulatory", suggestedMarkets: ["Dubai"],
 };
 
-async function generate(body: string, options: { format?: DraftOpts["format"]; source?: string; date?: string | null; badTitle?: string } = {}) {
+async function generate(body: string, options: { format?: DraftOpts["format"]; source?: string; date?: string | null; badTitle?: string; repairBasis?: unknown; numericRepair?: boolean } = {}) {
   const prompts: string[] = [];
+  let repairs = 0;
   const result = await draftFromCluster(cluster, ["dubailand.gov.ae"], {
     format: options.format,
     now: NOW,
@@ -73,7 +74,11 @@ async function generate(body: string, options: { format?: DraftOpts["format"]; s
       },
       repair: async (request) => {
         prompts.push(request.system ?? "");
-        return { ok: true, text: json(body) };
+        repairs++;
+        const copy = JSON.parse(json(body));
+        if (options.numericRepair && repairs === 1) copy.body += " Dubai Land Department confirmed a fee of AED 999 million.";
+        if (options.repairBasis !== undefined) copy.reportingBasis = options.repairBasis;
+        return { ok: true, text: JSON.stringify(copy) };
       },
       fetchArticle: async () => ({
         text: options.source ?? EVIDENCE, finalUrl: URL,
@@ -87,6 +92,18 @@ async function generate(body: string, options: { format?: DraftOpts["format"]; s
 }
 
 async function main() {
+  for (const [domain, publisher, path] of [
+    ["gulfnews.com", "Gulf News", "/business/corporate-news/allegiance-real-estate-claims-three-honours-at-the-damac-awards-h1-2026-1.500669757"],
+    ["thenationalnews.com", "The National", "/business/property/2026/09/09/dubai-holding-awards-its-largest-construction-contract-worth-dh5-billion/"],
+    ["khaleejtimes.com", "Khaleej Times", "/real-estate/test-source-fixture"],
+    ["zawya.com", "Zawya", "/en/business/real-estate/test-source-fixture"],
+  ]) {
+    const url = `https://${domain}${path}`;
+    assert.equal(approvedPublisherIdentity(url)?.name, publisher);
+    const citations = buildCitations([{ source: "Model-invented feed label", url }], cluster, [domain], NOW.toISOString());
+    assert.equal(citations[0]?.source, publisher, "Attribution is registry-owned, not model-owned.");
+  }
+  assert.equal(approvedPublisherIdentity("https://gulfnews.com.evil.example/story"), null);
   const { result, prompts } = await generate(BODY, { format: "short-update" });
   assert.equal(result.ok, true, `${result.reason}; ${result.diagnostics?.join("; ")}`);
   assert.ok(result.article && result.provenance);
@@ -107,6 +124,20 @@ async function main() {
   assert.doesNotMatch(titleRepair.prompts[1], /Preserve the current title unless the unsupported or unparsed lists identify numerical/u);
   assert.equal(titleRepair.result.article?.title, article.title,
     "The corrected title must pass the unchanged final source check.");
+  const numericRepair = await generate(BODY, { format: "short-update",
+    badTitle: "Dubai Land Department grants permanent residency to every applicant", numericRepair: true });
+  assert.equal(numericRepair.result.ok, true, numericRepair.result.reason);
+  assert.equal(numericRepair.prompts.length, 3, "Exercise research, evidence repair and numeric repair.");
+  for (const prompt of numericRepair.prompts.slice(1)) {
+    assert.match(prompt, /omit reportingBasis entirely/u);
+    assert.doesNotMatch(prompt, /Include reportingBasis exactly/u);
+  }
+  assert.equal(numericRepair.result.article?.reportingBasis, undefined);
+  const inventedBasis = await generate(BODY, { format: "short-update",
+    badTitle: "Dubai Land Department grants permanent residency to every applicant",
+    repairBasis: { sourceUrl: URL, speaker: "Invented Speaker", organization: "Invented Company", statementKind: "corporate-intent" } });
+  assert.equal(inventedBasis.result.ok, false);
+  assert.match(inventedBasis.result.reason ?? "", /cannot replace or invent reportingBasis/u);
   assert.doesNotMatch(prompts[0], /650\+|800[–-]1100|analytical register \(≥3\)/u);
   assert.match(draftSystemPrompt(), /650\+/u, "legacy prompt remains long-form");
   assert.equal(validateDraftArticleShape(article).ok, true);

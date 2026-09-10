@@ -53,6 +53,9 @@ const VALID_CATEGORIES: NewsCategory[] = [
 
 const SHORT_UPDATE_STYLE = "Write a short factual news update of 80-500 words, usually 80-220 words; use more only when distinct essential facts require it. Use plain UK English and paragraph breaks. Lead with the verified announcement and its named source. Do not pad the report, repeat facts to fill space, force analytical jargon or em-dashes, or add a number just to satisfy a style rule. Every number that is present must remain source-supported. No editorial interpretation, investment advice, forecasts of your own or trade calls. Leave faq empty unless a distinct sourced answer is useful.";
 const LONG_REPORT_STYLE = "Keep UK English, 800-1100 words, paragraph breaks and at least three approved analytical-register terms.";
+const ATTRIBUTION_STYLE = "Use the publisher's reader-facing name for attribution, never an internal feed or desk label such as Gulf News — Property. Do not turn a publisher into the actor of an event: distinguish who reported the news from who acted. Keep a complete factual verb in headlines and summaries; avoid fragments or vague subjects such as 'the deal'.";
+const FACT_SELECTION_STYLE = "Before composing, select the few essential facts from the supplied reporting. For each fact, identify its source URL, actor, factual action, object, date, figure and whether it is a plan or a completed event. Write original sentences from those facts, not by making small word substitutions in source sentences. Drop optional detail rather than combining unrelated facts or padding the update. Return only the requested article JSON, not these working notes.";
+const REPAIR_BASIS_STYLE = "The server retains the original reportingBasis as read-only metadata. Return only title, subtitle, tldr, body and faq; omit reportingBasis entirely. Do not create a reportingBasis when it is absent, and do not replace it or return null. If the existing draft is an attributed corporate-intent announcement, keep the named speaker, role and company visible, preserve intentions as intentions, and do not add predictions or completed outcomes. If the supplied facts cannot support a sentence, remove that sentence instead of changing metadata to make it eligible.";
 const ANNOUNCEMENT_STYLE = 'For a short developer-corporate or launch announcement only, one directly readable approved publication may support reporting that a named corporate speaker announced the organization\'s own intention. Include reportingBasis exactly as {"sourceUrl":"the exact cited article URL","speaker":"the named speaker","organization":"the named company","statementKind":"corporate-intent"}. This is a separate attributed-announcement lane: the ordinary official-fact requirement to repeat the publisher on every sentence does not apply to a verified named-company plan. It is not our prediction or a claim that planned spending has occurred. Visibly name the speaker, role, company and reported statement in the body. Each plan sentence and summary must explicitly name the company and preserve its inner intention, figures, geography and dates from one source sentence. Other factual context still needs unchanged direct source support. Do not add buyer demand, market forecasts, returns, recommendations, completed outcomes or promotional claims. Omit reportingBasis for all other reporting. If repairing an existing attributed announcement, preserve its reportingBasis unchanged; never invent a different speaker, company or source to make a claim pass.';
 
 /** The caller selects the format; model output cannot opt into easier gates. */
@@ -65,6 +68,8 @@ You are given a story lead (a cluster of headlines + snippets). RESEARCH it with
 ABSOLUTE RULES (a draft that breaks these is rejected):
 - Synthetic imagery is forbidden. Do not select, generate or approve media. The server attaches a matching preapproved real UHD context photograph when available; other photographs require editorial selection. Never describe an unverified project image.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
+- ${ATTRIBUTION_STYLE}
+- ${FACT_SELECTION_STYLE}
 - Keep each factual sentence source-alignable on its own: name the exact subject, preserve the source's numbers/dates, polarity, modality, direction, comparator and factual action, and carry at least two distinctive nouns or objects from one bounded source sentence. Do not merge separate source facts, swap subject and object, or use a pronoun as the only factual subject.
 - A negative absence claim (for example, that a release did not provide a figure) is permitted only when an accessible source explicitly states that absence. A missing detail is not evidence of absence.
 - Use every URL in citations for at least one distinct factual sentence and cite no URL you do not use. Paraphrase the evidence: never copy 14 or more consecutive source words or closely reproduce a source sentence.
@@ -556,7 +561,10 @@ export async function draftFromCluster(
   }
   const format = opts.format ?? "long-report";
   const shortUpdate = format === "short-update";
-  const formatStyle = shortUpdate ? `${SHORT_UPDATE_STYLE} ${ANNOUNCEMENT_STYLE}` : LONG_REPORT_STYLE;
+  // Initial research may propose a source-bound announcement basis. Repairs
+  // edit prose only: reusing ANNOUNCEMENT_STYLE here instructed them to invent
+  // exactly the metadata that preservesReportingBasis correctly rejects.
+  const formatStyle = `${shortUpdate ? SHORT_UPDATE_STYLE : LONG_REPORT_STYLE} ${REPAIR_BASIS_STYLE} ${ATTRIBUTION_STYLE} ${FACT_SELECTION_STYLE}`;
   const pinnedClockMilliseconds =
     opts.now && Number.isFinite(opts.now.getTime())
       ? opts.now.getTime()
@@ -586,7 +594,7 @@ export async function draftFromCluster(
       : "";
   const lead = cluster.entries
     .slice(0, 8)
-    .map((e, i) => `[${i + 1}] ${e.source.name} — ${e.title}\n   ${e.summary}`)
+    .map((e, i) => `[${i + 1}] ${approvedPublisherIdentity(e.url)?.name ?? approvedPublisherIdentity(`https://${e.source.domain}`)?.name ?? e.source.name} — ${e.title}\n   ${e.summary}`)
     .join("\n\n");
 
   const researchRequest = {
@@ -838,7 +846,7 @@ export async function draftFromCluster(
   const evidencePacket = fetchedEvidence
     .map(
       (evidence, index) =>
-        `[SOURCE ${index + 1}: ${evidence.finalUrl ?? evidence.url}]\n${evidence.text}`,
+        `[SOURCE ${index + 1}: ${evidence.finalUrl ?? evidence.url}]\nREADER-FACING PUBLISHER: ${approvedPublisherIdentity(evidence.finalUrl ?? evidence.url)?.name ?? "Use the named publisher in the source; do not invent one"}\n${evidence.text}`,
     )
     .join("\n\n---\n\n");
   const evidenceTexts = fetchedEvidence.map((evidence) => evidence.text);

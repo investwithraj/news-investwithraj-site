@@ -176,6 +176,36 @@ async function main() {
   assert.deepEqual(result.article?.reportingBasis, article.reportingBasis);
   assert.deepEqual(result.article?.speakableSelector, [".article-body > p:first-child"]);
   assert.equal(providerCalls, 1);
+  // A repair can edit copy but cannot create, replace or remove the source-bound
+  // announcement identity. Omission is intentional: the server retains it.
+  for (const [mode, candidate, expected] of [
+    ["omitted", undefined, true],
+    ["identical", article.reportingBasis, true],
+    ["null", null, false],
+    ["changed", { ...article.reportingBasis, speaker: "Another Person" }, false],
+  ] as const) {
+    let repairs = 0;
+    const repaired = await draftFromCluster(cluster, [publisher.domain], {
+      format: "short-update", now: NOW,
+      dependencies: {
+        research: async () => ({ ok: true, text: JSON.stringify({ ...article,
+          title: "Prestige One grants permanent residency to every buyer" }), searchedUrls: [sourceUrl] }),
+        repair: async (request) => {
+          repairs++;
+          assert.match(request.system ?? "", /omit reportingBasis entirely/u);
+          assert.doesNotMatch(request.system ?? "", /Include reportingBasis exactly/u);
+          return { ok: true, text: JSON.stringify({ ...article, reportingBasis: candidate }) };
+        },
+        fetchArticle: async () => ({ text: sourceText, finalUrl: sourceUrl,
+          publishedAt: "2026-09-09T08:00:00.000Z", publicationDateSource: "publisher-api",
+          diagnostic: { code: "ok", message: "fixture" } }),
+      },
+    });
+    assert.ok(repairs > 0, `${mode} must exercise repair`);
+    assert.equal(repaired.ok, expected, `${mode}: ${repaired.reason}`);
+    if (expected) assert.deepEqual(repaired.article?.reportingBasis, article.reportingBasis);
+    else assert.match(repaired.reason ?? "", /cannot replace or invent reportingBasis/u);
+  }
   console.log("Announcement policy passed: source-bound short reporting, typed scope, current-policy approvals, invalid/misleading/copied/stale holds, hash binding and drafting round-trip. No external operations.");
 }
 

@@ -11,8 +11,10 @@ export type SourceTier = "government" | "national-press" | "regional-press" | "i
 export type SourceFetchType = "rss" | "webfetch" | "scrape" | "reddit";
 
 export interface VerifiedSource {
-  /** Display name for inline attribution */
+  /** Internal source/feed label, retained in discovery provenance. */
   name: string;
+  /** Registry-owned publisher name for reader-facing attribution, without a desk/feed suffix. */
+  publisherName?: string;
   /** Canonical homepage URL — also the domain anchor for citation matching */
   url: string;
   /** Tier — drives editorial weight (gov + national press = highest) */
@@ -117,6 +119,7 @@ export const SOURCE_WHITELIST: VerifiedSource[] = [
   /* ─── Tier 2 · National press (4) ──────────────────────────────── */
   {
     name: "Khaleej Times — Real Estate",
+    publisherName: "Khaleej Times",
     url: "https://www.khaleejtimes.com/real-estate",
     tier: "national-press",
     market: ["UAE", "Dubai", "Abu Dhabi"],
@@ -125,6 +128,7 @@ export const SOURCE_WHITELIST: VerifiedSource[] = [
   },
   {
     name: "Gulf News — Property",
+    publisherName: "Gulf News",
     url: "https://gulfnews.com/business/property",
     tier: "national-press",
     market: ["UAE", "Dubai", "Abu Dhabi"],
@@ -133,6 +137,7 @@ export const SOURCE_WHITELIST: VerifiedSource[] = [
   },
   {
     name: "The National — Business",
+    publisherName: "The National",
     url: "https://www.thenationalnews.com/business",
     tier: "national-press",
     market: ["UAE", "Abu Dhabi"],
@@ -151,6 +156,7 @@ export const SOURCE_WHITELIST: VerifiedSource[] = [
   /* ─── Tier 3 · Regional press (2) ──────────────────────────────── */
   {
     name: "Zawya — Real Estate (LSEG)",
+    publisherName: "Zawya",
     url: "https://www.zawya.com/en/business/real-estate",
     tier: "regional-press",
     market: ["GCC", "UAE"],
