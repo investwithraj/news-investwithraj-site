@@ -212,6 +212,41 @@
   gap: 1rem;
 }
 
+.shortUpdate .relations {
+  max-width: 54rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.shortUpdate .relations > header {
+  display: block;
+  margin-bottom: 1.25rem;
+}
+
+.shortUpdate .relations h2 {
+  max-width: none;
+  margin: 0.75rem 0;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+
+.shortUpdate .relations > header > p:last-child {
+  margin-bottom: 0;
+}
+
+.shortUpdate .relationGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
+.shortUpdate .more a {
+  min-height: 7rem;
+  padding: 1.25rem;
+}
+
+.shortUpdate .more a strong {
+  margin-top: 1rem;
+}
+
 @media (max-width: 760px) {
   .shortUpdate .identity {
     grid-template-columns: minmax(0, 1fr);

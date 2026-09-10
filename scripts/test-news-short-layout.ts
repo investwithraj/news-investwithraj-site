@@ -11,7 +11,9 @@ import sharp from "sharp";
 
 import { NEWS_ARTICLES } from "../content/news";
 import type { NewsArticle } from "../content/news/types";
-import { decisionCta } from "../lib/news-editorial";
+import { decisionCta, relatedVerticalsForArticle } from "../lib/news-editorial";
+import { resolveArticleRelations, type ResolvedArticleArea, type ResolvedArticleDeveloper } from "../lib/article-relations";
+import { VERTICALS, type Vertical } from "../lib/verticals";
 import { getCuratedNewsCandidate } from "../lib/news-review/curated-candidates";
 import { PRESTIGE_ONE_CONTEXT_MEDIA as media } from "../lib/news-review/curated-media-context";
 
@@ -25,11 +27,11 @@ const className = (name: string) => classes[name];
 
 type ArticleProps = {
   article: NewsArticle;
-  newer: null;
-  older: null;
-  relatedAreas: [];
-  relatedDevelopers: [];
-  relatedVerticals: [];
+  newer: NewsArticle | null;
+  older: NewsArticle | null;
+  relatedAreas: readonly ResolvedArticleArea[];
+  relatedDevelopers: readonly ResolvedArticleDeveloper[];
+  relatedVerticals: Vertical[];
 };
 
 function escaped(text: string): string {
@@ -78,13 +80,46 @@ async function main() {
     article.format !== "short-update" && article.status !== "research" && article.body.length > 2_000);
   assert.ok(longArticle, "an actual long-form article is required for the comparison");
 
-  function render(article: NewsArticle) {
+  function render(article: NewsArticle, overrides: Partial<Omit<ArticleProps, "article">> = {}) {
     return renderToStaticMarkup(createElement(Article!, {
-      article, newer: null, older: null, relatedAreas: [], relatedDevelopers: [], relatedVerticals: [],
+      article, newer: null, older: null, relatedAreas: [], relatedDevelopers: [],
+      relatedVerticals: relatedVerticalsForArticle(article, VERTICALS).slice(0, 3),
+      ...overrides,
     }));
   }
+  const broadVerticals = relatedVerticalsForArticle(shortArticle, VERTICALS).slice(0, 3);
+  assert.deepEqual(broadVerticals.map((vertical) => vertical.slug),
+    ["off-plan-watch", "uhnw-trades", "sovereign-plays"],
+    "short fixture must cover the three broad links supplied by the actual route");
   const shortHtml = render(shortArticle);
   const longHtml = render(longArticle);
+  assert.equal(shortHtml.includes('data-news-layer="context"'), false,
+    "a short update with only broad desks must not render an empty context section");
+  assert.equal(shortHtml.includes("Follow the subject."), false);
+  const longWithBroadDesks = render(longArticle, { relatedVerticals: broadVerticals });
+  assert.ok(longWithBroadDesks.includes("Follow the subject."));
+  for (const vertical of broadVerticals) {
+    assert.equal(shortHtml.includes(`href="/news?desk=${vertical.slug}"`), false);
+    assert.ok(longWithBroadDesks.includes(`href="/news?desk=${vertical.slug}"`));
+  }
+  // Actual existing relations are a component fixture only, not a new claim
+  // that these entities belong to the Prestige One publication.
+  const explicit = resolveArticleRelations("2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island");
+  assert.ok(explicit.areas.length && explicit.developers.length);
+  for (const overrides of [
+    { relatedAreas: explicit.areas }, { relatedDevelopers: explicit.developers },
+  ]) {
+    const explicitHtml = render(shortArticle, overrides);
+    assert.ok(explicitHtml.includes('data-news-layer="context"'));
+    assert.ok(explicitHtml.includes("Follow the subject."));
+    assert.equal(explicitHtml.includes("Related desks"), false);
+    const link = "relatedAreas" in overrides
+      ? explicit.areas[0].advisoryLinks[0]
+      : explicit.developers[0].advisoryLink;
+    assert.ok(explicitHtml.includes(`href="${escaped(link.href)}"`));
+  }
+  const withMore = render(shortArticle, { older: longArticle });
+  assert.ok(withMore.includes(`href="/news/${longArticle.slug}"`));
   assert.equal(occurrences(shortHtml, "<h1>"), 1);
   assert.equal(occurrences(longHtml, "<h1>"), 1);
   assert.ok(shortHtml.includes(className("shortUpdate")));
@@ -125,6 +160,10 @@ async function main() {
   assert.match(css, /\.shortUpdate\s+\.identity\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.15fr\)\s+minmax\(0,\s*1fr\)/u);
   assert.match(css, /@media\s*\(max-width:\s*760px\)\s*\{\s*\.shortUpdate\s+\.identity\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/u);
   assert.match(css, /\.shortUpdate\s+\.articleGrid\s*\{[^}]*display:\s*block/u);
+  assert.match(css, /\.shortUpdate\s+\.relations\s*\{[^}]*padding:\s*2rem\s+1\.25rem/u);
+  assert.match(css, /\.shortUpdate\s+\.relations\s*>\s*header\s*\{[^}]*display:\s*block/u);
+  assert.match(css, /\.shortUpdate\s+\.more\s+a\s*\{[^}]*min-height:\s*7rem/u);
+  assert.match(css, /\.shortUpdate\s+\.more\s+a\s+strong\s*\{[^}]*margin-top:\s*1rem/u);
 
   const imagePath = path.join(root, media.repoPath);
   assert.ok(existsSync(imagePath), "root must copy the approved image before this rendered-image check");
@@ -205,7 +244,7 @@ async function main() {
     writeFileSync(output, outputHtml);
     console.log(`Local component preview${mobile ? " (390px srcdoc iframe)" : ""}: ${output}`);
   }
-  console.log(`Short news layout PASS: actual component, ${shortArticle.body.split(/\n\n+/u).length} paragraphs once, approved ${media.width}x${media.height} original, one source section; long report retains signal/consequence/source rail. Browser geometry is not asserted.`);
+  console.log(`Short news layout PASS: actual component, ${shortArticle.body.split(/\n\n+/u).length} paragraphs once, approved ${media.width}x${media.height} original, one source section; three real broad desk links omitted for short updates, explicit area/developer links retained, long report retains signal/consequence/source rail/desks. Browser geometry is not asserted.`);
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });

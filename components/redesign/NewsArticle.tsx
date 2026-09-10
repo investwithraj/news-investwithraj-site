@@ -50,6 +50,11 @@ export default function NewsArticle({
 }: Props) {
   const paragraphs = article.body.split(/\n\n+/).filter(Boolean);
   const shortUpdate = article.format === "short-update";
+  const visibleVerticals = shortUpdate ? [] : relatedVerticals;
+  const hasRelatedEntities = Boolean(
+    relatedAreas.length || relatedDevelopers.length || visibleVerticals.length,
+  );
+  const showContext = !shortUpdate || hasRelatedEntities || article.faq.length > 0;
   const evidence = evidenceSummary(article);
   const readTime = readingMinutes(article);
   const consequence = consequenceExcerpt(article);
@@ -255,10 +260,8 @@ export default function NewsArticle({
           ) : null}
         </section>
 
-        <section className={styles.context} data-news-layer="context">
-          {(relatedAreas.length ||
-            relatedDevelopers.length ||
-            relatedVerticals.length) ? (
+        {showContext ? <section className={styles.context} data-news-layer="context">
+          {hasRelatedEntities ? (
             <div
               className={styles.relations}
               aria-labelledby="related-entities-title"
@@ -304,10 +307,10 @@ export default function NewsArticle({
                     ))}
                   </section>
                 ) : null}
-                {relatedVerticals.length ? (
+                {visibleVerticals.length ? (
                   <section>
                     <h3>Related desks</h3>
-                    {relatedVerticals.map((vertical) => (
+                    {visibleVerticals.map((vertical) => (
                       <Link
                         href={`/news?desk=${vertical.slug}`}
                         key={vertical.slug}
@@ -343,7 +346,7 @@ export default function NewsArticle({
               </div>
             </div>
           ) : null}
-        </section>
+        </section> : null}
 
         <footer className={styles.finalLayer} data-news-layer="next-action">
           <nav
