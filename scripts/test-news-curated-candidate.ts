@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { getNewsBySlug, NEWS_ARTICLES } from "../content/news";
 import type { NewsArticle } from "../content/news/types";
 import { ARTICLE_RELATION_RECORDS } from "../lib/article-relations";
+import { findSourceByUrl } from "../lib/sources/registry";
 import {
   CURATED_NEWS_CANDIDATE_KEYS,
   assertCompletedCuratedPublication,
@@ -96,8 +97,22 @@ for (const key of CURATED_NEWS_CANDIDATE_KEYS) {
   for (const citation of candidate.article.citations) {
     const publisher = approvedPublisherIdentity(citation.url);
     assert.ok(publisher, `${citation.url} must have an approved publisher`);
-    assert.equal(citation.source, publisher.name);
+    assert.ok([publisher.name, findSourceByUrl(citation.url)?.name].includes(citation.source),
+      "Stored citation labels must belong to this exact registry publisher.");
     assert.equal(citation.tier, publisher.tier);
+    const priorJson = JSON.stringify(candidate.article);
+    const modern = { ...candidate.article, citations: candidate.article.citations.map((item) =>
+      ({ ...item, source: approvedPublisherIdentity(item.url)!.name })) };
+    assert.equal(validateDraftArticleShape(modern).ok, true,
+      "New reader-facing publisher labels remain valid.");
+    for (const source of ["Invented newsroom", "Gulf News — Invented Desk", "Reuters"]) {
+      if (source === publisher.name) continue;
+      const forged: typeof candidate.article = { ...candidate.article, citations: [{ ...citation, source }] };
+      assert.equal(validateDraftArticleShape(forged).ok, false,
+        "Unknown or cross-publisher labels must still be rejected.");
+    }
+    assert.equal(JSON.stringify(candidate.article), priorJson,
+      "Compatibility validation must not rewrite stored articles or their hashes.");
   }
 
   // Returned candidates are detached: one execution cannot change the

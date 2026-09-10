@@ -10,6 +10,7 @@ import type {
 } from "@/lib/news-review/types";
 import { CURRENT_EVIDENCE_POLICY_VERSION } from "@/lib/news-review/types";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
+import { findSourceByUrl } from "@/lib/sources/registry";
 import { hasApprovedDailyMediaContext } from "./daily-media-catalog";
 import {
   approvedEvidencePublisherDomain,
@@ -102,7 +103,10 @@ function validCanonicalCitation(value: unknown): boolean {
   const publisher = approvedPublisherIdentity(value.url);
   return (
     publisher !== null &&
-    value.source === publisher.name &&
+    // Stored drafts and published receipts retain their original registry label
+    // and hash. Accept only that exact label or the current reader-facing name
+    // of the same URL-bound publisher; never arbitrary model-provided aliases.
+    (value.source === publisher.name || value.source === findSourceByUrl(value.url)?.name) &&
     value.tier === publisher.tier
   );
 }
