@@ -75,7 +75,8 @@ function validateUrl(value: string, allowedDomains: string[]): URL {
     (url.port && url.port !== "443") ||
     !hostAllowed(url.hostname, allowedDomains)
   ) {
-    throw new Error("Source URL is outside the approved HTTPS host boundary.");
+    // Identify the blocked host without exposing query strings or credentials.
+    throw new Error(`Source URL is outside the approved HTTPS host boundary (${url.protocol}//${url.hostname}).`);
   }
   return url;
 }

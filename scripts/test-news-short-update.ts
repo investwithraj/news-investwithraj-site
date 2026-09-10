@@ -59,7 +59,7 @@ const cluster: Cluster = {
   suggestedCategory: "regulatory", suggestedMarkets: ["Dubai"],
 };
 
-async function generate(body: string, options: { format?: DraftOpts["format"]; source?: string; date?: string | null } = {}) {
+async function generate(body: string, options: { format?: DraftOpts["format"]; source?: string; date?: string | null; badTitle?: string } = {}) {
   const prompts: string[] = [];
   const result = await draftFromCluster(cluster, ["dubailand.gov.ae"], {
     format: options.format,
@@ -67,7 +67,9 @@ async function generate(body: string, options: { format?: DraftOpts["format"]; s
     dependencies: {
       research: async (request) => {
         prompts.push(request.system ?? "");
-        return { ok: true, text: json(body), searchedUrls: [URL] };
+        const draft = JSON.parse(json(body));
+        if (options.badTitle) draft.title = options.badTitle;
+        return { ok: true, text: JSON.stringify(draft), searchedUrls: [URL] };
       },
       repair: async (request) => {
         prompts.push(request.system ?? "");
@@ -97,6 +99,14 @@ async function main() {
   assert.ok(voice.metrics.approvedLexiconCount < 3);
   assert.ok(voice.metrics.wordCount >= 80 && voice.metrics.wordCount <= 500);
   assert.equal(prompts.length, 1, "valid short update needs no length/jargon repair");
+  const titleRepair = await generate(BODY, { format: "short-update",
+    badTitle: "Dubai Land Department grants permanent residency to every applicant" });
+  assert.equal(titleRepair.result.ok, true, titleRepair.result.reason);
+  assert.ok(titleRepair.prompts.length > 1, "An unsupported non-numeric title must enter repair.");
+  assert.match(titleRepair.prompts[1], /If any listed claim-support, validator or numeric failure concerns the title, rewrite it/u);
+  assert.doesNotMatch(titleRepair.prompts[1], /Preserve the current title unless the unsupported or unparsed lists identify numerical/u);
+  assert.equal(titleRepair.result.article?.title, article.title,
+    "The corrected title must pass the unchanged final source check.");
   assert.doesNotMatch(prompts[0], /650\+|800[–-]1100|analytical register \(≥3\)/u);
   assert.match(draftSystemPrompt(), /650\+/u, "legacy prompt remains long-form");
   assert.equal(validateDraftArticleShape(article).ok, true);
