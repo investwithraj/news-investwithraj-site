@@ -37,9 +37,11 @@ assert.deepEqual(CURATED_NEWS_CANDIDATE_KEYS, [
   "dld-initial-registration-2026-09-07",
   "rak-h1-housing-2026-09-02",
   "adgm-h1-growth-2026-09-08",
+  "prestige-one-investment-2026-09-10",
 ]);
 
 const expectedSources = new Map<string, string[]>([
+  ["prestige-one-investment-2026-09-10", ["https://www.wam.ae/en/article/c256iib-dubai-developers-launch-multi-billion-dirham"]],
   [
     "dld-initial-registration-2026-09-07",
     [

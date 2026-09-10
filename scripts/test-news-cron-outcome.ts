@@ -174,6 +174,24 @@ async function main(): Promise<void> {
   assert.equal(held.primaryOutcome, "held");
   assert.deepEqual(held.outcomes, ["held"]);
   assert.equal(held.shouldFail, false, "A fresh feed may tolerate one held-only pass");
+  const missedDailyPublication = buildNewsCronRunReport(input({
+    requiredPublishedDubaiDate: "2026-08-25",
+    staged: 0,
+    draftHeld: 6,
+    publication: { ...publication, published: 0, deploymentVerified: 0, deferred: 0 },
+  }));
+  assert.equal(missedDailyPublication.shouldFail, true, "A daily run cannot be green with only yesterday's article");
+  assert.ok(missedDailyPublication.operationalFailureReasons.some((reason) => reason.includes("no live publication")));
+  const coveredDailyPublication = buildNewsCronRunReport(input({
+    requiredPublishedDubaiDate: "2026-08-24",
+    staged: 0,
+    publication: { ...publication, published: 0, deploymentVerified: 0, deferred: 0 },
+  }));
+  assert.equal(coveredDailyPublication.shouldFail, false, "An already covered day need not publish again");
+  const pendingDeployment = buildNewsCronRunReport(input({
+    publication: { ...publication, deploymentVerified: 0, pendingVerification: 1 },
+  }));
+  assert.equal(pendingDeployment.shouldFail, true, "A Git commit is not a verified live article");
 
   const staleHeld = buildNewsCronRunReport(
     input({

@@ -12,6 +12,7 @@
 //   - 3+ failures → drop to manual review
 
 import { SOURCE_WHITELIST } from "@/lib/sources/registry";
+import type { NewsArticleFormat } from "@/content/news/types";
 
 /* ─── Lexicons ──────────────────────────────────────────────────────── */
 
@@ -144,6 +145,8 @@ export interface DraftArticle {
   citations: Array<{ source: string; url: string; accessedAt?: string }>;
   /** "news" | "insight" | "area" */
   tier: "news" | "insight" | "area";
+  /** Explicit news-only contract; omission retains the long-form gates. */
+  format?: NewsArticleFormat;
   /** Governed market labels used only to derive an exact contextual CTA. */
   market?: readonly string[];
   /** Reader-visible CTA copy. It is checked for voice and pressure tactics,
@@ -251,6 +254,19 @@ export function validateDraft(article: DraftArticle): ValidationResult {
     .toLowerCase();
   const bodyLower = article.body.toLowerCase();
   const wordCount = countWords(article.body);
+  const shortUpdate = article.tier === "news" && article.format === "short-update";
+  if (
+    article.format !== undefined &&
+    (article.tier !== "news" ||
+      (article.format !== "short-update" && article.format !== "long-report"))
+  ) {
+    failures.push({
+      gate: 7,
+      name: "Article format",
+      detail: "Only news articles may select short-update or long-report.",
+      severity: "block",
+    });
+  }
 
   // Gate 1 — Banned lexicon
   const bannedHits = BANNED_LEXICON.filter((w) => allText.includes(w.toLowerCase()));
@@ -275,7 +291,7 @@ export function validateDraft(article: DraftArticle): ValidationResult {
   const approvedHits = APPROVED_LEXICON.filter((w) =>
     allText.includes(w.toLowerCase())
   );
-  if (approvedHits.length < 3) {
+  if (!shortUpdate && approvedHits.length < 3) {
     failures.push({
       gate: 2,
       name: "Approved lexicon",
@@ -298,7 +314,7 @@ export function validateDraft(article: DraftArticle): ValidationResult {
   // Gate 4 — P1 has a number
   const p1 = (article.body.split(/\n\n/)[0] ?? "").trim();
   const p1HasNumber = /\d/.test(p1);
-  if (!p1HasNumber) {
+  if (!shortUpdate && !p1HasNumber) {
     failures.push({
       gate: 4,
       name: "P1 has a number",
@@ -341,7 +357,7 @@ export function validateDraft(article: DraftArticle): ValidationResult {
   }
 
   // Gate 7 — Word count
-  const wordCountTarget = {
+  const wordCountTarget = shortUpdate ? { min: 80, max: 500 } : {
     news: { min: 600, max: 1200 },
     insight: { min: 2500, max: 3500 },
     area: { min: 800, max: 2500 },
@@ -357,7 +373,7 @@ export function validateDraft(article: DraftArticle): ValidationResult {
 
   // Gate 8 — Em-dash present (signature punctuation)
   const emDashCount = (article.body.match(/—/g) || []).length;
-  if (emDashCount < 1) {
+  if (!shortUpdate && emDashCount < 1) {
     failures.push({
       gate: 8,
       name: "Em-dash signature",

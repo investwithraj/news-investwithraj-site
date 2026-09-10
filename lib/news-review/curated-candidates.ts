@@ -15,6 +15,7 @@ export const CURATED_NEWS_CANDIDATE_KEYS = [
   "dld-initial-registration-2026-09-07",
   "rak-h1-housing-2026-09-02",
   "adgm-h1-growth-2026-09-08",
+  "prestige-one-investment-2026-09-10",
 ] as const;
 
 export type CuratedNewsCandidateKey =
@@ -334,6 +335,61 @@ The evidence supports a precise summary. Abu Dhabi Media Office and Gulf News ke
   },
 };
 
+const prestigeOneInvestment: CuratedNewsCandidate = {
+  key: "prestige-one-investment-2026-09-10",
+  draftId: "be570910-2026-4090-8090-100000000004",
+  topic: "Prestige One Dubai investment and launch plans for 2026–2027",
+  reviewNote: "Raj requested this story from the Arabian Business screenshot. Human-edited short update; WAM is the directly fetched primary report. Publish only through the normal source, originality, date and publication checks.",
+  article: {
+    slug: "2026-09-10-prestige-one-dubai-investment-plan",
+    title: "Prestige One plans to invest AED3 billion to AED4 billion",
+    subtitle: "Prestige One's plans cover land purchases and new residential and commercial projects",
+    publishedAt: "2026-09-10T18:10:03.000Z",
+    modifiedAt: "2026-09-10T18:10:03.000Z",
+    displayDate: "10 Sept 2026",
+    author: "raj-tomar",
+    tier: "news",
+    format: "short-update",
+    category: "developer-corporate",
+    market: ["Dubai"],
+    reportingBasis: {
+      sourceUrl: "https://www.wam.ae/en/article/c256iib-dubai-developers-launch-multi-billion-dirham",
+      speaker: "Hussein Ezz Eddin",
+      organization: "Prestige One Developments",
+      statementKind: "corporate-intent",
+    },
+    tldr: [
+      "Prestige One plans AED3 billion to AED4 billion of investment.",
+      "Prestige One's plans cover land, residential and commercial projects.",
+      "Prestige One plans seven to eight further launches this season.",
+    ],
+    body: `Hussein Ezz Eddin, the Chief Sales Officer of Prestige One Developments, said the developer plans to invest AED3 billion to AED4 billion during the 2026-2027 property season, WAM reports.
+
+Prestige One Developments intends to put the investment towards land purchases and new residential and commercial projects in Dubai. Prestige One Developments plans projects in key locations across Dubai.
+
+Prestige One Developments also plans a further seven to eight project launches during the current season, according to the executive's comments reported by WAM.`,
+    faq: [],
+    citations: [{
+      source: "WAM (Emirates News Agency)",
+      url: "https://www.wam.ae/en/article/c256iib-dubai-developers-launch-multi-billion-dirham",
+      accessedAt: "2026-09-10T18:10:03.000Z",
+      tier: "government",
+    }],
+    heroImage: {
+      src: "/news/2026-09-10-prestige-one-dubai-investment-plan/cover.jpg",
+      alt: "Dubai skyline at sunset, shown as city context",
+      credit: "Invest With Raj stock-account archive; Dubai city context, not a Prestige One project",
+    },
+    cta: {
+      href: "https://www.investwithraj.com/engage?utm_source=news&utm_medium=internal&utm_campaign=prestige_one_investment",
+      label: "Discuss your Dubai real estate decision with Raj",
+    },
+    distribution: {},
+    metaDescription: "Prestige One's Dubai plans cover land acquisitions and new residential and commercial projects, WAM reports.",
+    speakableSelector: [".article-body > p:first-child"],
+  },
+};
+
 const CURATED_NEWS_CANDIDATES: Record<
   CuratedNewsCandidateKey,
   CuratedNewsCandidate
@@ -341,6 +397,7 @@ const CURATED_NEWS_CANDIDATES: Record<
   "dld-initial-registration-2026-09-07": dldInitialRegistration,
   "rak-h1-housing-2026-09-02": rakH1Housing,
   "adgm-h1-growth-2026-09-08": adgmH1Growth,
+  "prestige-one-investment-2026-09-10": prestigeOneInvestment,
 };
 
 export function isCuratedNewsCandidateKey(

@@ -17,6 +17,7 @@ import {
   committedCuratedDeploymentRequest,
   recoverCommittedCuratedDeployment,
 } from "../lib/news-review/curated-recovery";
+import { ensureCuratedMediaApproval } from "../lib/news-review/curated-media";
 import {
   approvedEvidencePublisherDomain,
   approvedPublisherIdentity,
@@ -601,6 +602,7 @@ async function main(): Promise<void> {
         "The exact curated draft has an incomplete publication state that cannot be staged again.",
       );
     }
+    await ensureCuratedMediaApproval(candidate.key, identical, post);
     emitActionOutput("candidate_key", candidate.key);
     emitActionOutput("already_published", "0");
     emitActionOutput("draft_id", identical.id);
@@ -645,6 +647,7 @@ async function main(): Promise<void> {
     throw new Error("Curated candidate staging returned an invalid receipt.");
   }
 
+  await ensureCuratedMediaApproval(candidate.key, staged, post);
   emitActionOutput("candidate_key", candidate.key);
   emitActionOutput("already_published", "0");
   emitActionOutput("draft_id", staged.id);

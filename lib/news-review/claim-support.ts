@@ -58,6 +58,30 @@ export interface ClaimSupportAssessment {
   unusedEvidenceUrls: string[];
 }
 
+/** A reviewed claim of speech, never a claim that the announced outcome will occur. */
+export interface AnnouncementReportingBasis {
+  sourceUrl: string;
+  speaker: string;
+  organization: string;
+  statementKind: "corporate-intent";
+}
+
+export interface AttributedAnnouncementInput {
+  format?: string;
+  category: string;
+  reportingBasis?: AnnouncementReportingBasis;
+  segments: readonly ClaimSupportSegment[];
+  /** Only independently fetched, cited, registry-verified evidence belongs here.
+   * The publication caller also verifies freshness and immutable evidence hashes. */
+  evidence: readonly ClaimSupportEvidence[];
+}
+
+export interface AttributedAnnouncementAssessment {
+  ok: boolean;
+  reason: string;
+  support: ClaimSupportAssessment;
+}
+
 interface AtomicClause {
   field: string;
   text: string;
@@ -314,6 +338,19 @@ const CATEGORICAL_FUTURE_CONSTRUCTION_RE =
 const CONDITIONAL_MODAL_RE = /\bwould\b/iu;
 const FORECAST_MODAL_RE =
   /\b(?:expect(?:ed|s|ing)?|forecast(?:s|ed|ing)?|project(?:ed|s|ing)|(?:analysts?|forecasters?|models?)\s+project|anticipat(?:e|es|ed|ing)|predict(?:s|ed|ing)?)\b/iu;
+// In an explicit property-type noun phrase, `projects` means developments,
+// not the forecast verb. Mask only that token for modality detection; all
+// anchors, quantities, predicates and source text remain untouched. An
+// unqualified `projects`, a capitalized potential company-name suffix, or a
+// following forecast object stays fail-closed. This is not a general parser.
+const PROPERTY_PROJECT_NOUN_RE =
+  /\b(residential|commercial)\s+projects(?=$|[.,;:!?)]|\s+(?:in|across|within|during|for|at|on|and|or|with)\b)/gu;
+
+function hasForecastModality(value: string): boolean {
+  return FORECAST_MODAL_RE.test(
+    value.replace(PROPERTY_PROJECT_NOUN_RE, "$1 developments"),
+  );
+}
 const INTENT_MODAL_RE =
   /\b(?:plan(?:ned|s|ning)?|propos(?:ed|es|ing)?|intend(?:ed|s|ing)?|aim(?:ed|s|ing)?|seek(?:s|ing)?|sought|hope(?:d|s|ing)?|want(?:ed|s|ing)?|aspir(?:e|es|ed|ing)|prepar(?:e|es|ed|ing)\s+to|look(?:s|ed|ing)?\s+to|slated|schedule(?:d|s)?|target(?:ed|s|ing)?|due|set to)\b/iu;
 const COMMITMENT_MODAL_RE =
@@ -1065,7 +1102,7 @@ function modality(value: string): Signature["modality"] {
   }
   if (CONDITIONAL_MODAL_RE.test(normalized)) return "conditional";
   if (COMMITMENT_MODAL_RE.test(normalized)) return "commitment";
-  if (FORECAST_MODAL_RE.test(normalized)) return "forecast";
+  if (hasForecastModality(normalized)) return "forecast";
   if (INTENT_MODAL_RE.test(normalized)) return "intent";
   if (READINESS_MODAL_RE.test(normalized)) return "readiness";
   if (POSSIBLE_MODAL_RE.test(normalized)) return "possible";
@@ -1090,7 +1127,7 @@ function modalityAmbiguous(value: string): boolean {
       CATEGORICAL_FUTURE_CONSTRUCTION_RE.test(normalized),
     CONDITIONAL_MODAL_RE.test(normalized),
     COMMITMENT_MODAL_RE.test(normalized),
-    FORECAST_MODAL_RE.test(normalized),
+    hasForecastModality(normalized),
     INTENT_MODAL_RE.test(normalized),
     READINESS_MODAL_RE.test(normalized),
   ].filter(Boolean).length > 1;
@@ -2310,4 +2347,250 @@ export function assessClaimSupport(input: {
     failures,
     unusedEvidenceUrls,
   };
+}
+
+const CORPORATE_BOUND_SUBJECT = "BoundCorporation";
+const CORPORATE_ANNOUNCEMENT_PROHIBITED_RE =
+  /\b(?:will|shall|would|could|may|might|expect(?:s|ed)?|forecast(?:s|ed)?|predict(?:s|ed)?|projected|guarantee(?:d|s)?|promise(?:d|s)?|pledge(?:d|s)?|commit(?:ted|s)?|yield|returns?|profits?|upside|downside|outperform|underperform|recommend|buyers?|investors?|demand|prices?|values?|wealth|lucrative|prime|luxury|exclusive|best|leading|unrivalled|unmatched|because|therefore|consequently)\b/iu;
+// Conditional intent is manual-only until its condition has a separately
+// validated representation. A source condition must never disappear when
+// an inner statement or coordinated clause is extracted for matching.
+const CORPORATE_INTENT_CONDITION_RE =
+  /\b(?:if|unless|until|once|upon|pending|provided|providing|subject\s+to|conditional(?:ly)?|conditioned\s+on|on\s+(?:the\s+)?condition|contingent\s+on|depend(?:s|ent|ing)?\s+on|awaiting|approval|approvals)\b/iu;
+
+function announcementRegexEscape(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function announcementPublisherPattern(value: string): string {
+  // Publisher registry aliases are lowercase. Match their display casing
+  // without making the independent speaker/organization grammar insensitive.
+  return [...value].map((character) => character.toLowerCase() !== character.toUpperCase()
+    ? `[${announcementRegexEscape(character.toLowerCase())}${announcementRegexEscape(character.toUpperCase())}]`
+    : announcementRegexEscape(character)).join("");
+}
+
+function announcementOrganizationAliases(organization: string): string[] {
+  const aliases = [organization];
+  const shorter = organization.replace(/\s+(?:Developments|Properties|Holdings|Group)$/u, "");
+  if (shorter !== organization && words(shorter).length >= 2) aliases.push(shorter);
+  return aliases.sort((left, right) => right.length - left.length);
+}
+
+function normalizeCorporateSubject(value: string, aliases: readonly string[], bindCompanyPronoun = false): string {
+  const alias = aliases.map(announcementRegexEscape).join("|");
+  const named = value.replace(new RegExp(`\\b(?:${alias})\\b`, "gu"), CORPORATE_BOUND_SUBJECT);
+  let fact = bindCompanyPronoun ? named.replace(/^the (?:company|developer)\b/iu, CORPORATE_BOUND_SUBJECT) : named;
+  const amount = "AED\\s*\\d[\\d,.]*(?:\\s+(?:billion|million|thousand))?(?:\\s+to\\s+AED\\s*\\d[\\d,.]*(?:\\s+(?:billion|million|thousand))?)?";
+  // Controlled nominal/verb alternations describe the same corporate intent.
+  // Nothing is dropped from the amount, place, date or object payload.
+  fact = fact
+    .replace(new RegExp(`^${CORPORATE_BOUND_SUBJECT} plans (${amount})(?: of)? (Dubai )?investment(?=[.,]|$)`, "u"), (_match, budget: string, city: string | undefined) => `${CORPORATE_BOUND_SUBJECT} plans to invest ${budget}${city ? " in Dubai" : ""}`)
+    .replace(new RegExp(`^${CORPORATE_BOUND_SUBJECT}(?:'s)? (Dubai )?plans (?:cover|include|involve) (.+)$`, "u"), (_match, city: string | undefined, object: string) => `${CORPORATE_BOUND_SUBJECT} plans ${object}${city ? " in Dubai" : ""}`)
+    .replace(new RegExp(`^${CORPORATE_BOUND_SUBJECT} intends to put the investment towards `, "u"), `${CORPORATE_BOUND_SUBJECT} plans to invest through `)
+    .replace(new RegExp(`^${CORPORATE_BOUND_SUBJECT} also plans `, "u"), `${CORPORATE_BOUND_SUBJECT} plans `)
+    .replace(/\bland purchases\b/gu, "land acquisitions")
+    .replace(/\b(residential|commercial) projects\b/gu, "$1 developments")
+    .replace(new RegExp(`^${CORPORATE_BOUND_SUBJECT} plans (?:new )?projects\\b`, "u"), `${CORPORATE_BOUND_SUBJECT} plans developments`)
+    .replace(/\bplans (a further )?((?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)(?: to (?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?) (further )?(?:project )?launches\b/gu, (_match, before: string | undefined, count: string, after: string | undefined) => `plans to launch ${before || after ? "a further " : ""}${count} developments`)
+    // Counted projects after a launch are an explicit noun, not a forecast.
+    // This local view never changes source bytes or relaxes the general matcher.
+    .replace(/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+projects\b/gu, "$1 developments");
+  return fact;
+}
+
+function stripAnnouncementPublisherAttribution(value: string, evidence: readonly ClaimSupportEvidence[]): string {
+  const publishers = evidence.flatMap(rawAliasesForEvidence).sort((left, right) => right.length - left.length).map(announcementPublisherPattern).join("|");
+  return stripPublisherAttribution(value.trim().replace(/[.!?]+$/u, ""), evidence)
+    .replace(new RegExp(`,\\s*(?:${publishers})\\s+(?:reports|reported|says|said)$`, "u"), "")
+    .replace(new RegExp(`,\\s*according to the executive's comments reported by (?:${publishers})$`, "u"), "");
+}
+
+interface CorporateSpeech {
+  prefix: string;
+  fact: string;
+}
+
+const CORPORATE_SPEAKER_ROLE_WORDS = new Set(
+  `the at of for and chief executive sales financial operating technology marketing commercial officer president vice chair chairman chairwoman founder co-founder managing director head manager general communications development business spokesperson ceo cfo coo cso cto cmo`.split(/\s+/u),
+);
+
+/** Parse only a named speech act, not an arbitrary occurrence of `said`. */
+function namedCorporateSpeech(
+  value: string,
+  basis: AnnouncementReportingBasis,
+  aliases: readonly string[],
+  evidence: readonly ClaimSupportEvidence[],
+): CorporateSpeech | null {
+  const unwrapped = stripAnnouncementPublisherAttribution(value, evidence).trim();
+  const speaker = announcementRegexEscape(basis.speaker);
+  const publishers = evidence.flatMap(rawAliasesForEvidence)
+    .sort((left, right) => right.length - left.length)
+    .map(announcementPublisherPattern).join("|");
+  const match = unwrapped.match(new RegExp(
+    `^(${speaker}(?:,?\\s+[^.!?]{0,180}?)?)\\s+(?:said|stated|announced|told\\s+(?:${publishers}))\\s+(?:that\\s+)?(.+)$`, "u",
+  ));
+  if (!match) return null;
+  const prefix = match[1].replace(/,\s*$/u, "");
+  const role = aliases.reduce((remaining, alias) => remaining.replace(alias, ""), prefix.replace(basis.speaker, ""));
+  if (words(role).some((word) => !CORPORATE_SPEAKER_ROLE_WORDS.has(word))) return null;
+  const fact = normalizeCorporateSubject(match[2], aliases, true);
+  const identityInPrefix = aliases.some((alias) =>
+    new RegExp(`\\b(?:at|of|for)\\s+${announcementRegexEscape(alias)}\\b`, "u").test(prefix),
+  );
+  // A pronoun is bound only by the same named speaker/organization sentence.
+  // Otherwise the explicitly named company must be the grammatical subject.
+  if (!identityInPrefix && !aliases.some((alias) => match[2].startsWith(`${alias} `))) return null;
+  if (!fact.startsWith(`${CORPORATE_BOUND_SUBJECT} `)) return null;
+  return { prefix, fact };
+}
+
+function corporateStatementParts(fact: string): string[] {
+  // Split a repeated corporate subject's coordinated intent without merging
+  // a completed launch into its future plan. A count-only second launch object
+  // is recovered only from the explicit `launched ... projects` in this sentence.
+  const coordinated = fact.match(/^(.+?)\s+and\s+(plans?\s+to\s+launch\s+.+)$/u);
+  if (!coordinated) return [fact];
+  let continuation = coordinated[2];
+  if (/\b(?:launched|launches)\b.*\bdevelopments\b/u.test(coordinated[1])) {
+    continuation = continuation.replace(
+      /^(plans?\s+to\s+launch\s+(?:a further\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)(?:\s+to\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))?)(\s+(?:during|in|by)\b.+)$/u,
+      "$1 developments$2",
+    );
+  }
+  return [coordinated[1], `${CORPORATE_BOUND_SUBJECT} ${continuation}`];
+}
+
+/**
+ * A separate source-bound speech lane. It proves that an identified person
+ * described a company's intent, never that the future event is true or certain.
+ * The ordinary one/two-publisher matcher above is intentionally unchanged.
+ */
+export function assessAttributedAnnouncement(
+  input: AttributedAnnouncementInput,
+): AttributedAnnouncementAssessment {
+  const invalid = (reason: string): AttributedAnnouncementAssessment => ({
+    ok: false,
+    reason,
+    support: {
+      ok: false, verdict: "manual", checkedClauseCount: 0, supported: [],
+      failures: [{ field: "reportingBasis", clause: "attributed announcement", code: "unsupported", detail: reason }],
+      unusedEvidenceUrls: input.evidence.map((record) => record.url),
+    },
+  });
+  const basis = input.reportingBasis;
+  if (input.format !== "short-update" || !["developer-corporate", "launch"].includes(input.category)) {
+    return invalid("attributed announcements require short-update developer-corporate or launch format");
+  }
+  if (!basis || typeof basis !== "object" || Array.isArray(basis) ||
+      Object.keys(basis).sort().join(",") !== "organization,sourceUrl,speaker,statementKind" ||
+      basis.statementKind !== "corporate-intent" ||
+      ![basis.speaker, basis.organization].every((value) => typeof value === "string" && value.trim() === value && value.length >= 3 && value.length <= 120 && /^[\p{L}\p{M}][\p{L}\p{M}\p{N} .&'’()-]+$/u.test(value)) ||
+      typeof basis.sourceUrl !== "string") return invalid("invalid corporate announcement reporting basis");
+  try {
+    const url = new URL(basis.sourceUrl);
+    if (url.protocol !== "https:" || url.username || url.password || url.hash) return invalid("announcement source must be an exact public HTTPS citation");
+  } catch { return invalid("invalid announcement source URL"); }
+  if (input.evidence.length !== 1 || input.evidence[0].url !== basis.sourceUrl || input.evidence[0].text.length < 80) {
+    return invalid("announcement requires its one exact cited, directly fetched source");
+  }
+  const rawTexts = [basis.speaker, basis.organization,
+    ...input.segments.map((segment) => segment.text),
+    ...input.evidence.map((record) => record.text)];
+  if (rawTexts.some((text) => text.normalize("NFKC").toLowerCase().includes(CORPORATE_BOUND_SUBJECT.toLowerCase()))) {
+    return invalid("raw article, source or identity text contains a reserved internal matching marker");
+  }
+  if (input.segments.some((segment) => CORPORATE_INTENT_CONDITION_RE.test(segment.text))) {
+    return invalid("conditional announcements require manual condition matching");
+  }
+  const aliases = announcementOrganizationAliases(basis.organization);
+  const originalWindows = sourceWindows(input.evidence);
+  const sourceRecord = input.evidence[0];
+  const sourceFacts: string[] = [];
+  const sourcePrefixes: string[] = [];
+  let continuations = 0;
+  // Do not use the general atomic splitter here: it splits `while` and other
+  // joins before a later qualifier can be checked against its whole statement.
+  const sourceSentences = sourceRecord.text.replace(/\r\n?/gu, "\n")
+    .split(/\n+|(?<=[.!?])\s+/u).map((value) => value.trim()).filter(Boolean);
+  for (const clause of sourceSentences) {
+    const speech = namedCorporateSpeech(clause, basis, aliases, input.evidence);
+    if ((speech || continuations > 0) && CORPORATE_INTENT_CONDITION_RE.test(clause)) {
+      return invalid("the named source statement contains a condition that cannot be omitted or matched automatically");
+    }
+    if (speech) {
+      if (words(clause).length > MAX_SOURCE_WINDOW_WORDS) continue;
+      sourcePrefixes.push(speech.prefix);
+      sourceFacts.push(...corporateStatementParts(speech.fact));
+      continuations = 2;
+      continue;
+    }
+    // Only adjacent explicitly reported continuations inherit this speaker.
+    const continuation = continuations > 0
+      ? clause.match(/^(?:He|She|They)\s+(?:said|stated|added)(?:\s+that)?\s+(the company\s+.+)$/u)
+      : null;
+    if (continuation && words(clause).length <= MAX_SOURCE_WINDOW_WORDS) {
+      sourceFacts.push(...corporateStatementParts(normalizeCorporateSubject(continuation[1], aliases, true)));
+      continuations -= 1;
+    } else continuations = 0;
+  }
+  if (sourcePrefixes.length === 0) return invalid("fetched source does not bind the named speaker to this company's statement");
+  // These are derived matching views only. Original bytes/hashes and the
+  // unmodified originality windows remain the publication evidence.
+  const normalizedEvidence = [{ ...sourceRecord, text: sourceFacts.join("\n") }];
+  const matchingWindows = sourceWindows(normalizedEvidence).filter((window) =>
+    window.signature.modality === "intent" && !isMixedSignature(window.signature) &&
+    !CORPORATE_ANNOUNCEMENT_PROHIBITED_RE.test(window.text),
+  );
+  if (matchingWindows.length === 0) return invalid("named source statement contains no bounded corporate intent");
+  const clauses = input.segments.flatMap((segment) => sentenceClauses(segment.text).map((text) => ({ field: segment.field, text })));
+  const hasVisibleBodyAttribution = clauses.some((clause) => clause.field === "body" && namedCorporateSpeech(clause.text, basis, aliases, input.evidence));
+  if (!hasVisibleBodyAttribution) return invalid("body must visibly identify the named speaker, company and reported statement");
+  const supported: AnchorSupportedClaim[] = [];
+  const failures: ClaimSupportFailure[] = [];
+  for (const clause of clauses) {
+    const speech = namedCorporateSpeech(clause.text, basis, aliases, input.evidence);
+    // Definite company/developer nouns bind only inside the same explicit
+    // named speech statement. A prior article-level binding is not enough:
+    // another source-supported company's context may have intervened.
+    const fact = speech?.fact ?? normalizeCorporateSubject(stripAnnouncementPublisherAttribution(clause.text, input.evidence).trim(), aliases);
+    // Ordinary factual context gets no new exception. It must pass the
+    // unchanged matcher against the original, full fetched text, be asserted
+    // rather than predictive, and contain no source-free editorial allowance.
+    const originalSig = signature(clause.text, input.evidence);
+    if (!speech && originalSig.modality === "asserted" && originalSig.probability === "none" &&
+        !HIGH_RISK_RE.test(clause.text) && !CORPORATE_ANNOUNCEMENT_PROHIBITED_RE.test(clause.text)) {
+      const contextSupport = assessClaimSupport({ segments: [{ field: clause.field, text: clause.text }], evidence: input.evidence });
+      if (contextSupport.ok && contextSupport.supported.length > 0 && contextSupport.supported.every((claim) => !claim.editorial)) {
+        supported.push(...contextSupport.supported);
+        continue;
+      }
+    }
+    let problem: string | null = null;
+    if (speech && !sourcePrefixes.some((prefix) => isSubset(contentTokens(words(speech.prefix)), contentTokens(words(prefix))))) {
+      problem = "the stated speaker role or company attribution is not supported by the source";
+    }
+    if (!fact.startsWith(`${CORPORATE_BOUND_SUBJECT} `) && !fact.startsWith(`${CORPORATE_BOUND_SUBJECT}'s `)) {
+      problem ??= "every announcement clause must explicitly name the bound company as its subject";
+    }
+    const sig = signature(fact, normalizedEvidence);
+    if (sig.modality !== "intent" || isMixedSignature(sig) || sig.probability !== "none" || sig.force !== "none" || sig.negative || sig.unresolvedPassive || CORPORATE_ANNOUNCEMENT_PROHIBITED_RE.test(fact)) {
+      problem ??= "announcement clauses must retain corporate intent without predictions, completed outcomes, promotion or investment conclusions";
+    }
+    const matching = matchingWindows.filter((window) => signaturesCompatible(sig, window.signature, window));
+    const copied = originalWindows.some((window) => exceedsOriginalityCeiling(prepareOriginality(clause.text), window));
+    if (copied) problem ??= "announcement clause exceeds the unchanged source-originality ceiling";
+    if (matching.length === 0) {
+      const closest = matchingWindows.map((window) => compatibilityFailures(sig, window.signature, window)).sort((left, right) => left.length - right.length)[0];
+      problem ??= `no named-speaker source statement carries the same conservative intent signature${closest?.length ? ` (${closest.join(", ")})` : ""}`;
+    }
+    if (problem) failures.push({ field: clause.field, clause: boundedClauseLabel(clause.text), code: copied ? "source-copying" : "unsupported", detail: problem });
+    else supported.push({ field: clause.field, clause: boundedClauseLabel(clause.text), evidenceUrls: [sourceRecord.url], verdict: "anchor-supported", editorial: false });
+  }
+  const ok = clauses.length > 0 && failures.length === 0;
+  const support: ClaimSupportAssessment = {
+    ok, verdict: ok ? "anchor-supported" : "manual", checkedClauseCount: clauses.length,
+    supported, failures, unusedEvidenceUrls: supported.length > 0 ? [] : [sourceRecord.url],
+  };
+  return { ok, reason: ok ? "named corporate intent is attributed and matched to one directly fetched source" : failures[0]?.detail ?? "announcement has no factual clauses", support };
 }

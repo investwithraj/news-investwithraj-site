@@ -16,16 +16,36 @@ configured discovery sources
 ```
 
 Automation publishes at most one evidence-ready article per scheduled run.
-The single 03:07 UTC run (07:07 Dubai time) researches and selects the newest
-passing story. Additional recovery runs are started manually and remain capped
-at one publication each.
+The 01:37 UTC run (05:37 Dubai time) researches and selects the newest passing
+story. A second run at 05:17 UTC (09:17 Dubai time) provides recovery; the
+Dubai-day guard prevents a second automated publication after that day is covered.
+GitHub may delay scheduled starts. Manual runs remain capped at one publication.
 Anything that fails a source, figure, validator or integrity gate remains held
-in The Desk. Raj can still review and publish held drafts manually.
+in The Desk. Raj can review and correct held drafts there; publication still
+requires the current checks to pass.
 
 ## Scheduled drafting
 
-`.github/workflows/news-cron.yml` runs `scripts/draft-once.ts` once each morning
-at 03:07 UTC (07:07 Dubai time) and can also be started manually.
+`.github/workflows/news-cron.yml` runs `scripts/draft-once.ts` at the two times
+above and can also be started manually. It requests short-update news, not an
+800-word article for every announcement. Short updates can be 80–500 words;
+they have a compact reader layout without repeated summary/analysis sections.
+Source, numeric, freshness and originality checks remain.
+
+Evidence policy v5 adds an explicit attributed-announcement lane for short
+developer-corporate/launch updates. Its hash-bound reporting basis names the
+speaker, organization, exact fetched source and corporate intent. One approved
+report can establish that the company announced a plan; it cannot establish
+our prediction, completed spending, returns or market-wide demand. Changed
+figures, dates, attribution, conditions, unsupported statements and copied
+passages remain held. Existing approvals must be reassessed under the current
+policy before they are reused.
+
+The Prestige One candidate reuses one exact owner-approved stock photograph as
+Dubai city context. Its candidate-specific reuse route checks the committed
+original bytes, dimensions, hash and approval receipt. It cannot approve a
+caller-supplied image. Both staging and publication stop if this required image
+is absent or changed. New imagery still uses the normal owner review path.
 
 The runner:
 
@@ -44,7 +64,15 @@ runs.
 
 `POST /api/cron/draft` is a fallback. It requires an authenticated server or
 cron request, `ENABLE_NEWS_DRAFT_CRON=1`, a configured drafting provider, and
-durable production storage. `GET /api/cron/draft` is status-only.
+durable production storage. An authenticated `GET /api/cron/draft` can also
+execute drafting; it is NOT a read-only diagnostic. The watchdog GET can
+dispatch a workflow. Inspect run logs and the public `/api/front` feed instead.
+
+A scheduled run must observe a live article for its Dubai date. A Git commit
+without verified canonical deployment is not publication success. Holds and
+errors remain visible even while yesterday's feed is less than 36 hours old.
+Explicit provider 429/5xx errors receive at most two bounded retries; invalid
+requests, credentials and ambiguous network failures are not repeated.
 
 ## Authentication contract
 
@@ -69,7 +97,7 @@ curl -X POST "https://news.investwithraj.com/api/cron/draft" \
 Browser mutations use the signed, HttpOnly review-session cookie and same-origin
 checks. The publication endpoint also accepts the server credential used by the
 scheduled publisher, but it independently re-runs every hard publication gate.
-The server credential cannot bypass evidence policy v4 or publish a held draft.
+The server credential cannot bypass the current evidence policy or publish a held draft.
 
 ## Draft acceptance and evidence
 

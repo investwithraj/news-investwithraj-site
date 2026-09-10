@@ -109,6 +109,7 @@ async function run(req: NextRequest, options: { cronGet?: boolean } = {}) {
     }
     try {
       const r = await draftFromCluster(cluster, whitelist, {
+        format: "short-update",
         model: process.env.DRAFT_MODEL ?? "claude-haiku-4-5-20251001",
         maxSearches: options.cronGet ? 1 : 2,
         maxTokens: options.cronGet ? 2_600 : 3_000,

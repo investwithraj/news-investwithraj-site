@@ -30,13 +30,14 @@ import {
 } from "@/lib/sources/registry";
 import { validateCtaLabel } from "@/lib/voice/validator";
 import { findNewsDraftQuarantine } from "./draft-quarantine";
-import { assessClaimSupport } from "./claim-support";
+import { hasApprovedCuratedMediaContext } from "./curated-media-context";
+import { assessAttributedAnnouncement, assessClaimSupport, type ClaimSupportAssessment } from "./claim-support";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
 export const MAX_AUTO_NEWS_SOURCE_AGE_HOURS = 7 * 24;
 
-export type EvidenceLane = "official-fact" | "corroborated-analysis";
+export type EvidenceLane = "official-fact" | "attributed-announcement" | "corroborated-analysis";
 
 export interface EvidencePolicy {
   lane: EvidenceLane;
@@ -228,7 +229,9 @@ export function articleEvidenceSegments(
       field: "semaform.howIdTradeIt.horizon",
       text: trade?.horizon ?? "",
     },
-    { field: "heroImage.alt", text: article.heroImage?.alt ?? "" },
+    // Exact owner-approved image descriptions use image provenance, not an
+    // unrelated article source. Publication separately requires that ledger.
+    { field: "heroImage.alt", text: hasApprovedCuratedMediaContext(article) ? "" : article.heroImage?.alt ?? "" },
   ];
   return segments.filter((segment) => segment.text.trim().length > 0);
 }
@@ -244,6 +247,13 @@ export function articleEvidenceText(article: DraftArticle): string {
 export function classifyEvidenceRisk(
   article: DraftArticle,
 ): EvidenceRiskClassification {
+  return classifyEvidenceRiskInternal(article, false);
+}
+
+function classifyEvidenceRiskInternal(
+  article: DraftArticle,
+  verifiedCorporateIntent: boolean,
+): EvidenceRiskClassification {
   const text = articleEvidenceText(article);
   if (article.semaform?.howIdTradeIt || INVESTMENT_OR_FORECAST_CLAIM_RE.test(text)) {
     return {
@@ -257,7 +267,7 @@ export function classifyEvidenceRisk(
       reason: "investment outcomes or buyer-wealth claims require corroboration",
     };
   }
-  if (PREDICTION_OR_CERTAINTY_CLAIM_RE.test(text)) {
+  if (!verifiedCorporateIntent && PREDICTION_OR_CERTAINTY_CLAIM_RE.test(text)) {
     return {
       requiresCorroboration: true,
       reason: "predictive or certainty claims require corroboration",
@@ -829,13 +839,31 @@ export function assessStoredEvidenceFreshness(
 }
 
 /** Select the smallest safe evidence lane. A single source is allowed only for
- * strictly attributed facts from that source's own authoritative publication.
+ * strictly attributed official facts or the verified, typed corporate-plan lane.
  * All analysis, comparisons, market claims, forecasts and recommendations stay
  * on the two-independent-publisher lane. */
 export function determineEvidencePolicy(
   article: DraftArticle,
   evidenceUrls: string[],
+  fetchedEvidence: readonly NonNullable<NewsDraftProvenance["fetchedEvidence"]>[number][] = [],
 ): EvidencePolicy {
+  if (article.reportingBasis !== undefined) {
+    const shape = validateArticleReportingBasis(article);
+    const announcement = shape.ok ? assessAttributedAnnouncement({
+      format: article.format, category: article.category, reportingBasis: article.reportingBasis,
+      ...claimSupportInput(article, fetchedEvidence),
+    }) : { ok: false, reason: shape.error };
+    const announcementRisk = classifyEvidenceRiskInternal(article, announcement.ok);
+    const sourceFetched = fetchedEvidence.some((record) =>
+      record.url === article.reportingBasis?.sourceUrl &&
+      approvedEvidencePublisherDomain(record.url, record.finalUrl) !== null &&
+      evidenceUrls.includes(record.finalUrl ?? record.url));
+    if (announcement.ok && sourceFetched && !announcementRisk.requiresCorroboration) {
+      return { lane: "attributed-announcement", requiredPublisherCount: 1, reason: announcement.reason };
+    }
+    return { lane: "corroborated-analysis", requiredPublisherCount: DEFAULT_CORROBORATION_SOURCES,
+      reason: announcementRisk.reason ?? announcement.reason ?? "The announcement basis is not source-bound." };
+  }
   const risk = classifyEvidenceRisk(article);
   const official = strictlyAttributedOfficialFact(article, evidenceUrls);
   if (!risk.requiresCorroboration && official.ok) {
@@ -852,6 +880,57 @@ export function determineEvidencePolicy(
       risk.reason ??
       `${official.reason}; two independent approved canonical publishers are required`,
   };
+}
+
+/** Structural authority only; the matcher separately verifies the source text. */
+export function validateArticleReportingBasis(article: {
+  format?: string; category: string; citations: readonly { url: string }[]; reportingBasis?: unknown;
+}): { ok: true } | { ok: false; error: string } {
+  if (article.reportingBasis === undefined) return { ok: true };
+  const basis = article.reportingBasis;
+  const invalid = { ok: false, error: "article.reportingBasis must name an exact cited corporate-intent source, speaker and organization on an eligible short update." } as const;
+  if (!basis || typeof basis !== "object" || Array.isArray(basis) || article.format !== "short-update" ||
+    !["developer-corporate", "launch"].includes(article.category)) return invalid;
+  const record = basis as Record<string, unknown>;
+  if (Object.keys(record).length !== 4 || Object.keys(record).some((key) =>
+    !["sourceUrl", "speaker", "organization", "statementKind"].includes(key)) ||
+    record.statementKind !== "corporate-intent") return invalid;
+  for (const key of ["speaker", "organization"] as const) {
+    const text = record[key];
+    if (typeof text !== "string" || text.trim().length < 2 || text.length > 160 ||
+      text !== text.trim() || /[\u0000-\u001f\u007f]/u.test(text)) return invalid;
+  }
+  if (typeof record.sourceUrl !== "string" || record.sourceUrl.length > 2_048 ||
+    !article.citations.some((citation) => citation.url === record.sourceUrl)) return invalid;
+  try {
+    const url = new URL(record.sourceUrl);
+    if (url.protocol !== "https:" || url.username || url.password || url.hash ||
+      (url.port && url.port !== "443") || url.pathname === "/" ||
+      !approvedPublisherIdentity(record.sourceUrl)) return invalid;
+  } catch { return invalid; }
+  return { ok: true };
+}
+
+function claimSupportInput(article: DraftArticle, evidence: readonly NonNullable<NewsDraftProvenance["fetchedEvidence"]>[number][]) {
+  return {
+    segments: articleEvidenceSegments(article).filter(({ field }) => !/\.q$/u.test(field)),
+    evidence: evidence.map((record) => {
+      const finalUrl = record.finalUrl ?? record.url;
+      const identity = approvedPublisherIdentity(finalUrl) ?? approvedPublisherIdentity(record.url);
+      return { url: record.url, text: record.text, publisher: identity?.name ?? finalUrl,
+        publisherDomain: approvedEvidencePublisherDomain(record.url, record.finalUrl) ?? `invalid:${record.url}`,
+        publisherAliases: identity ? normalizedPublisherAliases(identity) : [] };
+    }),
+  };
+}
+
+/** The drafting path and stored approval path use the same attribution matcher. */
+export function assessArticleClaimSupport(article: DraftArticle,
+  evidence: readonly NonNullable<NewsDraftProvenance["fetchedEvidence"]>[number][]): ClaimSupportAssessment {
+  const input = claimSupportInput(article, evidence);
+  return article.reportingBasis !== undefined
+    ? assessAttributedAnnouncement({ ...input, format: article.format, category: article.category, reportingBasis: article.reportingBasis }).support
+    : assessClaimSupport(input);
 }
 
 export interface AutoApproveAssessment {
@@ -1252,6 +1331,11 @@ export function assessDraft(
 ): AutoApproveAssessment {
   const reasons: string[] = [];
   const { article, validator, provenance } = draft;
+  const reportingBasisShape = validateArticleReportingBasis(article);
+  if (!reportingBasisShape.ok) reasons.push(reportingBasisShape.error);
+  if (article.format === "short-update" && article.semaform !== undefined) {
+    reasons.push("short-update format cannot contain analytical or trade sections");
+  }
 
   const quarantine = findNewsDraftQuarantine(draft);
   if (quarantine) {
@@ -1321,7 +1405,11 @@ export function assessDraft(
   const policy = determineEvidencePolicy(
     article,
     fetchedEvidence.map((evidence) => evidence.finalUrl ?? evidence.url),
+    fetchedEvidence,
   );
+  if (article.reportingBasis !== undefined && policy.lane !== "attributed-announcement") {
+    reasons.push(`attributed announcement basis failed: ${policy.reason}`);
+  }
 
   // 2 · citations — all whitelisted, from two canonical publishers
   const citationCount = validator.metrics.citationCount;
@@ -1358,26 +1446,7 @@ export function assessDraft(
   const claimTexts = articleEvidenceSegments(article).map(
     (segment) => segment.text,
   );
-  const claimSupport = assessClaimSupport({
-    segments: articleEvidenceSegments(article).filter(
-      ({ field }) => !/\.q$/u.test(field),
-    ),
-    evidence: fetchedEvidence.map((evidence) => {
-      const finalUrl = evidence.finalUrl ?? evidence.url;
-      const identity =
-        approvedPublisherIdentity(finalUrl) ??
-        approvedPublisherIdentity(evidence.url);
-      return {
-        url: evidence.url,
-        text: evidence.text,
-        publisher: identity?.name ?? finalUrl,
-        publisherDomain:
-          approvedEvidencePublisherDomain(evidence.url, evidence.finalUrl) ??
-          `invalid:${evidence.url}`,
-        publisherAliases: identity ? normalizedPublisherAliases(identity) : [],
-      };
-    }),
-  });
+  const claimSupport = assessArticleClaimSupport(article, fetchedEvidence);
   if (claimSupport.failures.length > 0) {
     reasons.push(
       `${claimSupport.failures.length} factual/editorial clause(s) are not anchor-supported: ${claimSupport.failures
@@ -1388,6 +1457,12 @@ export function assessDraft(
         )
         .join(" · ")}`,
     );
+  }
+  if (
+    article.format === "short-update" &&
+    claimSupport.supported.some((claim) => claim.editorial)
+  ) {
+    reasons.push("short-update format permits source-supported facts only, not editorial interpretation");
   }
   if (claimSupport.unusedEvidenceUrls.length > 0) {
     reasons.push(

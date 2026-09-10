@@ -1,4 +1,5 @@
 import { appendFile } from "node:fs/promises";
+import { dubaiCalendarDate } from "../../lib/dubai-time";
 
 export const NEWS_FRONT_SCHEMA_VERSION = "front-v1" as const;
 export const DEFAULT_MAX_NEWEST_PUBLICATION_AGE_HOURS = 36;
@@ -52,6 +53,8 @@ export interface NewsCronRunInput {
   failureMessages: string[];
   publication: PublicationPassTelemetry | null;
   observation: NewestPublicationObservation | null;
+  /** Automated daily runs must observe an actual publication for this Dubai day. */
+  requiredPublishedDubaiDate?: string;
   /** May tighten or relax alert cadence within a safe 12-72 hour range. */
   maxNewestPublicationAgeHours?: number;
 }
@@ -175,6 +178,23 @@ export function buildNewsCronRunReport(
         : `public feed is ${age}; maximum cadence is ${maxAgeHours}h`,
     );
   }
+  if (input.requiredPublishedDubaiDate) {
+    const observedDay = input.observation?.newestPublishedAt
+      ? dubaiCalendarDate(input.observation.newestPublishedAt)
+      : null;
+    if (observedDay !== input.requiredPublishedDubaiDate) {
+      operationalFailureReasons.push(
+        `no live publication observed for Dubai day ${input.requiredPublishedDubaiDate}; latest publication day is ${observedDay ?? "none"}`,
+      );
+    }
+  }
+  if (published > 0 && (
+    publication?.deploymentVerified !== published ||
+    (publication?.pendingVerification ?? 0) > 0 ||
+    (publication?.verificationSkipped ?? 0) > 0
+  )) {
+    operationalFailureReasons.push("publication was committed but its exact canonical deployment is not verified");
+  }
   const failed =
     input.technicalFailures +
     (publication?.failed ?? 0) +
@@ -252,6 +272,8 @@ export async function emitNewsCronRunReport(
     outcome: report.primaryOutcome,
     outcomes: report.outcomes.join(","),
     published_count: String(report.publication?.published ?? 0),
+    verified_publication_count: String(report.publication?.deploymentVerified ?? 0),
+    required_publication_day: report.requiredPublishedDubaiDate ?? "not-required",
     staged_count: String(report.staged),
     held_count: String(report.held),
     deferred_count: String(report.deferred),
@@ -295,6 +317,8 @@ export async function emitNewsCronRunReport(
       `| Outcome | ${markdownValue(report.primaryOutcome)} |`,
       `| All outcomes | ${markdownValue(report.outcomes.join(", "))} |`,
       `| Published / staged | ${report.publication?.published ?? 0} / ${report.staged} |`,
+      `| Canonical deployment verified | ${report.publication?.deploymentVerified ?? 0} |`,
+      `| Required Dubai publication day | ${report.requiredPublishedDubaiDate ?? "not required for this run"} |`,
       `| Held / deferred / failed | ${report.held} / ${report.deferred} / ${report.failed} |`,
       `| Publication SHA | ${markdownValue(report.publicationShas.join(", ") || "none")} |`,
       `| Newest publication | ${markdownValue(newestPublishedAt)} |`,

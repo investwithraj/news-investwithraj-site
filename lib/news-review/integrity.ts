@@ -15,6 +15,7 @@ import {
   approvedPublisherIdentity,
   assessDraft,
   assessStoredEvidenceFreshness,
+  validateArticleReportingBasis,
 } from "@/lib/news-review/auto-approve";
 import {
   validateDraft,
@@ -264,6 +265,8 @@ export function validateDraftArticleShape(
     "displayDate",
     "author",
     "tier",
+    "format",
+    "reportingBasis",
     "category",
     "market",
     "tldr",
@@ -331,6 +334,16 @@ export function validateDraftArticleShape(
     return { ok: false, error: "article author or tier is invalid." };
   }
   if (
+    value.format !== undefined &&
+    value.format !== "short-update" &&
+    value.format !== "long-report"
+  ) {
+    return { ok: false, error: "article.format is unsupported." };
+  }
+  if (value.format === "short-update" && value.semaform !== undefined) {
+    return { ok: false, error: "Short updates cannot contain analytical or trade sections." };
+  }
+  if (
     typeof value.category !== "string" ||
     !CATEGORIES.has(value.category as NewsCategory)
   ) {
@@ -383,6 +396,8 @@ export function validateDraftArticleShape(
   if (new Set(citationUrls).size !== citationUrls.length) {
     return { ok: false, error: "article.citations contains duplicate URLs." };
   }
+  const basisShape = validateArticleReportingBasis(value as unknown as DraftArticle);
+  if (!basisShape.ok) return basisShape;
   if (
     !isRecord(value.heroImage) ||
     Object.keys(value.heroImage).some(
@@ -402,7 +417,7 @@ export function validateDraftArticleShape(
   if (isRecord(value.cta) && validHttpsUrl(value.cta.href)) {
     const cta = new URL(value.cta.href);
     ctaIsCanonical =
-      cta.origin === "https://investwithraj.com" &&
+      (cta.origin === "https://investwithraj.com" || cta.origin === "https://www.investwithraj.com") &&
       cta.pathname === "/engage";
   }
   if (

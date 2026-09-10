@@ -33,15 +33,24 @@ family. It is a separate Next.js 16 app from the IWR root repo at
 
 ## Content pipeline
 
-The authoritative GitHub Actions routine runs at 03:07 UTC / 07:07 Dubai:
+The authoritative GitHub Actions routine runs at 01:37 UTC / 05:37 Dubai,
+with a recovery window at 05:17 UTC / 09:17 Dubai. Scheduling can be delayed by
+GitHub; the configured Vercel watchdog is a separate recovery mechanism.
 1. Pull current material from the configured discovery sources.
 2. De-duplicate, cluster and rank candidate events.
 3. Research a bounded candidate and retain independently fetched evidence.
+   Scheduled news uses the explicit short-update format (80–500 words, never
+   padded to reach a long-report target). Facts, attribution and originality
+   checks still apply; long analysis is a distinct format.
 4. Validate every source, material figure, date, voice and integrity rule.
 5. Hold anything incomplete in The Desk; never treat discovery feeds as evidence.
 6. Publish at most one passing article, then verify its exact canonical deployment.
 7. Notify IndexNow only after canonical verification and persist the receipt.
 8. Expose the article through the homepage, canonical sitemap, Google News sitemap and RSS.
+
+An automated run without a verified publication for its Dubai day must report
+action required, even if yesterday's feed is still within the older freshness
+window. Do not describe a completed job as a successful publication.
 
 Google News eligibility is automatic; ordinary news articles must not use the
 Google Indexing API. Social auto-posting, Medium/Substack/Beehiiv reposting,
@@ -57,6 +66,8 @@ authorised and protected by an idempotent delivery design.
 - This repo's `main` branch ships to production via Vercel auto-deploy.
 - Build verification (`rm -rf .next .turbo && npm run build`) MANDATORY
   before every push — same lesson learned on IWR root.
+  When a review server is active, use a new, unused `NEXT_DIST_DIR=.next-<run>`
+  for the clean build instead; never delete or replace a running server's build.
 
 ## Stack
 

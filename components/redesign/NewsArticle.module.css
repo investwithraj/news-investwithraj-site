@@ -118,6 +118,115 @@
   text-align: right;
 }
 
+/* A short announcement is one concise read, not a compressed long-report shell. */
+.shortUpdate .identity {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  background: var(--iwr-ink);
+}
+
+.shortUpdate .header {
+  min-height: 0;
+  padding: clamp(2rem, 4vw, 4rem);
+}
+
+.shortUpdate .back {
+  margin-bottom: 2rem;
+}
+
+.shortUpdate .header h1 {
+  max-width: 21ch;
+  font-size: clamp(2.2rem, 3.5vw, 4rem);
+  line-height: 1.04;
+}
+
+.shortUpdate .subtitle {
+  margin: 1.5rem 0 2rem;
+}
+
+.shortUpdate .hero {
+  height: 100%;
+  min-height: 24rem;
+}
+
+.shortUpdate .articleGrid {
+  display: block;
+  max-width: 54rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 4vw, 4rem) 1.25rem;
+}
+
+.shortUpdate .sources {
+  max-width: 54rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem;
+}
+
+.shortUpdate .sources header {
+  display: block;
+  margin-bottom: 1.5rem;
+}
+
+.shortUpdate .sources h2 {
+  max-width: none;
+  font-size: 1.8rem;
+  line-height: 1.15;
+}
+
+.shortUpdate .sources header > p:last-child {
+  margin-bottom: 0;
+}
+
+.shortUpdate .share {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  background: transparent;
+}
+
+.shortUpdate .share > * {
+  min-height: 3.5rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.shortUpdate .action {
+  display: block;
+  max-width: 54rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
+}
+
+.shortUpdate .action h2 {
+  max-width: none;
+  margin: 1rem 0;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.12;
+}
+
+.shortUpdate .action > div > p {
+  margin-bottom: 1.5rem;
+}
+
+.shortUpdate .action a {
+  max-width: 29rem;
+  gap: 1rem;
+}
+
+@media (max-width: 760px) {
+  .shortUpdate .identity {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shortUpdate .hero {
+    min-height: 0;
+    height: clamp(15rem, 58vw, 25rem);
+  }
+
+  .shortUpdate .header {
+    padding: 2rem 1.25rem;
+  }
+}
+
 .correction {
   display: grid;
   max-width: 64rem;

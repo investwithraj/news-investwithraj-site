@@ -12,7 +12,7 @@ import type { ValidationResult } from "@/lib/voice/validator";
 /** Increment whenever publication evidence policy becomes stricter. Stored
  * approvals, publication claims and receipts without this exact version are
  * intentionally manual-only. */
-export const CURRENT_EVIDENCE_POLICY_VERSION = 4 as const;
+export const CURRENT_EVIDENCE_POLICY_VERSION = 5 as const;
 
 /** The article content under review — the full NewsArticle shape minus the
  *  publication-state flag (status is set to "live" only at publish time). */
@@ -96,8 +96,20 @@ export interface MediaApprovalLedger {
   sourceUrl: string;
   rightsStatus: string;
   credit: string;
-  reviewer: "raj-review-session";
+  reviewer: "raj-review-session" | "owner-approved-stock-reuse";
   approvedAt: string;
+  /** Candidate-bound owner receipt; included in the immutable media hash. */
+  reuseReceipt?: {
+    id: string;
+    path: string;
+    ownerApprovalSha256: string;
+    sourceAssetPath: string;
+    sourceAssetSha256: string;
+    approvedBy: string;
+    ownerApprovalDate: string;
+    reuseAuthorizedAt: string;
+    basis: "owner-approved-stock-account";
+  };
 }
 
 export interface PublicationRecord {

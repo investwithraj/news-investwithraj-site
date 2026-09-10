@@ -172,6 +172,7 @@ interface RunState {
   technicalFailures: number;
   failureMessages: string[];
   publication: AutoApproveSummary | null;
+  requiredPublishedDubaiDate?: string;
 }
 
 function errorMessage(error: unknown): string {
@@ -186,6 +187,7 @@ async function executePipeline(state: RunState): Promise<void> {
     site: SITE,
     repositoryArticles: NEWS_ARTICLES,
   });
+  if (morningGuard.automated) state.requiredPublishedDubaiDate = morningGuard.morningDate;
   if (morningGuard.automated && morningGuard.covered) {
     console.log(
       `automated morning lane already covered for ${morningGuard.morningDate}; paid research and publication skipped`,
@@ -273,6 +275,7 @@ async function executePipeline(state: RunState): Promise<void> {
     let result: Awaited<ReturnType<typeof draftFromCluster>>;
     try {
       result = await draftFromCluster(cluster, whitelist, {
+        format: "short-update",
         model: process.env.DRAFT_MODEL,
         maxSearches: 8,
         maxTokens: 5_200,

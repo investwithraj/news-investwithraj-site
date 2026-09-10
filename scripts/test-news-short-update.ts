@@ -1,0 +1,181 @@
+import assert from "node:assert/strict";
+
+import { draftFromCluster, draftSystemPrompt, type DraftOpts } from "../lib/news-review/draft-engine.js";
+import { assessDraft } from "../lib/news-review/auto-approve.js";
+import { draftContentHash, evidenceApprovalFor, validateDraftArticleShape } from "../lib/news-review/integrity.js";
+import { serializeArticle } from "../lib/news-review/serialize.js";
+import type { DraftArticle } from "../lib/news-review/types.js";
+import type { Cluster } from "../lib/pipeline/types.js";
+import { validateDraft } from "../lib/voice/validator.js";
+
+const NOW = new Date("2026-09-10T08:00:00.000Z");
+const SOURCE_DATE = "2026-09-09T08:00:00.000Z";
+const URL = "https://dubailand.gov.ae/en/news/short-update-fixture";
+// Synthetic fixtures only: no external requests, live articles or provider calls.
+const paragraphs = [
+  "Dubai Land Department confirmed its registration service update. Dubai Land Department published revised registration guidance for the applicable procedure.",
+  "Dubai Land Department stated the applicable implementation terms for its registration service. Dubai Land Department confirmed the official registration process in its published announcement.",
+  "Dubai Land Department published its direct service announcement for the updated registration procedure. Dubai Land Department stated the official implementation timetable for the new service.",
+  "Dubai Land Department published applicable service fees in the updated registration guidance. Dubai Land Department confirmed the registration procedure covers applicable contracts and official records.",
+  "Dubai Land Department stated the implementation terms include the updated transaction process and regulatory service. Dubai Land Department published its own registration service guidance. Dubai Land Department confirmed the revised regulatory timetable for its registration services.",
+];
+const BODY = paragraphs.join("\n\n");
+const EVIDENCE = [
+  "Dubai Land Department confirmed an updated registration service framework in its official record.",
+  "Dubai Land Department published the revised registration guidance for its applicable procedure.",
+  "Dubai Land Department stated its applicable implementation terms for the registration service.",
+  "Dubai Land Department confirmed its official registration process in the published announcement.",
+  "Dubai Land Department published a direct service announcement for its updated registration procedure.",
+  "Dubai Land Department stated its official implementation timetable for a new service.",
+  "Dubai Land Department published the applicable service fees in its updated registration guidance.",
+  "Dubai Land Department confirmed its registration procedure covers the applicable contracts and official records.",
+  "Dubai Land Department stated its implementation terms include an updated transaction process and the regulatory service.",
+  "Dubai Land Department published the official registration service guidance through its direct channel.",
+  "Dubai Land Department confirmed its revised regulatory timetable for the registration services.",
+].join(" ");
+const json = (body: string) => JSON.stringify({
+  title: "Dubai Land Department confirms its registration service update",
+  subtitle: "Dubai Land Department published its own registration service guidance.",
+  tldr: [
+    "Dubai Land Department confirmed its registration service update.",
+    "Dubai Land Department published its own registration service guidance.",
+    "Dubai Land Department stated the applicable implementation terms.",
+  ],
+  body,
+  faq: [],
+  citations: [{ source: "Dubai Land Department", url: URL }],
+});
+const cluster: Cluster = {
+  id: "short-update-fixture",
+  topic: "Dubai Land Department registration service update",
+  entries: [{
+    id: "fixture-entry", title: "Registration service update", url: URL,
+    publishedAt: SOURCE_DATE, summary: "Discovery text is not evidence.",
+    source: { name: "Dubai Land Department", tier: "government", domain: "dubailand.gov.ae" },
+  }],
+  score: 80,
+  scoreBreakdown: { uhnwRelevance: 20, sourceTier: 20, freshness: 20, rajAngle: 20 },
+  entities: { developers: [], places: ["Dubai"], figures: [], hasTier1Source: true },
+  suggestedCategory: "regulatory", suggestedMarkets: ["Dubai"],
+};
+
+async function generate(body: string, options: { format?: DraftOpts["format"]; source?: string; date?: string | null } = {}) {
+  const prompts: string[] = [];
+  const result = await draftFromCluster(cluster, ["dubailand.gov.ae"], {
+    format: options.format,
+    now: NOW,
+    dependencies: {
+      research: async (request) => {
+        prompts.push(request.system ?? "");
+        return { ok: true, text: json(body), searchedUrls: [URL] };
+      },
+      repair: async (request) => {
+        prompts.push(request.system ?? "");
+        return { ok: true, text: json(body) };
+      },
+      fetchArticle: async () => ({
+        text: options.source ?? EVIDENCE, finalUrl: URL,
+        publishedAt: options.date === undefined ? SOURCE_DATE : options.date,
+        publicationDateSource: options.date === null ? null : "meta",
+        diagnostic: { code: "ok", message: "test fixture" },
+      }),
+    },
+  });
+  return { result, prompts };
+}
+
+async function main() {
+  const { result, prompts } = await generate(BODY, { format: "short-update" });
+  assert.equal(result.ok, true, `${result.reason}; ${result.diagnostics?.join("; ")}`);
+  assert.ok(result.article && result.provenance);
+  const article = result.article;
+  assert.equal(article.format, "short-update");
+  assert.equal(article.body, BODY, "short mode must not insert a compulsory numerical lead");
+  const voice = validateDraft(article);
+  assert.equal(voice.ok, true, JSON.stringify(voice.failures));
+  assert.equal(voice.metrics.p1HasNumber, false);
+  assert.ok(voice.metrics.approvedLexiconCount < 3);
+  assert.ok(voice.metrics.wordCount >= 80 && voice.metrics.wordCount <= 500);
+  assert.equal(prompts.length, 1, "valid short update needs no length/jargon repair");
+  assert.doesNotMatch(prompts[0], /650\+|800[–-]1100|analytical register \(≥3\)/u);
+  assert.match(draftSystemPrompt(), /650\+/u, "legacy prompt remains long-form");
+  assert.equal(validateDraftArticleShape(article).ok, true);
+  for (const origin of ["https://investwithraj.com", "https://www.investwithraj.com"]) {
+    assert.equal(validateDraftArticleShape({ ...article, cta: { ...article.cta, href: `${origin}/engage?utm_source=news` } }).ok, true);
+  }
+  for (const href of ["https://foreign.example/engage", "https://www.investwithraj.com.foreign.example/engage", "https://www.investwithraj.com/other", "http://www.investwithraj.com/engage"]) {
+    assert.equal(validateDraftArticleShape({ ...article, cta: { ...article.cta, href } }).ok, false);
+  }
+  const hash = draftContentHash(article, result.provenance);
+  assert.notEqual(hash, draftContentHash({ ...article, format: "long-report" }, result.provenance));
+  assert.match(serializeArticle(article), /"format": "short-update"/u);
+  const assessment = assessDraft({
+    id: "short-update-test", createdAt: NOW.toISOString(), article,
+    validator: voice, provenance: result.provenance,
+  }, { autoPublicationAt: NOW });
+  assert.equal(assessment.verdict, "auto-approve", assessment.reasons.join("; "));
+  assert.ok(evidenceApprovalFor(1, hash, [URL], result.provenance, article,
+    NOW.toISOString(), "deterministic-auto-publisher"));
+  const pressUrl = "https://www.reuters.com/world/middle-east/short-update-fixture";
+  const pressArticle = { ...article, citations: [{ ...article.citations[0], source: "Reuters", url: pressUrl }] };
+  const onePressAssessment = assessDraft({
+    id: "short-press-test", article: pressArticle, validator: validateDraft(pressArticle),
+    provenance: {
+      ...result.provenance,
+      fetchedEvidence: result.provenance.fetchedEvidence?.map((evidence) => ({ ...evidence, url: pressUrl, finalUrl: pressUrl })),
+    },
+  });
+  assert.equal(onePressAssessment.requiredPublisherCount, 2);
+  assert.equal(onePressAssessment.verdict, "manual", "short mode cannot turn one press publisher into the official-fact lane");
+
+  const legacy = { ...article };
+  delete legacy.format;
+  assert.equal(validateDraft(legacy).ok, false, "omitting mode cannot bypass long-form gates");
+  assert.equal(validateDraft({ ...article, format: "long-report" }).ok, false);
+  assert.equal(validateDraft({ ...article, tier: "insight" }).ok, false);
+  assert.equal(validateDraftArticleShape({ ...article, format: "anything" }).ok, false);
+  assert.equal(validateDraftArticleShape({ ...article, format: null }).ok, false);
+  assert.equal(validateDraftArticleShape({ ...article, semaform: { theTake: "A brief analysis." } }).ok, false);
+  assert.equal(validateDraft({ ...article, body: "Short but incomplete." }).ok, false);
+  assert.equal(validateDraft({ ...article, body: `${BODY} `.repeat(5) }).ok, false);
+
+  const editorialBody = `${BODY}\n\nADGM records licence and entity measures separately. ADGM's active licence total reached 13,974. ADGM's operational entity count reached 3,986. ADGM's fund total reached 276. ADGM's manager total reached 190. These licence and entity measures should remain separate in this analysis.`;
+  const editorialEvidence = `${EVIDENCE} ADGM records active licences and operational entities as separate measures. ADGM's active licence total reached 13,974. ADGM's operational entity count reached 3,986. ADGM's fund total reached 276. ADGM's manager total reached 190.`;
+  const editorialArticle = { ...article, body: editorialBody };
+  const editorialProvenance = {
+    ...result.provenance,
+    fetchedEvidence: result.provenance.fetchedEvidence?.map((evidence) => ({ ...evidence, text: editorialEvidence })),
+  };
+  const editorialAssessment = assessDraft({
+    id: "short-editorial-test", createdAt: NOW.toISOString(), article: editorialArticle,
+    validator: validateDraft(editorialArticle), provenance: editorialProvenance,
+  });
+  assert.ok(editorialAssessment.reasons.some((reason) => /short-update format permits source-supported facts only/u.test(reason)),
+    editorialAssessment.reasons.join("; "));
+  const editorialGeneration = await generate(editorialBody, { format: "short-update", source: editorialEvidence });
+  assert.equal(editorialGeneration.result.ok, false);
+  assert.match(editorialGeneration.result.reason ?? "", /Short updates permit source-supported facts only/u);
+
+  const unsupported = await generate(`${BODY}\n\nDubai Land Department confirmed a registration fee of AED 999 million.`, { format: "short-update" });
+  assert.equal(unsupported.result.ok, false, "short format cannot bypass numeric/claim evidence");
+  assert.match(unsupported.result.reason ?? "", /unsupported|not anchor-supported|unparsed/u);
+  for (const prompt of unsupported.prompts) {
+    assert.doesNotMatch(prompt, /650\+|800[–-]1100|at least three approved analytical-register/u);
+  }
+  const copied = await generate(`${BODY}\n\n${EVIDENCE}`, { format: "short-update" });
+  assert.equal(copied.result.ok, false, "copying source sentences remains held");
+  assert.match(`${copied.result.reason} ${copied.result.diagnostics?.join(" ")}`, /source-copying/u);
+  const unsupportedClaim = await generate(`${BODY}\n\nDubai Land Department confirmed that every applicant received permanent residency.`, { format: "short-update" });
+  assert.equal(unsupportedClaim.result.ok, false);
+  assert.match(unsupportedClaim.result.reason ?? "", /not anchor-supported/u);
+  const stale = await generate(BODY, { format: "short-update", date: "2026-08-01T00:00:00.000Z" });
+  assert.equal(stale.result.ok, false, "short format cannot bypass source recency");
+  const undated = await generate(BODY, { format: "short-update", date: null });
+  assert.equal(undated.result.ok, false, "short format cannot use undated evidence");
+  const invalid = await generate(BODY, { format: "other" as DraftArticle["format"] });
+  assert.equal(invalid.result.ok, false);
+  assert.equal(invalid.prompts.length, 0, "invalid mode fails before paid research");
+  console.log("Short-update regression passed: explicit format, concise factual publication, unchanged evidence/number/date/originality gates, no legacy bypass.");
+}
+
+main().catch((error) => { console.error(error); process.exitCode = 1; });

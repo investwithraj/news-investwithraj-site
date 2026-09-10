@@ -40,6 +40,7 @@ on:
           - dld-initial-registration-2026-09-07
           - rak-h1-housing-2026-09-02
           - adgm-h1-growth-2026-09-08
+          - prestige-one-investment-2026-09-10
 concurrency:
   group: news-cron-production
   cancel-in-progress: false
@@ -62,6 +63,11 @@ jobs:
       - run: npx tsx scripts/test-source-truth-reporting.ts
       - run: npx tsx scripts/test-cluster-relevance.ts
       - run: npx tsx scripts/test-news-cron-outcome.ts
+      - run: npx tsx scripts/test-provider-retry.ts
+      - run: npx tsx scripts/test-news-short-update.ts
+      - run: npx tsx scripts/test-announcement-policy.ts
+      - run: npx tsx scripts/test-attributed-announcement.ts
+      - run: npx tsx scripts/test-curated-media-reuse.ts
       - run: npx tsx scripts/test-news-candidate-quarantine.ts
       - run: npx tsx scripts/test-news-draft-quarantine.ts
       - run: npx tsx scripts/test-news-manual-candidate.ts

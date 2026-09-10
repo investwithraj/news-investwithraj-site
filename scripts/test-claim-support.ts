@@ -26,6 +26,48 @@ function assess(
   return assessClaimSupport({ segments, evidence });
 }
 
+for (const propertyType of ["residential", "commercial"]) {
+  const nounProjects = assess(
+    [{ field: "body", text: `Acme plans to launch ${propertyType} projects.` }],
+    [
+      { url: "https://example.test/projects", publisher: "First Publisher", text: `Acme plans to launch its new ${propertyType} projects.` },
+      { url: "https://second.example.test/projects", publisher: "Second Publisher", text: `Acme plans to launch its new ${propertyType} projects.` },
+    ],
+  );
+  assert.equal(nounProjects.ok, true,
+    `property-type projects is a noun, not a second forecast modality: ${JSON.stringify(nounProjects)}`);
+  const oneSourceIntent = assess(
+    [{ field: "body", text: `Acme plans to launch ${propertyType} projects.` }],
+    [{ url: "https://example.test/projects", publisher: "First Publisher", text: `Acme plans to launch its new ${propertyType} projects.` }],
+  );
+  assert.equal(oneSourceIntent.ok, false, "this noun fix must not relax the separate intent corroboration rule");
+  assert.match(oneSourceIntent.failures.map((failure) => failure.detail).join(" "), /two anchor-supporting publishers/u);
+}
+
+const genuineProjectForecast = assess(
+  [{ field: "body", text: "Acme projects coastal home supply to rise." }],
+  [
+    { url: "https://example.test/forecast", publisher: "First Publisher", text: "Acme projects coastal home supply to increase." },
+    { url: "https://second.example.test/forecast", publisher: "Second Publisher", text: "Acme projects coastal home supply to increase." },
+  ],
+);
+assert.equal(genuineProjectForecast.ok, true, JSON.stringify(genuineProjectForecast));
+const projectForecastStrengthened = assess(
+  [{ field: "body", text: "Acme confirmed coastal home supply increased." }],
+  [{ url: "https://example.test/forecast", publisher: "First Publisher", text: "Acme projects coastal home supply to increase." }],
+);
+assert.equal(projectForecastStrengthened.ok, false, "a genuine projects forecast must not become an asserted completed fact");
+assert.match(projectForecastStrengthened.failures.map((failure) => failure.detail).join(" "), /modality differs/u);
+for (const company of ["Acme Residential", "Acme Commercial"]) {
+  const companySuffixForecast = assess(
+    [{ field: "body", text: `${company} confirmed coastal home supply increased.` }],
+    [{ url: "https://example.test/forecast", publisher: "First Publisher", text: `${company} projects coastal home supply to increase.` }],
+  );
+  assert.equal(companySuffixForecast.ok, false);
+  assert.match(companySuffixForecast.failures.map((failure) => failure.detail).join(" "), /modality differs/u,
+    "a capitalized company-name suffix cannot disguise a genuine forecast verb as a property noun");
+}
+
 const paraphrase = assess([
   {
     field: "body",

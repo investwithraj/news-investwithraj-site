@@ -11,6 +11,10 @@ import { dubaiCalendarDate } from "@/lib/dubai-time";
 import { assessDraft } from "@/lib/news-review/auto-approve";
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import { assertPublishedCorrectionLineage } from "@/lib/news-review/correction";
+import {
+  assertRequiredCuratedMediaApproval,
+  CuratedMediaReuseError,
+} from "@/lib/news-review/curated-media";
 import { githubConfigured, publishArticleCommit } from "@/lib/news-review/github";
 import {
   findRecentLiveArticleDuplicate,
@@ -427,7 +431,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       const alreadyPrepared =
         citationUrls.length === preparedSources.length &&
         citationUrls.every((url) => preparedSources.includes(url)) &&
-        Boolean(draft.evidenceApproval);
+        // An old-policy ledger is not prepared. After the current assessment
+        // above passes, the existing CAS review write may mint a current one.
+        Boolean(reassessEvidenceApproval(draft));
       if (!alreadyPrepared) {
         const prepared = await updateReviewedDraft(
           id,
@@ -476,6 +482,14 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    try {
+      assertRequiredCuratedMediaApproval(draft);
+    } catch (error) {
+      if (error instanceof CuratedMediaReuseError) {
+        return privateJson({ error: error.message }, error.status);
+      }
+      throw error;
+    }
     stage = "media-validation";
     if (!draft.mediaApproval && !automated) {
       return privateJson(

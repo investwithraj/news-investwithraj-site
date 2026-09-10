@@ -1,5 +1,6 @@
 // Claude API client — used by F16 personalized briefs + F18 translation.
 // Anthropic key from env. Graceful no-op when not configured.
+import { fetchProviderWithRetry } from "./provider-retry";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5-20250929";
@@ -40,7 +41,7 @@ export async function callClaude(opts: ClaudeOptions): Promise<ClaudeResult> {
     return { ok: false, error: "ANTHROPIC_API_KEY not set" };
   }
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetchProviderWithRetry("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "x-api-key": ANTHROPIC_API_KEY,
@@ -118,7 +119,7 @@ export async function callClaudeResearch(
 
   try {
     for (let step = 0; step < 6; step++) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetchProviderWithRetry("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
           "x-api-key": ANTHROPIC_API_KEY,

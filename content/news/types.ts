@@ -128,6 +128,17 @@ export interface SemaformSections {
  *  at /news/[slug]. Live = published article, all gates passed. */
 export type NewsArticleStatus = "live" | "research";
 
+/** Explicit editorial length contract. Omitted on legacy long-form reports. */
+export type NewsArticleFormat = "short-update" | "long-report";
+
+/** Reports that a named corporate actor stated an intention; not an IWR forecast. */
+export interface NewsReportingBasis {
+  sourceUrl: string;
+  speaker: string;
+  organization: string;
+  statementKind: "corporate-intent";
+}
+
 export interface NewsArticle {
   /** URL slug — kebab-case, no leading slash. Used at /news/{slug}. */
   slug: string;
@@ -151,14 +162,18 @@ export interface NewsArticle {
   author: "raj-tomar";
   /** Tier — always "news" for this type. Set at the article level for clarity. */
   tier: "news";
+  /** Short updates contain sourced facts only, not an abbreviated analysis. */
+  format?: NewsArticleFormat;
+  /** Optional source-bound attribution lane for short corporate announcements. */
+  reportingBasis?: NewsReportingBasis;
   /** Category — drives Notes-like grouping + filter UI */
   category: NewsCategory;
   /** Geographic anchor */
   market: ("Dubai" | "Abu Dhabi" | "Ras Al Khaimah" | "UAE" | "GCC")[];
   /** 3-bullet TLDR shown at top of article body — each ≤ 140 chars */
   tldr: [string, string, string];
-  /** Long-form body — paragraphs separated by \n\n (no markdown headers).
-   *  Word count target 600–1200 (validator gate 7). */
+  /** Paragraphs separated by \n\n (no markdown headers).
+   * Short updates: 80–500 words; legacy/long reports: 600–1200. */
   body: string;
   /** 3-5 FAQ items appended to article body; also emitted as FAQPage JSON-LD */
   faq: FaqItem[];

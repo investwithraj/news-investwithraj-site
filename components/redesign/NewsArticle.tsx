@@ -49,6 +49,7 @@ export default function NewsArticle({
   relatedVerticals,
 }: Props) {
   const paragraphs = article.body.split(/\n\n+/).filter(Boolean);
+  const shortUpdate = article.format === "short-update";
   const evidence = evidenceSummary(article);
   const readTime = readingMinutes(article);
   const consequence = consequenceExcerpt(article);
@@ -64,7 +65,7 @@ export default function NewsArticle({
   )}&body=${encodeURIComponent(pageUrl)}`;
 
   return (
-    <main id="main" className={styles.page}>
+    <main id="main" className={`${styles.page}${shortUpdate ? ` ${styles.shortUpdate}` : ""}`}>
       <article>
         <div className={styles.identity} data-news-layer="identity">
           <header className={styles.header}>
@@ -141,7 +142,7 @@ export default function NewsArticle({
           )}
         </div>
 
-        <section
+        {!shortUpdate ? <section
           className={`${styles.tldr} article-tldr`}
           aria-labelledby="signal-title"
           data-news-layer="signal"
@@ -155,7 +156,7 @@ export default function NewsArticle({
               </li>
             ))}
           </ol>
-        </section>
+        </section> : null}
 
         <div className={styles.articleGrid} data-news-layer="analysis">
 
@@ -164,7 +165,7 @@ export default function NewsArticle({
               <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
             ))}
 
-            <section className={styles.consequence}>
+            {!shortUpdate ? <section className={styles.consequence}>
               <span>Editorial context</span>
               <h2>Why this may matter.</h2>
               <p>{consequence}</p>
@@ -173,7 +174,7 @@ export default function NewsArticle({
                 contextual analysis, not an independent source or a promised
                 outcome.
               </small>
-            </section>
+            </section> : null}
 
             {article.semaform?.theTake ? (
               <section className={styles.take}>
@@ -198,7 +199,7 @@ export default function NewsArticle({
             ) : null}
           </div>
 
-          <aside className={styles.sourceRail}>
+          {!shortUpdate ? <aside className={styles.sourceRail}>
             <p>Evidence status</p>
             <strong>{evidence.sourceCount}</strong>
             <span>{evidence.label}</span>
@@ -209,7 +210,7 @@ export default function NewsArticle({
                 Editorial standards ↗
               </Link>
             </nav>
-          </aside>
+          </aside> : null}
         </div>
 
         <section
@@ -218,10 +219,10 @@ export default function NewsArticle({
           data-news-layer="evidence"
         >
           <header>
-            <p>Evidence</p>
-            <h2 id="sources-title">Sources &amp; provenance.</h2>
+            <p>{shortUpdate ? "Original reporting" : "Evidence"}</p>
+            <h2 id="sources-title">{shortUpdate ? "Read the source." : "Sources & provenance."}</h2>
             <p>
-              Open the primary reporting behind this analysis.
+              {shortUpdate ? "The original report behind this update." : "Open the primary reporting behind this analysis."}
             </p>
           </header>
           <ol>
@@ -359,15 +360,15 @@ export default function NewsArticle({
 
           <section className={styles.action}>
           <p>Make it specific</p>
-          <h2>{cta.heading}</h2>
+          <h2>{shortUpdate ? "Talk through your next move." : cta.heading}</h2>
           <div>
             <p>
-              Bring Raj the position, opportunity or concern. The first call
-              is a working session, not a substitute for legal, tax or
-              financial advice.
+              {shortUpdate
+                ? "Bring the project, area or question you are considering. We will work through the details together."
+                : "Bring Raj the position, opportunity or concern. The first call is a working session, not a substitute for legal, tax or financial advice."}
             </p>
-            <a href={cta.href}>
-              {cta.label} <span aria-hidden="true">↗</span>
+            <a href={shortUpdate ? article.cta.href : cta.href}>
+              {shortUpdate ? article.cta.label : cta.label} <span aria-hidden="true">↗</span>
             </a>
           </div>
           </section>
