@@ -7,7 +7,19 @@ drafted by the daily content pipeline. Every draft validated against this
 profile before commit. Failures → redraft up to 2× → drop to manual review.
 
 **Maintenance:** 30-day review for voice drift; bump version, commit.
-**Version:** v1.0 — 2026-05-26.
+**Version:** v1.1 — 2026-09-10.
+
+## Daily news takes precedence over the older Notes style
+
+For `format: short-update`, follow `docs/editorial/DAILY-NEWS-STANDARD.md`.
+Write a fresh, original, plainly worded update of 80–500 words. Lead with the
+actual announcement; retain the source, date and relevant facts. Include the
+Dubai/UAE real-estate connection only when supported. Never pad a short story,
+force a jargon quota, insert an unnecessary number or require an em-dash.
+Use a relevant real image with its source and credit. City context must not be
+presented as the announced project. The longer cadence, vocabulary quotas and
+600–1200-word news targets below are historical Notes guidance, not daily-news
+requirements. They must not override the current short-update validator.
 
 ---
 

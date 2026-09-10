@@ -45,7 +45,18 @@ The Prestige One candidate reuses one exact owner-approved stock photograph as
 Dubai city context. Its candidate-specific reuse route checks the committed
 original bytes, dimensions, hash and approval receipt. It cannot approve a
 caller-supplied image. Both staging and publication stop if this required image
-is absent or changed. New imagery still uses the normal owner review path.
+is absent or changed. Normal short updates can also use the exact registered
+originals in `lib/news-review/daily-media-catalog.ts`. The protected
+`POST /api/news/draft/[id]/reuse-daily-media` accepts only the current revision,
+record version and content hash, never a caller-selected image or approval.
+It verifies the original bytes, links them into the article-local cover path
+and seals an immutable media record before publication. No matching image
+means the draft stays held. See `docs/editorial/2026-09-10-daily-news-image-catalogue.md`.
+
+New stories require an approved image. The dedicated correction route may
+repair a historical text-only article without adding an image, but only after
+verifying its archived WITHHELD lineage and visible correction disclosure.
+The normal daily worker cannot use this exception or publish corrections.
 
 The runner:
 
@@ -121,8 +132,9 @@ applicable evidence lane, keep the draft on hold.
 ## Publication
 
 Automated publication is bounded to one draft per run and requires all
-deterministic evidence gates. Articles without an approved UHD cover publish
-text-only; public surfaces must never substitute unverified media.
+deterministic evidence gates. New articles without an approved UHD cover stay
+held; public surfaces must never substitute unverified media. Historical
+text-only articles remain readable, but are not a precedent for new publication.
 
 For held drafts:
 

@@ -8,13 +8,13 @@ import { NextRequest } from "next/server";
 
 import { NEWS_ARTICLES } from "@/content/news";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
-import { assessDraft } from "@/lib/news-review/auto-approve";
+import { assessDraft, assertNewPublicationMediaApproval } from "@/lib/news-review/auto-approve";
 import { authorize, authorizeMutation } from "@/lib/news-review/auth";
 import { assertPublishedCorrectionLineage } from "@/lib/news-review/correction";
 import {
-  assertRequiredCuratedMediaApproval,
   CuratedMediaReuseError,
 } from "@/lib/news-review/curated-media";
+import { DailyMediaReuseError } from "@/lib/news-review/daily-media";
 import { githubConfigured, publishArticleCommit } from "@/lib/news-review/github";
 import {
   findRecentLiveArticleDuplicate,
@@ -98,6 +98,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     if (assessment?.verdict === "manual") {
       blockers.push("evidence-or-validator-hold");
     }
+    if (draft && !draft.publication) {
+      const historicalCorrection = Boolean(draft.correctionOf && draft.article.correction && !draft.mediaApproval);
+      try {
+        if (historicalCorrection) await assertPublishedCorrectionLineage(draft);
+        else assertNewPublicationMediaApproval(draft);
+      } catch { blockers.push(historicalCorrection ? "correction-lineage-hold" : "media-approval-required"); }
+    }
     const duplicateHold = draft
       ? findRecentLiveArticleDuplicate(draft.article, NEWS_ARTICLES)
       : null;
@@ -158,6 +165,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   });
   if (!parsed.ok) return parsed.response;
   const body = parsed.value;
+  const expectedDraftProvided = body.expectedRevision !== undefined ||
+    body.expectedRecordVersion !== undefined || body.expectedContentHash !== undefined;
   if (
     !automated &&
     (body.automatedMorningLane !== undefined ||
@@ -212,7 +221,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       400,
     );
   }
-  if (!automated && (
+  if ((!automated || expectedDraftProvided) && (
     typeof body.expectedRevision !== "number" ||
     !Number.isSafeInteger(body.expectedRevision) ||
     body.expectedRevision < 1 ||
@@ -220,8 +229,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     !Number.isSafeInteger(body.expectedRecordVersion) ||
     body.expectedRecordVersion < 1 ||
     !validHash(body.expectedContentHash) ||
-    !validHash(body.mediaApprovalHash) ||
-    !validHash(body.evidenceApprovalHash)
+    (!automated && (!validHash(body.mediaApprovalHash) || !validHash(body.evidenceApprovalHash)))
   )) {
     return privateJson(
       {
@@ -282,11 +290,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         );
       }
       if (
-        !automated &&
+        (!automated || expectedDraftProvided) &&
         (existingPublication.revision !== body.expectedRevision ||
           existingPublication.contentHash !== body.expectedContentHash ||
-          existingPublication.mediaApprovalHash !== body.mediaApprovalHash ||
-          existingPublication.evidenceApprovalHash !== body.evidenceApprovalHash)
+          (!automated && (existingPublication.mediaApprovalHash !== body.mediaApprovalHash ||
+          existingPublication.evidenceApprovalHash !== body.evidenceApprovalHash)))
       ) {
         return privateJson(
           { error: "Draft changed; reload before publishing." },
@@ -306,7 +314,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         202,
       );
     }
-    if (!automated && (
+    if ((!automated || expectedDraftProvided) && (
       draft.revision !== body.expectedRevision ||
       draft.recordVersion !== body.expectedRecordVersion ||
       draft.contentHash !== body.expectedContentHash
@@ -482,16 +490,22 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
+    stage = "media-validation";
+    // The existing correction service only permits an exact archived,
+    // completed text-only publication with a visible disclosure. It also
+    // forbids attaching media during that bounded correction. This exception
+    // does not apply to new stories or to the ordinary automatic worker.
+    const historicalTextOnlyCorrection = Boolean(draft.correctionOf && draft.article.correction && !draft.mediaApproval);
     try {
-      assertRequiredCuratedMediaApproval(draft);
+      if (historicalTextOnlyCorrection) await assertPublishedCorrectionLineage(draft);
+      else assertNewPublicationMediaApproval(draft);
     } catch (error) {
-      if (error instanceof CuratedMediaReuseError) {
+      if (error instanceof CuratedMediaReuseError || error instanceof DailyMediaReuseError) {
         return privateJson({ error: error.message }, error.status);
       }
       throw error;
     }
-    stage = "media-validation";
-    if (!draft.mediaApproval && !automated) {
+    if (!draft.mediaApproval && !historicalTextOnlyCorrection) {
       return privateJson(
         { error: "The immutable UHD media approval ledger is missing." },
         422,

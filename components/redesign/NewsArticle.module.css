@@ -318,13 +318,15 @@
   right: 1.25rem;
   bottom: 1rem;
   left: 1.25rem;
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.66);
-  font-size: 0.58rem;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 0.5rem 0.65rem;
+  background: rgba(11, 13, 18, 0.88);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
+
+.hero figcaption a { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; }
 
 .heroFallback {
   display: grid;

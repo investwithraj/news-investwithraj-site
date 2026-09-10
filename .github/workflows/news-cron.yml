@@ -17,6 +17,11 @@ on:
         required: false
         default: false
         type: boolean
+      research_only:
+        description: "Test normal discovery, research and staging without approving or publishing any draft"
+        required: false
+        default: false
+        type: boolean
       retry_failed_research:
         description: "Retry a previously failed research cluster after a confirmed pipeline repair"
         required: false
@@ -51,6 +56,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Validate research-only dispatch
+        if: github.event_name == 'workflow_dispatch' && inputs.research_only
+        shell: bash
+        env:
+          PUBLICATION_ONLY: ${{ inputs.publication_only }}
+          CURATED_CANDIDATE: ${{ inputs.curated_candidate_key }}
+          MANUAL_LLM_CANDIDATE: ${{ inputs.candidate_key }}
+          MORNING_DATE: ${{ inputs.morning_date }}
+        run: |
+          if [ "$PUBLICATION_ONLY" = "true" ] || [ "$CURATED_CANDIDATE" != "none" ] || [ "$MANUAL_LLM_CANDIDATE" != "auto" ] || [ -n "$MORNING_DATE" ]; then
+            echo "::error title=Research-only news test::Research-only mode cannot be combined with publication-only mode, a curated or manual candidate, or a watchdog morning date."
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           ref: main
@@ -63,11 +81,17 @@ jobs:
       - run: npx tsx scripts/test-source-truth-reporting.ts
       - run: npx tsx scripts/test-cluster-relevance.ts
       - run: npx tsx scripts/test-news-cron-outcome.ts
+      - run: npx tsx scripts/test-news-research-only.ts
       - run: npx tsx scripts/test-provider-retry.ts
       - run: npx tsx scripts/test-news-short-update.ts
       - run: npx tsx scripts/test-announcement-policy.ts
       - run: npx tsx scripts/test-attributed-announcement.ts
       - run: npx tsx scripts/test-curated-media-reuse.ts
+      - run: npx tsx scripts/test-daily-media-catalog.ts
+      - run: npx tsx scripts/test-daily-media-reuse.ts
+      - run: npx tsx scripts/test-daily-media-github.ts
+      - run: npx tsx scripts/test-daily-media-publication.ts
+      - run: npx tsx scripts/test-daily-media-display.ts
       - run: npx tsx scripts/test-news-candidate-quarantine.ts
       - run: npx tsx scripts/test-news-draft-quarantine.ts
       - run: npx tsx scripts/test-news-manual-candidate.ts
@@ -104,7 +128,9 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # Reviewed manual targets stage first so their exact generated copy
           # can be inspected before a separate publication-only run.
-          AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || (github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1') }}
+          # Research-only dispatches always use the same discovery/staging path
+          # but cannot enter assessment, approval or publication.
+          AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.research_only && '0' || (github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || (github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1')) }}
           AUTO_PUBLISH_LIMIT: "1"
           CURATED_PUBLICATION: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || '0' }}
           CURATED_CANDIDATE_KEY: ${{ inputs.curated_candidate_key }}
@@ -114,11 +140,11 @@ jobs:
           # Scheduled runs and the Vercel watchdog share one Dubai-day lane.
           # Ordinary workflow_dispatch and curated/manual paths remain outside
           # this guard and keep their existing behaviour.
-          AUTOMATED_MORNING_LANE: ${{ github.event_name == 'schedule' && '1' || (inputs.morning_date != '' && '1' || '0') }}
+          AUTOMATED_MORNING_LANE: ${{ github.event_name == 'workflow_dispatch' && inputs.research_only && '0' || (github.event_name == 'schedule' && '1' || (inputs.morning_date != '' && '1' || '0')) }}
           MORNING_DATE: ${{ inputs.morning_date || '' }}
           # One Dubai-morning run researches and may publish the newest passing
           # website-news item. Manual recovery runs use the same bounded lane.
-          DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && (inputs.publication_only || inputs.curated_candidate_key != 'none') && '0' || '1' }}
+          DRAFT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && inputs.research_only && '1' || (github.event_name == 'workflow_dispatch' && (inputs.publication_only || inputs.curated_candidate_key != 'none') && '0' || '1') }}
           AUTO_PUBLISH_ORDER: "newest"
           AUTO_BACKLOG_MIN_AGE_HOURS: "12"
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"

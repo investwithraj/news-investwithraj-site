@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
 
   // Next 16 can omit Sharp's runtime-loaded libvips shared object from a
   // traced server function even though the JavaScript package is present.
-  // Keep the native files scoped to the three newsroom routes that may
+  // Keep the native files scoped to the newsroom routes that may
   // inspect an approved editorial image.
   outputFileTracingIncludes: {
     "/api/news/draft/*/publish": [
@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
       "./node_modules/@img/sharp-libvips-linux-x64/**/*",
     ],
     "/api/news/draft/*/reuse-curated-media": [
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+    "/api/news/draft/*/reuse-daily-media": [
       "./node_modules/@img/sharp-linux-x64/**/*",
       "./node_modules/@img/sharp-libvips-linux-x64/**/*",
     ],

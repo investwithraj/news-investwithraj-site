@@ -147,8 +147,15 @@ async function main() {
     "A stale evidence hash rejects changed source text");
   const route = readFileSync("app/api/news/draft/[id]/publish/route.ts", "utf8");
   assert.match(route, /const alreadyPrepared =[\s\S]{0,500}Boolean\(reassessEvidenceApproval\(draft\)\)/u);
-  assert.ok(route.indexOf("assertRequiredCuratedMediaApproval(draft)") > route.indexOf("const recomputedEvidence"));
-  assert.ok(route.indexOf("assertRequiredCuratedMediaApproval(draft)") < route.indexOf('stage = "media-validation"'));
+  const mediaGuard = route.indexOf("assertNewPublicationMediaApproval(draft)", route.indexOf("const recomputedEvidence"));
+  assert.ok(mediaGuard > route.indexOf("const recomputedEvidence"));
+  assert.ok(mediaGuard > route.indexOf('stage = "media-validation"'));
+  assert.ok(mediaGuard < route.indexOf("await claimDraftPublication(id"));
+  const assessorSource = readFileSync("lib/news-review/auto-approve.ts", "utf8");
+  const mediaHelper = assessorSource.slice(assessorSource.indexOf("export function assertNewPublicationMediaApproval"),
+    assessorSource.indexOf("export function selectAutoApproveEligibleDrafts"));
+  assert.match(mediaHelper, /assertRequiredCuratedMediaApproval\(draft\)/u,
+    "The shared new-publication guard must retain the exact Prestige media check");
   assert.match(route, /error instanceof CuratedMediaReuseError[\s\S]{0,130}privateJson\(\{ error: error.message \}, error.status\)/u);
 
   const cluster: Cluster = { id: "announcement-policy-fixture", topic: title, entries: [{ id: "fixture", title, url: sourceUrl,

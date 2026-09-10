@@ -39,17 +39,22 @@ function ArticleImage({
 
   return (
     <>
-      <Image
-        src={media.src}
-        alt={media.alt}
-        fill
-        priority={priority}
-        sizes={
-          priority
-            ? "(max-width: 900px) 100vw, 66vw"
-            : "(max-width: 720px) 100vw, 33vw"
-        }
-      />
+      <span className={styles.imageViewport}>
+        <Image
+          src={media.src}
+          alt={media.alt}
+          fill
+          priority={priority}
+          data-preserve-wide-frame={media.preserveWideFrame || undefined}
+          style={media.preserveWideFrame ? { objectFit: "contain", transform: "none" } : undefined}
+          sizes={
+            priority
+              ? "(max-width: 900px) 100vw, 66vw"
+              : "(max-width: 720px) 100vw, 33vw"
+          }
+        />
+        <span className={styles.imageShade} aria-hidden="true" />
+      </span>
       <span className={styles.imageContext}>
         {media.label} · {media.credit}
       </span>
@@ -102,7 +107,6 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
                 media={mediaPlan.get(lead.slug)}
                 priority
               />
-              <span className={styles.imageShade} />
               <span className={styles.imageIndex}>01</span>
             </span>
             <span className={styles.leadCopy}>
@@ -186,7 +190,6 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
                   article={article}
                   media={mediaPlan.get(article.slug)}
                 />
-                <span className={styles.imageShade} />
               </span>
               <span className={styles.cardBody}>
                 <span className={styles.meta}>

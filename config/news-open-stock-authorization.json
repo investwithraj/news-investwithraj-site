@@ -1,0 +1,9 @@
+{
+  "recordedAt": "2026-09-10",
+  "authorizedBy": "Raj Tomar",
+  "request": "use the internet to find images and use them",
+  "scope": "Real news photographs for the Invest With Raj website, retaining each exact source, photographer and applicable free-use licence.",
+  "receiptPath": "docs/editorial/2026-09-10-daily-news-image-catalogue.md",
+  "assets": ["public/news-stock/abu-dhabi-sunset.jpg", "public/news-stock/ras-al-khaimah-coast.jpg"],
+  "exclusions": "No AI imagery, misleading project substitution or blanket approval of future downloads."
+}

@@ -33,6 +33,10 @@ family. It is a separate Next.js 16 app from the IWR root repo at
 
 ## Content pipeline
 
+Read [the daily news standard](docs/editorial/DAILY-NEWS-STANDARD.md) before
+writing or changing the news routine. Fresh news is a concise, original update,
+not a research report stretched to satisfy a template.
+
 The authoritative GitHub Actions routine runs at 01:37 UTC / 05:37 Dubai,
 with a recovery window at 05:17 UTC / 09:17 Dubai. Scheduling can be delayed by
 GitHub; the configured Vercel watchdog is a separate recovery mechanism.
@@ -51,6 +55,12 @@ GitHub; the configured Vercel watchdog is a separate recovery mechanism.
 An automated run without a verified publication for its Dubai day must report
 action required, even if yesterday's feed is still within the older freshness
 window. Do not describe a completed job as a successful publication.
+
+Use workflow-dispatch `research_only=true` to test normal discovery, research
+and staging without approving or publishing any draft. Leave the candidate
+inputs at their defaults, `publication_only=false` and `morning_date` empty.
+This is a paid research test with private draft writes, not a read-only dry run.
+Its result must be described as staged, held or failed, never as published.
 
 Google News eligibility is automatic; ordinary news articles must not use the
 Google Indexing API. Social auto-posting, Medium/Substack/Beehiiv reposting,

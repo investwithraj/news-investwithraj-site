@@ -10,6 +10,7 @@ import type {
 } from "@/lib/news-review/types";
 import { CURRENT_EVIDENCE_POLICY_VERSION } from "@/lib/news-review/types";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
+import { hasApprovedDailyMediaContext } from "./daily-media-catalog";
 import {
   approvedEvidencePublisherDomain,
   approvedPublisherIdentity,
@@ -401,7 +402,9 @@ export function validateDraftArticleShape(
   if (
     !isRecord(value.heroImage) ||
     Object.keys(value.heroImage).some(
-      (key) => !new Set(["src", "alt", "credit"]).has(key),
+      (key) => !(hasApprovedDailyMediaContext(value)
+        ? new Set(["src", "alt", "credit", "sourceUrl", "rightsStatus", "width", "height"])
+        : new Set(["src", "alt", "credit"])).has(key),
     ) ||
     value.heroImage.src !== `/news/${value.slug}/cover.jpg` ||
     !boundedString(value.heroImage.alt, 1, 300) ||

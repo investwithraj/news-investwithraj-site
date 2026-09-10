@@ -8,6 +8,7 @@ import type {
 } from "@/lib/article-relations";
 import { resolveArticleEditorialMedia } from "@/lib/article-display-media";
 import { EDITORIAL } from "@/lib/constants";
+import { hasApprovedDailyMediaContext, selectDailyNewsMedia } from "@/lib/news-review/daily-media-catalog";
 import {
   categoryLabel,
   consequenceExcerpt,
@@ -61,6 +62,7 @@ export default function NewsArticle({
   const cta = decisionCta(article);
   const markets = displayMarkets(article);
   const displayMedia = resolveArticleEditorialMedia(article);
+  const dailyPhoto = hasApprovedDailyMediaContext(article) ? selectDailyNewsMedia(article) : null;
   const pageUrl = `https://news.investwithraj.com/news/${article.slug}`;
   const linkedInShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
     pageUrl,
@@ -125,10 +127,12 @@ export default function NewsArticle({
                 fill
                 priority
                 sizes="100vw"
+                style={dailyPhoto?.preserveWideFrame ? { objectFit: "contain" } : undefined}
               />
               <span className={styles.heroShade} aria-hidden="true" />
               <figcaption>
                 {displayMedia.label} · {displayMedia.credit}
+                {dailyPhoto?.licenceUrl ? <> · <a href={dailyPhoto.sourceUrl} target="_blank" rel="noopener noreferrer">Photo source</a> · <a href={dailyPhoto.licenceUrl} target="_blank" rel="noopener noreferrer">Licence</a></> : null}
               </figcaption>
             </figure>
           ) : (

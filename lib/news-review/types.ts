@@ -96,7 +96,7 @@ export interface MediaApprovalLedger {
   sourceUrl: string;
   rightsStatus: string;
   credit: string;
-  reviewer: "raj-review-session" | "owner-approved-stock-reuse";
+  reviewer: "raj-review-session" | "owner-approved-stock-reuse" | "approved-open-stock-reuse";
   approvedAt: string;
   /** Candidate-bound owner receipt; included in the immutable media hash. */
   reuseReceipt?: {
@@ -108,7 +108,7 @@ export interface MediaApprovalLedger {
     approvedBy: string;
     ownerApprovalDate: string;
     reuseAuthorizedAt: string;
-    basis: "owner-approved-stock-account";
+    basis: "owner-approved-stock-account" | "open-stock-licence";
   };
 }
 

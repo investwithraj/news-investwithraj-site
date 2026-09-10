@@ -16,6 +16,8 @@ import type {
   NewsDraftProvenance,
 } from "../lib/news-review/types.js";
 import { validateDraft } from "../lib/voice/validator.js";
+import { draftContentHash, mediaApprovalHash } from "../lib/news-review/integrity.js";
+import type { MediaApprovalLedger } from "../lib/news-review/types.js";
 
 const sourceA = "https://www.reuters.com/world/middle-east/source-a";
 const sourceB =
@@ -114,6 +116,30 @@ const staleDraft = {
 } as NewsDraft;
 draft.article.publishedAt = "2026-08-12T10:00:00.000Z";
 draft.provenance.score = 50;
+// Publication selection tests use valid existing human image approvals. Missing
+// media is exercised separately by test-daily-media-publication.ts.
+for (const fixture of [draft, olderDraft, staleDraft]) {
+  fixture.status = "review";
+  fixture.revision = 1;
+  fixture.recordVersion = 1;
+  fixture.contentHash = draftContentHash(fixture.article, fixture.provenance);
+  const record: Omit<MediaApprovalLedger, "hash"> = {
+    revision: fixture.revision,
+    contentHash: fixture.contentHash,
+    slug: fixture.article.slug,
+    repoPath: `public/news/${fixture.article.slug}/cover.jpg`,
+    contentSha256: "c".repeat(64),
+    mime: "image/jpeg",
+    width: 6000,
+    height: 4000,
+    sourceUrl: "https://images.example.test/approved-original.jpg",
+    rightsStatus: "licensed",
+    credit: "Approved test photographer",
+    reviewer: "raj-review-session",
+    approvedAt: fixture.createdAt,
+  };
+  fixture.mediaApproval = { ...record, hash: mediaApprovalHash(record) };
+}
 
 const originalFetch = globalThis.fetch;
 const calls: string[] = [];
@@ -1340,7 +1366,7 @@ async function main() {
     assert.ok(calls[1].includes(draft.id), "newest passing draft must publish first");
     assert.deepEqual(
       publishRequestBodies.at(-1),
-      {},
+      { expectedRevision: draft.revision, expectedRecordVersion: draft.recordVersion, expectedContentHash: draft.contentHash },
       "ordinary server publication must not opt into the automated morning ledger",
     );
 
@@ -1360,6 +1386,9 @@ async function main() {
     assert.equal(automatedMorning.published, 1);
     assert.deepEqual(publishRequestBodies, [
       {
+        expectedRevision: draft.revision,
+        expectedRecordVersion: draft.recordVersion,
+        expectedContentHash: draft.contentHash,
         automatedMorningLane: true,
         requiredPublishedDubaiDate: "2026-08-12",
       },

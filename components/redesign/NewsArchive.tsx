@@ -409,12 +409,16 @@ export default function NewsArchive({
                   >
                     {item.media ? (
                       <>
-                        <Image
-                          src={item.media.src}
-                          alt={item.media.alt}
-                          fill
-                          sizes="(max-width: 700px) 100vw, 18rem"
-                        />
+                        <span className={styles.imageViewport}>
+                          <Image
+                            src={item.media.src}
+                            alt={item.media.alt}
+                            fill
+                            data-preserve-wide-frame={item.media.preserveWideFrame || undefined}
+                            style={item.media.preserveWideFrame ? { objectFit: "contain", transform: "none" } : undefined}
+                            sizes="(max-width: 700px) 100vw, 18rem"
+                          />
+                        </span>
                         <span className={styles.imageContext}>
                           {item.media.label} · {item.media.credit}
                         </span>

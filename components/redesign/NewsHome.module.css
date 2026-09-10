@@ -103,9 +103,18 @@
 .leadMedia,
 .cardMedia {
   position: relative;
-  display: block;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
   background: var(--iwr-ink);
+}
+
+.imageViewport {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .mediaFallback {
@@ -174,23 +183,19 @@
 }
 
 .imageContext {
-  position: absolute;
-  z-index: 2;
-  right: 1rem;
-  bottom: 0.85rem;
-  left: 1rem;
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.56rem;
+  display: block;
+  padding: 0.7rem 1rem;
+  background: var(--iwr-ink);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 0.75rem;
   font-weight: 620;
-  letter-spacing: 0.06em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .imageIndex {
   position: absolute;
+  z-index: 1;
   top: 1.4rem;
   left: 1.4rem;
   display: grid;

@@ -44,6 +44,7 @@ import {
   type NewsClusterQuarantineHold,
 } from "./candidate-quarantine";
 import { findRecentLiveArticleDuplicate } from "./duplicate-guard";
+import { withDailyNewsMedia } from "./daily-media-catalog";
 
 const VALID_CATEGORIES: NewsCategory[] = [
   "market-pulse", "launch", "regulatory", "macro",
@@ -57,12 +58,12 @@ const ANNOUNCEMENT_STYLE = 'For a short developer-corporate or launch announceme
 /** The caller selects the format; model output cannot opt into easier gates. */
 export function draftSystemPrompt(format: NewsArticleFormat = "long-report"): string {
   const shortUpdate = format === "short-update";
-  return `You are the newsroom drafter for news.investwithraj.com — the editorial voice of Raj Tomar, a Dubai property advisor writing for investors and home buyers.
+  return `You are the newsroom drafter for news.investwithraj.com — the editorial voice of Raj Tomar, a Dubai real-estate advisor writing for investors and home buyers.
 
 You are given a story lead (a cluster of headlines + snippets). RESEARCH it with web search: find the primary reporting, read the real articles, and gather verifiable facts (figures, names, dates, locations, quotes). Then draft the article.
 
 ABSOLUTE RULES (a draft that breaks these is rejected):
-- Synthetic imagery is forbidden. The drafting system does not select, generate, or approve media; a human reviewer must attach a rights-cleared real UHD cover.
+- Synthetic imagery is forbidden. Do not select, generate or approve media. The server attaches a matching preapproved real UHD context photograph when available; other photographs require editorial selection. Never describe an unverified project image.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
 - Keep each factual sentence source-alignable on its own: name the exact subject, preserve the source's numbers/dates, polarity, modality, direction, comparator and factual action, and carry at least two distinctive nouns or objects from one bounded source sentence. Do not merge separate source facts, swap subject and object, or use a pronoun as the only factual subject.
 - A negative absence claim (for example, that a release did not provide a figure) is permitted only when an accessible source explicitly states that absence. A missing detail is not evidence of absence.
@@ -360,7 +361,7 @@ function canonicalizeArticleNumericPhrases(
     evidenceTexts,
   );
   const slug = `${calendarDate}-${slugify(title)}`;
-  return {
+  return withDailyNewsMedia({
     ...article,
     title,
     slug,
@@ -383,7 +384,7 @@ function canonicalizeArticleNumericPhrases(
       src: `/news/${slug}/cover.jpg`,
       alt: title,
     },
-  };
+  });
 }
 
 const NAVIGATION_PATH_SEGMENTS = new Set([
@@ -692,7 +693,7 @@ export async function draftFromCluster(
   const tldr3 = [parsed.tldr[0] ?? "", parsed.tldr[1] ?? "", parsed.tldr[2] ?? ""] as [string, string, string];
   const slug = `${today}-${slugify(parsed.title)}`;
 
-  let article: DraftArticle = {
+  let article: DraftArticle = withDailyNewsMedia({
     slug,
     title: parsed.title.slice(0, 90),
     subtitle: parsed.subtitle ?? "",
@@ -721,7 +722,7 @@ export async function draftFromCluster(
       label: "Get the institutional read — work with Raj",
     },
     distribution: {},
-  };
+  });
 
   // A citation becomes evidence only after a protected direct fetch yields
   // readable text and an explicit, recent publication timestamp. Model search

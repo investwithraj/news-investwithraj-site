@@ -1,6 +1,7 @@
 import { AREAS } from "@/content/areas";
 import type { NewsArticle } from "@/content/news/types";
 import { DEVELOPERS } from "@/lib/developers";
+import { hasApprovedDailyMediaContext, selectDailyNewsMedia } from "@/lib/news-review/daily-media-catalog";
 import {
   articleMentionsArea,
   articleMentionsDeveloper,
@@ -19,12 +20,17 @@ export type ArticleDisplayMedia = Readonly<{
   credit: string;
   notice: string;
   label: "Report image" | "Area context" | "Developer context";
+  /** Exact catalogue constraint, retained through discovery projections. */
+  preserveWideFrame?: boolean;
 }>;
 
 function recordedArticleMedia(
   article: NewsArticle,
 ): ArticleDisplayMedia | null {
   if (!hasVerifiedEditorialImage(article)) return null;
+  const dailyPhoto = hasApprovedDailyMediaContext(article)
+    ? selectDailyNewsMedia(article)
+    : null;
 
   return {
     src: article.heroImage.src,
@@ -32,6 +38,7 @@ function recordedArticleMedia(
     credit: article.heroImage.credit,
     notice: "Approved editorial context for this report.",
     label: "Report image",
+    ...(dailyPhoto?.preserveWideFrame ? { preserveWideFrame: true } : {}),
   };
 }
 

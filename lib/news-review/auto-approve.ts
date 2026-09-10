@@ -31,6 +31,15 @@ import {
 import { validateCtaLabel } from "@/lib/voice/validator";
 import { findNewsDraftQuarantine } from "./draft-quarantine";
 import { hasApprovedCuratedMediaContext } from "./curated-media-context";
+import { assertRequiredCuratedMediaApproval } from "./curated-media";
+import { hasApprovedDailyMediaContext } from "./daily-media-catalog";
+import {
+  assertRequiredDailyMediaApproval,
+  DailyMediaReuseError,
+  ensureDailyMediaApproval,
+  type DailyMediaReuseResponse,
+} from "./daily-media";
+import { draftContentHash, mediaApprovalHash } from "./integrity";
 import { assessAttributedAnnouncement, assessClaimSupport, type ClaimSupportAssessment } from "./claim-support";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 
@@ -231,7 +240,7 @@ export function articleEvidenceSegments(
     },
     // Exact owner-approved image descriptions use image provenance, not an
     // unrelated article source. Publication separately requires that ledger.
-    { field: "heroImage.alt", text: hasApprovedCuratedMediaContext(article) ? "" : article.heroImage?.alt ?? "" },
+    { field: "heroImage.alt", text: hasApprovedCuratedMediaContext(article) || hasApprovedDailyMediaContext(article) ? "" : article.heroImage?.alt ?? "" },
   ];
   return segments.filter((segment) => segment.text.trim().length > 0);
 }
@@ -1545,6 +1554,7 @@ export interface AutoApproveSummary {
 }
 
 function holdReasonCategory(reason: string): string {
+  if (/media approval|approved image|daily media|media ledger|photo context/iu.test(reason)) return "media-approval";
   if (/editorial quarantine/iu.test(reason)) return "editorial-quarantine";
   if (/fails gates/iu.test(reason)) return "voice-or-structure-gate";
   if (/freshness|publication date|timestamp|date-source/iu.test(reason)) {
@@ -1600,6 +1610,34 @@ export interface AutoApproveDraftTarget {
 const DRAFT_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const CONTENT_HASH_RE = /^[a-f0-9]{64}$/u;
+
+/** New publications always need an immutable image approval. Existing manual
+ * images keep their own approval; catalogue images also need the exact receipt. */
+export function assertNewPublicationMediaApproval(draft: NewsDraft): void {
+  const approval = draft.mediaApproval;
+  if (!approval) {
+    throw new DailyMediaReuseError("An approved image is required before publication.", 422);
+  }
+  const { hash, ...record } = approval;
+  if (approval.slug !== draft.article.slug ||
+    approval.revision !== draft.revision || approval.contentHash !== draft.contentHash ||
+    draftContentHash(draft.article, draft.provenance) !== draft.contentHash ||
+    mediaApprovalHash(record) !== hash ||
+    !Number.isFinite(Date.parse(approval.approvedAt)) ||
+    !CONTENT_HASH_RE.test(approval.contentSha256) ||
+    !["jpg", "jpeg", "png", "webp"].some((extension) => approval.repoPath === `public/news/${draft.article.slug}/cover.${extension}`) ||
+    !Number.isSafeInteger(approval.width) || !Number.isSafeInteger(approval.height) ||
+    approval.width < 3840 || approval.height < 2160 ||
+    !approval.credit?.trim() || !approval.sourceUrl?.trim() || !approval.rightsStatus?.trim() ||
+    !["raj-review-session", "owner-approved-stock-reuse", "approved-open-stock-reuse"].includes(approval.reviewer)) {
+    throw new DailyMediaReuseError("The image media approval ledger is missing, changed or stale.");
+  }
+  assertRequiredCuratedMediaApproval(draft);
+  if (hasApprovedDailyMediaContext(draft.article) ||
+    ((approval.reuseReceipt || approval.reviewer !== "raj-review-session") && !hasApprovedCuratedMediaContext(draft.article))) {
+    assertRequiredDailyMediaApproval(draft);
+  }
+}
 
 /** Select the publication set before assessment. A targeted run is bound to
  * both immutable identifiers and can never fall through to another draft. */
@@ -1753,10 +1791,69 @@ export async function runAutoApprove(opts: {
   );
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");
-  const holdReasonCounts = summarizeHoldReasons(held);
   const publishLimit = Math.max(1, Math.min(10, opts.publishLimit ?? 1));
-  const selected = opts.publish ? approve.slice(0, publishLimit) : [];
-  const deferred = opts.publish ? Math.max(0, approve.length - selected.length) : 0;
+  const selected: AutoApproveAssessment[] = [];
+  const selectedDrafts = new Map<string, NewsDraft>();
+  const mediaHeldIds = new Set<string>();
+  let mediaPreparations = 0;
+  if (opts.publish) {
+    for (const assessment of approve) {
+      if (selected.length >= publishLimit) break;
+      let candidate = eligibleDrafts.find((draft) => draft.id === assessment.id)!;
+      try {
+        if (candidate.correctionOf || candidate.article.correction) {
+          throw new DailyMediaReuseError("Historical corrections require the dedicated correction workflow, not daily automatic publication.", 422);
+        }
+        if (!candidate.mediaApproval) {
+          if (!hasApprovedDailyMediaContext(candidate.article)) {
+            throw new DailyMediaReuseError("An approved image is required; this draft has no approved daily photo context.", 422);
+          }
+          if (!DRAFT_ID_RE.test(candidate.id)) {
+            throw new DailyMediaReuseError("Daily media approval requires an exact draft lookup ID.", 422);
+          }
+          // Bound both writes and publication. A failed image preparation does
+          // not consume a publication slot or cause the whole backlog to write.
+          if (mediaPreparations >= publishLimit) continue;
+          mediaPreparations += 1;
+          await ensureDailyMediaApproval(candidate, async (pathname, body) => {
+            const response = await fetch(`${base}${pathname}`, {
+              method: "POST",
+              headers: { ...authHeaders, "content-type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            const payload = (await response.json().catch(() => ({}))) as DailyMediaReuseResponse;
+            return { response, payload };
+          });
+          const refreshedResponse = await fetch(`${base}/api/news/draft?id=${encodeURIComponent(candidate.id)}`, {
+            headers: authHeaders,
+            cache: "no-store",
+          });
+          const refreshedPayload = (await refreshedResponse.json().catch(() => ({}))) as { ok?: boolean; draft?: NewsDraft };
+          const refreshed = refreshedPayload.draft;
+          if (!refreshedResponse.ok || refreshedPayload.ok !== true || !refreshed ||
+            refreshed.id !== candidate.id || refreshed.revision !== candidate.revision ||
+            refreshed.contentHash !== candidate.contentHash || refreshed.publication ||
+            refreshed.recordVersion !== candidate.recordVersion + 1) {
+            throw new DailyMediaReuseError("The draft changed while preparing its media approval; reload before publication.");
+          }
+          candidate = refreshed;
+          const refreshedAssessment = assessDraft(candidate, { autoPublicationAt });
+          if (refreshedAssessment.verdict !== "auto-approve") {
+            throw new DailyMediaReuseError(`Publication held after media approval: ${refreshedAssessment.reasons.join("; ")}`, 422);
+          }
+        }
+        assertNewPublicationMediaApproval(candidate);
+        selected.push(assessment);
+        selectedDrafts.set(assessment.id, candidate);
+      } catch (error) {
+        mediaHeldIds.add(assessment.id);
+        held.push({ ...assessment, verdict: "manual", reasons: [`Media approval: ${error instanceof Error ? error.message : "failed closed"}`] });
+      }
+    }
+  }
+  const approvedCount = approve.length - mediaHeldIds.size;
+  const holdReasonCounts = summarizeHoldReasons(held);
+  const deferred = opts.publish ? Math.max(0, approvedCount - selected.length) : 0;
 
   if (publishOrder === "backlog") {
     log(
@@ -1765,11 +1862,12 @@ export async function runAutoApprove(opts: {
   }
 
   log(
-    `auto-approve: ${activeDrafts.length} active draft(s) · ${approve.length} pass · ${held.length} held · ` +
+    `auto-approve: ${activeDrafts.length} active draft(s) · ${approvedCount} pass · ${held.length} held · ` +
       `mode ${opts.publish ? `PUBLISH (${publishOrder}, limit ${publishLimit})` : "REVIEW ONLY"} ` +
       `(risk-based official-fact/corroborated-analysis policy)`,
   );
   for (const a of approve) {
+    if (mediaHeldIds.has(a.id)) continue;
     log(`  ok  ${a.slug}  (${a.evidenceLane} · ${a.figureCount} figs · ${a.whitelistCount}/${a.citationCount} cites)`);
   }
   for (const a of held.slice(0, 20)) {
@@ -1791,6 +1889,12 @@ export async function runAutoApprove(opts: {
   const publishedSlugs: string[] = [];
   const failureMessages: string[] = [];
   for (const assessment of selected) {
+    const selectedDraft = selectedDrafts.get(assessment.id)!;
+    const exactDraft = {
+      expectedRevision: selectedDraft.revision,
+      expectedRecordVersion: selectedDraft.recordVersion,
+      expectedContentHash: selectedDraft.contentHash,
+    };
     let response: Response;
     try {
       response = await fetch(
@@ -1804,11 +1908,12 @@ export async function runAutoApprove(opts: {
           body: JSON.stringify(
             opts.automatedMorningLane === true
               ? {
+                  ...exactDraft,
                   automatedMorningLane: true,
                   requiredPublishedDubaiDate:
                     opts.requiredPublishedDubaiDate,
                 }
-              : {},
+              : exactDraft,
           ),
         },
       );
@@ -1949,7 +2054,7 @@ export async function runAutoApprove(opts: {
   return {
     total: activeDrafts.length,
     eligible: eligibleDrafts.length,
-    approved: approve.length,
+    approved: approvedCount,
     published,
     failed,
     held: held.length,
