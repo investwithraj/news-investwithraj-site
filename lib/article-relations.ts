@@ -35,6 +35,11 @@ export type ResolvedArticleDeveloper = Readonly<{
  */
 export const ARTICLE_RELATION_RECORDS = [
   {
+    articleSlug: "2026-09-10-prestige-one-dubai-investment-plan",
+    areaSlugs: [],
+    developerSlugs: [],
+  },
+  {
     articleSlug: "2026-09-08-adgm-h1-2026-aum-licences-workforce",
     areaSlugs: [],
     developerSlugs: [],

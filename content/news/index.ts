@@ -74,8 +74,10 @@ import { article as art_2026_09_07_dubai_land_department_launches_initial_regist
 import { article as art_2026_09_07_ras_al_khaimah_h1_housing_momentum_eases } from "./2026-09-07-ras-al-khaimah-h1-housing-momentum-eases";
 import { article as art_2026_09_07_aldar_closes_abu_dhabi_s_first_off_plan_mortgage_under } from "./2026-09-07-aldar-closes-abu-dhabi-s-first-off-plan-mortgage-under";
 import { article as art_2026_09_08_adgm_h1_2026_aum_licences_workforce } from "./2026-09-08-adgm-h1-2026-aum-licences-workforce";
+import { article as art_2026_09_10_prestige_one_dubai_investment_plan } from "./2026-09-10-prestige-one-dubai-investment-plan";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_09_10_prestige_one_dubai_investment_plan,
   art_2026_09_08_adgm_h1_2026_aum_licences_workforce,
   art_2026_09_07_aldar_closes_abu_dhabi_s_first_off_plan_mortgage_under,
   art_2026_09_07_ras_al_khaimah_h1_housing_momentum_eases,
