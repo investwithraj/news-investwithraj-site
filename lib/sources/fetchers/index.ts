@@ -1,5 +1,5 @@
-// Source-fetch orchestrator. Runs every configured discovery source in
-// parallel and returns the FetchRun summary + aggregated entries.
+// Source-fetch orchestrator. Bounds per-host load and returns the FetchRun
+// summary + aggregated entries, including queries skipped during host backoff.
 
 import type { FetchRun, FetchResult } from "./types";
 export type { RawEntry, FetchResult, FetchRun } from "./types";
@@ -7,18 +7,30 @@ import { FETCH_SOURCES } from "@/lib/sources/registry";
 import { fetchRssFeed } from "./rss";
 import { fetchWebPage } from "./webfetch";
 import { fetchReddit } from "./reddit";
+import type { VerifiedSource } from "@/lib/sources/registry";
+import { dispatchSourceFetches, providerBackoffMessage } from "./dispatch";
 
-/** Run all fetch sources in parallel. Each source has its own timeout
- *  + graceful failure — a single source erroring never blocks the rest. */
-export async function fetchAllSources(): Promise<FetchRun> {
+/** Optional offline test seams; production uses registry sources and fetchers. */
+export interface FetchAllSourcesOptions {
+  sources?: readonly VerifiedSource[];
+  fetchSource?: (source: VerifiedSource) => Promise<FetchResult>;
+}
+
+/** Independent hosts continue after failures; a refused/unavailable host is
+ * not queried again in this run. Existing source validation stays unchanged. */
+export async function fetchAllSources(options: FetchAllSourcesOptions = {}): Promise<FetchRun> {
   const startedAt = new Date().toISOString();
-  const promises = FETCH_SOURCES.map((source) => {
+  const fetchSource = options.fetchSource ?? ((source: VerifiedSource) => {
     if (source.fetchType === "rss") return fetchRssFeed(source);
     if (source.fetchType === "reddit") return fetchReddit(source);
     return fetchWebPage(source);
   });
-
-  const results: FetchResult[] = await Promise.all(promises);
+  const results = await dispatchSourceFetches(
+    options.sources ?? FETCH_SOURCES,
+    (source) => source.rssUrl ?? source.fetchUrl ?? source.url,
+    fetchSource,
+    (source, failure) => ({ source, entries: [], error: providerBackoffMessage(failure), failure, durationMs: 0 }),
+  );
 
   const totalEntries = results.reduce((sum, r) => sum + r.entries.length, 0);
   const okCount = results.filter((r) => r.error === null).length;
@@ -37,6 +49,7 @@ export async function fetchAllSources(): Promise<FetchRun> {
     totalEntries,
     okCount,
     errorCount,
+    skippedSourceCount: results.filter((result) => result.failure?.code === "provider-backoff").length,
     transportOkCount: okCount,
     datedEntrySourceCount,
     emptySourceCount,
@@ -61,7 +74,8 @@ export function summarizeFetchRun(run: FetchRun): string {
   const transportResults = run.results.filter((result) => result.error === null);
   const datedResults = transportResults.filter(hasDatedEntry);
   const emptyResults = transportResults.filter((result) => !hasDatedEntry(result));
-  const errorResults = run.results.filter((result) => result.error !== null);
+  const skippedResults = run.results.filter((result) => result.failure?.code === "provider-backoff");
+  const errorResults = run.results.filter((result) => result.error !== null && result.failure?.code !== "provider-backoff");
 
   lines.push(
     `📰 Transport responses: ${transportResults.length}/${sourceCount} sources`,
@@ -82,6 +96,10 @@ export function summarizeFetchRun(run: FetchRun): string {
     for (const r of errorResults) {
       lines.push(`    - ${r.source.name}: ${r.error}`);
     }
+  }
+  if (skippedResults.length > 0) {
+    lines.push(`⏸️  ${skippedResults.length} source(s) skipped without a request during provider backoff:`);
+    for (const result of skippedResults) lines.push(`    - ${result.source.name}: ${result.error}`);
   }
   // Per-tier breakdown
   const byTier: Record<string, number> = {};

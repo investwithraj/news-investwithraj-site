@@ -53,6 +53,46 @@ export interface SafeFetchResult {
   contentType: string;
 }
 
+/** Bounded response metadata only: never a response body or a credential/query URL. */
+export interface SourceFetchFailure {
+  code: "http" | "content-type" | "provider-backoff";
+  host: string;
+  status?: number;
+  contentType?: string;
+  retryAfterSeconds?: number;
+}
+
+export class SourceFetchError extends Error {
+  constructor(message: string, readonly failure: SourceFetchFailure) {
+    super(message);
+    this.name = "SourceFetchError";
+  }
+}
+
+export function sourceFetchFailure(error: unknown): SourceFetchFailure | undefined {
+  return error instanceof SourceFetchError ? { ...error.failure } : undefined;
+}
+
+function responseFailureMetadata(
+  url: URL,
+  status: number,
+  contentType: string,
+  retryAfter: string | string[] | undefined,
+): Omit<SourceFetchFailure, "code"> {
+  const mime = contentType.split(";", 1)[0].trim().toLowerCase();
+  const safeMime = /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/u.test(mime) && mime.length <= 120
+    ? mime : "unknown";
+  const delay = typeof retryAfter === "string" && retryAfter.length <= 80
+    ? (/^\d+$/u.test(retryAfter.trim())
+      ? Number(retryAfter.trim())
+      : Math.ceil((Date.parse(retryAfter) - Date.now()) / 1_000))
+    : NaN;
+  return {
+    host: url.hostname.toLowerCase().replace(/\.$/u, ""), status, contentType: safeMime,
+    ...(Number.isSafeInteger(delay) && delay >= 0 && delay <= 604_800 ? { retryAfterSeconds: delay } : {}),
+  };
+}
+
 function normalizedHost(value: string): string {
   return value.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, "");
 }
@@ -185,6 +225,7 @@ async function requestOnce(
       },
       (response) => {
         const status = response.statusCode ?? 0;
+        const contentType = String(response.headers["content-type"] ?? "");
         if ([301, 302, 303, 307, 308].includes(status)) {
           const location = response.headers.location;
           response.resume();
@@ -198,17 +239,22 @@ async function requestOnce(
         }
         if (status < 200 || status >= 300) {
           response.resume();
-          finishError(new Error(`Source request failed (${status}).`));
+          finishError(new SourceFetchError(`Source request failed (${status}).`, {
+            code: "http",
+            ...responseFailureMetadata(url, status, contentType, response.headers["retry-after"]),
+          }));
           return;
         }
-        const contentType = String(response.headers["content-type"] ?? "");
         const contentEncoding = String(
           response.headers["content-encoding"] ?? "identity",
         ).toLowerCase();
         options.allowedContentTypes.lastIndex = 0;
         if (!options.allowedContentTypes.test(contentType)) {
           response.resume();
-          finishError(new Error("Source response type is not approved."));
+          finishError(new SourceFetchError("Source response type is not approved.", {
+            code: "content-type",
+            ...responseFailureMetadata(url, status, contentType, response.headers["retry-after"]),
+          }));
           return;
         }
         if (contentEncoding !== "identity") {

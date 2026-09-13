@@ -10,6 +10,7 @@ import type { RawEntry, FetchResult } from "./types";
 import type { VerifiedSource } from "@/lib/sources/registry";
 import {
   safeFetchBytes,
+  sourceFetchFailure,
   urlOnApprovedHost,
 } from "@/lib/sources/safe-fetch";
 
@@ -54,6 +55,7 @@ export async function fetchWebPage(
       source,
       entries: [],
       error: e instanceof Error ? e.message : "Unknown WebFetch error",
+      failure: sourceFetchFailure(e),
       durationMs: performance.now() - t0,
     };
   }

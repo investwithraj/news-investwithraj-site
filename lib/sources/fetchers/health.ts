@@ -1,16 +1,20 @@
 import type { VerifiedSource } from "@/lib/sources/registry";
 import {
   safeFetchBytes,
+  sourceFetchFailure,
   urlOnApprovedHost,
   type SafeFetchOptions,
   type SafeFetchResult,
+  type SourceFetchFailure,
 } from "@/lib/sources/safe-fetch";
 import { parseRssDocument } from "@/lib/sources/fetchers/rss";
 import { extractCandidateLinks } from "@/lib/sources/fetchers/webfetch";
+import { dispatchSourceFetches, providerBackoffMessage } from "./dispatch";
 
 export type SourceDiscoveryState =
   | "dated-entries"
   | "transport-only"
+  | "provider-backoff"
   | "review";
 
 export interface SourceHealthResult {
@@ -27,6 +31,7 @@ export interface SourceHealthResult {
   entryCount?: number;
   newestPublishedAt?: string;
   error?: string;
+  failure?: SourceFetchFailure;
 }
 
 type HealthBytesFetch = (
@@ -53,8 +58,10 @@ export async function checkOfficialSourceHealth(
   const timeoutMs = options.timeoutMs ?? 8_000;
   const clock = options.clock ?? Date.now;
 
-  return Promise.all(
-    sources.map(async (source) => {
+  return dispatchSourceFetches<VerifiedSource, SourceHealthResult>(
+    sources,
+    (source) => source.rssUrl ?? source.fetchUrl ?? source.url,
+    async (source) => {
       const started = clock();
       const target = source.rssUrl ?? source.fetchUrl ?? source.url;
       try {
@@ -146,13 +153,21 @@ export async function checkOfficialSourceHealth(
           status: statusFromError(error),
           latencyMs: Math.max(0, clock() - started),
           error: error instanceof Error ? error.message : String(error),
+          failure: sourceFetchFailure(error),
         };
       }
+    },
+    (source, failure) => ({
+      name: source.name, target: source.rssUrl ?? source.fetchUrl ?? source.url,
+      ok: false, transportOk: false, discoveryOk: false, discoveryState: "provider-backoff",
+      status: 0, latencyMs: 0, entryCount: 0, error: providerBackoffMessage(failure), failure,
     }),
   );
 }
 
 function statusFromError(error: unknown): number {
+  const failure = sourceFetchFailure(error);
+  if (failure?.status !== undefined) return failure.status;
   const message = error instanceof Error ? error.message : String(error);
   const match = message.match(/Source request failed \((\d{3})\)\./u);
   return match ? Number(match[1]) : 0;

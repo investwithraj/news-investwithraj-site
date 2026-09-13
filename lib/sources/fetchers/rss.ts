@@ -9,6 +9,7 @@ import {
 } from "@/lib/sources/registry";
 import {
   safeFetchBytes,
+  sourceFetchFailure,
   urlOnApprovedHost,
 } from "@/lib/sources/safe-fetch";
 
@@ -184,6 +185,7 @@ export async function fetchRssFeed(
       source,
       entries: [],
       error: e instanceof Error ? e.message : "Unknown fetch error",
+      failure: sourceFetchFailure(e),
       durationMs: performance.now() - t0,
     };
   }

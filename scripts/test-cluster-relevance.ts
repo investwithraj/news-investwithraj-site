@@ -138,6 +138,44 @@ const publisherFixtures: RawEntry["source"][] = [
   { name: "UAE official source", tier: "government", domain: "example.gov.ae" },
   { name: "Reuters", tier: "national-press", domain: "reuters.com" },
 ];
+const webfetchPlaceholder = "(WebFetch source — full content extracted in-session from Dubai Holding)";
+const dubaiHoldingPublisher: RawEntry["source"] = {
+  name: "Dubai Holding", tier: "industry-portal", domain: "dubaiholding.com",
+};
+assert.equal(
+  clusterAndScore([
+    entry("foreign-webfetch-visa", foreignVisaTitle, webfetchPlaceholder, dubaiHoldingPublisher),
+    entry("foreign-webfetch-villa", foreignVillaTitle, webfetchPlaceholder, dubaiHoldingPublisher),
+  ]).length,
+  0,
+  "Synthetic WebFetch source labels cannot supply UAE story geography.",
+);
+const localWebfetchEntry = entry("local-webfetch", "Dubai residential development breaks ground", webfetchPlaceholder, dubaiHoldingPublisher);
+const localWebfetch = clusterAndScore([localWebfetchEntry]);
+const localWithoutPlaceholder = clusterAndScore([{ ...localWebfetchEntry, summary: "" }]);
+assert.equal(localWebfetch.length, 1, "A genuine Dubai headline remains eligible with a placeholder excerpt.");
+assert.deepEqual(localWebfetch[0].entities, localWithoutPlaceholder[0].entities,
+  "The synthetic publisher label must not create a developer entity.");
+assert.deepEqual(localWebfetch[0].scoreBreakdown, localWithoutPlaceholder[0].scoreBreakdown);
+assert.equal(localWebfetch[0].id, localWithoutPlaceholder[0].id);
+assert.equal(localWebfetch[0].entries[0].summary, webfetchPlaceholder, "Keep the raw discovery record intact.");
+const actualExcerpt = clusterAndScore([
+  entry("actual-excerpt", "New housing phase begins", "Dubai Holding confirms a residential development in Dubai.", dubaiHoldingPublisher),
+]);
+assert.equal(actualExcerpt.length, 1, "A real excerpt can still establish UAE story geography.");
+assert.ok(actualExcerpt[0].entities.developers.includes("Dubai Holding"));
+for (const company of ["Dubai Holding", "Dubai Holding Real Estate", "Dubai Properties", "RAK Properties"]) {
+  assert.equal(clusterAndScore([
+    entry("geographic-brand-abroad", `${company} announces residential development in London`, "The new housing project is in the UK.", dubaiHoldingPublisher),
+  ]).length, 0, `${company} cannot provide geographic proof for a foreign project.`);
+}
+for (const localContext of ["in Dubai", "in Business Bay", "for UAE investors"]) {
+  const localBrand = clusterAndScore([
+    entry("geographic-brand-local", `Dubai Holding announces residential development ${localContext}`, "The company outlined the new housing project.", dubaiHoldingPublisher),
+  ]);
+  assert.equal(localBrand.length, 1, "A separate local content link remains eligible.");
+  assert.ok(localBrand[0].entities.developers.includes("Dubai Holding"), "Corporate-name stripping is limited to geography checking.");
+}
 for (const source of publisherFixtures) {
   assert.equal(
     clusterAndScore([

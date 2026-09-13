@@ -1,6 +1,7 @@
 // Shared types for the source-fetching layer.
 
 import type { SourceTier, VerifiedSource } from "@/lib/sources/registry";
+import type { SourceFetchFailure } from "@/lib/sources/safe-fetch";
 
 /** A single raw entry pulled from a verified source — pre-clustering. */
 export interface RawEntry {
@@ -36,6 +37,8 @@ export interface FetchResult {
   entries: RawEntry[];
   /** Null on success, error message on failure (fetch continues with other sources) */
   error: string | null;
+  /** Optional bounded transport/backoff diagnosis. Backoff means no request was made. */
+  failure?: SourceFetchFailure;
   /** ms elapsed for the fetch — useful for perf tracking */
   durationMs: number;
 }
@@ -50,6 +53,8 @@ export interface FetchRun {
   /** How many sources errored vs succeeded */
   okCount: number;
   errorCount: number;
+  /** Included in errorCount for compatibility, never in transportOkCount. */
+  skippedSourceCount?: number;
   /** Explicit alias for okCount: the source transport completed without an error. */
   transportOkCount: number;
   /** Sources that returned at least one entry with a parseable publication date. */

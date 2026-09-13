@@ -4,7 +4,7 @@
 
 import type { RawEntry } from "@/lib/sources/fetchers";
 import type { Cluster, ClusterEntities } from "./types";
-import { TIER_WEIGHT } from "@/lib/sources/registry";
+import { findSourceByUrl, isOfficialDeveloperUrl, TIER_WEIGHT } from "@/lib/sources/registry";
 import { similarity } from "./dedupe";
 import { createHash } from "node:crypto";
 
@@ -63,6 +63,16 @@ function hasKnownEntity(text: string, entity: string): boolean {
     `(?:^|[^\\p{L}\\p{N}])${escapedEntity}(?=$|[^\\p{L}\\p{N}])`,
     "iu",
   ).test(text);
+}
+
+/** The index fetcher has no article excerpt for these entries: this complete
+ * placeholder records publisher identity only. It must not become story
+ * geography, a developer signature or ranking keywords (e.g. Dubai Holding). */
+function entryStoryText(entry: Pick<RawEntry, "title" | "summary">): string {
+  const summary = /^\(WebFetch source\s+[—-]\s+full content extracted in-session from .+\)$/u.test(entry.summary.trim())
+    ? ""
+    : entry.summary;
+  return `${entry.title}\n${summary}`;
 }
 
 // SPECIFIC places only — generic emirate names live in GENERIC_PLACES below
@@ -164,7 +174,16 @@ const AMBIGUOUS_COMMUNITY_DEVELOPERS: Record<string, string[]> = {
 };
 
 function entryHasUaeLink(entry: RawEntry): boolean {
-  let text = `${entry.title}\n${entry.summary}`;
+  let text = entryStoryText(entry);
+
+  // These corporate names contain geographic words but the companies can
+  // announce overseas projects. Remove only the complete company name from
+  // geographic matching, not from entity extraction or ranking. A separate
+  // local place, project or investor connection must establish the UAE link.
+  text = text.replace(
+    /(?:^|[^\p{L}\p{N}])(?:Dubai\s+Holding(?:\s+Real\s+Estate)?|Dubai\s+Properties|RAK\s+Properties)(?=$|[^\p{L}\p{N}])/giu,
+    " ",
+  );
 
   // Being headquartered in Dubai does not make a foreign-only project local.
   // Remove only these company-origin phrases, retaining any separate UAE
@@ -244,7 +263,7 @@ const RAJ_ANGLE_KEYWORDS = [
 
 function extractEntities(entries: RawEntry[]): ClusterEntities {
   const text = entries
-    .map((e) => `${e.title}\n${e.summary}`)
+    .map(entryStoryText)
     .join("\n")
     .toLowerCase();
 
@@ -256,7 +275,7 @@ function extractEntities(entries: RawEntry[]): ClusterEntities {
   // Money figures — match "AED 4.25M", "$3.9B", "AED 11.97 billion" patterns
   const figureRe = /(AED|aed|USD|usd|\$|€)\s*\d+(?:[.,]\d+)?\s*(?:M|B|K|million|billion|thousand)\b/g;
   const figuresRaw = entries
-    .flatMap((e) => [...(e.title.matchAll(figureRe) || []), ...(e.summary.matchAll(figureRe) || [])])
+    .flatMap((e) => [...entryStoryText(e).matchAll(figureRe)])
     .map((m) => m[0]);
   const figures = [...new Set(figuresRaw)];
 
@@ -269,7 +288,7 @@ function extractEntities(entries: RawEntry[]): ClusterEntities {
 
 /** Pick a cluster signature — the primary entity that defines the topic */
 function signatureFor(entry: RawEntry): string | null {
-  const text = `${entry.title} ${entry.summary}`.toLowerCase();
+  const text = entryStoryText(entry).toLowerCase();
 
   // Prefer specific place + developer combos (most editorial-actionable).
   // Generic emirate names are skipped — they'd collapse every story into one
@@ -318,7 +337,7 @@ function categorizeCluster(entries: RawEntry[]): Cluster["suggestedCategory"] {
 
 /** Determine which markets the cluster covers */
 function detectMarkets(entries: RawEntry[]): Cluster["suggestedMarkets"] {
-  const text = entries.map((e) => `${e.title} ${e.summary}`).join(" ").toLowerCase();
+  const text = entries.map(entryStoryText).join(" ").toLowerCase();
   const markets: Cluster["suggestedMarkets"] = [];
   if (/\bdubai\b/.test(text)) markets.push("Dubai");
   if (/\babu dhabi\b/.test(text)) markets.push("Abu Dhabi");
@@ -332,7 +351,7 @@ function detectMarkets(entries: RawEntry[]): Cluster["suggestedMarkets"] {
 /* ─── Scoring ────────────────────────────────────────────────────────── */
 
 function scoreUhnwRelevance(entries: RawEntry[]): number {
-  const text = entries.map((e) => `${e.title} ${e.summary}`).join(" ").toLowerCase();
+  const text = entries.map(entryStoryText).join(" ").toLowerCase();
   let hits = 0;
   for (const kw of UHNW_KEYWORDS) {
     if (text.includes(kw.toLowerCase())) hits++;
@@ -368,7 +387,7 @@ function scoreFreshness(entries: RawEntry[]): number {
 }
 
 function scoreRajAngle(entries: RawEntry[]): number {
-  const text = entries.map((e) => `${e.title} ${e.summary}`).join(" ").toLowerCase();
+  const text = entries.map(entryStoryText).join(" ").toLowerCase();
   let hits = 0;
   for (const kw of RAJ_ANGLE_KEYWORDS) {
     if (text.includes(kw.toLowerCase())) hits++;
@@ -399,6 +418,53 @@ const EDITORIAL_EXCLUSION_RE =
 
 function topicFitsPropertyDesk(topic: string): boolean {
   return topicIsRealEstate(topic) && !EDITORIAL_EXCLUSION_RE.test(topic);
+}
+
+const PRIMARY_ANNOUNCEMENT_ACTION_RE =
+  /\b(?:announc(?:e|es|ed)|confirm(?:s|ed)?|launch(?:es|ed)?|unveil(?:s|ed)?|award(?:s|ed)?|issu(?:e|es|ed)|publish(?:es|ed)?|approv(?:e|es|ed)|complet(?:e|es|ed)|open(?:s|ed)?|handover|hands? over|breaks? ground|groundbreaking|begins? construction)\b/iu;
+const PRIMARY_ANNOUNCEMENT_EXCLUSION_RE =
+  /\b(?:forecast(?:s|ing)?|predict(?:s|ed|ion|ions)?|outlook|opinion|analysis|expects?|investment advice|should buy|should sell)\b/iu;
+
+/** Research eligibility only, never publication approval. Plain official
+ * announcements can rank below 45 without luxury/analysis keywords. A single
+ * bounded fallback may consider a current first-party property announcement;
+ * the later independent fetch, event-date and evidence gates stay mandatory. */
+export function isTimelyPrimaryPropertyEntry(entry: RawEntry, now = Date.now()): boolean {
+  if (!Number.isFinite(now) || !entryHasUaeLink(entry) || !topicFitsPropertyDesk(entry.title) ||
+    !PRIMARY_ANNOUNCEMENT_ACTION_RE.test(entry.title) || PRIMARY_ANNOUNCEMENT_EXCLUSION_RE.test(entryStoryText(entry))) return false;
+
+  // Fetchers emit explicit UTC timestamps. Never derive a date from the title,
+  // URL, discovery clock or publisher identity; reject normalised bad dates.
+  const date = entry.publishedAt.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?Z$/u);
+  if (!date) return false;
+  const published = Date.parse(entry.publishedAt);
+  if (!Number.isFinite(published) || new Date(published).toISOString() !== `${date[1]}.${(date[2] ?? "").padEnd(3, "0")}Z`) return false;
+  const age = now - published;
+  if (age < 0 || age > 72 * 60 * 60 * 1_000) return false;
+
+  try {
+    const url = new URL(entry.url);
+    const source = findSourceByUrl(entry.url);
+    if (!source || source.citable === false || (source.tier !== "government" && !isOfficialDeveloperUrl(entry.url))) return false;
+    const host = url.hostname.toLowerCase().replace(/^www\./u, "");
+    const canonicalHost = new URL(source.url).hostname.toLowerCase().replace(/^www\./u, "");
+    if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash ||
+      host !== canonicalHost || entry.source.domain.toLowerCase().replace(/^www\./u, "") !== canonicalHost ||
+      entry.source.tier !== source.tier) return false;
+
+    // This proves a direct publisher article-shaped URL, not its fetched
+    // canonical identity. The article fetcher must still verify that identity.
+    const path = decodeURIComponent(url.pathname).replace(/\/+$/u, "");
+    const parts = path.split("/").filter(Boolean);
+    const leaf = parts.at(-1) ?? "";
+    if (parts.length < 2 || leaf.length < 12 || !/[a-z]/iu.test(leaf) ||
+      /(?:^|\/)(?:api|search|tags?|categor(?:y|ies)|rss|feeds?|sitemap)(?:\/|$)/iu.test(path) ||
+      /^(?:latest-news|news-and-media|media-cent(?:re|er)|press-releases?|press-release-listing)$/iu.test(leaf)) return false;
+    return ![source.url, source.fetchUrl, source.rssUrl].some((indexUrl) => indexUrl &&
+      new URL(indexUrl).pathname.replace(/\/+$/u, "") === url.pathname.replace(/\/+$/u, ""));
+  } catch {
+    return false;
+  }
 }
 
 /** Stable, reservation-safe ID for headline-similarity clusters. Feed GUIDs

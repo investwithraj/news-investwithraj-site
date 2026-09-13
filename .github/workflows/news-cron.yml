@@ -79,7 +79,9 @@ jobs:
       - run: npx tsx scripts/test-developer-source-registry.ts
       - run: npx tsx scripts/test-abu-dhabi-media-office-source.ts
       - run: npx tsx scripts/test-source-truth-reporting.ts
+      - run: npx tsx scripts/test-source-fetch-dispatch.ts
       - run: npx tsx scripts/test-cluster-relevance.ts
+      - run: npx tsx scripts/test-primary-announcement-fallback.ts
       - run: npx tsx scripts/test-news-repair-citations.ts
       - run: npx tsx scripts/test-phase-identifiers.ts
       - run: npx tsx scripts/test-research-originality.ts
@@ -101,7 +103,9 @@ jobs:
       - run: npx tsx scripts/test-news-curated-candidate.ts
       - run: npx tsx scripts/test-news-curated-transport.ts
       - run: npx tsx scripts/test-news-scheduler.ts
-      - run: npx tsx scripts/check-source-health.ts
+      # Discovery below reports transport and dated-entry health from the
+      # requests it actually uses. Do not issue a duplicate live feed burst
+      # immediately before that same ingestion.
       - name: Validate curated dispatch
         if: github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none'
         shell: bash

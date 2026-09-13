@@ -241,6 +241,7 @@ async function executePipeline(state: RunState): Promise<void> {
     clusterAndScore(deduped, CANDIDATE_POOL),
     MIN_SCORE,
     requestedCandidate,
+    runNow,
   );
   const candidatePlan = planDraftCandidates({
     clusters,
@@ -253,8 +254,11 @@ async function executePipeline(state: RunState): Promise<void> {
     ),
   });
   const candidates = candidatePlan.candidates;
+  const automaticSelection = clusters.some((cluster) => cluster.score < MIN_SCORE)
+    ? "one timely primary-source fallback"
+    : `score >= ${MIN_SCORE}`;
   console.log(
-    `selected clusters (${requestedCandidate === "auto" ? `score >= ${MIN_SCORE}` : requestedCandidate}): ${clusters.length}; candidates: ${candidates.length}; recoverable held drafts: ${candidatePlan.recoverableHeld}`,
+    `selected clusters (${requestedCandidate === "auto" ? automaticSelection : requestedCandidate}): ${clusters.length}; candidates: ${candidates.length}; recoverable held drafts: ${candidatePlan.recoverableHeld}`,
   );
   state.candidates = candidates.length;
 
