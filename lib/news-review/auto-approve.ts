@@ -1034,8 +1034,19 @@ const PERIOD_SPAN_RE = new RegExp(
 // still evidence-bound, and the deliberately exact span cannot absorb nearby
 // prose or create a general product-number exemption.
 const PROJECT_360_IDENTIFIER_RE = /\bProject[ \t]+360\b/g;
+// A phase number identifies a development stage; trailing verbs/quantifiers are
+// not part of that identifier. Keep it evidence-bound as a labelled tuple, and
+// do not reinterpret an unrecognised alphanumeric suffix as a shorter number.
+// Only explicit clause/location boundaries may end the identifier. A following
+// scale, unit or count noun ("phase 2 million homes", "Phase 2%") must instead
+// reach the unchanged full quantity parser, not match evidence for "Phase 2".
+const PHASE_IDENTIFIER_BOUNDARY = String.raw`(?=$|[ \t]*(?:[.,;:!?/()\[\]{}]|-[ \t]*\d|\r?\n)|[ \t]+(?:of|in|at|on|for|from|by|with|within|and|or|but|is|are|was|were|has|have|had|will|would|could|may|might|can|must|includes?|offers?|covers?|contains?|features?|provides?|comprises?|occupies|spans|sits|starts?|begins?|ends?)\b)`;
+const PHASE_IDENTIFIER_RE = new RegExp(
+  String.raw`(?<![-A-Za-z0-9])phase[ \t]+(?:no\.?[ \t]*)?${UNSIGNED_NUM}(?![A-Za-z0-9]|[.,]\d)${PHASE_IDENTIFIER_BOUNDARY}`,
+  "gi",
+);
 const LABELLED_DIGIT_RE = new RegExp(
-  String.raw`(?<![-A-Za-z0-9])(?:phase|stage|tranche|plot|unit|tower|building|release|version)[ \t]+(?:no\.?[ \t]*)?${UNSIGNED_NUM}${HEAD_PHRASE}`,
+  String.raw`(?<![-A-Za-z0-9])(?:stage|tranche|plot|unit|tower|building|release|version)[ \t]+(?:no\.?[ \t]*)?${UNSIGNED_NUM}${HEAD_PHRASE}`,
   "gi",
 );
 const RATIO_OR_FRACTION =
@@ -1085,6 +1096,7 @@ const NUMERIC_SPAN_PATTERNS: ReadonlyArray<{
 }> = [
   { kind: "identifier", pattern: PROJECT_360_IDENTIFIER_RE },
   { kind: "period", pattern: PERIOD_SPAN_RE },
+  { kind: "label", pattern: PHASE_IDENTIFIER_RE },
   { kind: "label", pattern: LABELLED_DIGIT_RE },
   { kind: "range", pattern: FULL_RANGE_RE },
   { kind: "value", pattern: GENERAL_DIGIT_SPAN_RE },

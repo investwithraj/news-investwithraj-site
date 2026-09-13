@@ -71,6 +71,7 @@ async function generate(body: string, options: {
   repairErrorAt?: number;
 } = {}) {
   const prompts: string[] = [];
+  const researchMessages: string[] = [];
   let repairs = 0;
   const result = await draftFromCluster(cluster, ["dubailand.gov.ae"], {
     format: options.format,
@@ -78,6 +79,7 @@ async function generate(body: string, options: {
     dependencies: {
       research: async (request) => {
         prompts.push(request.system ?? "");
+        researchMessages.push(...request.messages.map((message) => message.content));
         const draft = JSON.parse(json(body));
         if (options.badTitle) draft.title = options.badTitle;
         return { ok: true, text: JSON.stringify(draft), searchedUrls: [URL] };
@@ -104,7 +106,7 @@ async function generate(body: string, options: {
       }),
     },
   });
-  return { result, prompts, repairs };
+  return { result, prompts, researchMessages, repairs };
 }
 
 async function main() {
@@ -120,7 +122,17 @@ async function main() {
     assert.equal(citations[0]?.source, publisher, "Attribution is registry-owned, not model-owned.");
   }
   assert.equal(approvedPublisherIdentity("https://gulfnews.com.evil.example/story"), null);
-  const { result, prompts } = await generate(BODY, { format: "short-update" });
+  const { result, prompts, researchMessages } = await generate(BODY, { format: "short-update" });
+  assert.equal(researchMessages.length, 1);
+  assert.equal(researchMessages[0].split("\n")[0], `RESEARCH DATE: ${NOW.toISOString()}`,
+    "Research must receive the current injected clock, not the source's older publication date.");
+  assert.match(researchMessages[0], /first look for the exact canonical government, regulator or developer release/u);
+  assert.match(researchMessages[0], /Prefer that primary publication when its facts support the short update/u);
+  assert.match(researchMessages[0], /do not inflate the source list with duplicate reporting/u);
+  assert.match(researchMessages[0], /higher-risk reporting still require two independently supporting approved publisher domains/u);
+  assert.match(researchMessages[0], /exact named speaker must state the plan in the source, not merely express personal sentiment/u);
+  assert.match(prompts[0], /personal feelings, a historical result or the reporter's project description does NOT establish corporate intent/u);
+  assert.match(prompts[0], /explicitly binds that named speaker and company to an actual plan/u);
   assert.equal(result.ok, true, `${result.reason}; ${result.diagnostics?.join("; ")}`);
   assert.ok(result.article && result.provenance);
   const article = result.article;

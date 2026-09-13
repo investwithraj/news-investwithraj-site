@@ -81,6 +81,7 @@ jobs:
       - run: npx tsx scripts/test-source-truth-reporting.ts
       - run: npx tsx scripts/test-cluster-relevance.ts
       - run: npx tsx scripts/test-news-repair-citations.ts
+      - run: npx tsx scripts/test-phase-identifiers.ts
       - run: npx tsx scripts/test-research-originality.ts
       - run: npx tsx scripts/test-news-cron-outcome.ts
       - run: npx tsx scripts/test-news-research-only.ts
