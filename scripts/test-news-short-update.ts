@@ -59,7 +59,17 @@ const cluster: Cluster = {
   suggestedCategory: "regulatory", suggestedMarkets: ["Dubai"],
 };
 
-async function generate(body: string, options: { format?: DraftOpts["format"]; source?: string; date?: string | null; badTitle?: string; repairBasis?: unknown; numericRepair?: boolean } = {}) {
+async function generate(body: string, options: {
+  format?: DraftOpts["format"];
+  source?: string;
+  date?: string | null;
+  badTitle?: string;
+  repairBasis?: unknown;
+  repairBasisAt?: number;
+  numericRepair?: boolean;
+  semanticRepair?: "first-unsupported" | "always-unsupported";
+  repairErrorAt?: number;
+} = {}) {
   const prompts: string[] = [];
   let repairs = 0;
   const result = await draftFromCluster(cluster, ["dubailand.gov.ae"], {
@@ -75,9 +85,15 @@ async function generate(body: string, options: { format?: DraftOpts["format"]; s
       repair: async (request) => {
         prompts.push(request.system ?? "");
         repairs++;
+        if (options.repairErrorAt === repairs) return { ok: false, error: "fixture provider unavailable" };
         const copy = JSON.parse(json(body));
         if (options.numericRepair && repairs === 1) copy.body += " Dubai Land Department confirmed a fee of AED 999 million.";
-        if (options.repairBasis !== undefined) copy.reportingBasis = options.repairBasis;
+        if (options.semanticRepair === "always-unsupported" || (options.semanticRepair === "first-unsupported" && repairs === 1)) {
+          copy.title = "Dubai Land Department grants permanent residency to every applicant";
+        }
+        if (options.repairBasis !== undefined && (options.repairBasisAt === undefined || options.repairBasisAt === repairs)) {
+          copy.reportingBasis = options.repairBasis;
+        }
         return { ok: true, text: JSON.stringify(copy) };
       },
       fetchArticle: async () => ({
@@ -88,7 +104,7 @@ async function generate(body: string, options: { format?: DraftOpts["format"]; s
       }),
     },
   });
-  return { result, prompts };
+  return { result, prompts, repairs };
 }
 
 async function main() {
@@ -124,6 +140,38 @@ async function main() {
   assert.doesNotMatch(titleRepair.prompts[1], /Preserve the current title unless the unsupported or unparsed lists identify numerical/u);
   assert.equal(titleRepair.result.article?.title, article.title,
     "The corrected title must pass the unchanged final source check.");
+  const semanticRepair = await generate(BODY, { format: "short-update",
+    badTitle: "Dubai Land Department grants permanent residency to every applicant",
+    semanticRepair: "first-unsupported" });
+  assert.equal(semanticRepair.result.ok, true, semanticRepair.result.reason);
+  assert.equal(semanticRepair.repairs, 2);
+  assert.equal(semanticRepair.prompts.length, 3, "Source alignment gets research plus at most two prose repairs.");
+  assert.match(semanticRepair.prompts[2], /final source-alignment correction/u);
+  assert.equal(semanticRepair.result.article?.title, article.title);
+  assert.ok(semanticRepair.result.diagnostics?.some((line) => /final source-alignment repair invoked/u.test(line)));
+  const stillUnsupported = await generate(BODY, { format: "short-update",
+    badTitle: "Dubai Land Department grants permanent residency to every applicant",
+    semanticRepair: "always-unsupported" });
+  assert.equal(stillUnsupported.result.ok, false, "A bounded retry cannot waive final factual support.");
+  assert.equal(stillUnsupported.repairs, 2);
+  assert.equal(stillUnsupported.prompts.length, 3, "Unsupported repairs must not create an endless retry loop.");
+  assert.match(stillUnsupported.result.reason ?? "", /not anchor-supported/u);
+  for (const repairErrorAt of [1, 2]) {
+    const failedProvider = await generate(BODY, { format: "short-update",
+      badTitle: "Dubai Land Department grants permanent residency to every applicant",
+      semanticRepair: "first-unsupported", repairErrorAt });
+    assert.equal(failedProvider.result.ok, false);
+    assert.equal(failedProvider.repairs, repairErrorAt, "Provider errors must not trigger another provider call.");
+    assert.equal(failedProvider.prompts.length, repairErrorAt + 1);
+    assert.match(failedProvider.result.reason ?? "", /fixture provider unavailable/u);
+  }
+  const finalBasisMutation = await generate(BODY, { format: "short-update",
+    badTitle: "Dubai Land Department grants permanent residency to every applicant",
+    semanticRepair: "first-unsupported", repairBasisAt: 2,
+    repairBasis: { sourceUrl: URL, speaker: "Invented Speaker", organization: "Invented Company", statementKind: "corporate-intent" } });
+  assert.equal(finalBasisMutation.result.ok, false);
+  assert.equal(finalBasisMutation.repairs, 2, "The basis-mutation regression must exercise the final repair.");
+  assert.match(finalBasisMutation.result.reason ?? "", /cannot replace or invent reportingBasis/u);
   const numericRepair = await generate(BODY, { format: "short-update",
     badTitle: "Dubai Land Department grants permanent residency to every applicant", numericRepair: true });
   assert.equal(numericRepair.result.ok, true, numericRepair.result.reason);

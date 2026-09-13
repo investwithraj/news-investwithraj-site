@@ -2050,6 +2050,35 @@ function boundedClauseLabel(value: string): string {
 }
 
 /**
+ * Check originality against the full, unchanged fetched research packet, not
+ * only the sources selected for the final citations. This is independent of
+ * claim support and reporting lane: uncited research is not supporting
+ * evidence, but removing its citation must not conceal source copying.
+ * Uses the existing clause, window and overlap rules without changing them.
+ */
+export function assessResearchOriginality(input: {
+  segments: readonly ClaimSupportSegment[];
+  evidence: readonly ClaimSupportEvidence[];
+}): ClaimSupportFailure[] {
+  const windows = sourceWindows(input.evidence);
+  const failures: ClaimSupportFailure[] = [];
+  for (const segment of input.segments) {
+    for (const clause of sentenceClauses(segment.text)) {
+      const originality = prepareOriginality(clause);
+      if (windows.some((window) => exceedsOriginalityCeiling(originality, window))) {
+        failures.push({
+          field: segment.field,
+          clause: boundedClauseLabel(clause),
+          code: "source-copying",
+          detail: "clause exceeds the unchanged source-originality ceiling against fetched research, including unselected citations",
+        });
+      }
+    }
+  }
+  return failures;
+}
+
+/**
  * Assess reader-visible clauses against immutable fetched publisher text.
  * The result proves a conservative anchor match only, never truth or entailment.
  */

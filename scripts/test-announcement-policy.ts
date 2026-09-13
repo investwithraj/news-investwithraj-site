@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { approvedPublisherIdentity, articleEvidenceSegments, assessDraft, determineEvidencePolicy } from "../lib/news-review/auto-approve";
 import { draftFromCluster } from "../lib/news-review/draft-engine";
-import { draftContentHash, evidenceApprovalFor, reassessEvidenceApproval, validateDraftArticleShape } from "../lib/news-review/integrity";
+import { draftContentHash, evidenceApprovalFor, reassessEvidenceApproval, validateDraftArticleShape, validateProvenanceShape } from "../lib/news-review/integrity";
 import { CURRENT_EVIDENCE_POLICY_VERSION, type DraftArticle, type NewsDraft, type NewsDraftProvenance } from "../lib/news-review/types";
 import { serializeArticle } from "../lib/news-review/serialize";
 import { validateDraft } from "../lib/voice/validator";
@@ -176,6 +176,113 @@ async function main() {
   assert.deepEqual(result.article?.reportingBasis, article.reportingBasis);
   assert.deepEqual(result.article?.speakableSelector, [".article-body > p:first-child"]);
   assert.equal(providerCalls, 1);
+
+  // A writer may explicitly narrow an over-cited announcement to its bound
+  // source. Both originally fetched sources must remain in provenance, and
+  // neither omission nor a repaired legacy `citations` field may silently prune.
+  const secondUrl = "https://www.reuters.com/world/middle-east/announcement-policy-fixture";
+  const secondPublisher = approvedPublisherIdentity(secondUrl)!;
+  const secondSourceText = "The official transport authority published revised bus routes for the city network. The service announcement sets out the timetable for urban passenger transport.";
+  async function repairTwoSourceAnnouncement(citationUrls: unknown, secondText = secondSourceText) {
+    let researchCalls = 0;
+    let repairCalls = 0;
+    const fetchedUrls: string[] = [];
+    const twoSourceResult = await draftFromCluster(cluster, [publisher.domain, secondPublisher.domain], {
+      format: "short-update", now: NOW,
+      dependencies: {
+        research: async () => {
+          researchCalls++;
+          return { ok: true, text: JSON.stringify({ ...article, citations: [
+            ...article.citations,
+            { source: secondPublisher.name, tier: secondPublisher.tier, url: secondUrl, accessedAt: NOW.toISOString() },
+          ] }), searchedUrls: [sourceUrl, secondUrl] };
+        },
+        repair: async (request) => {
+          repairCalls++;
+          assert.match(request.system ?? "", /citationUrls/u);
+          assert.match(request.system ?? "", /dropping a citation cannot hide copying/u);
+          return { ok: true, text: JSON.stringify({ ...article, reportingBasis: undefined, citationUrls }) };
+        },
+        fetchArticle: async (url) => {
+          fetchedUrls.push(url);
+          return { text: url === sourceUrl ? sourceText : secondText, finalUrl: url,
+            publishedAt: "2026-09-09T08:00:00.000Z", publicationDateSource: "publisher-api",
+            diagnostic: { code: "ok", message: "two-source fixture" } };
+        },
+      },
+    });
+    assert.equal(researchCalls, 1);
+    assert.deepEqual([...fetchedUrls].sort(), [sourceUrl, secondUrl].sort(), "Fetch each initial citation exactly once.");
+    return { result: twoSourceResult, repairCalls };
+  }
+  const narrowed = await repairTwoSourceAnnouncement([sourceUrl]);
+  assert.equal(narrowed.result.ok, true, `${narrowed.result.reason}; ${narrowed.result.diagnostics?.join("; ")}`);
+  assert.equal(narrowed.repairCalls, 1, "An explicit, supported source selection needs only one repair.");
+  assert.ok(narrowed.result.article && narrowed.result.provenance);
+  assert.deepEqual(narrowed.result.article.citations.map((citation) => citation.url), [sourceUrl]);
+  assert.deepEqual(narrowed.result.article.reportingBasis, article.reportingBasis);
+  assert.deepEqual(narrowed.result.provenance.fetchedEvidence?.map((evidence) => evidence.url).sort(),
+    [sourceUrl, secondUrl].sort(), "Citation pruning must retain all originally fetched research.");
+  for (const evidence of narrowed.result.provenance.fetchedEvidence ?? []) {
+    const expectedText = evidence.url === sourceUrl ? sourceText : secondSourceText;
+    assert.equal(evidence.text, expectedText, "The stored research must retain the original source text.");
+    assert.equal(evidence.contentHash, createHash("sha256").update(expectedText).digest("hex"));
+  }
+  assert.ok(narrowed.result.provenance.sources.some((source) => source.url === secondUrl));
+  const narrowedAssessment = assess(narrowed.result.article, narrowed.result.provenance);
+  assert.equal(narrowedAssessment.verdict, "auto-approve", narrowedAssessment.reasons.join("; "));
+  assert.equal(narrowedAssessment.evidenceLane, "attributed-announcement");
+  const narrowedShape = validateProvenanceShape(narrowed.result.provenance, [sourceUrl]);
+  assert.equal(narrowedShape.ok, true, JSON.stringify(narrowedShape));
+  const narrowedApproval = evidenceApprovalFor(1,
+    draftContentHash(narrowed.result.article, narrowed.result.provenance), [sourceUrl],
+    narrowed.result.provenance, narrowed.result.article, NOW.toISOString(), "deterministic-auto-publisher");
+  assert.ok(narrowedApproval, "A single-source announcement with two retained original research records remains approvable.");
+  assert.deepEqual(narrowedApproval.sourceUrls, [sourceUrl], "The evidence approval must bind the selected citation, not restore dropped citations.");
+  for (const mode of ["missing-hash", "missing-source-history"] as const) {
+    const invalidResearch: NewsDraftProvenance = structuredClone(narrowed.result.provenance);
+    if (mode === "missing-hash") {
+      delete invalidResearch.fetchedEvidence!.find((evidence) => evidence.url === secondUrl)!.contentHash;
+    } else {
+      invalidResearch.sources = invalidResearch.sources.filter((source) => source.url !== secondUrl);
+    }
+    assert.equal(validateProvenanceShape(invalidResearch, [sourceUrl]).ok, false,
+      `${mode}: an uncited research record must remain immutable and tied to original source history.`);
+    assert.equal(evidenceApprovalFor(1, draftContentHash(narrowed.result.article, invalidResearch),
+      [sourceUrl], invalidResearch, narrowed.result.article, NOW.toISOString(), "deterministic-auto-publisher"), null,
+    `${mode}: malformed uncited research cannot receive an evidence approval.`);
+  }
+  const omittedSelection = await repairTwoSourceAnnouncement(undefined);
+  assert.equal(omittedSelection.result.ok, false, "Omitting citationUrls must retain the unused second citation and hold.");
+  assert.equal(omittedSelection.repairCalls, 2, "An unchanged packet receives only the bounded final correction.");
+  assert.match(omittedSelection.result.reason ?? "", /not anchor-supported|unused|announcement basis/u);
+  for (const [label, citationUrls] of [
+    ["empty", []],
+    ["new URL", [sourceUrl, "https://www.reuters.com/world/new-unfetched-story"]],
+    ["altered URL", [`${sourceUrl}?changed=1`]],
+    ["dropped reporting basis", [secondUrl]],
+  ] as const) {
+    const invalidSelection = await repairTwoSourceAnnouncement(citationUrls);
+    assert.equal(invalidSelection.result.ok, false, label);
+    assert.equal(invalidSelection.repairCalls, 1, `${label}: invalid source selection fails without a retry.`);
+    assert.match(invalidSelection.result.reason ?? "", /Repair citation selection/u);
+  }
+
+  // The retained research set is an immutable originality boundary. An article
+  // may be factually supported by WAM yet copy the dropped second publication.
+  const copiedFromDroppedSource = await repairTwoSourceAnnouncement([sourceUrl], narrowed.result.article.body);
+  assert.equal(copiedFromDroppedSource.result.ok, false, "Dropping the copied source cannot make the generated article original.");
+  assert.equal(copiedFromDroppedSource.repairCalls, 2);
+  assert.match(`${copiedFromDroppedSource.result.reason} ${copiedFromDroppedSource.result.diagnostics?.join(" ")}`, /source-copying/u);
+  const copiedResearch = structuredClone(narrowed.result.provenance);
+  const omittedEvidence = copiedResearch.fetchedEvidence!.find((evidence) => evidence.url === secondUrl)!;
+  omittedEvidence.text = narrowed.result.article.body;
+  omittedEvidence.contentHash = createHash("sha256").update(omittedEvidence.text).digest("hex");
+  const storedCopyAssessment = assess(narrowed.result.article, copiedResearch);
+  assert.equal(storedCopyAssessment.gatesOk, true, "The originality hold must not be concealed by a voice failure.");
+  assert.equal(storedCopyAssessment.verdict, "manual", "Stored approval must check originality against dropped fetched sources too.");
+  assert.match(storedCopyAssessment.reasons.join("; "), /source-copying/u);
+
   // A repair can edit copy but cannot create, replace or remove the source-bound
   // announcement identity. Omission is intentional: the server retains it.
   for (const [mode, candidate, expected] of [

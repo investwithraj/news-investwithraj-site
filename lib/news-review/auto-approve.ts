@@ -40,7 +40,7 @@ import {
   type DailyMediaReuseResponse,
 } from "./daily-media";
 import { draftContentHash, mediaApprovalHash } from "./integrity";
-import { assessAttributedAnnouncement, assessClaimSupport, type ClaimSupportAssessment } from "./claim-support";
+import { assessAttributedAnnouncement, assessClaimSupport, assessResearchOriginality, type ClaimSupportAssessment } from "./claim-support";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
@@ -935,11 +935,16 @@ function claimSupportInput(article: DraftArticle, evidence: readonly NonNullable
 
 /** The drafting path and stored approval path use the same attribution matcher. */
 export function assessArticleClaimSupport(article: DraftArticle,
-  evidence: readonly NonNullable<NewsDraftProvenance["fetchedEvidence"]>[number][]): ClaimSupportAssessment {
+  evidence: readonly NonNullable<NewsDraftProvenance["fetchedEvidence"]>[number][],
+  researchEvidence: readonly NonNullable<NewsDraftProvenance["fetchedEvidence"]>[number][] = evidence): ClaimSupportAssessment {
   const input = claimSupportInput(article, evidence);
-  return article.reportingBasis !== undefined
+  const support = article.reportingBasis !== undefined
     ? assessAttributedAnnouncement({ ...input, format: article.format, category: article.category, reportingBasis: article.reportingBasis }).support
     : assessClaimSupport(input);
+  const selectedUrls = new Set(evidence.map((record) => record.url));
+  const omittedSources = researchEvidence.filter((record) => !selectedUrls.has(record.url));
+  const copying = omittedSources.length ? assessResearchOriginality(claimSupportInput(article, omittedSources)) : [];
+  return copying.length ? { ...support, ok: false, verdict: "manual", failures: [...support.failures, ...copying] } : support;
 }
 
 export interface AutoApproveAssessment {
@@ -1455,7 +1460,7 @@ export function assessDraft(
   const claimTexts = articleEvidenceSegments(article).map(
     (segment) => segment.text,
   );
-  const claimSupport = assessArticleClaimSupport(article, fetchedEvidence);
+  const claimSupport = assessArticleClaimSupport(article, fetchedEvidence, storedEvidence);
   if (claimSupport.failures.length > 0) {
     reasons.push(
       `${claimSupport.failures.length} factual/editorial clause(s) are not anchor-supported: ${claimSupport.failures

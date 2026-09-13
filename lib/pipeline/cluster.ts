@@ -139,6 +139,60 @@ const GENERIC_PLACES = new Set([
   "ajman",
 ]);
 
+// An article's publisher/feed geography is not the story's geography. A UAE
+// outlet can cover a New Zealand visa or a Goa villa, and UAE developers also
+// build abroad. Require a local link in each entry BEFORE grouping or scoring.
+const UAE_LOCATION_NAMES = [
+  ...GENERIC_PLACES,
+  "United Arab Emirates",
+  "U.A.E.",
+  "Fujairah",
+  "Umm Al Quwain",
+  "Al Ain",
+  "Emirati",
+];
+const UAE_INSTITUTIONS = ["DLD", "CBUAE", "Oqood", "Ejari"];
+
+// These maintained community names also have ordinary meanings overseas.
+// Without an explicit UAE place, require their developer as corroboration.
+const AMBIGUOUS_COMMUNITY_DEVELOPERS: Record<string, string[]> = {
+  "The Valley": ["Emaar"],
+  "The Oasis": ["Emaar"],
+  "City Walk": ["Meraas"],
+  "District One": ["Meydan", "Nakheel"],
+  "Town Square": ["Nshama"],
+};
+
+function entryHasUaeLink(entry: RawEntry): boolean {
+  let text = `${entry.title}\n${entry.summary}`;
+
+  // Being headquartered in Dubai does not make a foreign-only project local.
+  // Remove only these company-origin phrases, retaining any separate UAE
+  // project, market or investor connection elsewhere in the title/summary.
+  for (const location of UAE_LOCATION_NAMES) {
+    const name = location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    text = text
+      .replace(
+        new RegExp(`\\b${name}[-\\s]+(?:based|headquartered|registered|incorporated)\\b`, "gi"),
+        " ",
+      )
+      .replace(
+        new RegExp(`\\b(?:based|headquartered|registered|incorporated)\\s+in\\s+(?:the\\s+)?${name}(?=$|[^\\p{L}\\p{N}])`, "giu"),
+        " ",
+      );
+  }
+
+  if (UAE_LOCATION_NAMES.some((name) => hasKnownEntity(text, name))) return true;
+  // RERA is intentionally absent: the same acronym is used by Indian
+  // regulators. A UAE-developer name alone is likewise not geographic proof.
+  if (UAE_INSTITUTIONS.some((name) => hasKnownEntity(text, name))) return true;
+  return KNOWN_PLACES.some((place) => {
+    if (!hasKnownEntity(text, place)) return false;
+    const developers = AMBIGUOUS_COMMUNITY_DEVELOPERS[place];
+    return !developers || developers.some((name) => hasKnownEntity(text, name));
+  });
+}
+
 const UHNW_KEYWORDS = [
   "luxury",
   "ultra-luxury",
@@ -268,7 +322,9 @@ function detectMarkets(entries: RawEntry[]): Cluster["suggestedMarkets"] {
   const markets: Cluster["suggestedMarkets"] = [];
   if (/\bdubai\b/.test(text)) markets.push("Dubai");
   if (/\babu dhabi\b/.test(text)) markets.push("Abu Dhabi");
-  if (/\b(ras al khaimah|rak|al marjan|wynn)\b/.test(text)) markets.push("Ras Al Khaimah");
+  if (/\b(ras al khaimah|rak|al marjan)\b/.test(text)) markets.push("Ras Al Khaimah");
+  // All entries have passed entryHasUaeLink; this is a broad local label,
+  // never a fallback that establishes relevance for an unlocated story.
   if (markets.length === 0) markets.push("UAE");
   return markets;
 }
@@ -370,10 +426,13 @@ export function clusterAndScore(
   entries: RawEntry[],
   topN = 10
 ): Cluster[] {
-  // 1. Group by signature
+  // 1. Reject entries without their own UAE link before grouping. Otherwise a
+  // foreign item could borrow relevance from a local entry in the same broad
+  // policy/developer bucket, become its topic and consume a research attempt.
   const groups = new Map<string, RawEntry[]>();
   const ungrouped: RawEntry[] = [];
   for (const e of entries) {
+    if (!entryHasUaeLink(e)) continue;
     const sig = signatureFor(e);
     if (sig === null) {
       ungrouped.push(e);

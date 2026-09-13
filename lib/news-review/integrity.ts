@@ -514,6 +514,7 @@ export function validateProvenanceShape(
   ) {
     return { ok: false, error: "provenance citedText is invalid." };
   }
+  const researchUrls = new Set(value.sources.map((source) => (source as Record<string, unknown>).url));
   if (
     value.fetchedEvidence !== undefined &&
     (!Array.isArray(value.fetchedEvidence) ||
@@ -522,7 +523,7 @@ export function validateProvenanceShape(
         if (
           !isRecord(evidence) ||
           !validHttpsUrl(evidence.url) ||
-          !citationUrls.includes(evidence.url) ||
+          (!citationUrls.includes(evidence.url) && !researchUrls.has(evidence.url)) ||
           (evidence.finalUrl !== undefined &&
             !validHttpsUrl(evidence.finalUrl)) ||
           !boundedString(evidence.text, 80, 9_000) ||
@@ -552,6 +553,14 @@ export function validateProvenanceShape(
         const typedEvidence = evidence as unknown as NonNullable<
           NewsDraftProvenance["fetchedEvidence"]
         >[number];
+        // Explicitly omitted citations can remain as original research for
+        // copy detection, never as extra claim support. Unlike cited legacy
+        // records they must carry a complete immutable direct-fetch proof.
+        if (!citationUrls.includes(evidence.url)) {
+          return evidence.contentHash !== expectedHash ||
+            !assessStoredEvidenceFreshness(typedEvidence).ok ||
+            approvedEvidencePublisherDomain(typedEvidence.url, typedEvidence.finalUrl) === null;
+        }
         return (
           hasFreshnessMetadata &&
           (!assessStoredEvidenceFreshness(typedEvidence).ok ||
