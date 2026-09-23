@@ -36,7 +36,7 @@ import {
   MAX_AUTO_NEWS_SOURCE_AGE_HOURS,
   validateArticleReportingBasis,
 } from "./auto-approve";
-import type { ClaimSupportAssessment } from "./claim-support";
+import { blockingClaimFailures, type ClaimSupportAssessment } from "./claim-support";
 import { urlOnApprovedHost } from "@/lib/sources/safe-fetch";
 import type { NewsArticle, NewsArticleFormat, NewsCategory, NewsReportingBasis } from "@/content/news/types";
 import {
@@ -1121,12 +1121,20 @@ export async function draftFromCluster(
       diagnostics,
     };
   }
-  if (!claimSupport.ok) {
+  const blockingClaims = blockingClaimFailures(claimSupport);
+  if (!claimSupport.ok && blockingClaims.length === 0) {
+    diagnostics.push(
+      `claim-support advisory (not blocking): ${claimSupport.failures.length} flagged clause(s), ` +
+        `${claimSupport.unusedEvidenceUrls.length} unused cited fetched-evidence source(s); ` +
+        claimSupportDiagnostics(claimSupport).slice(0, 1_500),
+    );
+  }
+  if (blockingClaims.length > 0) {
     return {
       ok: false,
       reason:
-        `final draft is not anchor-supported: ${claimSupport.failures.length} unsupported factual/editorial clause(s), ` +
-        `${claimSupport.unusedEvidenceUrls.length} unused cited fetched-evidence source(s); ` +
+        `final draft is not anchor-supported: ${blockingClaims.length} blocking clause(s) ` +
+        `of ${claimSupport.failures.length} flagged; ` +
         claimSupportDiagnostics(claimSupport),
       diagnostics,
     };

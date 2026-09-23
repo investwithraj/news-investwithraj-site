@@ -164,10 +164,16 @@ async function main() {
   const stillUnsupported = await generate(BODY, { format: "short-update",
     badTitle: "Dubai Land Department grants permanent residency to every applicant",
     semanticRepair: "always-unsupported" });
-  assert.equal(stillUnsupported.result.ok, false, "A bounded retry cannot waive final factual support.");
+  // The repair loop is unchanged — two bounded attempts, no endless retry. What
+  // changed on 23 Sep 2026 is the verdict when repair cannot satisfy the clause
+  // signature: the draft is staged with an advisory diagnostic instead of held.
+  assert.equal(stillUnsupported.result.ok, true, stillUnsupported.result.reason);
   assert.equal(stillUnsupported.repairs, 2);
   assert.equal(stillUnsupported.prompts.length, 3, "Unsupported repairs must not create an endless retry loop.");
-  assert.match(stillUnsupported.result.reason ?? "", /not anchor-supported/u);
+  assert.ok(
+    stillUnsupported.result.diagnostics?.some((line) => /claim-support advisory \(not blocking\)/u.test(line)),
+    "A clause that survives repair must still be recorded as an advisory diagnostic.",
+  );
   for (const repairErrorAt of [1, 2]) {
     const failedProvider = await generate(BODY, { format: "short-update",
       badTitle: "Dubai Land Department grants permanent residency to every applicant",
@@ -266,9 +272,15 @@ async function main() {
   const copied = await generate(`${BODY}\n\n${EVIDENCE}`, { format: "short-update" });
   assert.equal(copied.result.ok, false, "copying source sentences remains held");
   assert.match(`${copied.result.reason} ${copied.result.diagnostics?.join(" ")}`, /source-copying/u);
+  // Since 23 Sep 2026 a non-numeric clause-signature mismatch is advisory, not
+  // blocking: it is recorded as a diagnostic and the draft is staged for human
+  // review in The Desk. See blockingClaimFailures in lib/news-review/claim-support.
   const unsupportedClaim = await generate(`${BODY}\n\nDubai Land Department confirmed that every applicant received permanent residency.`, { format: "short-update" });
-  assert.equal(unsupportedClaim.result.ok, false);
-  assert.match(unsupportedClaim.result.reason ?? "", /not anchor-supported/u);
+  assert.equal(unsupportedClaim.result.ok, true, unsupportedClaim.result.reason);
+  assert.ok(
+    unsupportedClaim.result.diagnostics?.some((line) => /claim-support advisory \(not blocking\)/u.test(line)),
+    "An unsupported non-numeric clause must still be recorded as an advisory diagnostic.",
+  );
   const stale = await generate(BODY, { format: "short-update", date: "2026-08-01T00:00:00.000Z" });
   assert.equal(stale.result.ok, false, "short format cannot bypass source recency");
   const undated = await generate(BODY, { format: "short-update", date: null });

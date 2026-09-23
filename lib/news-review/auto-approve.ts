@@ -40,7 +40,7 @@ import {
   type DailyMediaReuseResponse,
 } from "./daily-media";
 import { draftContentHash, mediaApprovalHash } from "./integrity";
-import { assessAttributedAnnouncement, assessClaimSupport, assessResearchOriginality, type ClaimSupportAssessment } from "./claim-support";
+import { assessAttributedAnnouncement, assessClaimSupport, assessResearchOriginality, blockingClaimFailures, type ClaimSupportAssessment } from "./claim-support";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 
 export const DEFAULT_CORROBORATION_SOURCES = 2;
@@ -1473,9 +1473,10 @@ export function assessDraft(
     (segment) => segment.text,
   );
   const claimSupport = assessArticleClaimSupport(article, fetchedEvidence, storedEvidence);
-  if (claimSupport.failures.length > 0) {
+  const blockingClaims = blockingClaimFailures(claimSupport);
+  if (blockingClaims.length > 0) {
     reasons.push(
-      `${claimSupport.failures.length} factual/editorial clause(s) are not anchor-supported: ${claimSupport.failures
+      `${blockingClaims.length} blocking factual/editorial clause(s): ${blockingClaims
         .slice(0, 6)
         .map(
           (failure) =>
@@ -1490,13 +1491,9 @@ export function assessDraft(
   ) {
     reasons.push("short-update format permits source-supported facts only, not editorial interpretation");
   }
-  if (claimSupport.unusedEvidenceUrls.length > 0) {
-    reasons.push(
-      `${claimSupport.unusedEvidenceUrls.length} cited fetched-evidence source(s) support no factual clause: ${claimSupport.unusedEvidenceUrls
-        .slice(0, 5)
-        .join(" · ")}`,
-    );
-  }
+  // A cited source supporting no clause is advisory as of 23 Sep 2026: it is a
+  // sourcing-breadth signal, not a factual defect, and it is still surfaced via
+  // unusedEvidenceCount on the assessment. See blockingClaimFailures.
   const figures = [
     ...new Set(claimTexts.flatMap((text) => extractFigures(text))),
   ];
