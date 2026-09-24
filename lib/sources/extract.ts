@@ -328,7 +328,10 @@ export type PublicationDateSource =
   | "json-ld"
   | "time"
   | "visible"
-  | "publisher-api";
+  | "publisher-api"
+  /** The discovery feed's own timestamp for the same URL, used only when the
+   *  fetched page carries no date of its own (official portals often don't). */
+  | "discovery-feed";
 
 export interface ExtractedPublicationDate {
   publishedAt: string | null;

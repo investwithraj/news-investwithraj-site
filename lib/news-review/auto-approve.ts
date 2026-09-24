@@ -43,7 +43,12 @@ import { draftContentHash, mediaApprovalHash } from "./integrity";
 import { assessAttributedAnnouncement, assessClaimSupport, assessResearchOriginality, blockingClaimFailures, type ClaimSupportAssessment } from "./claim-support";
 import { dubaiCalendarDate } from "@/lib/dubai-time";
 
-export const DEFAULT_CORROBORATION_SOURCES = 2;
+// One fetched, whitelisted publisher is enough. Raj set this on 14 Jun 2026
+// and the engine published near-daily under it for six weeks. Raising it to
+// two in September held 108 of 109 drafts: most Dubai property stories break
+// in a single outlet first, and the figure gate — every number verbatim in the
+// fetched text — is what protects the reader, not a second byline.
+export const DEFAULT_CORROBORATION_SOURCES = 1;
 export const MAX_AUTO_NEWS_SOURCE_AGE_HOURS = 7 * 24;
 
 export type EvidenceLane = "official-fact" | "attributed-announcement" | "corroborated-analysis";
@@ -768,7 +773,7 @@ export function assessStoredEvidenceFreshness(
     };
   }
   if (
-    !(["meta", "json-ld", "time", "visible", "publisher-api"] as const).includes(
+    !(["meta", "json-ld", "time", "visible", "publisher-api", "discovery-feed"] as const).includes(
       evidence.sourceDateSource,
     )
   ) {

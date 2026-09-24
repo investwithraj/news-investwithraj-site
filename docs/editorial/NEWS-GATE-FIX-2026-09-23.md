@@ -71,6 +71,27 @@ remedy is a rewrite, not a lower ceiling.
   `news-cron` → Run workflow on this branch with **`research_only: true`**, which
   researches and stages without approving or publishing anything.
 
+## 24 Sep — second pass, after the first fix went live
+
+PR #4 merged as `cb1d22c`. The first full run on `main` showed the deadlock
+gone (*"1 blocking clause(s) of 17 flagged"* on Saadiyat Grove; before, all 17
+would have blocked) but still published nothing. Today's four candidates fell
+to four different causes, and each became a change on
+`claude/news-engine-repairs`:
+
+| Candidate | What held it | Change |
+| --- | --- | --- |
+| Golden Visa / DLD | DLD portal page carries no machine-readable date → `publication date missing`; Arabian Business returns 405/403 to every fetcher | **Discovery-feed date fallback.** When a fetched page has text but no date, the Google News entry's timestamp for the same URL stands in, labelled `discovery-feed` in provenance. `canonicalDiscoveryUrl()` + `discoveryDateByUrl` in `draft-engine.ts`; `"discovery-feed"` added to `PublicationDateSource`, `sourceDateSource`, and the publish-time allow-list in `auto-approve.ts`. Arabian Business is bot-protected on their side; nothing to fix here. |
+| Yas Island | drafter wrote "$1.7 billion construction cost" — source quotes AED; the figure gate caught the conversion (correctly) | **Prompt rule** in `draftSystemPrompt`: quote figures in the source's currency and unit, never convert AED↔USD or m²↔sq ft, never round a precise figure. |
+| all 109 backlog drafts | `insufficient-independent-publishers: 108` | **`DEFAULT_CORROBORATION_SOURCES` 2 → 1**, Raj's 14 Jun setting. The figure gate is the protection; a second byline is not. |
+| all 109 backlog drafts | `source-date-or-freshness: 109` — every source past the 7-day window | **Retired.** `scripts/retire-backlog.ts` (dry-run default, `--delete` to act) removed all 109 on 24 Sep; full copy at `pipeline-runs/retired-backlog-2026-09-24.json` (untracked). Needed a new `retireStaleDraft()` in `storage.ts`: legacy records carry no stored `contentHash`, so the cockpit's compare-and-swap could never match them. It matches id + age + no-publication-record atomically. |
+
+Tests updated to the new contracts rather than deleted: one press publisher
+whose figures trace now auto-approves (`test-news-short-update`,
+`test-announcement-policy`), and a dateless page with a dated feed entry
+stages with `sourceDateSource: "discovery-feed"` while one with no date from
+any origin is still held. `tsc` clean; six gate suites pass.
+
 ## Open risks
 
 1. A fabricated non-numeric clause with no figure in it is no longer blocked at
