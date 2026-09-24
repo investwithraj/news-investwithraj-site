@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { buildCitations, draftFromCluster, draftSystemPrompt, type DraftOpts } from "../lib/news-review/draft-engine.js";
-import { approvedPublisherIdentity, assessDraft } from "../lib/news-review/auto-approve.js";
+import { approvedPublisherIdentity, assessDraft, DEFAULT_CORROBORATION_SOURCES } from "../lib/news-review/auto-approve.js";
 import { draftContentHash, evidenceApprovalFor, validateDraftArticleShape } from "../lib/news-review/integrity.js";
 import { serializeArticle } from "../lib/news-review/serialize.js";
 import type { DraftArticle } from "../lib/news-review/types.js";
@@ -63,6 +63,8 @@ async function generate(body: string, options: {
   format?: DraftOpts["format"];
   source?: string;
   date?: string | null;
+  /** Discovery-feed timestamp for the fixture entry; null strips it. */
+  feedDate?: string | null;
   badTitle?: string;
   repairBasis?: unknown;
   repairBasisAt?: number;
@@ -73,7 +75,15 @@ async function generate(body: string, options: {
   const prompts: string[] = [];
   const researchMessages: string[] = [];
   let repairs = 0;
-  const result = await draftFromCluster(cluster, ["dubailand.gov.ae"], {
+  const fixtureCluster: Cluster = options.feedDate === undefined
+    ? cluster
+    : {
+        ...cluster,
+        // RawEntry.publishedAt is a required string; an empty one is what an
+        // undated feed item looks like in practice and is ignored by the lookup.
+        entries: cluster.entries.map((entry) => ({ ...entry, publishedAt: options.feedDate ?? "" })),
+      };
+  const result = await draftFromCluster(fixtureCluster, ["dubailand.gov.ae"], {
     format: options.format,
     now: NOW,
     dependencies: {
@@ -232,8 +242,18 @@ async function main() {
       fetchedEvidence: result.provenance.fetchedEvidence?.map((evidence) => ({ ...evidence, url: pressUrl, finalUrl: pressUrl })),
     },
   });
-  assert.equal(onePressAssessment.requiredPublisherCount, 2);
-  assert.equal(onePressAssessment.verdict, "manual", "short mode cannot turn one press publisher into the official-fact lane");
+  // The lane is the contract; the count behind it is a policy constant that
+  // Raj sets (1 since 24 Sep 2026, as it was from 14 Jun 2026).
+  assert.equal(onePressAssessment.evidenceLane, "corroborated-analysis", "one press publisher stays in the corroborated lane");
+  assert.equal(onePressAssessment.requiredPublisherCount, DEFAULT_CORROBORATION_SOURCES);
+  // With the policy count at one, a single press publisher whose figures all
+  // trace to fetched text clears the gate; the lane assertion above is what
+  // guards against it being mislabelled as an official fact.
+  assert.equal(
+    onePressAssessment.verdict,
+    DEFAULT_CORROBORATION_SOURCES === 1 ? "auto-approve" : "manual",
+    onePressAssessment.reasons.join("; "),
+  );
 
   const legacy = { ...article };
   delete legacy.format;
@@ -283,8 +303,18 @@ async function main() {
   );
   const stale = await generate(BODY, { format: "short-update", date: "2026-08-01T00:00:00.000Z" });
   assert.equal(stale.result.ok, false, "short format cannot bypass source recency");
-  const undated = await generate(BODY, { format: "short-update", date: null });
-  assert.equal(undated.result.ok, false, "short format cannot use undated evidence");
+  // A dateless page may borrow the discovery feed's timestamp for the same URL
+  // (official portals rarely carry one); the provenance rail labels the origin.
+  // With no feed date either, the source stays out of the evidence packet.
+  const feedDated = await generate(BODY, { format: "short-update", date: null });
+  assert.equal(feedDated.result.ok, true, feedDated.result.reason);
+  assert.equal(
+    feedDated.result.provenance?.fetchedEvidence?.[0]?.sourceDateSource,
+    "discovery-feed",
+    "a borrowed feed date must be labelled as such in provenance",
+  );
+  const undated = await generate(BODY, { format: "short-update", date: null, feedDate: null });
+  assert.equal(undated.result.ok, false, "short format cannot use evidence with no date from any origin");
   const invalid = await generate(BODY, { format: "other" as DraftArticle["format"] });
   assert.equal(invalid.result.ok, false);
   assert.equal(invalid.prompts.length, 0, "invalid mode fails before paid research");

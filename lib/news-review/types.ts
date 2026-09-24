@@ -62,7 +62,8 @@ export interface NewsDraftProvenance {
       | "json-ld"
       | "time"
       | "visible"
-      | "publisher-api";
+      | "publisher-api"
+      | "discovery-feed";
     /** Original staging clock and bounded age window. Staging freshness is
      * recomputed against this clock; unattended publication also checks these
      * immutable timestamps against its actual publication clock. */

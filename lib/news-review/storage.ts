@@ -1001,6 +1001,60 @@ return 0
   });
 }
 
+/**
+ * Remove one stale, never-published review draft.
+ *
+ * `deleteReviewedDraft` is the cockpit's compare-and-swap: it needs the stored
+ * revision, recordVersion and contentHash to match. Drafts staged before those
+ * fields existed carry none of them (hydrateDraft synthesises a hash on read),
+ * so the swap can never match and the cockpit cannot retire them. This path
+ * exists for the backlog sweep only: it matches on id, refuses anything with a
+ * publication record, and requires the draft to be older than `olderThanIso`,
+ * all checked atomically inside the store.
+ */
+export async function retireStaleDraft(
+  id: string,
+  olderThanIso: string,
+): Promise<boolean> {
+  if (!Number.isFinite(Date.parse(olderThanIso))) {
+    throw new Error("olderThanIso must be an ISO timestamp.");
+  }
+  assertDurableStorage();
+  if (kvConfigured()) {
+    const script = `
+local raw = redis.call("GET", KEYS[1])
+if not raw then return 0 end
+local drafts = cjson.decode(raw)
+for index, draft in ipairs(drafts) do
+  if draft.id == ARGV[1] then
+    if draft.publication then return -1 end
+    if not draft.createdAt or draft.createdAt >= ARGV[2] then return -2 end
+    table.remove(drafts, index)
+    redis.call("SET", KEYS[1], cjson.encode(drafts))
+    return 1
+  end
+end
+return 0
+`;
+    const result = Number(await kvEval(script, [KV_KEY], [id, olderThanIso]));
+    if (result === 0) return false;
+    if (result === -1) throw new DraftConflictError("Draft has a publication record.");
+    if (result === -2) throw new DraftConflictError("Draft is not older than the cutoff.");
+    return true;
+  }
+  return withLocalMutation(async () => {
+    const all = await fsGet();
+    const index = all.findIndex((item) => item.id === id);
+    if (index === -1) return false;
+    const latest = all[index];
+    if (latest.publication) throw new DraftConflictError("Draft has a publication record.");
+    if (!(latest.createdAt < olderThanIso)) throw new DraftConflictError("Draft is not older than the cutoff.");
+    all.splice(index, 1);
+    if (!(await fsSet(all))) throw new Error("Draft storage write failed.");
+    return true;
+  });
+}
+
 export async function setMediaApproval(
   id: string,
   approval: MediaApprovalLedger,

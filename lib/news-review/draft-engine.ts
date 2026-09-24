@@ -70,6 +70,7 @@ You are given a story lead (a cluster of headlines + snippets). RESEARCH it with
 ABSOLUTE RULES (a draft that breaks these is rejected):
 - Synthetic imagery is forbidden. Do not select, generate or approve media. The server attaches a matching preapproved real UHD context photograph when available; other photographs require editorial selection. Never describe an unverified project image.
 - Every number, name, and claim must come from a real source you found via search. NEVER invent or estimate a figure.
+- Quote every figure in exactly the currency and unit the source uses. Never convert AED to USD or USD to AED, never restate square metres as square feet, and never round a figure the source states precisely. A converted or restated figure does not appear in any source and is rejected.
 - ${ATTRIBUTION_STYLE}
 - ${FACT_SELECTION_STYLE}
 - Keep each factual sentence source-alignable on its own: name the exact subject, preserve the source's numbers/dates, polarity, modality, direction, comparator and factual action, and carry at least two distinctive nouns or objects from one bounded source sentence. Do not merge separate source facts, swap subject and object, or use a pronoun as the only factual subject.
@@ -472,6 +473,19 @@ function isExactEvidenceResourceUrl(
   return true;
 }
 
+/** Match a citation to its discovery-feed entry: same host + path, ignoring
+ *  scheme, `www.`, tracking parameters, fragments and a trailing slash. */
+export function canonicalDiscoveryUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./u, "");
+    const path = parsed.pathname.replace(/\/+$/u, "") || "/";
+    return `${host}${path}`;
+  } catch {
+    return "";
+  }
+}
+
 export function buildCitations(
   claudeCites: DraftJson["citations"],
   _cluster: Cluster,
@@ -740,6 +754,12 @@ export async function draftFromCluster(
   // A citation becomes evidence only after a protected direct fetch yields
   // readable text and an explicit, recent publication timestamp. Model search
   // snippets and model-emitted citation spans never enter this packet.
+  const discoveryDateByUrl = new Map<string, string>();
+  for (const entry of cluster.entries) {
+    if (!entry.publishedAt || !Number.isFinite(Date.parse(entry.publishedAt))) continue;
+    const key = canonicalDiscoveryUrl(entry.url);
+    if (key && !discoveryDateByUrl.has(key)) discoveryDateByUrl.set(key, entry.publishedAt);
+  }
   const citedTexts = await Promise.all(
     citations.map(async (citation) => {
       let fetched: FetchedArticleText;
@@ -756,6 +776,21 @@ export async function draftFromCluster(
           publicationDateSource: null,
           diagnostic: { code: "fetch-error", message },
         };
+      }
+      // Official portals (DLD, media offices) often publish without any
+      // machine-readable date, which used to hold every story that cited them.
+      // The discovery feed already carries a timestamp for the same URL, so
+      // when the page itself is dateless — and only then — that timestamp
+      // stands in, clearly labelled so the provenance rail shows its origin.
+      if (fetched.text.trim().length > 0 && fetched.publishedAt === null) {
+        const feedDate = discoveryDateByUrl.get(canonicalDiscoveryUrl(citation.url));
+        if (feedDate) {
+          fetched = {
+            ...fetched,
+            publishedAt: feedDate,
+            publicationDateSource: "discovery-feed",
+          };
+        }
       }
       const checkedAt = clockNow();
       const freshness = assessPublicationFreshness(

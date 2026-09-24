@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { approvedPublisherIdentity, articleEvidenceSegments, assessDraft, determineEvidencePolicy } from "../lib/news-review/auto-approve";
+import { approvedPublisherIdentity, articleEvidenceSegments, assessDraft, DEFAULT_CORROBORATION_SOURCES, determineEvidencePolicy } from "../lib/news-review/auto-approve";
 import { draftFromCluster } from "../lib/news-review/draft-engine";
 import { draftContentHash, evidenceApprovalFor, reassessEvidenceApproval, validateDraftArticleShape, validateProvenanceShape } from "../lib/news-review/integrity";
 import { CURRENT_EVIDENCE_POLICY_VERSION, type DraftArticle, type NewsDraft, type NewsDraftProvenance } from "../lib/news-review/types";
@@ -60,10 +60,20 @@ async function main() {
   assert.equal(positive.verdict, "auto-approve", positive.reasons.join("; "));
   assert.equal(positive.evidenceLane, "attributed-announcement");
   assert.equal(positive.requiredPublisherCount, 1);
-  assert.equal(determineEvidencePolicy(article, [sourceUrl]).requiredPublisherCount, 2,
+  const unfetchedPolicy = determineEvidencePolicy(article, [sourceUrl]);
+  assert.equal(unfetchedPolicy.lane, "corroborated-analysis",
     "URLs or model metadata without directly fetched evidence cannot enter the announcement lane");
+  assert.equal(unfetchedPolicy.requiredPublisherCount, DEFAULT_CORROBORATION_SOURCES);
+  // Dropping the reporting basis removes the announcement lane; the draft is
+  // then ordinary corroborated news, judged on its fetched figures alone.
   const withoutBasis = { ...article }; delete withoutBasis.reportingBasis;
-  assert.equal(assess(withoutBasis).verdict, "manual");
+  const withoutBasisAssessment = assess(withoutBasis);
+  assert.equal(withoutBasisAssessment.evidenceLane, "corroborated-analysis");
+  assert.equal(
+    withoutBasisAssessment.verdict,
+    DEFAULT_CORROBORATION_SOURCES === 1 ? "auto-approve" : "manual",
+    withoutBasisAssessment.reasons.join("; "),
+  );
   for (const basis of [null, {}, { ...article.reportingBasis, speaker: "" },
     { ...article.reportingBasis, statementKind: "forecast" }, { ...article.reportingBasis, extra: true },
     { ...article.reportingBasis, sourceUrl: "https://www.wam.ae/" },
