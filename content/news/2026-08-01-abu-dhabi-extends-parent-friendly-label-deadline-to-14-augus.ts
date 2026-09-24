@@ -45,10 +45,12 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "alt": "Abu Dhabi extends Parent-friendly Label deadline to 14 August 2026",
-    "credit": "Abu Dhabi Corniche skyline · giggel via Wikimedia Commons · CC BY 3.0",
-    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Abu_Dhabi_-_Corniche_%E2%80%93_Skyline_-_%D8%A7%D9%84%D9%83%D9%88%D8%B1%D9%86%D9%8A%D8%B4_-_%D8%A7%D9%84%D8%A3%D9%81%D9%82_-_panoramio.jpg",
-    "rightsStatus": "CC BY 3.0",
+    "alt": "Abu Dhabi's Corniche skyline at night, tower lights reflected above a tree-lined boulevard",
+    "credit": "Abu Dhabi skyline from the Corniche at night · Sabithnav via Wikimedia Commons · CC BY-SA 4.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Abu_Dhabi_skyline_-_corniche_2.jpg",
+    "rightsStatus": "CC BY-SA 4.0",
+    "width": 6000,
+    "height": 4000,
     "src": "/news/2026-08-01-abu-dhabi-extends-parent-friendly-label-deadline-to-14-augus/cover.jpg",
     "approval": "approved-editorial"
   },
