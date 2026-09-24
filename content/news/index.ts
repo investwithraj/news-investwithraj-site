@@ -75,8 +75,14 @@ import { article as art_2026_09_07_ras_al_khaimah_h1_housing_momentum_eases } fr
 import { article as art_2026_09_07_aldar_closes_abu_dhabi_s_first_off_plan_mortgage_under } from "./2026-09-07-aldar-closes-abu-dhabi-s-first-off-plan-mortgage-under";
 import { article as art_2026_09_08_adgm_h1_2026_aum_licences_workforce } from "./2026-09-08-adgm-h1-2026-aum-licences-workforce";
 import { article as art_2026_09_10_prestige_one_dubai_investment_plan } from "./2026-09-10-prestige-one-dubai-investment-plan";
+import { article as art_2026_08_01_abu_dhabi_extends_parent_friendly_label_deadline_to_14_augus } from "./2026-08-01-abu-dhabi-extends-parent-friendly-label-deadline-to-14-augus";
+import { article as art_2026_08_22_ellington_properties_partners_adcb_for_pre_approved_off } from "./2026-08-22-ellington-properties-partners-adcb-for-pre-approved-off";
+import { article as art_2026_08_24_dib_opens_50_off_plan_finance_to_non_residents_in_shariah } from "./2026-08-24-dib-opens-50-off-plan-finance-to-non-residents-in-shariah";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  art_2026_08_24_dib_opens_50_off_plan_finance_to_non_residents_in_shariah,
+  art_2026_08_22_ellington_properties_partners_adcb_for_pre_approved_off,
+  art_2026_08_01_abu_dhabi_extends_parent_friendly_label_deadline_to_14_augus,
   art_2026_09_10_prestige_one_dubai_investment_plan,
   art_2026_09_08_adgm_h1_2026_aum_licences_workforce,
   art_2026_09_07_aldar_closes_abu_dhabi_s_first_off_plan_mortgage_under,

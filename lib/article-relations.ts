@@ -35,6 +35,21 @@ export type ResolvedArticleDeveloper = Readonly<{
  */
 export const ARTICLE_RELATION_RECORDS = [
   {
+    articleSlug: "2026-08-24-dib-opens-50-off-plan-finance-to-non-residents-in-shariah",
+    areaSlugs: [],
+    developerSlugs: [],
+  },
+  {
+    articleSlug: "2026-08-22-ellington-properties-partners-adcb-for-pre-approved-off",
+    areaSlugs: [],
+    developerSlugs: [],
+  },
+  {
+    articleSlug: "2026-08-01-abu-dhabi-extends-parent-friendly-label-deadline-to-14-augus",
+    areaSlugs: [],
+    developerSlugs: [],
+  },
+  {
     articleSlug: "2026-09-10-prestige-one-dubai-investment-plan",
     areaSlugs: [],
     developerSlugs: [],
