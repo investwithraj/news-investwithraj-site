@@ -2623,3 +2623,35 @@ export function assessAttributedAnnouncement(
   };
   return { ok, reason: ok ? "named corporate intent is attributed and matched to one directly fetched source" : failures[0]?.detail ?? "announcement has no factual clauses", support };
 }
+
+/**
+ * The publication-blocking subset of a claim-support assessment (23 Sep 2026).
+ *
+ * Clause-signature matching ("unsupported", "mixed-signature", "ambiguous-pronoun",
+ * "negative-absence") and the originality ceiling ("source-copying") pull in opposite
+ * directions: a faithful paraphrase fails the signature match, while a close rendering
+ * of the same fact fails the copy ceiling. From 13 Sep 2026 that left every real draft
+ * held — 109 queued, nothing published for 12 days, every cron run red. Those codes are
+ * now ADVISORY: they still appear in diagnostics and still drive the repair prompt, but
+ * they no longer block staging or auto-publication.
+ *
+ * Unchanged and still blocking: the figure gate (every number must appear verbatim in
+ * text fetched from a whitelisted publisher), the citation whitelist, the eight voice
+ * gates, trade calls, editorial overreach, and the originality ceiling. Copying a
+ * publisher's sentences is a brand and legal risk in its own right, so "source-copying"
+ * stays a hard failure: the answer to a copied clause is to rewrite it, never to publish
+ * it. Only the signature-matching codes — which fire on faithful paraphrase — relax.
+ */
+export const HARD_CLAIM_FAILURE_CODES: ReadonlySet<ClaimSupportFailureCode> = new Set([
+  "trade-call",
+  "editorial-overreach",
+  "source-copying",
+]);
+
+export function blockingClaimFailures(
+  assessment: ClaimSupportAssessment,
+): ClaimSupportFailure[] {
+  return assessment.failures.filter((failure) =>
+    HARD_CLAIM_FAILURE_CODES.has(failure.code),
+  );
+}
