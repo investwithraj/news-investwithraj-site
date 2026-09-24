@@ -141,6 +141,29 @@ site (13 Aug – 8 Sep) point at `/news/<slug>/cover.jpg` files that do not
 exist — 404 today, hero hidden. One (Omniyat, RAK) is fixed here; the other
 seven need proper images chosen by a person, not the stock picker.
 
+## 24 Sep, evening — first live attempt on the repaired engine (run 36041372218)
+
+Pre-flight: the cron runs 27 test scripts before drafting; `test-news-curated-candidate`
+still asserted the two-publisher count and killed every run after #5 until #7.
+
+With that cleared, the run researched six stories and held all six — for six
+different reasons, two of which are the engine being right:
+
+| Story | Held on | Verdict |
+| --- | --- | --- |
+| Golden Visa / mortgaged property | the model found the official DLD page contradicting the Arabian Business headline | **correct** — that is journalism |
+| Emaar / prices "fall 5%" | The National source 412h old (limit 168h) | **correct** — stale cluster |
+| Al Marjan 64% of RAK views | no whitelisted URL to fetch (portal data) | correct |
+| Saadiyat Grove | 1 `source-copying` clause + 3 more blocking | drafter must paraphrase; repair prompt exists |
+| UBS "strong value / bubble risk" | `evidence-only repair retained 1 unsupported figure(s): 2026 surveyed` | **bug** — a bare year parsed as a statistic |
+| Nad Al Sheba D1bn villas | `reportingBasis must name an exact cited corporate-intent source…` | **bug** — a malformed optional record held the whole draft |
+
+Both bugs fixed here: a bare calendar year (no currency, scale, unit or `%`)
+is excluded from the figure parser, as the June rule always did — "2026 units"
+and "AED 2026" still parse; and an ill-fitting `reportingBasis` is dropped
+with a diagnostic so the draft continues on the corroborated lane instead of
+being held.
+
 ## Open risks
 
 1. A fabricated non-numeric clause with no figure in it is no longer blocked at

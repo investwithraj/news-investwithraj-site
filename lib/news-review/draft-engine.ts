@@ -714,8 +714,16 @@ export async function draftFromCluster(
   const category: NewsCategory = VALID_CATEGORIES.includes(cluster.suggestedCategory as NewsCategory)
     ? (cluster.suggestedCategory as NewsCategory)
     : "market-pulse";
+  // A reporting basis is an optional upgrade to the attributed-announcement
+  // lane. When the model emits one that does not fit (wrong format, wrong
+  // category, malformed record), the draft is still an ordinary story judged
+  // on its fetched figures; dropping the basis is the right outcome, not a
+  // hold. On 24 Sep 2026 this held a sourced Nad Al Sheba villas story.
   const reportingBasisShape = validateArticleReportingBasis({ format, category, citations, reportingBasis: parsed.reportingBasis });
-  if (!reportingBasisShape.ok) return { ok: false, reason: reportingBasisShape.error, diagnostics };
+  if (!reportingBasisShape.ok) {
+    diagnostics.push(`reporting basis dropped, draft continues on the corroborated lane: ${reportingBasisShape.error}`);
+    delete parsed.reportingBasis;
+  }
   const today = dubaiCalendarDate(now);
   const tldr3 = [parsed.tldr[0] ?? "", parsed.tldr[1] ?? "", parsed.tldr[2] ?? ""] as [string, string, string];
   const slug = `${today}-${slugify(parsed.title)}`;

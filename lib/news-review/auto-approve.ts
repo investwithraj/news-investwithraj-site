@@ -1028,6 +1028,14 @@ const EXCLUDED_DIGIT_PATTERNS = [
   /\b\d{1,2}:\d{2}(?:[ \t]*(?:a\.?m\.?|p\.?m\.?|UTC|GMT|GST))\b/gi,
   /\[\d+(?:\s*[-,]\s*\d+)*\]/g,
   /(?:^|\n)\s*(?:\(\d+\)|\d+[.)])(?=\s)/g,
+  // A bare calendar year is a date, not a statistic (the June rule skipped
+  // these too). "2026 surveyed" held a real UBS draft on 24 Sep 2026. A year
+  // that carries a currency, scale, unit or percentage ("AED 2026", "2026
+  // units", "2026%") is still a quantity and still reaches the parser.
+  new RegExp(
+    String.raw`(?<!(?:${CUR})[ \t]*)(?<![\d.,])\b(?:19|20)\d{2}\b(?![.,]\d)(?![ \t]*%)(?![ \t]+(?:${SCALE}|${UNIT})\b)`,
+    "g",
+  ),
 ];
 
 const PERIOD_POINT = String.raw`(?:[HQ][1-4](?:[ \t]+(?:19|20)\d{2})?)`;
