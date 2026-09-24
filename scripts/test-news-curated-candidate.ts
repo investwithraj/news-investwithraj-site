@@ -14,6 +14,7 @@ import {
 } from "../lib/news-review/curated-candidates";
 import {
   approvedPublisherIdentity,
+  DEFAULT_CORROBORATION_SOURCES,
   determineEvidencePolicy,
   selectAutoApproveEligibleDrafts,
 } from "../lib/news-review/auto-approve";
@@ -131,9 +132,11 @@ const adgmEvidencePolicy = determineEvidencePolicy(
 assert.equal(
   adgmEvidencePolicy.lane,
   "corroborated-analysis",
-  "the ADGM results read must stay on the two-publisher lane",
+  "the ADGM results read must stay on the corroborated lane",
 );
-assert.equal(adgmEvidencePolicy.requiredPublisherCount, 2);
+// The lane is the contract; the count behind it is the policy constant Raj
+// sets (1 since 24 Sep 2026, as it was from 14 Jun 2026).
+assert.equal(adgmEvidencePolicy.requiredPublisherCount, DEFAULT_CORROBORATION_SOURCES);
 assert.deepEqual(adgmCandidate.article.distribution, {});
 assert.doesNotMatch(
   adgmCandidate.article.body,
