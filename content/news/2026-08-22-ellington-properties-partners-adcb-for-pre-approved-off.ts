@@ -45,10 +45,12 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "alt": "Ellington Properties Partners ADCB for Pre-Approved Off-Plan Financing",
-    "credit": "Dubai aerial · Nino Verde via Wikimedia Commons · CC BY-SA 4.0",
-    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dubai_aerial.jpg",
-    "rightsStatus": "CC BY-SA 4.0",
+    "alt": "Business Bay towers and the Burj Khalifa mirrored in still water at night",
+    "credit": "Business Bay and the Burj Khalifa reflected at night · Robert Bock via Wikimedia Commons · CC0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dubai_skyline_unsplash.jpg",
+    "rightsStatus": "CC0 1.0",
+    "width": 5760,
+    "height": 3840,
     "src": "/news/2026-08-22-ellington-properties-partners-adcb-for-pre-approved-off/cover.jpg",
     "approval": "approved-editorial"
   },

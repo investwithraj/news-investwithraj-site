@@ -45,9 +45,12 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "alt": "Omniyat Acquires 36,600 sqm Marjan Beach Plot in First RAK Expansion",
+    "alt": "Rocky ridge of the Hajar mountains above the Ras Al Khaimah coastline",
     "credit": "Ridge south of Jabal Rahabah, Ras Al Khaimah · Ciorraga via Wikimedia Commons · CC BY-SA 4.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ridge_south_of_Jabal_Rahabah._Emirate_of_Ras_al_Khaimah._UAE.jpg",
     "rightsStatus": "CC BY-SA 4.0",
+    "width": 4000,
+    "height": 2250,
     "src": "/news/2026-08-13-omniyat-acquires-36-600-sqm-marjan-beach-plot-in-first-rak/cover.jpg",
     "approval": "approved-editorial"
   },

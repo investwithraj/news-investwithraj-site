@@ -45,10 +45,12 @@ export const article: NewsArticle = {
     }
   ],
   "heroImage": {
-    "alt": "DIB opens 50% off-plan finance to non-residents in Shariah-compliant push",
-    "credit": "Downtown Dubai from the Burj Khalifa observation deck · rawpixel · CC0 1.0",
-    "sourceUrl": "https://www.rawpixel.com/image/3338056/free-photo-image-dubai-city-night-aerial",
-    "rightsStatus": "CC0 1.0",
+    "alt": "Crowds watching the Dubai Fountain at night with the Burj Khalifa rising behind it",
+    "credit": "The Dubai Fountain beneath the Burj Khalifa at night · GinaD via Wikimedia Commons · CC BY-SA 4.0",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dubai_Fountain.jpg",
+    "rightsStatus": "CC BY-SA 4.0",
+    "width": 4928,
+    "height": 3264,
     "src": "/news/2026-08-24-dib-opens-50-off-plan-finance-to-non-residents-in-shariah/cover.jpg",
     "approval": "approved-editorial"
   },
