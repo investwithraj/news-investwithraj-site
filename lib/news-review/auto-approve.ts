@@ -1818,7 +1818,9 @@ export async function runAutoApprove(opts: {
   );
   const approve = assessments.filter((a) => a.verdict === "auto-approve");
   const held = assessments.filter((a) => a.verdict === "manual");
-  const publishLimit = Math.max(1, Math.min(10, opts.publishLimit ?? 1));
+  // Upper bound matches the catch-up sweep's research cap; the workflow sets 1
+  // for every scheduled run, so ordinary cadence is unchanged.
+  const publishLimit = Math.max(1, Math.min(40, opts.publishLimit ?? 1));
   const selected: AutoApproveAssessment[] = [];
   const selectedDrafts = new Map<string, NewsDraft>();
   const mediaHeldIds = new Set<string>();

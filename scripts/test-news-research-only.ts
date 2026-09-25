@@ -122,7 +122,8 @@ function testWorkflow(workflow: string): void {
     assert.equal(environmentValue(pipeline, "AUTOMATED_MORNING_LANE", inputs, event), expected.morning);
   }
   assert.deepEqual([...workflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]), ["37 1 * * *", "17 5 * * *"]);
-  assert.match(pipeline, /AUTO_PUBLISH_LIMIT: "1"/u);
+  // One publication per run, except an explicit manual catch-up sweep.
+  assert.match(pipeline, /AUTO_PUBLISH_LIMIT: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.catch_up && '40' \|\| '1' \}\}/u);
 }
 
 async function testActualPublicationGate(runner: string): Promise<void> {

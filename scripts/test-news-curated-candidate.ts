@@ -417,7 +417,8 @@ assert.match(
   workflow,
   /DRAFT_ENABLED:.*publication_only \|\| inputs\.curated_candidate_key != 'none'.*'0'/u,
 );
-assert.match(workflow, /AUTO_PUBLISH_LIMIT: "1"/u);
+// One publication per run, except an explicit manual catch-up sweep.
+assert.match(workflow, /AUTO_PUBLISH_LIMIT: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.catch_up && '40' \|\| '1' \}\}/u);
 assert.match(
   workflow,
   /AUTO_APPROVE_TARGET_DRAFT_ID: \$\{\{ steps\.curated\.outputs\.draft_id \}\}/u,

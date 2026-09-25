@@ -1021,7 +1021,8 @@ async function testSchedulesAndSocialIsolation(): Promise<void> {
   assert.match(workflow, /cron: "37 1 \* \* \*"/u);
   assert.match(workflow, /cron: "17 5 \* \* \*"/u);
   assert.match(workflow, /group: news-cron-production/u);
-  assert.match(workflow, /AUTO_PUBLISH_LIMIT: "1"/u);
+  // One publication per run, except an explicit manual catch-up sweep.
+  assert.match(workflow, /AUTO_PUBLISH_LIMIT: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.catch_up && '40' \|\| '1' \}\}/u);
   assert.match(workflow, /AUTOMATED_MORNING_LANE:/u);
   assert.match(workflow, /MORNING_DATE:/u);
   assert.deepEqual(vercel.crons, [

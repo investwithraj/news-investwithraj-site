@@ -27,6 +27,11 @@ on:
         required: false
         default: false
         type: boolean
+      catch_up:
+        description: "Catch-up sweep: research every eligible story in the 7-day window (up to 40), retry quarantined clusters, and publish every draft that passes the unchanged gates"
+        required: false
+        default: false
+        type: boolean
       candidate_key:
         description: "Run one reviewed, version-controlled editorial candidate instead of the automatic score queue"
         required: false
@@ -57,7 +62,8 @@ permissions:
 jobs:
   draft:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # A catch-up sweep researches up to 40 stories at ~1-2 minutes each.
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && 150 || 45 }}
     steps:
       - name: Validate research-only dispatch
         if: github.event_name == 'workflow_dispatch' && inputs.research_only
@@ -145,7 +151,12 @@ jobs:
           # Research-only dispatches always use the same discovery/staging path
           # but cannot enter assessment, approval or publication.
           AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.research_only && '0' || (github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || (github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1')) }}
-          AUTO_PUBLISH_LIMIT: "1"
+          # A catch-up sweep lifts the per-run volume limits only. Every draft
+          # still passes the same figure, citation, voice and copying gates.
+          AUTO_PUBLISH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '1' }}
+          PIPELINE_CAP: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '1' }}
+          PIPELINE_MAX_ATTEMPTS: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '6' }}
+          PIPELINE_CANDIDATE_POOL: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '60' || '30' }}
           CURATED_PUBLICATION: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || '0' }}
           CURATED_CANDIDATE_KEY: ${{ inputs.curated_candidate_key }}
           AUTO_APPROVE_TARGET_DRAFT_ID: ${{ steps.curated.outputs.draft_id }}
@@ -166,7 +177,7 @@ jobs:
           NEWS_STALE_AFTER_HOURS: "36"
           # Failed research clusters remain quarantined unless an operator
           # explicitly confirms a repair and requests one bounded retry.
-          PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && inputs.retry_failed_research && '1' || '0' }}
+          PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && (inputs.retry_failed_research || inputs.catch_up) && '1' || '0' }}
           PIPELINE_CANDIDATE_KEY: ${{ github.event_name == 'workflow_dispatch' && inputs.candidate_key || 'auto' }}
       - name: Surface daily news outcome
         if: always() && (github.event_name != 'workflow_dispatch' || inputs.curated_candidate_key == 'none' || steps.curated.outputs.already_published != '1')
