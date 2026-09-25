@@ -763,7 +763,7 @@ async function main(): Promise<void> {
   );
   assert.equal(
     workflowEnvironmentLine(workflow, "AUTO_PUBLISH_LIMIT"),
-    'AUTO_PUBLISH_LIMIT: "1"',
+    "AUTO_PUBLISH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '1' }}",
   );
   assert.equal(
     workflowEnvironmentLine(workflow, "AUTOMATED_MORNING_LANE"),
