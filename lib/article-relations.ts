@@ -35,6 +35,11 @@ export type ResolvedArticleDeveloper = Readonly<{
  */
 export const ARTICLE_RELATION_RECORDS = [
   {
+    articleSlug: "2026-09-26-meraas-awards-contract-to-gcc-contracting-for-272-villas-at",
+    areaSlugs: [],
+    developerSlugs: [],
+  },
+  {
     articleSlug: "2026-08-24-dib-opens-50-off-plan-finance-to-non-residents-in-shariah",
     areaSlugs: [],
     developerSlugs: [],
