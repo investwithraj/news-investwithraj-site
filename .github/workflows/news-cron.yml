@@ -157,6 +157,9 @@ jobs:
           PIPELINE_CAP: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '1' }}
           PIPELINE_MAX_ATTEMPTS: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '6' }}
           PIPELINE_CANDIDATE_POOL: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '60' || '30' }}
+          # Relevance cut-off for which clusters get researched. It ranks and
+          # filters; it is not a fact gate. A sweep reaches borderline stories.
+          PIPELINE_MIN_SCORE: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '35' || '45' }}
           CURATED_PUBLICATION: ${{ github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || '0' }}
           CURATED_CANDIDATE_KEY: ${{ inputs.curated_candidate_key }}
           AUTO_APPROVE_TARGET_DRAFT_ID: ${{ steps.curated.outputs.draft_id }}

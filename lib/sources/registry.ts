@@ -331,6 +331,19 @@ const GOOGLE_QUERIES: [string, string, VerifiedSource["market"]][] = [
   ["REIT / institutional", "UAE real estate REIT institutional fund investment", ["UAE"]],
   ["PropTech / tokenisation", "Dubai real estate tokenisation PropTech VARA blockchain", ["Dubai"]],
   ["Developer earnings", "Emaar OR Aldar OR Damac results earnings revenue", ["UAE"]],
+  // Widened 25 Sep 2026: 297 entries a week were clustering into only four
+  // stories above the cut-off. Named developers, master communities,
+  // infrastructure and the northern emirates are where daily news actually
+  // breaks; generic "Dubai real estate" queries keep returning the same few.
+  ["Mid-tier developers", "Binghatti OR Ellington OR Omniyat OR Samana OR Danube OR \"Select Group\" property", ["Dubai"]],
+  ["Abu Dhabi developers", "Aldar OR Modon OR Bloom OR Imkan OR \"Reportage\" Abu Dhabi project launch", ["Abu Dhabi"]],
+  ["Northern emirates", "Arada OR Alef OR Sharjah OR Ajman real estate project", ["UAE"]],
+  ["Master communities", "\"Dubai Creek Harbour\" OR \"Palm Jebel Ali\" OR \"Dubai South\" OR \"Expo City\" OR \"Dubai Hills\" property", ["Dubai"]],
+  ["Infrastructure", "\"Etihad Rail\" OR \"Blue Line\" OR \"Al Maktoum\" airport property Dubai", ["UAE", "Dubai"]],
+  ["Construction contracts", "UAE construction contract awarded residential towers villas", ["UAE"]],
+  ["Hospitality / branded", "Dubai hotel branded residence opening Four Seasons OR Mandarin OR Aman OR Bulgari", ["Dubai"]],
+  ["Transactions / records", "Dubai record sale villa penthouse price sold", ["Dubai"]],
+  ["Market reports", "UAE property report Q3 OR H1 prices rents CBRE OR Knight Frank OR Savills OR ValuStrat", ["UAE"]],
 ];
 
 const BING_QUERIES: [string, string, VerifiedSource["market"]][] = [
@@ -338,6 +351,9 @@ const BING_QUERIES: [string, string, VerifiedSource["market"]][] = [
   ["Abu Dhabi real estate", "Abu Dhabi real estate property", ["Abu Dhabi"]],
   ["UAE Golden Visa property", "UAE Golden Visa property investment", ["UAE"]],
   ["Dubai luxury property", "Dubai luxury branded residences", ["Dubai"]],
+  ["Dubai developer launches", "Dubai developer launches project", ["Dubai"]],
+  ["UAE property report", "UAE property market report prices", ["UAE"]],
+  ["Ras Al Khaimah property", "Ras Al Khaimah property", ["Ras Al Khaimah"]],
 ];
 
 export const DISCOVERY_FEEDS: VerifiedSource[] = [
