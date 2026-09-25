@@ -51,6 +51,9 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+  # The stall alert below files or updates a GitHub issue, which is what
+  # emails Raj. Nothing else in this job writes to the repo.
+  issues: write
 jobs:
   draft:
     runs-on: ubuntu-latest
@@ -71,7 +74,11 @@ jobs:
           fi
       - uses: actions/checkout@v4
         with:
-          ref: main
+          # Scheduled runs come from the default branch, so this is still
+          # main for them. A manual run on a branch now tests THAT branch —
+          # a hard-coded "main" here meant branch dispatches silently ran
+          # production code, which hid the September deadlock for 12 days.
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -181,6 +188,46 @@ jobs:
             exit 1
           fi
           echo "::notice title=Daily news pipeline::outcome=$PIPELINE_OUTCOME; outcomes=$PIPELINE_OUTCOMES; publication_sha=$PUBLICATION_SHA; newest_age_hours=$NEWEST_PUBLICATION_AGE_HOURS; action=$ACTIONABLE_REASONS"
+      - name: Alert on a stalled feed
+        # Runs even when the pipeline step failed. A red run in the Actions
+        # tab reaches nobody; an issue on the repo emails the owner. One issue
+        # carries the whole stall: it is updated while the feed stays stale
+        # and closed automatically on the first successful publication.
+        if: always() && github.event_name == 'schedule'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PIPELINE_OUTCOME: ${{ steps.pipeline.outputs.outcome }}
+          NEWEST_PUBLICATION_AGE_HOURS: ${{ steps.pipeline.outputs.newest_publication_age_hours }}
+          ACTIONABLE_REASONS: ${{ steps.pipeline.outputs.actionable_reasons }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STALL_AFTER_HOURS: "36"
+        run: |
+          age="${NEWEST_PUBLICATION_AGE_HOURS%%.*}"
+          [ -n "$age" ] || age=0
+          existing="$(gh issue list --label news-stall --state open --json number --jq '.[0].number // empty')"
+          if [ "$PIPELINE_OUTCOME" = "published" ] || [ "$age" -le "$STALL_AFTER_HOURS" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --comment "Feed is current again (newest publication ${NEWEST_PUBLICATION_AGE_HOURS}h old, outcome=${PIPELINE_OUTCOME}). $RUN_URL"
+            fi
+            exit 0
+          fi
+          gh label create news-stall --color B60205 --description "news.investwithraj.com has not published within the cadence" --force >/dev/null 2>&1 || true
+          title="News engine stalled: no publication for ${age}h"
+          nl=$'\n'
+          body="**news.investwithraj.com has not published for ${NEWEST_PUBLICATION_AGE_HOURS}h** (cadence ${STALL_AFTER_HOURS}h).${nl}${nl}"
+          body+="Last scheduled run: ${RUN_URL}${nl}"
+          body+="Outcome: \`${PIPELINE_OUTCOME:-none}\`${nl}${nl}"
+          body+="Why the run did not publish:${nl}\`\`\`${nl}${ACTIONABLE_REASONS:-no reason recorded}${nl}\`\`\`${nl}${nl}"
+          body+="Open The Desk at https://news.investwithraj.com/internal/review, or read the run log above. "
+          body+="This issue updates on every stalled scheduled run and closes itself on the next publication."
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --title "$title" --body "$body"
+            gh issue comment "$existing" --body "Still stalled: ${NEWEST_PUBLICATION_AGE_HOURS}h without a publication. $RUN_URL"
+          else
+            gh issue create --title "$title" --label news-stall --body "$body"
+          fi
       - name: Surface curated no-op
         if: github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && steps.curated.outputs.already_published == '1'
         run: echo "::notice title=Curated news candidate::The exact candidate is already published; no draft or publication action was taken."
