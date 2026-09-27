@@ -37,6 +37,11 @@ const SITE = process.env.SITE_URL || "https://news.investwithraj.com";
 const SECRET = process.env.POST_PUBLISH_SECRET || "";
 const MIN_SCORE = Number.parseInt(process.env.PIPELINE_MIN_SCORE ?? "45", 10);
 const MAX_DRAFTS = Number.parseInt(process.env.PIPELINE_CAP ?? "1", 10);
+// Articles the automated lane may still publish today (NEWS_DAILY_TARGET minus
+// what is already live for this Dubai day). Null outside the automated lane.
+let laneRemaining: number | null = null;
+const effectiveCap = (configured: number) =>
+  laneRemaining === null ? configured : Math.max(0, Math.min(configured, laneRemaining));
 const MAX_ATTEMPTS = Number.parseInt(
   process.env.PIPELINE_MAX_ATTEMPTS ?? "6",
   10,
@@ -134,7 +139,7 @@ async function runPublicationPass(
     site: SITE,
     secret: SECRET,
     publish: true,
-    publishLimit: Number.parseInt(process.env.AUTO_PUBLISH_LIMIT ?? "1", 10),
+    publishLimit: effectiveCap(Number.parseInt(process.env.AUTO_PUBLISH_LIMIT ?? "1", 10)),
     publishOrder:
       process.env.AUTO_PUBLISH_ORDER === "backlog" ? "backlog" : "newest",
     backlogMinAgeHours: Number.parseInt(
@@ -195,8 +200,9 @@ async function executePipeline(state: RunState): Promise<void> {
     return;
   }
   if (morningGuard.automated) {
+    laneRemaining = morningGuard.remaining;
     console.log(
-      `automated morning lane open for ${morningGuard.morningDate}; one evidence-gated publication remains permitted`,
+      `automated morning lane open for ${morningGuard.morningDate}; ${morningGuard.remaining} evidence-gated publication(s) remain permitted today`,
     );
   }
   if (new TextEncoder().encode(SECRET).byteLength < 32) {
@@ -264,7 +270,7 @@ async function executePipeline(state: RunState): Promise<void> {
 
   const whitelist = getWhitelistDomains();
   for (const cluster of candidates) {
-    if (state.staged >= MAX_DRAFTS || state.attempts >= MAX_ATTEMPTS) break;
+    if (state.staged >= effectiveCap(MAX_DRAFTS) || state.attempts >= MAX_ATTEMPTS) break;
 
     const reservationToken = await reserveCluster(cluster.id, cluster.topic);
     if (!reservationToken) {

@@ -153,9 +153,9 @@ jobs:
           AUTO_APPROVE: ${{ github.event_name == 'workflow_dispatch' && inputs.research_only && '0' || (github.event_name == 'workflow_dispatch' && inputs.curated_candidate_key != 'none' && '1' || (github.event_name == 'workflow_dispatch' && inputs.candidate_key != 'auto' && '0' || '1')) }}
           # A catch-up sweep lifts the per-run volume limits only. Every draft
           # still passes the same figure, citation, voice and copying gates.
-          AUTO_PUBLISH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '1' }}
-          PIPELINE_CAP: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '1' }}
-          PIPELINE_MAX_ATTEMPTS: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '6' }}
+          AUTO_PUBLISH_LIMIT: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '3' }}
+          PIPELINE_CAP: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '3' }}
+          PIPELINE_MAX_ATTEMPTS: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '40' || '12' }}
           PIPELINE_CANDIDATE_POOL: ${{ github.event_name == 'workflow_dispatch' && inputs.catch_up && '60' || '30' }}
           # Relevance cut-off for which clusters get researched. It ranks and
           # filters; it is not a fact gate. A sweep reaches borderline stories.
@@ -178,6 +178,9 @@ jobs:
           AUTO_BACKLOG_MAX_AGE_DAYS: "21"
           AUTO_REDRAFT_MIN_AGE_HOURS: "24"
           NEWS_STALE_AFTER_HOURS: "36"
+          # Raj, 27 Sep 2026: up to three articles per Dubai day. The automated
+          # lane stays open until the day holds this many live articles.
+          NEWS_DAILY_TARGET: "3"
           # Failed research clusters remain quarantined unless an operator
           # explicitly confirms a repair and requests one bounded retry.
           PIPELINE_RETRY_FAILED: ${{ github.event_name == 'workflow_dispatch' && (inputs.retry_failed_research || inputs.catch_up) && '1' || '0' }}

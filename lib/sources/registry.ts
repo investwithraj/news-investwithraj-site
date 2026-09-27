@@ -344,6 +344,10 @@ const GOOGLE_QUERIES: [string, string, VerifiedSource["market"]][] = [
   ["Hospitality / branded", "Dubai hotel branded residence opening Four Seasons OR Mandarin OR Aman OR Bulgari", ["Dubai"]],
   ["Transactions / records", "Dubai record sale villa penthouse price sold", ["Dubai"]],
   ["Market reports", "UAE property report Q3 OR H1 prices rents CBRE OR Knight Frank OR Savills OR ValuStrat", ["UAE"]],
+  // Raj, 27 Sep 2026: Binghatti's Moody's rating move never reached the
+  // engine. Developer credit ratings, bonds and sukuk are investor news.
+  ["Developer credit / ratings", "Moody's OR Fitch OR \"S&P\" rating developer Dubai OR UAE Binghatti OR Damac OR Emaar OR Aldar OR Sobha", ["UAE"]],
+  ["Developer bonds / sukuk", "UAE developer sukuk OR bond OR notes issue Binghatti OR Damac OR Omniyat OR Arada OR Sobha", ["UAE"]],
 ];
 
 const BING_QUERIES: [string, string, VerifiedSource["market"]][] = [
