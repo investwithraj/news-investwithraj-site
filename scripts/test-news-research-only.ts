@@ -123,7 +123,7 @@ function testWorkflow(workflow: string): void {
   }
   assert.deepEqual([...workflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]), ["37 1 * * *", "17 5 * * *"]);
   // One publication per run, except an explicit manual catch-up sweep.
-  assert.match(pipeline, /AUTO_PUBLISH_LIMIT: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.catch_up && '40' \|\| '1' \}\}/u);
+  assert.match(pipeline, /AUTO_PUBLISH_LIMIT: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.catch_up && '40' \|\| '3' \}\}/u);
 }
 
 async function testActualPublicationGate(runner: string): Promise<void> {
@@ -153,6 +153,8 @@ async function testActualPublicationGate(runner: string): Promise<void> {
       console: { log: () => undefined },
       SITE: "https://news.example.invalid",
       SECRET: "offline-test-only",
+      // Outside the automated daily lane the runner's cap is a pass-through.
+      effectiveCap: (configured: number) => configured,
       runAutoApprove: async (options: { publish?: boolean; publishLimit?: number }) => {
         calls += 1;
         assert.equal(options.publish, true);

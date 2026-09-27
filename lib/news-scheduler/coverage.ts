@@ -154,6 +154,29 @@ export function observeRepositoryDubaiDayCoverage(input: {
       };
 }
 
+/** Live articles already published on the given Dubai calendar day. */
+export function countRepositoryDubaiDayPublications(input: {
+  morningDate: string;
+  articles: readonly RepositoryArticle[];
+}): number {
+  return input.articles.filter(
+    (candidate) =>
+      candidate.status !== "research" &&
+      /^[a-z0-9-]{1,180}$/u.test(candidate.slug) &&
+      Number.isFinite(Date.parse(candidate.publishedAt)) &&
+      dubaiCalendarDate(candidate.publishedAt) === input.morningDate,
+  ).length;
+}
+
+/** Daily publication target for the automated lane (Raj, 27 Sep 2026: 3).
+ *  Bounded to 1..10; anything invalid falls back to the original 1. */
+export function dailyPublicationTarget(
+  environment: Readonly<Record<string, string | undefined>>,
+): number {
+  const parsed = Number.parseInt(environment.NEWS_DAILY_TARGET ?? "1", 10);
+  return Number.isSafeInteger(parsed) ? Math.max(1, Math.min(10, parsed)) : 1;
+}
+
 export async function guardAutomatedMorningPublication(input: {
   environment?: Readonly<Record<string, string | undefined>>;
   now?: Date;
@@ -161,31 +184,41 @@ export async function guardAutomatedMorningPublication(input: {
   fetcher?: Fetcher;
   repositoryArticles?: readonly RepositoryArticle[];
 }): Promise<
-  | Readonly<{ automated: false; covered: false; morningDate: null }>
-  | (LiveDayCoverage & Readonly<{ automated: true }>)
+  | Readonly<{ automated: false; covered: false; morningDate: null; remaining: null }>
+  | (LiveDayCoverage & Readonly<{ automated: true; remaining: number }>)
 > {
   const environment = input.environment ?? process.env;
   if (environment.AUTOMATED_MORNING_LANE !== "1") {
-    return { automated: false, covered: false, morningDate: null };
+    return { automated: false, covered: false, morningDate: null, remaining: null };
   }
   const morningDate = validatedDubaiMorningDate(
     environment.MORNING_DATE,
     input.now ?? new Date(),
   );
+  const target = dailyPublicationTarget(environment);
   const repositoryCoverage = observeRepositoryDubaiDayCoverage({
     morningDate,
     articles: input.repositoryArticles ?? [],
     site: input.site,
   });
-  if (repositoryCoverage.covered) {
-    return { automated: true, ...repositoryCoverage };
-  }
-  return {
-    automated: true,
-    ...(await observeLiveDubaiDayCoverage({
+  if (target > 1) {
+    // The run checks out main at start, and every publication commits to
+    // main, so the repository count is the day's truth. The lane stays open
+    // until the day holds `target` articles.
+    const published = countRepositoryDubaiDayPublications({
       morningDate,
-      site: input.site,
-      fetcher: input.fetcher,
-    })),
-  };
+      articles: input.repositoryArticles ?? [],
+    });
+    const remaining = Math.max(0, target - published);
+    return { automated: true, ...repositoryCoverage, covered: remaining === 0, remaining };
+  }
+  if (repositoryCoverage.covered) {
+    return { automated: true, ...repositoryCoverage, remaining: 0 };
+  }
+  const live = await observeLiveDubaiDayCoverage({
+    morningDate,
+    site: input.site,
+    fetcher: input.fetcher,
+  });
+  return { automated: true, ...live, remaining: live.covered ? 0 : 1 };
 }
