@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { INSIGHT_ARTICLES } from "@/content/insights";
 
 import { CLOSING_BELLS } from "@/content/closing-bell";
 import { POWER_LISTS } from "@/content/power-list";
@@ -25,6 +26,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const projection = isNewsroomLifecycleCutoverEnabled()
     ? releasedLifecycleSitemap()
     : currentPublicSitemap();
+  // Syndicated editions point to LinkedIn; only self-canonical editions belong here.
+  projection.push(...INSIGHT_ARTICLES.filter(a => !a.linkedinUrl).map(a => ({url: `${SITE.url}/insights/${a.slug}`, lastModified: new Date(a.modifiedAt), changeFrequency: "weekly" as const, priority: 0.7})));
   return isNewsroomEvidenceHoldPreviewEnabled()
     ? projection.filter((entry) => {
         const pathname = new URL(entry.url).pathname;

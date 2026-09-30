@@ -240,6 +240,7 @@ export const config = {
     "/cinema/:path*",
     "/media/real-uhd/:path*",
     "/media/verified/:path*",
+    "/media/news/:path*",
     "/hero.mp4",
     "/pulse",
     "/news/2026-07-21-ethiopia-sets-10m-investment-bar-for-golden-visa-18-uae-prop",

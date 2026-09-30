@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
+import { redirect } from "next/navigation";
 
 import NewsArchive from "@/components/redesign/NewsArchive";
 import type { NewsArchiveInitialParams } from "@/components/redesign/NewsArchive";
@@ -72,6 +73,7 @@ export default async function NewsIndex({
   const live = getPublicDiscoveryNewsArticles();
   const items = projectNewsArchiveItems(live);
   const initialParams = archiveInitialParams(await searchParams);
+  if (initialParams.desk === "beyond-the-deal") redirect("https://www.investwithraj.com/newsletter");
   const freshness = await currentArchiveFreshness(
     live[0]?.publishedAt ?? null,
   );

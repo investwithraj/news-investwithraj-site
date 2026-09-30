@@ -20,6 +20,7 @@ const primary = [
   { label: "Latest", href: "/" },
   { label: "News", href: "/news" },
   { label: "DLD pulse", href: "/news?desk=dld-pulse" },
+  { label: "Newsletter", href: "https://www.investwithraj.com/newsletter" },
   { label: "About", href: "/about" },
 ] as const;
 

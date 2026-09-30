@@ -8,6 +8,7 @@ import { GET as getNewsSitemap } from "@/app/news-sitemap.xml/route";
 import { GET as getRss } from "@/app/rss.xml/route";
 import sitemap from "@/app/sitemap";
 import { NEWS_ARTICLES } from "@/content/news";
+import { INSIGHT_ARTICLES } from "@/content/insights";
 import { SITE } from "@/lib/constants";
 import {
   AUXILIARY_NEWSROOM_LIFECYCLE,
@@ -67,6 +68,7 @@ const pinnedProductionEvidencePath = resolve(
 const pinnedProductionRows = parseCsv(
   readFileSync(pinnedProductionEvidencePath, "utf8"),
 );
+pinnedProductionRows.push(...parseCsv(read("docs/migration/newsletter-redirect-evidence-2026-10-01.csv")));
 const primaryRows = rows.filter((row) => row.in_sitemap === "yes");
 const primaryByUrl = new Map(
   primaryRows.map((row) => [row.current_url, row]),
@@ -86,9 +88,9 @@ const currentPublicAuthorityPaths = [
 const currentReleaseRedirectSources = new Set<string>(
   CURRENT_RELEASE_NEWSROOM_REDIRECT_SOURCES,
 );
-const currentReleasePublicAuthorityPaths = currentPublicAuthorityPaths.filter(
-  (pathname) => !currentReleaseRedirectSources.has(pathname),
-);
+const currentReleasePublicAuthorityPaths = [...currentPublicAuthorityPaths.filter(
+  (pathname) => !currentReleaseRedirectSources.has(pathname) && pathname !== "/v/beyond-the-deal",
+), ...INSIGHT_ARTICLES.filter(a=>!a.linkedinUrl).map(a=>`/insights/${a.slug}`)].sort();
 for (const pathname of additivePublishedArticlePaths) {
   assert.equal(getNewsroomLifecycle(pathname), null);
   assert.deepEqual(
@@ -217,6 +219,7 @@ const releasedLegacyPaths = primaryRows
   .map((row) => row.current_url);
 const releasedAuthorityPaths = [
   ...new Set([...releasedLegacyPaths, ...additiveIndexableArticlePaths]),
+  ...INSIGHT_ARTICLES.filter(a=>!a.linkedinUrl).map(a=>`/insights/${a.slug}`),
 ].sort();
 assert.equal(
   getPublicDiscoveryNewsArticles().length,
@@ -644,6 +647,10 @@ function assertRedirectDestination(source: string, destination: string) {
     return;
   }
 
+  if (destination === "https://www.investwithraj.com/newsletter") {
+    assertPinnedExternalEvidence(destination, "index, follow");
+    return;
+  }
   assert.equal(target.origin, "https://investwithraj.com");
   assert.ok(
     target.pathname.startsWith("/areas/") ||

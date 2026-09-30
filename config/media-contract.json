@@ -70,6 +70,18 @@
   ],
   "assets": [
     {
+      "key": "newsletter:jbr-waterfront",
+      "path": "/media/news/beyond-the-deal-jbr-waterfront.webp",
+      "mediaType": "image",
+      "subject": "Jumeirah Beach Residence waterfront",
+      "classification": "approved-editorial-context",
+      "approval": "approved",
+      "routes": [{"path":"/insights/waterfront-beyond-the-view","role":"editorial-hero","fullscreen":false},{"path":"/","role":"newsletter-feature","fullscreen":false}],
+      "source": {"provider":"Raj's approved stock-account archive","creator":"Stock-account archive","sourceId":"1881756594","url":"https://www.investwithraj.com/media/licensed-real/1881756594.jpg"},
+      "rights": {"status":"verified-owner-supplied","record":"Owner approval 2026-09-09; docs/editorial/BEYOND-THE-DEAL-WEEKLY.md"},
+      "derivative": {"width":2400,"height":1200,"from":"7728×3864 un-upscaled source master; same full frame"}
+    },
+    {
       "key": "brand:iwr-v1.2-color",
       "path": "/brand/v1.2/IWR-B04-CORRECTED-Render-Safe-Color.svg",
       "mediaType": "image",

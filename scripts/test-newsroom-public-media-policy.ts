@@ -28,7 +28,7 @@ function enumerateFiles(root: string): string[] {
 const publicRoot = path.join(process.cwd(), "public");
 const governedOnDisk = [
   "/hero.mp4",
-  ...["audio", "brand", "cinema", "media/real-uhd", "media/verified"].flatMap(
+  ...["audio", "brand", "cinema", "media/real-uhd", "media/verified", "media/news"].flatMap(
     (prefix) =>
       enumerateFiles(path.join(publicRoot, prefix)).map(
         (absolute) =>
@@ -37,8 +37,9 @@ const governedOnDisk = [
   ),
 ].sort();
 
-assert.equal(approved.length, 18);
-assert.equal(new Set(approved).size, 18);
+assert.equal(approved.length, 19);
+assert.equal(new Set(approved).size, 19);
+assert(approved.includes("/media/news/beyond-the-deal-jbr-waterfront.webp"));
 assert.deepEqual(APPROVED_NEWSROOM_PUBLIC_MEDIA_PATHS, approved);
 assert.equal(withheld.length, 31);
 assert.equal(new Set(withheld).size, 31);
@@ -71,8 +72,8 @@ const unknownGovernedPaths = [...mediaContract.unknownGovernedMedia].sort();
 assert.equal(unknownGovernedPaths.length, 16);
 assert.deepEqual(UNKNOWN_NEWSROOM_PUBLIC_MEDIA_PATHS, unknownGovernedPaths);
 const governedAuthority = [...approved, ...withheld, ...unknownGovernedPaths].sort();
-assert.equal(governedOnDisk.length, 65);
-assert.equal(new Set(governedOnDisk).size, 65);
+assert.equal(governedOnDisk.length, 66);
+assert.equal(new Set(governedOnDisk).size, 66);
 assert.deepEqual(
   governedOnDisk,
   governedAuthority,
@@ -87,6 +88,7 @@ for (const mediaPath of unknownGovernedPaths) {
 }
 for (const mediaPath of [
   "/media/verified/areas/not-recorded.webp",
+  "/media/news/not-recorded.webp",
   "/media/real-uhd/not-raj.webp",
   "/cinema/not-recorded.mp4",
   "/audio/not-recorded.mp3",
@@ -111,6 +113,7 @@ for (const matcher of [
   "/cinema/:path*",
   "/media/real-uhd/:path*",
   "/media/verified/:path*",
+  "/media/news/:path*",
   "/hero.mp4",
 ]) {
   assert.ok(proxySource.includes(`"${matcher}"`), `${matcher} proxy matcher missing`);
@@ -119,5 +122,5 @@ assert.match(proxySource, /noindex, nofollow, noarchive/u);
 assert.match(proxySource, /status:\s*404/u);
 
 console.log(
-  "Newsroom public-media policy passed: 18 approved, 31 explicit withheld, 16 on-disk unknown governed assets, unknown fail-closed and app routes unaffected.",
+  "Newsroom public-media policy passed: 19 approved, 31 explicit withheld, 16 on-disk unknown governed assets, unknown fail-closed and app routes unaffected.",
 );

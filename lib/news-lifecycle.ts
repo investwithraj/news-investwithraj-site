@@ -340,7 +340,7 @@ export const PRIMARY_NEWSROOM_LIFECYCLE = {
   },
   "/v/beyond-the-deal": {
     disposition: "MERGE",
-    destination: "/news?desk=beyond-the-deal",
+    destination: "https://www.investwithraj.com/newsletter",
   },
 } as const satisfies Readonly<Record<string, NewsroomLifecycleEntry>>;
 

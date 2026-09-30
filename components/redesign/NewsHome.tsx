@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getLatestInsights } from "@/content/insights";
 
 import type { NewsArticle } from "@/content/news/types";
 import {
@@ -224,6 +225,10 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
         </Link>
       </section>
 
+      {getLatestInsights(1).map(edition => <section className={styles.newsletter} key={edition.slug} aria-labelledby="newsletter-title">
+        <Link href={`/insights/${edition.slug}`}><Image src={edition.heroImage.src} alt={edition.heroImage.alt} width={2400} height={1200} sizes="(max-width: 680px) 100vw, 50vw" /></Link>
+        <div><p>Beyond the Deal · Raj Tomar’s weekly letter</p><h2 id="newsletter-title"><Link href={`/insights/${edition.slug}`}>{edition.title}</Link></h2><p>{edition.subtitle}</p><Link href={`/insights/${edition.slug}`}>Read the letter →</Link><a href="https://www.investwithraj.com/newsletter">Explore the newsletter ↗</a></div>
+      </section>)}
       <section className={styles.bridge}>
         <p>From information to action</p>
         <h2>Discuss your real estate plans.</h2>

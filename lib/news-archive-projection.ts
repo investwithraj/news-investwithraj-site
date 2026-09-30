@@ -16,7 +16,7 @@ import {
 } from "@/lib/news-editorial";
 import { articleMatchesVertical, VERTICALS } from "@/lib/verticals";
 
-export const NEWS_ARCHIVE_DESKS: NewsArchiveDesk[] = VERTICALS.map(
+export const NEWS_ARCHIVE_DESKS: NewsArchiveDesk[] = VERTICALS.filter(v => v.slug !== "beyond-the-deal").map(
   ({ slug, name, description }) => ({ slug, name, description }),
 );
 

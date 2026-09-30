@@ -19,6 +19,7 @@ const governedPrefixes = [
   "/cinema/",
   "/media/real-uhd/",
   "/media/verified/",
+  "/media/news/",
 ] as const;
 
 export const APPROVED_NEWSROOM_PUBLIC_MEDIA_PATHS = Object.freeze(

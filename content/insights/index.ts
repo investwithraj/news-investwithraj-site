@@ -1,8 +1,8 @@
-// Central registry of all insight articles. Populated by the Sunday-09:00
-// GST weekly routine (Block 2.3) — 1-2 deep-dives per week, PR-reviewed
-// before commit. Empty Day-1.
+// Beyond the Deal editions are written and released from the authorised chat
+// workflow. The retired external publisher must not populate this registry.
 
 import type { InsightArticle } from "./types";
+import { waterfrontBeyondTheView } from "./waterfront-beyond-the-view";
 export type { InsightArticle } from "./types";
 export {
   sortInsightArticles,
@@ -10,7 +10,7 @@ export {
   type InsightCategory,
 } from "./types";
 
-export const INSIGHT_ARTICLES: InsightArticle[] = [];
+export const INSIGHT_ARTICLES: InsightArticle[] = [waterfrontBeyondTheView];
 
 export function getLatestInsights(limit = 5): InsightArticle[] {
   return [...INSIGHT_ARTICLES]

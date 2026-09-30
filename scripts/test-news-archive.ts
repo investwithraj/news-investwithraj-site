@@ -42,7 +42,6 @@ const EXPECTED_DESKS = [
   "off-plan-watch",
   "uhnw-trades",
   "sovereign-plays",
-  "beyond-the-deal",
 ] as const;
 const ALL_FILTERS: NewsArchiveFilters = {
   query: "",
@@ -66,7 +65,7 @@ const publishedSlugs = PUBLISHED_NEWS_ARTICLES.map((article) => article.slug);
 assert.deepEqual(
   NEWS_ARCHIVE_DESKS.map((desk) => desk.slug),
   EXPECTED_DESKS,
-  "The archive must expose only the five approved editorial desks.",
+  "The archive exposes four news desks; Beyond the Deal is a separate newsletter.",
 );
 assert.deepEqual(
   NEWS_ARCHIVE_FILTER_KEYS,
@@ -176,7 +175,7 @@ assert.throws(
   /Developer relation has no canonical advisory destination/,
 );
 
-for (const vertical of VERTICALS) {
+for (const vertical of VERTICALS.filter(v => v.slug !== "beyond-the-deal")) {
   const expected = getVerticalArticles(
     vertical,
     PUBLISHED_NEWS_ARTICLES,

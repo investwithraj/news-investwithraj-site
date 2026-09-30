@@ -158,11 +158,11 @@ export const VERTICALS: Vertical[] = [
   {
     slug: "beyond-the-deal",
     name: "Beyond the Deal",
-    tagline: "Longer reads for decisions that need more than a headline.",
+    tagline: "Raj Tomar’s weekly newsletter.",
     description:
-      "The forces behind a property decision: financing, regulation, buyer demand and the way communities work.",
+      "Weekly letters on UAE real estate, urban design and long-term ownership. Read the editions and subscribe on LinkedIn.",
     method:
-      "The desk selects analytical articles whose main value is interpretation across policy, regulation, financing, demand or market structure.",
+      "This legacy route leads to the Beyond the Deal newsletter archive; news articles are not newsletter editions.",
     categories: ["macro", "policy", "regulatory", "market-pulse"],
     keywords: [
       "buyers",
@@ -187,7 +187,7 @@ export const VERTICALS: Vertical[] = [
       "linear-gradient(135deg, rgba(32, 32, 33, 0.12), rgba(178, 146, 79, 0.06))",
     accent: "var(--gold-deep)",
     glyph: "05",
-    cadence: "Updated when an analytical report clears editorial review",
+    cadence: "Weekly",
   },
 ];
 
@@ -208,6 +208,8 @@ export function articleMatchesVertical(
   vertical: Vertical,
   article: NewsArticle,
 ): boolean {
+  // Beyond the Deal is Raj's weekly newsletter, never a keyword news bucket.
+  if (vertical.slug === "beyond-the-deal") return false;
   if (article.status === "research") return false;
   if (vertical.curatedSlugs.includes(article.slug)) return true;
   if (!vertical.categories.includes(article.category)) return false;

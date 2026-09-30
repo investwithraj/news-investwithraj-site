@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { NEWS_ARTICLES } from "@/content/news";
 import { CONTACT, rootCtaUrl, SITE } from "@/lib/constants";
 import { PUBLIC_AREAS, PUBLIC_DEVELOPERS } from "@/lib/public-content";
@@ -67,6 +67,7 @@ export default async function VerticalPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (slug === "beyond-the-deal") permanentRedirect("https://www.investwithraj.com/newsletter");
   const vertical = getVerticalBySlug(slug);
   if (!vertical) notFound();
 
