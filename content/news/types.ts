@@ -25,6 +25,8 @@ export interface Citation {
 }
 
 export interface HeroImage {
+  /** Public licence link for reusable editorial photography. */
+  licenceUrl?: string;
   /** Path under /public OR external URL */
   src: string;
   /** Required alt text */
@@ -140,6 +142,13 @@ export interface NewsReportingBasis {
 }
 
 export interface NewsArticle {
+  /** The approved chat-news sample treatment, additive to existing articles. */
+  brief?: {
+    headings?: { beforeParagraph: number; title: string }[];
+    figures?: { value: string; label: string }[];
+    note?: string;
+    related?: { href: string; title: string; label: string };
+  };
   /** URL slug — kebab-case, no leading slash. Used at /news/{slug}. */
   slug: string;
   /** Immutable reviewed-draft hash emitted only by the publication pipeline. */

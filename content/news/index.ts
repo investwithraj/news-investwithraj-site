@@ -8,6 +8,7 @@
 //   3. Vercel auto-deploys on push, /news/[slug] route generates
 
 import type { NewsArticle } from "./types";
+import { MANUAL_NEWS_20260930 } from "./2026-09-30-chat-news";
 export type { NewsArticle } from "./types";
 export {
   sortNewsArticles,
@@ -81,6 +82,7 @@ import { article as art_2026_08_24_dib_opens_50_off_plan_finance_to_non_resident
 import { article as art_2026_09_26_meraas_awards_contract_to_gcc_contracting_for_272_villas_at } from "./2026-09-26-meraas-awards-contract-to-gcc-contracting-for-272-villas-at";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  ...MANUAL_NEWS_20260930,
   art_2026_09_26_meraas_awards_contract_to_gcc_contracting_for_272_villas_at,
   art_2026_08_24_dib_opens_50_off_plan_finance_to_non_residents_in_shariah,
   art_2026_08_22_ellington_properties_partners_adcb_for_pre_approved_off,

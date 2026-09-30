@@ -34,6 +34,12 @@ export type ResolvedArticleDeveloper = Readonly<{
  * article blocks validation until it receives exactly one explicit record.
  */
 export const ARTICLE_RELATION_RECORDS = [
+  { articleSlug: "2026-09-30-aldar-talay-yas-riva-sales", areaSlugs: ["saadiyat-island", "yas-island"], developerSlugs: ["aldar"] },
+  { articleSlug: "2026-09-30-abu-dhabi-government-asset-investment-portal", areaSlugs: [], developerSlugs: [] },
+  { articleSlug: "2026-09-30-abu-dhabi-infrastructure-munich-roadshow", areaSlugs: [], developerSlugs: [] },
+  { articleSlug: "2026-09-30-abu-dhabi-mobility-plenary-headquarters", areaSlugs: [], developerSlugs: [] },
+  { articleSlug: "2026-09-30-abu-dhabi-h1-development-capacity", areaSlugs: [], developerSlugs: [] },
+  { articleSlug: "2026-09-30-abu-dhabi-mit-urban-research", areaSlugs: [], developerSlugs: [] },
   {
     articleSlug: "2026-09-26-meraas-awards-contract-to-gcc-contracting-for-272-villas-at",
     areaSlugs: [],

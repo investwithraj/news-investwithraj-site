@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import NewsArticle from "@/components/redesign/NewsArticle";
+import EditorialBrief from "@/components/redesign/EditorialBrief";
 import { getNewsBySlug, NEWS_ARTICLES } from "@/content/news";
 import { resolveArticleRelations } from "@/lib/article-relations";
 import { SITE } from "@/lib/constants";
@@ -131,14 +132,14 @@ export default async function NewsArticlePage({
           }}
         />
       ) : null}
-      <NewsArticle
+      {article.brief ? <EditorialBrief article={article} /> : <NewsArticle
         article={article}
         newer={newer}
         older={older}
         relatedAreas={relatedAreas}
         relatedDevelopers={relatedDevelopers}
         relatedVerticals={relatedVerticals}
-      />
+      />}
     </>
   );
 }
