@@ -37,7 +37,7 @@
 
 .heroGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 27rem);
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(3rem, 8vw, 9rem);
   align-items: end;
 }

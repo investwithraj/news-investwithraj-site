@@ -9,7 +9,6 @@ import {
 import {
   categoryLabel,
   displayMarkets,
-  evidenceSummary,
   formatEditorialDate,
   selectDistinctArticles,
 } from "@/lib/news-editorial";
@@ -28,7 +27,7 @@ function ArticleImage({
   if (!media) {
     return (
       <span className={styles.mediaFallback}>
-        <span>Source-led report</span>
+        <span>Real estate news</span>
         <strong>{displayMarkets(article).join(" / ")}</strong>
         <small>
           {categoryLabel(article.category)} · {article.displayDate}
@@ -70,7 +69,6 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
   const rail = rest.slice(0, 3);
   const ledger = rest.slice(3, 9);
   const mediaPlan = planDistinctArticleMedia(featured);
-  const leadEvidence = evidenceSummary(lead);
 
   return (
     <main id="main" className={styles.page}>
@@ -82,7 +80,7 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
             <span aria-hidden="true" />
           </p>
           <p>
-            Latest source-linked publication:{" "}
+            Latest update:{" "}
             {formatEditorialDate(articles[0].publishedAt)}
           </p>
         </div>
@@ -117,13 +115,6 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
                 </span>
                 <time dateTime={lead.publishedAt}>{lead.displayDate}</time>
               </span>
-              <span
-                className={`${styles.evidence} ${
-                  leadEvidence.limited ? styles.evidenceLimited : ""
-                }`}
-              >
-                Evidence · {leadEvidence.label}
-              </span>
               <strong>{lead.title}</strong>
               <span className={styles.subtitle}>{lead.subtitle}</span>
               <span className={styles.signal}>
@@ -134,9 +125,9 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
             </span>
           </Link>
 
-          <aside className={styles.rail} aria-label="Latest distinct reports">
+          <aside className={styles.rail} aria-label="Latest news">
             <div className={styles.railHead}>
-              <span>Latest distinct reports</span>
+              <span>Latest news</span>
               <span>{String(articles.length).padStart(2, "0")} live</span>
             </div>
             {rail.map((article, index) => (
@@ -157,9 +148,6 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
                   </span>
                   <strong>{article.title}</strong>
                   <small>{displayMarkets(article).join(" / ")}</small>
-                  <small className={styles.railEvidence}>
-                    Evidence · {evidenceSummary(article).label}
-                  </small>
                 </span>
                 <i aria-hidden="true">↗</i>
               </Link>
@@ -170,11 +158,10 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
 
       <section className={styles.ledger} aria-labelledby="ledger-title">
         <header className={styles.sectionHead}>
-          <p>Current intelligence</p>
-          <h2 id="ledger-title">The consequential read.</h2>
+          <p>More news</p>
+          <h2 id="ledger-title">Across the market.</h2>
           <p>
-            Reporting selected for the decision it affects—not the volume it
-            generates. Near-identical event reports are shown once here.
+            The latest developments in UAE real estate.
           </p>
         </header>
 
@@ -203,9 +190,6 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
                 </span>
                 <strong>{article.title}</strong>
                 <small>{article.subtitle}</small>
-                <small className={styles.cardEvidence}>
-                  Evidence · {evidenceSummary(article).label}
-                </small>
                 <span>{String(index + 5).padStart(2, "0")} ↗</span>
               </span>
             </Link>
@@ -217,19 +201,19 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
         <Link href="/news">
           <span>01</span>
           <strong>Area filters</strong>
-          <p>Filter source-linked reporting by its related market.</p>
+          <p>Find news from the places you follow.</p>
           <i>Open ↗</i>
         </Link>
         <Link href="https://investwithraj.com/developers">
           <span>02</span>
           <strong>Developer dossiers</strong>
-          <p>Continue to the canonical advisory developer directory.</p>
+          <p>Explore developers and their projects.</p>
           <i>Open ↗</i>
         </Link>
         <Link href="/news">
           <span>03</span>
           <strong>News archive</strong>
-          <p>Browse every canonical report in chronological order.</p>
+          <p>Browse previous stories and market updates.</p>
           <i>Open ↗</i>
         </Link>
         <Link href="/news?desk=dld-pulse">
@@ -242,7 +226,7 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
 
       <section className={styles.bridge}>
         <p>From information to action</p>
-        <h2>A headline is not a strategy.</h2>
+        <h2>Discuss your real estate plans.</h2>
         <div>
           <p>
             If a market move changes your position, book a short working call

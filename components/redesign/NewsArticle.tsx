@@ -178,11 +178,6 @@ export default function NewsArticle({
               <span>Editorial context</span>
               <h2>Why this may matter.</h2>
               <p>{consequence}</p>
-              <small>
-                This passage is excerpted from the report above. It is
-                contextual analysis, not an independent source or a promised
-                outcome.
-              </small>
             </section> : null}
 
             {article.semaform?.theTake ? (
@@ -209,10 +204,9 @@ export default function NewsArticle({
           </div>
 
           {!shortUpdate ? <aside className={styles.sourceRail}>
-            <p>Evidence status</p>
+            <p>Sources</p>
             <strong>{evidence.sourceCount}</strong>
             <span>{evidence.label}</span>
-            <small>{evidence.detail}</small>
             <nav aria-label="Editorial information">
               <Link href="/about">About the publication ↗</Link>
               <Link href="/about/editorial-standards">
@@ -243,7 +237,7 @@ export default function NewsArticle({
                   <div>
                     <strong>{sourceNameForCitation(citation)}</strong>
                     <small>
-                      {tier ? TIER_LABELS[tier] : "Tier not classified"} ·
+                      {tier ? TIER_LABELS[tier] : "Source"} ·
                       Accessed{" "}
                       {formatEditorialDate(citation.accessedAt)}
                     </small>
@@ -255,13 +249,6 @@ export default function NewsArticle({
               );
             })}
           </ol>
-          {evidence.limited ? (
-            <p className={styles.evidenceNotice}>
-              Corroboration is limited on this report. The evidence cue is
-              visible here and across the archive so readers can judge the
-              source base before acting.
-            </p>
-          ) : null}
         </section>
 
         {showContext ? <section className={styles.context} data-news-layer="context">
@@ -372,7 +359,7 @@ export default function NewsArticle({
             <p>
               {shortUpdate
                 ? "Bring the project, area or question you are considering. We will work through the details together."
-                : "Bring Raj the position, opportunity or concern. The first call is a working session, not a substitute for legal, tax or financial advice."}
+                : "Discuss the location, project and next steps with Raj."}
             </p>
             <a href={shortUpdate ? article.cta.href : cta.href}>
               {shortUpdate ? article.cta.label : cta.label} <span aria-hidden="true">↗</span>

@@ -164,8 +164,7 @@ export default function NewsFooter() {
               </span>
             </Link>
             <p>
-              Source-cited UAE real estate reporting, analysis and decision
-              intelligence from the Invest With Raj News Desk.
+              UAE real estate news and analysis from Invest With Raj.
             </p>
             <a
               href="mailto:office@investwithraj.com"

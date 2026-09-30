@@ -6,7 +6,7 @@ import { getPublicDiscoveryNewsArticles } from "@/lib/public-content";
 
 const PAGE_URL = SITE.url;
 const DESCRIPTION =
-  "Source-cited UAE real estate reporting: what moved, what it changes, and what serious buyers, sellers and developers should do next.";
+  "UAE real estate news, market updates and analysis for buyers, investors and developers.";
 
 export const metadata: Metadata = {
   title: "UAE Real Estate Intelligence",

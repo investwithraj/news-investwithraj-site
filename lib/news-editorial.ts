@@ -157,7 +157,7 @@ export function evidenceSummary(article: NewsArticle): EvidenceSummary {
     return {
       sourceCount,
       leadTier,
-      label: "Evidence review pending",
+      label: "Sources",
       detail: "No source links are attached to this record.",
       limited: true,
     };
@@ -167,10 +167,10 @@ export function evidenceSummary(article: NewsArticle): EvidenceSummary {
     return {
       sourceCount,
       leadTier,
-      label: `${leadLabel} · single source`,
+      label: leadLabel,
       detail: limited
-        ? "This report currently relies on one supporting source. Read the source before acting."
-        : "One high-authority source is attached. Independent corroboration is not shown on this page.",
+        ? "Source linked below."
+        : "Source linked below.",
       limited,
     };
   }

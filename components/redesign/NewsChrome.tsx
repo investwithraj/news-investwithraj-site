@@ -330,7 +330,7 @@ export default function NewsChrome() {
             <h2 id="news-directory-title">
               Read the market from every useful angle.
             </h2>
-            <span>Source-cited UAE real estate reporting and decision tools.</span>
+            <span>UAE real estate news and analysis.</span>
           </div>
 
           <nav className={styles.menuGroups} aria-label="Complete news directory">

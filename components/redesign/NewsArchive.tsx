@@ -24,31 +24,9 @@ export type NewsArchiveInitialParams = Partial<
   Record<ArchiveQueryKey, string>
 >;
 
-function freshnessCopy(freshness: NewsArchiveFreshness): string {
-  if (freshness.state === "empty" || freshness.ageHours === null) {
-    return "No published reports are currently in the archive.";
-  }
-  if (freshness.ageHours <= 1) {
-    return "Latest report published within the last hour.";
-  }
-  if (freshness.state === "fresh") {
-    return `Latest report published ${freshness.ageHours} hours ago.`;
-  }
-
-  const days = Math.max(2, Math.round(freshness.ageHours / 24));
-  return `Latest report published about ${days} days ago.`;
-}
-
-function freshnessHeading(freshness: NewsArchiveFreshness): string {
-  if (freshness.state === "fresh") return "Current reporting";
-  if (freshness.state === "stale") return "Archive mode";
-  return "Archive empty";
-}
-
 export default function NewsArchive({
   items,
   desks,
-  freshness,
   initialParams = {},
 }: {
   items: NewsArchiveItem[];
@@ -218,16 +196,14 @@ export default function NewsArchive({
         </Link>
         <div className={styles.heroGrid}>
           <div>
-            <p className={styles.eyebrow}>The reporting · structured archive</p>
+            <p className={styles.eyebrow}>UAE real estate news</p>
             <h1>
               Every <br className={styles.mobileBreak} />report,
               <br />
               in order.
             </h1>
             <p className={styles.dek}>
-              Browse source-linked UAE and Gulf real estate reporting by market,
-              report type, related area or developer, or one of five
-              editorial desks.
+              Explore real estate news by location, topic or developer.
             </p>
             <div className={styles.policyLinks}>
               <a href="/rss.xml">RSS feed ↗</a>
@@ -236,29 +212,13 @@ export default function NewsArchive({
               </Link>
             </div>
           </div>
-          <aside
-            className={styles.freshness}
-            data-state={freshness.state}
-            aria-label="Publication freshness"
-          >
-            <span className={styles.freshnessDot} aria-hidden="true" />
-            <div>
-              <span>Publication freshness</span>
-              <strong>{freshnessHeading(freshness)}</strong>
-              <small>{freshnessCopy(freshness)}</small>
-              <small>
-                Current means published within {freshness.thresholdHours}
-                hours.
-              </small>
-            </div>
-          </aside>
         </div>
       </header>
 
       <section className={styles.archive} aria-labelledby="archive-title">
         <div className={styles.archiveHead}>
           <div>
-            <p>Archive controls</p>
+            <p>Browse news</p>
             <h2 id="archive-title">Find a report.</h2>
           </div>
           <p aria-live="polite">
@@ -425,7 +385,7 @@ export default function NewsArchive({
                       </>
                     ) : (
                       <span className={styles.mediaFallback}>
-                        <span>Source-linked report</span>
+                        <span>Real estate news</span>
                         <strong>{item.markets.join(" / ")}</strong>
                         <small>
                           {item.categoryLabel} · {item.displayDate}
@@ -470,13 +430,6 @@ export default function NewsArchive({
                       <h3>{item.title}</h3>
                     </Link>
                     <p className={styles.subtitle}>{item.subtitle}</p>
-                    <span
-                      className={`${styles.evidence} ${
-                        item.evidenceLimited ? styles.evidenceLimited : ""
-                      }`}
-                    >
-                      Evidence · {item.evidenceLabel}
-                    </span>
                     <div className={styles.rowLinks}>
                       <Link href={`/news/${item.slug}`}>Read report ↗</Link>
                       {item.advisoryLinks.map((link) => (
