@@ -632,13 +632,13 @@ function AreasPane({ areas }: { areas: Props["areas"] }) {
   return (
     <div className={styles.areaList}>
       {areas.slice(0, 12).map((area) => (
-        <Link key={area.slug} href={`/news?area=${area.slug}`}>
+        <Link key={area.slug} href={`https://www.investwithraj.com/areas/${area.slug}`}>
           <span>{area.name}</span>
           <small>{area.emirate}</small>
         </Link>
       ))}
-      <Link className={styles.textLink} href="/news">
-        View all archive filters
+      <Link className={styles.textLink} href="https://www.investwithraj.com/areas">
+        Explore all area guides
       </Link>
     </div>
   );

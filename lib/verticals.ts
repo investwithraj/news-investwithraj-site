@@ -31,7 +31,7 @@ export const VERTICALS: Vertical[] = [
     name: "DLD Pulse",
     tagline: "Verified transaction reporting, placed in market context.",
     description:
-      "A focused archive of cited Dubai transaction, price and volume reporting. It is not a live DLD feed and does not claim to reproduce every registry record.",
+      "Dubai property sales, prices and transaction volumes — and what the figures tell buyers and owners.",
     method:
       "Reports enter this desk when the published article cites a primary or attributable market source and its central subject is Dubai transaction volume, pricing or registry activity.",
     categories: ["market-pulse"],
@@ -43,6 +43,7 @@ export const VERTICALS: Vertical[] = [
       "dubai real estate",
     ],
     curatedSlugs: [
+      "2026-09-30-dubai-offplan-prices-sales-pace",
       "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
       "2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
       "2026-07-02-dubai-real-estate-sets-historic-high-water-mark-with-aed-252",
@@ -93,7 +94,7 @@ export const VERTICALS: Vertical[] = [
     name: "UHNW Trades",
     tagline: "Material trophy-property moves, with the evidence visible.",
     description:
-      "A selective archive of cited ultra-prime sales, leases and branded-residence market signals. It does not claim a fixed transaction threshold or complete market coverage.",
+      "Ultra-prime home sales, exceptional leases and the branded-residence market across the UAE.",
     method:
       "Selection requires a material ultra-prime residential transaction or a directly relevant market report, with the amount and context supported in the article’s citations.",
     categories: ["market-pulse", "developer-corporate"],
@@ -101,6 +102,7 @@ export const VERTICALS: Vertical[] = [
       "ultra-prime",
       "penthouse",
       "branded residences",
+      "branded-home",
       "villa leased",
       "mansion",
       "trophy",
@@ -158,7 +160,7 @@ export const VERTICALS: Vertical[] = [
     name: "Beyond the Deal",
     tagline: "Longer reads for decisions that need more than a headline.",
     description:
-      "A curated reading room for policy, regulation and macro analysis affecting UAE real estate decisions. Publication follows the evidence, not a promised schedule.",
+      "The forces behind a property decision: financing, regulation, buyer demand and the way communities work.",
     method:
       "The desk selects analytical articles whose main value is interpretation across policy, regulation, financing, demand or market structure.",
     categories: ["macro", "policy", "regulatory", "market-pulse"],

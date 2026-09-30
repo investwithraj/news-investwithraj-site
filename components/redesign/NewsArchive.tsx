@@ -311,7 +311,7 @@ export default function NewsArchive({
               ))}
             </select>
           </label>
-          <label>
+          <label id="area-filter" style={{ scrollMarginTop: "7rem" }}>
             <span>Area</span>
             <select
               value={area}

@@ -503,8 +503,8 @@ assert.ok(
   "Terminal area shortcuts must be derived from the same archive projection.",
 );
 assert.ok(
-  terminalShellSource.includes('href={`/news?area=${area.slug}`}'),
-  "Terminal area shortcuts must target the typed archive filter.",
+  terminalShellSource.includes('href={`https://www.investwithraj.com/areas/${area.slug}`}'),
+  "Terminal links labelled Area guides must open the substantive area guides.",
 );
 
 for (const forbidden of [

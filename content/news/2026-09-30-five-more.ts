@@ -16,7 +16,7 @@ const stock = (file: string, alt: string, width: number, height: number): Omit<H
 type BriefInput = Pick<NewsArticle, "slug" | "title" | "subtitle" | "market" | "category" | "tldr" | "body" | "citations" | "brief"> & { image: Omit<HeroImage, "src"> };
 function brief({ image, ...input }: BriefInput): NewsArticle {
   return { ...input, status: "live", publishedAt, modifiedAt: publishedAt, displayDate: "30 September 2026", author: "raj-tomar", tier: "news", format: "short-update", faq: [], distribution: {}, metaDescription: input.subtitle,
-    heroImage: { ...image, src: `/news/${input.slug}/cover.webp` },
+    heroImage: { ...image, src: `/news/${input.slug}/${input.slug === "2026-09-30-dubai-offplan-prices-sales-pace" ? "cover.v2.webp" : "cover.webp"}` },
     cta: { href: `https://www.investwithraj.com/engage?intent=investment&source=news&subject=${input.slug}`, label: "Discuss your real estate plans" },
   };
 }
@@ -30,7 +30,7 @@ export const FIVE_MORE_NEWS_20260930: NewsArticle[] = [
     tldr: ["44 of 717 projects reduced prices by at least 5% since February’s end.", "Only 28 projects were below their original launch price.", "Pricing against nearby alternatives is shaping sales absorption."],
     body: "Broad discounts have yet to emerge across Dubai’s off-plan market, according to fäm Properties research reported by Khaleej Times on 30 September. Of 717 projects launched since July 2023, 44 had cut prices by at least 5% since the end of February. Just 28 were selling below their initial launch price.\n\nThe more revealing difference was sales pace. Among 574 projects launched since 2025, those priced at least 20% above their area’s median had sold a median 60% of units, against 73.8% for the median project in the sample.\n\nFor a buyer, that makes nearby competition worth examining closely. Compare the total price, layout and instalments with similar homes before treating an unchanged developer price as proof of demand. Slower sales can leave more choice available even when the advertised price stays put.",
     citations: [{ source: "Khaleej Times reporting on fäm Properties research, 30 September 2026", url: "https://www.khaleejtimes.com/business/dubai-developers-hold-off-plan-pricing-as-only-6-projects-cut-prices-by-5-or-more-since-february", accessedAt: "2026-09-30T19:35:00.000Z" }],
-    image: stock("dubai-golden.jpg", "Dubai skyline across the water at sunset", 7728, 5152),
+    image: stock("440311297.jpg", "Dubai Marina residential towers in daylight — archive neighbourhood photograph", 6506, 6506),
     brief: { headings: [{ beforeParagraph: 2, title: "Price the alternatives" }], note: "How does the asking price compare with similar homes in the same area?", related: { href: "https://www.investwithraj.com/explore", title: "Compare places and projects across Dubai.", label: "Explore real estate" } },
   }),
   brief({

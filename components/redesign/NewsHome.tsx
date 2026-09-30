@@ -198,7 +198,7 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
       </section>
 
       <section className={styles.doors} aria-label="Explore the intelligence">
-        <Link href="/news">
+        <Link href="/news#area-filter">
           <span>01</span>
           <strong>Area filters</strong>
           <p>Find news from the places you follow.</p>

@@ -26,7 +26,7 @@ const groups = [
   {
     title: "Market intelligence",
     links: [
-      { label: "Archive filters", href: "/news" },
+      { label: "Archive filters", href: "/news#area-filter" },
       {
         label: "Developer dossiers",
         href: "https://investwithraj.com/developers",
@@ -221,13 +221,13 @@ export default function NewsFooter() {
           <span>Independent · Dubai · GMT+4</span>
           <div>
             <a
-              href={PRACTICE_URL}
+              href="https://www.investwithraj.com/"
               rel="noopener noreferrer"
               data-cta-level="3"
               data-cta-action="editorial"
               data-cta-source="news-footer"
             >
-              Advisory ↗
+              Invest With Raj main website ↗
             </a>
             <a
               href="/sitemap.xml"

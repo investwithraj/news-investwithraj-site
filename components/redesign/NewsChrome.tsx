@@ -35,7 +35,7 @@ const menuGroups = [
   {
     title: "Markets",
     links: [
-      { label: "Browse archive filters", href: "/news" },
+      { label: "Browse archive filters", href: "/news#area-filter" },
       {
         label: "Developer dossiers",
         href: "https://investwithraj.com/developers",
@@ -296,15 +296,15 @@ export default function NewsChrome() {
           <a
             ref={bookRef}
             className={styles.book}
-            href={PRACTICE_URL}
-            aria-label="Book a working call"
+            href="https://www.investwithraj.com/"
+            aria-label="Back to Invest With Raj main website"
             rel="noopener noreferrer"
-            data-cta-level="1"
-            data-cta-action="book-call"
+            data-cta-level="3"
+            data-cta-action="editorial"
             data-cta-source="news-navigation"
           >
-            <span className={styles.bookLong}>Book a working call</span>
-            <span className={styles.bookShort}>Call</span>
+            <span className={styles.bookLong}>Main website</span>
+            <span className={styles.bookShort}>Main site</span>
             <span className={styles.bookArrow} aria-hidden="true">↗</span>
           </a>
         </div>

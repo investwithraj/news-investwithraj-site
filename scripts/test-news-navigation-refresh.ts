@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { FIVE_MORE_NEWS_20260930 } from '@/content/news/2026-09-30-five-more';
+import { VERTICALS, articleMatchesVertical } from '@/lib/verticals';
+const source=(p:string)=>fs.readFileSync(p,'utf8');
+assert(source('components/redesign/NewsHome.tsx').includes('href="/news#area-filter"'));
+assert(source('components/redesign/NewsArchive.tsx').includes('id="area-filter"'));
+assert(source('components/redesign/NewsChrome.tsx').includes('aria-label="Back to Invest With Raj main website"'));
+assert(source('components/terminal/TerminalShell.tsx').includes('https://www.investwithraj.com/areas/${area.slug}'));
+const offplan=FIVE_MORE_NEWS_20260930[0], branded=FIVE_MORE_NEWS_20260930[1];
+assert(!offplan.heroImage.sourceUrl?.includes('dubai-golden'));
+assert(offplan.heroImage.src.endsWith('cover.v2.webp'));
+assert(articleMatchesVertical(VERTICALS.find(v=>v.slug==='dld-pulse')!,offplan));
+assert(articleMatchesVertical(VERTICALS.find(v=>v.slug==='uhnw-trades')!,branded));
+assert(!articleMatchesVertical(VERTICALS.find(v=>v.slug==='dld-pulse')!,FIVE_MORE_NEWS_20260930[3]));
+console.log('PASS: navigation anchors, main-site return, real area-guide links, replacement cover and scoped desk assignments.');
