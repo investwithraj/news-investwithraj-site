@@ -81,7 +81,10 @@ import { article as art_2026_08_22_ellington_properties_partners_adcb_for_pre_ap
 import { article as art_2026_08_24_dib_opens_50_off_plan_finance_to_non_residents_in_shariah } from "./2026-08-24-dib-opens-50-off-plan-finance-to-non-residents-in-shariah";
 import { article as art_2026_09_26_meraas_awards_contract_to_gcc_contracting_for_272_villas_at } from "./2026-09-26-meraas-awards-contract-to-gcc-contracting-for-272-villas-at";
 
+import { FIVE_MORE_NEWS_20260930 } from "./2026-09-30-five-more";
+
 export const NEWS_ARTICLES: NewsArticle[] = [
+  ...FIVE_MORE_NEWS_20260930,
   ...MANUAL_NEWS_20260930,
   art_2026_09_26_meraas_awards_contract_to_gcc_contracting_for_272_villas_at,
   art_2026_08_24_dib_opens_50_off_plan_finance_to_non_residents_in_shariah,

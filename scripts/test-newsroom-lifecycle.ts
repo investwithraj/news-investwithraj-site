@@ -700,13 +700,12 @@ async function assertDiscoveryExclusions() {
     frontPayload.items.every((item) => !excludedSlugs.has(item.slug)),
     "/api/front exposed a retired or noindex article.",
   );
+  // A six-item recency feed must not pin this historical correction forever.
+  // Its continued discoverability is asserted against the full archive below.
   assert.ok(
-    frontPayload.items.some(
-      (item) =>
-        item.slug ===
-        CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION.slice("/news/".length),
-    ),
-    "/api/front failed to restore the corrected Aldar report.",
+    frontPayload.items.every((item) => item.slug !==
+      CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE.slice("/news/".length)),
+    "/api/front exposed the retired Aldar duplicate.",
   );
 
   const archiveSlugs = projectNewsArchiveItems(
@@ -745,12 +744,12 @@ async function assertDiscoveryExclusions() {
     ].map((match) => match[1]);
     assert.ok(newsSlugs.length > 0);
     assert.ok(newsSlugs.every((slug) => !excludedSlugs.has(slug)));
-    assert.ok(
-      newsSlugs.includes(
-        CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION.slice("/news/".length),
-      ),
-      "The News sitemap failed to restore the corrected Aldar report.",
-    );
+    const correctedSlug = CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION.slice("/news/".length);
+    const corrected = INDEXABLE_NEWS_ARTICLES.find((article) => article.slug === correctedSlug);
+    assert.ok(corrected, "Corrected Aldar article must remain indexable.");
+    const correctedAge = Date.now() - Date.parse(corrected.publishedAt);
+    assert.equal(newsSlugs.includes(correctedSlug), correctedAge >= 0 && correctedAge <= 48 * 60 * 60 * 1000,
+      "Corrected Aldar article must follow the same News sitemap age window as other articles.");
   } finally {
     Date.now = originalNow;
   }
@@ -761,9 +760,9 @@ async function assertDiscoveryExclusions() {
   assert.ok(llms.includes(`${SITE.url}/news?area={area-slug}`));
   assert.ok(llms.includes(`${SITE.url}/news?developer={developer-slug}`));
   assert.ok(!llms.includes(`${SITE.url}${CURRENT_RELEASE_ALDAR_REDIRECT_SOURCE}`));
-  assert.ok(
-    llms.includes(`${SITE.url}${CURRENT_RELEASE_ALDAR_REDIRECT_DESTINATION}`),
-  );
+  for (const article of INDEXABLE_NEWS_ARTICLES.filter((item) => Boolean(item.publicationContentHash)).slice(0, 5)) {
+    assert.ok(llms.includes(`${SITE.url}/news/${article.slug}`), "LLMs discovery must contain the current latest verified articles.");
+  }
 }
 
 function assertDuplicateResolution() {

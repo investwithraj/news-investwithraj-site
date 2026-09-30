@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import sharp from 'sharp';
 import { MANUAL_NEWS_20260930 } from '@/content/news/2026-09-30-chat-news';
+import { FIVE_MORE_NEWS_20260930 } from '@/content/news/2026-09-30-five-more';
 import { NEWS_ARTICLES } from '@/content/news';
 import { editorialImageHoldReasons } from '@/lib/news-editorial';
 import { getIndexablePublicNewsArticles } from '@/lib/news-discovery';
@@ -10,13 +11,13 @@ import { GET } from '@/app/api/front/route';
 
 async function main() {
  assert.equal(MANUAL_NEWS_20260930.length,6);
+ assert.equal(FIVE_MORE_NEWS_20260930.length,5);
  const indexed=getIndexablePublicNewsArticles();
  const feed=await (await GET()).json();
- for(const article of MANUAL_NEWS_20260930){
+ for(const article of [...FIVE_MORE_NEWS_20260930,...MANUAL_NEWS_20260930]){
   assert.equal(NEWS_ARTICLES.filter(a=>a.slug===article.slug).length,1);
   assert.equal(ARTICLE_RELATION_RECORDS.filter(a=>a.articleSlug===article.slug).length,1);
   assert(indexed.some(a=>a.slug===article.slug));
-  assert(feed.items.some((a:{slug:string;cover:string})=>a.slug===article.slug&&a.cover));
   assert.deepEqual(editorialImageHoldReasons(article),[]);
   const image=await sharp('public'+article.heroImage.src).metadata();
   assert.equal(image.width,1920);
@@ -35,7 +36,13 @@ async function main() {
   assert(!/Ownerss|Pangea|guaranteed returns/i.test(JSON.stringify(article)));
   if(article.heroImage.rightsStatus?.startsWith('CC '))assert(article.heroImage.licenceUrl);
  }
+ for(const article of FIVE_MORE_NEWS_20260930){
+  assert(feed.items.some((a:{slug:string;cover:string})=>a.slug===article.slug&&a.cover));
+  assert(Date.parse(article.publishedAt)<=Date.now());
+ }
+ assert.equal(feed.items.length,6);
+ assert.equal(new Set(feed.items.map((a:{slug:string})=>a.slug)).size,6);
  assert.equal(feed.media.approvedCoverCount,6);
- console.log('PASS: six unique, indexed manual articles; six UHD-approved covers; feed, relations, prose and licence checks.');
+ console.log('PASS: eleven unique, indexed manual articles; eleven UHD-approved covers; all five new stories in the six-item feed; relations, prose and licence checks.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
