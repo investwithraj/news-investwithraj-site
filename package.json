@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:review-desk-retired": "tsx scripts/test-review-desk-retired.ts",
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",

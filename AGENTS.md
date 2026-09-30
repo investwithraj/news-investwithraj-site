@@ -1,5 +1,16 @@
 # news.investwithraj.com — agent notes
 
+## CURRENT OVERRIDE — 30 September 2026: review desk removed
+
+Raj retired the automatic publisher and then explicitly requested removal of the
+review desk. The browser review UI and dependent write/cron routes are retired
+with HTTP 410. Preserve published articles, private records and credentials.
+Do not restore the old workflow or require its password. Editorial work happens
+in chat; approved manual releases use authenticated repository/deployment access
+and clean-build verification. No public write endpoint is authorised.
+See docs/editorial/REVIEW-DESK-RETIRED-2026-09-30.md.
+Historical scheduled-publication and desk instructions below are superseded.
+
 This is the **news firehose subdomain** of the Invest With Raj brand
 family. It is a separate Next.js 16 app from the IWR root repo at
 `~/Downloads/landing page/investwithraj/`. Do not cross-pollinate.

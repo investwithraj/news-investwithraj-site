@@ -5,6 +5,7 @@
 // never receives POST_PUBLISH_SECRET.
 
 import { NextRequest, NextResponse } from "next/server";
+import { isRetiredReviewPath, retiredReviewResponse } from "@/lib/review-desk-retirement";
 import { isReleasedNewsroomRemovalPath } from "@/lib/news-lifecycle";
 import { decideNewsroomPublicMedia } from "@/lib/public-media-policy";
 import {
@@ -82,6 +83,8 @@ function strongCredentials(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Retire before the old Basic Auth challenge; never expose the former desk.
+  if (isRetiredReviewPath(pathname)) return retiredReviewResponse(request);
   const mediaDecision = decideNewsroomPublicMedia(pathname);
   if (mediaDecision.state !== "ungoverned") {
     if (mediaDecision.allowed) {
@@ -228,6 +231,10 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/internal/:path*",
+    "/api/news/draft/:path*",
+    "/api/news/correction/:path*",
+    "/api/cron/draft/:path*",
+    "/api/cron/news-watchdog/:path*",
     "/audio/:path*",
     "/brand/:path*",
     "/cinema/:path*",

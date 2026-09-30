@@ -1,29 +1,11 @@
-import { NextRequest } from "next/server";
+// Retired with the newsroom review desk. No credential, store or provider access.
+import { retiredReviewResponse } from "@/lib/review-desk-retirement";
 
-import { runNewsWatchdog } from "@/lib/news-scheduler/watchdog";
-import {
-  authorizeServerMutation,
-  privateJson,
-} from "@/lib/security/mutation";
-
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
-
-export async function GET(request: NextRequest) {
-  if (process.env.ENABLE_NEWS_WATCHDOG !== "1") {
-    const receipt = await runNewsWatchdog();
-    return privateJson(receipt, receipt.httpStatus);
-  }
-  const auth = authorizeServerMutation(request, { allowCronBearer: true });
-  if (!auth.ok) return auth.response;
-  if (auth.credential !== "cron") {
-    return privateJson(
-      { error: "The news watchdog requires the Vercel Cron bearer credential." },
-      403,
-    );
-  }
-
-  const receipt = await runNewsWatchdog();
-  return privateJson(receipt, receipt.httpStatus);
-}
+export const GET = retiredReviewResponse;
+export const POST = retiredReviewResponse;
+export const PATCH = retiredReviewResponse;
+export const DELETE = retiredReviewResponse;
+export const PUT = retiredReviewResponse;
+export const OPTIONS = retiredReviewResponse;
+export const HEAD = retiredReviewResponse;
