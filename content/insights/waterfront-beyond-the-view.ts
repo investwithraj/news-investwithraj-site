@@ -81,5 +81,6 @@ Before your next waterfront viewing, write down three things: the premium you ar
   },
   cta: { href: "https://www.investwithraj.com/engage?intent=investment&source=beyond-the-deal&subject=waterfront-beyond-the-view", label: "Discuss a waterfront purchase" },
   distribution: {},
+  linkedinUrl: "https://www.linkedin.com/pulse/view-investment-raj-tomar-jeuye/",
   readTimeMin: 5,
 };
