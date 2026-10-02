@@ -43,6 +43,7 @@ export const VERTICALS: Vertical[] = [
       "dubai real estate",
     ],
     curatedSlugs: [
+      "2026-10-02-dubai-september-property-sales",
       "2026-09-30-dubai-offplan-prices-sales-pace",
       "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
       "2026-07-14-dubai-property-prices-fall-1-24-in-june-as-yields-hold-at-6-",
@@ -72,6 +73,8 @@ export const VERTICALS: Vertical[] = [
       "delivery",
     ],
     curatedSlugs: [
+      "2026-10-02-one-only-al-maryah-residences",
+      "2026-10-02-burj-azizi-kone-elevators",
       "2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-",
       "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
       "2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",
@@ -108,6 +111,7 @@ export const VERTICALS: Vertical[] = [
       "trophy",
     ],
     curatedSlugs: [
+      "2026-10-02-one-only-al-maryah-residences",
       "2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra",
       "2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
       "2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh",
