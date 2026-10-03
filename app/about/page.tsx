@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { SITE } from "@/lib/constants";
+import { SITE, rootCtaUrl } from "@/lib/constants";
 import {
   asGraph,
   breadcrumbSchema,
@@ -14,9 +14,7 @@ import {
 import styles from "./AboutPages.module.css";
 
 const PAGE_URL = `${SITE.url}/about`;
-const ADVISORY_URL =
-  `${SITE.rootUrl}/engage?utm_source=news.investwithraj.com` +
-  "&utm_medium=about&utm_campaign=editorial_to_advisory";
+const ADVISORY_URL = rootCtaUrl({ placement: "about", campaign: "editorial_to_advisory", content: "about" });
 const DESCRIPTION =
   "Why Invest With Raj Intelligence exists, who Raj is, and where source-led UAE real estate reporting ends and personal advisory begins.";
 

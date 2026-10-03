@@ -8,7 +8,11 @@ import mediaContract from "../config/media-contract.json";
 const read = (path: string) => readFileSync(resolve(path));
 const text = (path: string) => read(path).toString("utf8");
 const sha256 = (path: string) =>
-  createHash("sha256").update(read(path)).digest("hex");
+  createHash("sha256")
+    // Git's Windows checkout changes only SVG line endings. Keep the approved
+    // LF content hash; font binaries and every SVG character remain strict.
+    .update(path.endsWith(".svg") ? text(path).replace(/\r\n/g, "\n") : read(path))
+    .digest("hex");
 
 const approvedFiles = {
   "app/brand/approved-v1.2-package/Montserrat-ExtraBold.ttf":

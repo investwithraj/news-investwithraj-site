@@ -18,17 +18,18 @@
    ──────────────────────────────────────────────────────────────────── */
 
 import Link from "next/link";
+import { SITE } from "@/lib/constants";
 
 const MAIN_URL =
-  process.env.NEXT_PUBLIC_MAIN_URL ?? "https://investwithraj.com";
+  process.env.NEXT_PUBLIC_MAIN_URL ?? SITE.rootUrl;
 
-/** The main practice home, tagged so it can attribute nav traffic sent over
- *  from the news terminal (source=news.investwithraj.com · medium=nav). */
+/** The main practice home, retaining internal placement rather than campaign tags. */
 const PRACTICE_HREF = (() => {
   const params = new URLSearchParams({
-    utm_source: "news.investwithraj.com",
-    utm_medium: "nav",
-    utm_content: "the-practice",
+    source: "news",
+    iwr_placement: "nav",
+    iwr_context: "connected_platform",
+    iwr_content: "the-practice",
   });
   return `${MAIN_URL}/?${params.toString()}`;
 })();

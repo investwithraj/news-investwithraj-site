@@ -38,10 +38,11 @@ export const EDITORIAL = {
 export function rootCtaUrl(opts: {
   campaign?: string;
   content?: string;
+  placement?: string;
 }): string {
   const params = new URLSearchParams({
     source: "news",
-    iwr_placement: "article-footer",
+    iwr_placement: opts.placement ?? "article-footer",
     iwr_context: opts.campaign ?? "article-footer",
     iwr_content: opts.content ?? "request-the-note",
   });

@@ -15,9 +15,21 @@ for (const href of [rootCtaUrl({}), generalAdvisoryUrl("area", "saadiyat-island"
   assert.equal([...url.searchParams.keys()].some(key => key.startsWith("utm_")), false);
   assert.ok(url.searchParams.get("iwr_placement"));
 }
-for (const file of ["components/redesign/NewsHome.tsx", "components/redesign/NewsChrome.tsx", "components/redesign/NewsFooter.tsx"]) {
+const pageCta = new URL(rootCtaUrl({ placement: "about", campaign: "editorial_to_advisory", content: "about" }));
+assert.equal(pageCta.pathname, "/engage");
+assert.equal(pageCta.searchParams.get("source"), "news");
+assert.equal(pageCta.searchParams.get("iwr_placement"), "about");
+assert.equal(pageCta.searchParams.get("iwr_context"), "editorial_to_advisory");
+for (const file of ["components/redesign/NewsHome.tsx", "components/redesign/NewsChrome.tsx", "components/redesign/NewsFooter.tsx", "app/about/page.tsx", "app/about/editorial-standards/page.tsx", "components/EditorialFooter.tsx", "components/immersive/acts/CrossLinkAct.tsx", "components/v17/chrome/V17EdgeNav.tsx"]) {
   assert.doesNotMatch(readFileSync(file, "utf8"), /utm_(source|medium|campaign|content)/);
 }
+const policy = readFileSync("app/about/editorial-standards/page.tsx", "utf8");
+assert.doesNotMatch(policy, /allowlisted publisher domains|editorial validator|held for review|Automated newsroom publication|AI briefs/);
+assert.match(policy, /Publisher/);
+assert.match(policy, /Raj Tomar · Invest With Raj/);
+assert.match(policy, /Corrections and enquiries/);
+assert.match(policy, /REVIEWED_DATE = "2026-10-03"/);
+assert.match(policy, /Updated 3 October 2026/);
 const runtime = readFileSync("lib/analytics.ts", "utf8");
 assert.match(runtime, /if \(isAllowed\("ga4"\)\) window\.gtag/);
 assert.match(runtime, /if \(isAllowed\("ga4"\)\) window\.dataLayer/);

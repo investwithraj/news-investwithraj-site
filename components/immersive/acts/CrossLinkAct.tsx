@@ -28,6 +28,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { SITE } from "@/lib/constants";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { KineticHeadline } from "@/components/futurism/KineticHeadline";
@@ -39,22 +40,22 @@ import {
   type Currency,
 } from "@/lib/fx/rates";
 
-const ROOT_URL = "https://investwithraj.com";
+const ROOT_URL = SITE.rootUrl;
 const WHATSAPP_E164 = "971589966085";
 const WHATSAPP_DISPLAY = "+971 58 996 6085";
 
 /**
  * Cross-property link builder. Every hand-off from the news terminal to the
- * main practice carries unified attribution (utm_source=news.investwithraj.com,
- * utm_medium=crosslink) so the practice can see exactly what this act sends
- * across. Honest tagging only — no redirects, no cloaking.
+ * main practice retains internal placement context without replacing the
+ * visitor's acquisition campaign.
  */
 function practiceUrl(path = "", content?: string): string {
   const params = new URLSearchParams({
-    utm_source: "news.investwithraj.com",
-    utm_medium: "crosslink",
+    source: "news",
+    iwr_placement: "crosslink",
+    iwr_context: "connected_platform",
   });
-  if (content) params.set("utm_content", content);
+  if (content) params.set("iwr_content", content);
   return `${ROOT_URL}${path}?${params.toString()}`;
 }
 

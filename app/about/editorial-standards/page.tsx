@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { CONTACT, SITE } from "@/lib/constants";
+import { CONTACT, SITE, rootCtaUrl } from "@/lib/constants";
 import {
   asGraph,
   breadcrumbSchema,
@@ -11,10 +11,8 @@ import {
 import styles from "../AboutPages.module.css";
 
 const PAGE_URL = `${SITE.url}/about/editorial-standards`;
-const REVIEWED_DATE = "2026-07-31";
-const ADVISORY_URL =
-  `${SITE.rootUrl}/engage?utm_source=news.investwithraj.com` +
-  "&utm_medium=editorial_standards&utm_campaign=editorial_to_advisory";
+const REVIEWED_DATE = "2026-10-03";
+const ADVISORY_URL = rootCtaUrl({ placement: "editorial_standards", campaign: "editorial_to_advisory", content: "editorial-standards" });
 const DESCRIPTION =
   "The source, verification, interpretation, correction, AI and conflicts standards used by Invest With Raj Intelligence.";
 
@@ -63,44 +61,44 @@ const standards = [
   {
     id: "evidence",
     number: "01",
-    title: "Evidence first",
+    title: "Accurate reporting",
     body:
-      "A report begins with an identifiable record. Material names, dates, prices, percentages, policy thresholds and attributed statements must be supportable from the sources linked to the page. If the record is too weak, the claim is withheld or described as unverified.",
+      "We check names, dates and material figures against identifiable sources. Announcements, construction progress and completed delivery are reported distinctly. Publication dates and the periods covered by market data remain clear.",
   },
   {
     id: "sources",
     number: "02",
-    title: "Source hierarchy",
+    title: "Sources you can follow",
     body:
-      "Regulators, public records, statutory notices and first-party corporate filings are preferred. Named research and reputable reporting can add context. Discovery feeds and social posts are leads, not proof. A link must support the specific nearby claim, not merely discuss the same subject.",
+      "Official announcements, public records and named market research form the basis of our coverage, alongside reputable reporting. We link the sources behind material claims. A developer's announcement is attributed to that developer, not presented as an independent endorsement.",
   },
   {
     id: "interpretation",
     number: "03",
     title: "Interpretation is labelled",
     body:
-      "Reported fact and News Desk interpretation do different jobs. Fact describes what the available record establishes. Interpretation explains a possible consequence for a buyer or investor. Forecasts are framed as scenarios, risks or watchpoints—never as guaranteed returns, prices or outcomes.",
+      "News explains what happened. Analysis examines its significance for buyers, owners and investors. Commentary is identified, and financial scenarios are distinguished from reported market results.",
   },
   {
     id: "corrections",
     number: "04",
     title: "Corrections remain visible",
     body:
-      "A material factual error should be corrected promptly once stronger evidence is verified. The page's modification date is updated and a material correction should be disclosed on the page. Changes in interpretation are not silently presented as changes in fact.",
+      "When a material factual error is established, we correct the article and explain the change on the page. A substantive update carries its actual update date; the original publication date is retained.",
   },
   {
     id: "ai",
     number: "05",
-    title: "AI can assist, never source",
+    title: "Use of AI",
     body:
-      "AI may help organise research, search a bounded editorial packet, summarise, translate, structure or draft. It is never treated as evidence. Automated newsroom publication is permitted only when the normal editorial validator passes, at least two allowlisted publisher domains have independently fetched evidence, and every material figure traces to that evidence; anything else remains held for review.",
+      "AI tools can assist research organisation and drafting. They are not factual sources: published claims are checked against identified records, and editorial responsibility remains with Invest With Raj.",
   },
   {
     id: "conflicts",
     number: "06",
     title: "Conflicts and commercial material",
     body:
-      "Editorial coverage and Raj's advisory work sit under the same name, so the boundary must be explicit. A commercial relationship must not lower the evidence standard or remove a material watchpoint. Paid or sponsored material, if introduced, must be labelled and separated from independent reporting.",
+      "Invest With Raj publishes real estate reporting and provides advisory services. Relevant commercial relationships are disclosed. Paid or sponsored coverage, if introduced, is labelled and kept distinct from editorial reporting.",
   },
 ];
 
@@ -118,28 +116,27 @@ export default function EditorialStandardsPage() {
         <header className={styles.policyHero}>
           <div className={styles.heroRegister}>
             <Link href="/about">← About the publication</Link>
-            <span>Reviewed 31 July 2026</span>
+            <span>Updated 3 October 2026</span>
           </div>
           <p>Editorial standards</p>
           <h1>
-            Evidence first.
+            How we report.
             <br />
-            Interpretation labelled.
+            What you can expect.
           </h1>
           <p>
-            These are the working rules for reporting published on
-            news.investwithraj.com. They describe what readers can expect and
-            how to challenge the record.
+            Clear sources, accurate dates and original reporting, with analysis
+            focused on the decisions facing real estate buyers and investors.
           </p>
         </header>
 
         <div className={styles.policyRegister}>
           <span>Applies to</span>
-          <strong>News · analysis · area and developer records · AI briefs</strong>
+          <strong>News · analysis · area and developer guides</strong>
           <span>Publication</span>
           <strong>{SITE.name}</strong>
-          <span>Publishing identity</span>
-          <strong>Invest With Raj News Desk</strong>
+          <span>Publisher</span>
+          <strong>Raj Tomar · Invest With Raj</strong>
         </div>
 
         <div className={styles.policyList}>
@@ -157,16 +154,15 @@ export default function EditorialStandardsPage() {
           className={styles.challenge}
           aria-labelledby="challenge-title"
         >
-          <p>07 · Challenge the record</p>
-          <h2 id="challenge-title">Bring the stronger source.</h2>
+          <p>Corrections and enquiries</p>
+          <h2 id="challenge-title">Get in touch.</h2>
           <p>
-            Send the article URL, the exact statement being challenged and the
-            strongest supporting source to{" "}
+            For a correction, send the article link, the relevant statement and
+            any supporting source to{" "}
             <a href={`mailto:${CONTACT.email}?subject=Correction%20request`}>
               {CONTACT.email}
             </a>
-            . A challenge is reviewed against the source record; it is not
-            accepted or rejected on the basis of commercial preference.
+            . We assess corrections against the source record.
           </p>
           <div>
             <Link href="/news">Read the reporting archive →</Link>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SITE } from "@/lib/constants";
 
 const PRACTICE_URL =
-  "https://investwithraj.com/?utm_source=news.investwithraj.com&utm_medium=footer&utm_campaign=organic-authority";
+  `${SITE.rootUrl}/?source=news&iwr_placement=editorial_footer&iwr_context=connected_platform`;
 
 export default function EditorialFooter() {
   return (
