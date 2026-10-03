@@ -20,6 +20,17 @@ assert.equal(pageCta.pathname, "/engage");
 assert.equal(pageCta.searchParams.get("source"), "news");
 assert.equal(pageCta.searchParams.get("iwr_placement"), "about");
 assert.equal(pageCta.searchParams.get("iwr_context"), "editorial_to_advisory");
+for (const article of NEWS_ARTICLES) {
+  const url = new URL(decisionCta(article).href);
+  assert.equal(url.origin, "https://www.investwithraj.com");
+  assert.equal(url.pathname, "/engage");
+  assert.equal(url.searchParams.get("subject"), article.slug);
+  assert.equal(url.searchParams.get("source"), "news");
+  assert.equal([...url.searchParams.keys()].some(key => key.startsWith("utm_")), false);
+}
+const articleTemplate = readFileSync("components/redesign/NewsArticle.tsx", "utf8");
+assert.doesNotMatch(articleTemplate, /article\.cta\.href/);
+assert.match(articleTemplate, /<a href=\{cta\.href\}>/);
 for (const file of ["components/redesign/NewsHome.tsx", "components/redesign/NewsChrome.tsx", "components/redesign/NewsFooter.tsx", "app/about/page.tsx", "app/about/editorial-standards/page.tsx", "components/EditorialFooter.tsx", "components/immersive/acts/CrossLinkAct.tsx", "components/v17/chrome/V17EdgeNav.tsx"]) {
   assert.doesNotMatch(readFileSync(file, "utf8"), /utm_(source|medium|campaign|content)/);
 }

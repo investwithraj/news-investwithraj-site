@@ -361,7 +361,7 @@ export default function NewsArticle({
                 ? "Bring the project, area or question you are considering. We will work through the details together."
                 : "Discuss the location, project and next steps with Raj."}
             </p>
-            <a href={shortUpdate ? article.cta.href : cta.href}>
+            <a href={cta.href}>
               {shortUpdate ? article.cta.label : cta.label} <span aria-hidden="true">↗</span>
             </a>
           </div>
