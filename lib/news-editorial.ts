@@ -433,11 +433,12 @@ export function decisionCta(article: NewsArticle): {
   };
 
   const selected = copy[article.category];
-  const url = new URL("/engage", "https://investwithraj.com");
-  url.searchParams.set("utm_source", "news");
-  url.searchParams.set("utm_medium", "article");
-  url.searchParams.set("utm_campaign", "decision-brief");
-  url.searchParams.set("utm_content", article.slug);
+  const url = new URL("/engage", "https://www.investwithraj.com");
+  url.searchParams.set("source", "news");
+  url.searchParams.set("iwr_placement", "article");
+  url.searchParams.set("iwr_context", "decision-brief");
+  url.searchParams.set("iwr_content", article.slug);
+  url.searchParams.set("subject", article.slug);
   const href = url.toString();
 
   return { href, ...selected };

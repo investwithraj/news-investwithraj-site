@@ -10,9 +10,9 @@ import IwrMark from "@/components/brand/IwrMark";
 import styles from "./NewsChrome.module.css";
 
 const PRACTICE_URL =
-  "https://investwithraj.com/engage?utm_source=news.investwithraj.com&utm_medium=nav&utm_campaign=editorial_to_advisory";
+  "https://www.investwithraj.com/engage?source=news&iwr_placement=nav&iwr_context=editorial_to_advisory";
 const BRIEF_URL =
-  "https://investwithraj.com/brief?utm_source=news.investwithraj.com&utm_medium=directory&utm_campaign=editorial_to_advisory";
+  "https://www.investwithraj.com/brief?source=news&iwr_placement=directory&iwr_context=editorial_to_advisory";
 const WHATSAPP_URL =
   "https://wa.me/971589966085?text=Hello%20Raj%2C%20I%20came%20from%20Invest%20With%20Raj%20Intelligence.";
 

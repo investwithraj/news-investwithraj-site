@@ -48,7 +48,7 @@ export function advisoryLinksForArea(area: AreaPage): AdvisoryLink[] {
   if (areaSlug) {
     links.push({
       href: withTracking(
-        `https://investwithraj.com/areas/${areaSlug}`,
+        `https://www.investwithraj.com/areas/${areaSlug}`,
         "area-dossier",
         area.slug,
       ),
@@ -63,7 +63,7 @@ export function advisoryLinksForArea(area: AreaPage): AdvisoryLink[] {
       `/notes/${area.iwrNoteSlug}`;
     links.push({
       href: withTracking(
-        `https://investwithraj.com${destination}`,
+        `https://www.investwithraj.com${destination}`,
         "institutional-note",
         area.slug,
       ),
@@ -82,7 +82,7 @@ export function advisoryLinkForDeveloper(
   if (!ADVISORY_DEVELOPER_SLUGS.has(slug)) return null;
   return {
     href: withTracking(
-      `https://investwithraj.com/developers/${slug}`,
+      `https://www.investwithraj.com/developers/${slug}`,
       "developer-dossier",
       slug,
     ),
@@ -96,7 +96,7 @@ export function generalAdvisoryUrl(
   slug: string,
 ): string {
   return withTracking(
-    "https://investwithraj.com/engage",
+    "https://www.investwithraj.com/engage",
     `${context}-decision`,
     slug,
   );
@@ -108,9 +108,9 @@ function withTracking(
   content: string,
 ): string {
   const url = new URL(base);
-  url.searchParams.set("utm_source", "news.investwithraj.com");
-  url.searchParams.set("utm_medium", "editorial");
-  url.searchParams.set("utm_campaign", campaign);
-  url.searchParams.set("utm_content", content);
+  url.searchParams.set("iwr_placement", "news-editorial");
+  url.searchParams.set("iwr_context", campaign);
+  url.searchParams.set("iwr_content", content);
+  if (url.pathname === "/engage") url.searchParams.set("source", "news");
   return url.toString();
 }

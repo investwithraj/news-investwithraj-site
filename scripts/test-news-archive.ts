@@ -402,9 +402,9 @@ for (const item of items) {
 
   for (const link of item.advisoryLinks) {
     const url = new URL(link.href);
-    assert.equal(url.hostname, "investwithraj.com");
-    assert.equal(url.searchParams.get("utm_source"), "news.investwithraj.com");
-    assert.equal(url.searchParams.get("utm_medium"), "editorial");
+    assert.equal(url.hostname, "www.investwithraj.com");
+    assert.equal(url.searchParams.get("iwr_placement"), "news-editorial");
+    assert.equal([...url.searchParams.keys()].some(key => key.startsWith("utm_")), false);
   }
 }
 

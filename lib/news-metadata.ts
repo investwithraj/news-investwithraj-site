@@ -14,13 +14,23 @@ export function newsArticleMetadata(article: NewsArticle): Metadata {
   const url = `${SITE.url}/news/${article.slug}`;
   const imageUrl = `${SITE.url}/api/og?slug=${encodeURIComponent(article.slug)}`;
   const hasImage = hasVerifiedEditorialImage(article);
+  const indexable = isIndexablePublicNewsArticleSlug(article.slug);
 
   return {
     title: article.title,
     description: article.metaDescription || article.subtitle,
     robots: {
-      index: isIndexablePublicNewsArticleSlug(article.slug),
+      index: indexable,
       follow: true,
+      // Route metadata replaces (rather than deep-merges) layout robots.
+      // Preserve large-image eligibility without making held articles indexable.
+      googleBot: {
+        index: indexable,
+        follow: true,
+        "max-image-preview": "large",
+        "max-video-preview": -1,
+        "max-snippet": -1,
+      },
     },
     alternates: {
       canonical: url,

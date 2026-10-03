@@ -74,6 +74,7 @@ export const VERTICALS: Vertical[] = [
     ],
     curatedSlugs: [
       "2026-10-02-one-only-al-maryah-residences",
+      "2026-10-03-ritz-carlton-al-maryah-construction",
       "2026-10-02-burj-azizi-kone-elevators",
       "2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-",
       "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
@@ -112,6 +113,7 @@ export const VERTICALS: Vertical[] = [
     ],
     curatedSlugs: [
       "2026-10-02-one-only-al-maryah-residences",
+      "2026-10-03-ritz-carlton-al-maryah-construction",
       "2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra",
       "2026-07-06-bugatti-residences-closes-aed-270mn-in-june-penthouse-sales",
       "2026-06-20-ahs-properties-acquires-shangri-la-dubai-for-dh1-1bn-eyes-dh",
@@ -145,6 +147,8 @@ export const VERTICALS: Vertical[] = [
     ],
     excludeKeywords: ["rumour", "rumor"],
     curatedSlugs: [
+      "2026-10-03-musaffah-innovation-district",
+      "2026-10-03-mid-island-parkway-2027",
       "2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-",
       "2026-07-23-aldar-activates-aed-100-bn-marsa-al-saadiyat-saadiyat-island",
       "2026-07-10-aldar-unveils-dh6bn-yas-point-1-600-residences-anchor-northe",

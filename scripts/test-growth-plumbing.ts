@@ -93,7 +93,7 @@ async function main() {
     apiHost: "https://us.i.posthog.com",
   });
   assert.deepEqual(config.crossDomainHosts, [
-    "investwithraj.com",
+    "www.investwithraj.com",
     "news.investwithraj.com",
   ]);
 
@@ -295,6 +295,11 @@ async function main() {
 
     for (const article of indexable) {
       const metadata = newsArticleMetadata(article);
+      const googleBot = (metadata.robots as {
+        googleBot?: { index?: boolean; "max-image-preview"?: string };
+      }).googleBot;
+      assert.equal(googleBot?.index, true);
+      assert.equal(googleBot?.["max-image-preview"], "large");
       assert.equal(
         (metadata.robots as { index?: boolean } | undefined)?.index,
         true,
@@ -320,6 +325,11 @@ async function main() {
     ).getNewsBySlug(noindexSlug);
     assert.ok(noindexArticle);
     const noindexMetadata = newsArticleMetadata(noindexArticle);
+    assert.equal(
+      (noindexMetadata.robots as { googleBot?: { index?: boolean } }).googleBot?.index,
+      false,
+      "Googlebot-specific metadata must preserve the held article's noindex state.",
+    );
     assert.equal(
       (noindexMetadata.robots as { index?: boolean } | undefined)?.index,
       false,

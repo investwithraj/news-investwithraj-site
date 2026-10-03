@@ -52,13 +52,13 @@ for (const article of published) {
     assert.ok(area.advisoryLinks.length > 0);
     assert.ok(
       area.advisoryLinks.every((link) =>
-        link.href.startsWith("https://investwithraj.com/"),
+      link.href.startsWith("https://www.investwithraj.com/"),
       ),
     );
   }
   for (const developer of relations.developers) {
     assert.ok(
-      developer.advisoryLink.href.startsWith("https://investwithraj.com/"),
+      developer.advisoryLink.href.startsWith("https://www.investwithraj.com/"),
     );
   }
 
@@ -67,10 +67,12 @@ for (const article of published) {
 
   const cta = decisionCta(article);
   const ctaUrl = new URL(cta.href);
-  assert.equal(ctaUrl.origin, "https://investwithraj.com");
+  assert.equal(ctaUrl.origin, "https://www.investwithraj.com");
   assert.equal(ctaUrl.pathname, "/engage");
-  assert.equal(ctaUrl.searchParams.get("utm_source"), "news");
-  assert.equal(ctaUrl.searchParams.get("utm_content"), article.slug);
+  assert.equal(ctaUrl.searchParams.get("source"), "news");
+  assert.equal(ctaUrl.searchParams.get("iwr_content"), article.slug);
+  assert.equal(ctaUrl.searchParams.get("subject"), article.slug);
+  assert.equal([...ctaUrl.searchParams.keys()].some(key => key.startsWith("utm_")), false);
 }
 
 assert.match(css, /\.context/);

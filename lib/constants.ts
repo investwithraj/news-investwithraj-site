@@ -5,7 +5,7 @@ export const SITE = {
   url:
     process.env.NEXT_PUBLIC_SITE_URL ??
     "https://news.investwithraj.com",
-  rootUrl: "https://investwithraj.com",
+  rootUrl: "https://www.investwithraj.com",
   name: "Invest With Raj Intelligence",
   tagline:
     "UAE real estate intelligence. Curated. Cited. Read like an analyst.",
@@ -34,16 +34,16 @@ export const EDITORIAL = {
   bylineUrl: `${SITE.url}/about/editorial-standards`,
 } as const;
 
-/** Lead-back CTA URLs — every news article footer points here, UTM-tagged. */
+/** Internal placement metadata must not impersonate an acquisition campaign. */
 export function rootCtaUrl(opts: {
   campaign?: string;
   content?: string;
 }): string {
   const params = new URLSearchParams({
-    utm_source: "news",
-    utm_medium: "internal",
-    utm_campaign: opts.campaign ?? "article-footer",
-    utm_content: opts.content ?? "request-the-note",
+    source: "news",
+    iwr_placement: "article-footer",
+    iwr_context: opts.campaign ?? "article-footer",
+    iwr_content: opts.content ?? "request-the-note",
   });
   return `${SITE.rootUrl}/engage?${params.toString()}`;
 }

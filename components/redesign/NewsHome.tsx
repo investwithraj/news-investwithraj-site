@@ -237,7 +237,7 @@ export default function NewsHome({ articles }: { articles: NewsArticle[] }) {
             If a market move changes your position, book a short working call
             with Raj. Bring the decision; leave with the next move.
           </p>
-          <a href="https://investwithraj.com/engage?utm_source=news.investwithraj.com&utm_medium=homepage_cta&utm_campaign=editorial_to_advisory">
+          <a href="https://www.investwithraj.com/engage?source=news&iwr_placement=homepage_cta&iwr_context=editorial_to_advisory">
             Book 15 minutes <span aria-hidden="true">↗</span>
           </a>
         </div>

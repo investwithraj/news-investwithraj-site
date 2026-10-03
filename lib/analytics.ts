@@ -1,6 +1,7 @@
 "use client";
 
 import { isAllowed } from "@/lib/consent/state";
+import { googleEventProperties } from "@/lib/google-event-properties";
 
 declare global {
   interface Window {
@@ -136,13 +137,13 @@ export function trackInteractionEvent(
   }
 
   try {
-    window.gtag?.("event", eventName, sanitized);
+    if (isAllowed("ga4")) window.gtag?.("event", eventName, googleEventProperties(sanitized));
   } catch {
     // Analytics must never interrupt the reader.
   }
 
   try {
-    window.dataLayer?.push({ event: eventName, ...sanitized });
+    if (isAllowed("ga4")) window.dataLayer?.push({ event: eventName, ...googleEventProperties(sanitized) });
   } catch {
     // Analytics must never interrupt the reader.
   }

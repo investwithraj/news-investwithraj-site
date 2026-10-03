@@ -582,8 +582,9 @@ function assertPublicNoindexMetadataGates() {
 
   assert.match(
     articleMetadata,
-    /index: isIndexablePublicNewsArticleSlug\(article\.slug\)/,
+    /const indexable = isIndexablePublicNewsArticleSlug\(article\.slug\)/,
   );
+  assert.equal((articleMetadata.match(/index: indexable/g) ?? []).length, 2);
   assert.match(articleMetadata, /follow:\s*true/);
   assert.match(articleRoute, /return newsArticleMetadata\(article\)/);
   assert.match(
