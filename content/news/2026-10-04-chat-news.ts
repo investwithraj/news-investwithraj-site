@@ -1,0 +1,36 @@
+import type { NewsArticle } from "./types";
+
+export const MANUAL_NEWS_20261004: NewsArticle[] = [{
+  slug: "2026-10-04-abu-dhabi-bus-digital-upgrade", status: "live",
+  title: "Abu Dhabi's AED300m bus upgrade puts service quality in the property picture",
+  subtitle: "A new operating and payment system is a different investment signal from a new road or rail line. Delivery details still matter.",
+  publishedAt: "2026-10-04T04:45:00.000Z", modifiedAt: "2026-10-04T04:45:00.000Z",
+  displayDate: "4 October 2026", author: "raj-tomar", tier: "news", format: "long-report",
+  category: "infrastructure", market: ["Abu Dhabi"],
+  tldr: ["More than AED300m announced on 2 October.", "Fleet management and fare collection are the central scope.", "No new route map or implementation date was disclosed."],
+  brief: {
+    headings: [{beforeParagraph: 1, title: "What the contract changes"}, {beforeParagraph: 3, title: "The existing journey matters"}, {beforeParagraph: 5, title: "The property implication"}, {beforeParagraph: 8, title: "A delivery question beyond the headline"}],
+    note: "Will a home become easier to reach in everyday use, or is the improvement confined to how an existing journey is monitored and paid for?",
+    related: {href: "https://www.investwithraj.com/library/investment-appraisals", title: "Put infrastructure into the property appraisal", label: "Read the investment guide"}
+  },
+  body: "Abu Dhabi Mobility has announced an investment of more than AED300 million in the systems behind its public transport network. For property investors, the important distinction is the scope: this is an operating and payment upgrade, not an announcement of new bus routes, additional road capacity or a rail station beside a development.\n\nThe Integrated Transport Centre, part of the Department of Municipalities and Transport, disclosed the project on 2 October at LIVEX. It named Conduent Business Solutions S.A.S. as the contractor. The programme combines automated vehicle management with digital fare collection. Planned functions include monitoring buses and journeys in real time, improving schedule adherence and using operational data to manage the service.\n\nThe payment element is intended to accommodate bank cards, digital payment methods and QR codes. Those are planned capabilities. The release does not give a passenger launch date, identify the first routes to receive them or quantify any reduction in waiting or journey times.\n\nThere is already a functioning fare system to improve upon. Abu Dhabi Mobility's current guidance describes Hafilat cards, tapped when boarding and leaving a bus. Its standard service fare is AED2 to board plus five fils per kilometre, capped at AED5 per journey. Qualifying transfers avoid another boarding charge, subject to a 60-minute connection window and a maximum of two transfers using three buses. Intercity services are excluded from that transfer arrangement.\n\nFor example, under that published formula a 20-kilometre standard-service journey costs AED3 before any separate circumstances apply: AED2 plus AED1 for distance. That calculation illustrates the existing fare, not a price announced for the new system. The contract release does not say that fares are changing. Payment convenience and the cost of travel are separate issues.\n\nFor a landlord, a stop on a map is only the starting point. The relevant test is the journey between a particular home and the places its occupants use. A nearby service may still require a long wait or an awkward change. Better operating information could make that journey more predictable, but the announcement alone does not establish that improvement at any specific building.\n\nThe strongest property comparison therefore remains local. Compare the actual walk to the stop, the service at commuting hours and the number of changes to the likely workplace. A purchase appraisal should use today's observable access; a planned digital upgrade can sit alongside it as a future improvement to monitor. It is not evidence for increasing an assumed rent or resale value now.\n\nThis also separates two commonly conflated infrastructure stories. A new connection can change which places are reachable. An operating upgrade concerns how an existing network performs. Both can matter to residents, but they require different evidence before becoming part of a property's investment case. Here, the useful follow-up would be a rollout timetable, route-level implementation and published service performance.\n\nThere is a further procurement detail worth watching. On 1 October, Conduent separately announced completion of the sale of its Public Transit Business to Modaxo, including fare-management and fleet-management operations. The Abu Dhabi announcement the following day still names Conduent Business Solutions S.A.S. The two releases do not establish whether this particular contract falls within the transferred business or whether its contracting entity changes.\n\nThat is a question for subsequent project information, not grounds to declare a delivery problem. Confirmation of the implementation partner, the first passenger-facing release and measurable service outcomes will tell investors more than the contract value on its own. Until then, the announcement supports a clear conclusion: Abu Dhabi is funding the operation of public transport, while the effect on individual residential catchments remains to be demonstrated.",
+  faq: [],
+  citations: [
+    {source: "Abu Dhabi Mobility announcement, 2 October 2026", url: "https://www.mediaoffice.abudhabi/en/transport/integrated-transport-centre-abu-dhabi-mobility-announces-aed300m-investment-in-next-generation-public-transport-systems/", accessedAt: "2026-10-04T04:43:00.000Z"},
+    {source: "Abu Dhabi Mobility: standard service fares and transfers", url: "https://admobility.gov.ae/en/pb-bus-service/hafilat-public-buses-fees", accessedAt: "2026-10-04T04:43:00.000Z"},
+    {source: "Abu Dhabi Mobility: Hafilat smart cards", url: "https://admobility.gov.ae/en/pb-bus-service/hafilat-products-for-hc", accessedAt: "2026-10-04T04:43:00.000Z"},
+    {source: "Conduent: completed Public Transit Business sale, 1 October 2026", url: "https://www.news.conduent.com/news/conduent-completes-sale-of-its-public-transit-business-to-modaxo", accessedAt: "2026-10-04T04:43:00.000Z"}
+  ],
+  heroImage: {
+    src: "/news/2026-10-04-abu-dhabi-bus-digital-upgrade/cover.webp",
+    alt: "Public bus at an Abu Dhabi stop in 2016; archive photograph, not the new payment system",
+    credit: "© Mosbatho, 2016 · CC BY 4.0 · Archive photograph; Topaz 4x enhancement",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Public_bus_in_Abu_Dhabi.jpg",
+    licenceUrl: "https://creativecommons.org/licenses/by/4.0/",
+    rightsStatus: "CC BY 4.0; photographer credit, licence link and enhancement identified",
+    width: 15240, height: 10040, approval: "approved-editorial"
+  },
+  cta: {href: "https://www.investwithraj.com/engage?intent=investment&source=news&subject=2026-10-04-abu-dhabi-bus-digital-upgrade", label: "Discuss your property appraisal"},
+  distribution: {},
+  metaDescription: "Abu Dhabi's AED300m-plus transport upgrade covers fleet management and fares. What it changes for property appraisals, and which delivery details remain open."
+}];
