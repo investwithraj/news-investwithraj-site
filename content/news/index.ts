@@ -13,6 +13,7 @@ import { MANUAL_NEWS_20261001 } from "./2026-10-01-chat-news";
 import { MANUAL_NEWS_20261002 } from "./2026-10-02-chat-news";
 import { MANUAL_NEWS_20261003 } from "./2026-10-03-chat-news";
 import { MANUAL_NEWS_20261004 } from "./2026-10-04-chat-news";
+import { MANUAL_NEWS_20261005 } from "./2026-10-05-chat-news";
 export type { NewsArticle } from "./types";
 export {
   sortNewsArticles,
@@ -88,6 +89,7 @@ import { article as art_2026_09_26_meraas_awards_contract_to_gcc_contracting_for
 import { FIVE_MORE_NEWS_20260930 } from "./2026-09-30-five-more";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
+  ...MANUAL_NEWS_20261005,
   ...MANUAL_NEWS_20261004,
   ...MANUAL_NEWS_20261003,
   ...MANUAL_NEWS_20261002,

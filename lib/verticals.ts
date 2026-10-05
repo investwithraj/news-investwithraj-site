@@ -148,6 +148,7 @@ export const VERTICALS: Vertical[] = [
     excludeKeywords: ["rumour", "rumor"],
     curatedSlugs: [
       "2026-10-03-musaffah-innovation-district",
+      "2026-10-05-fourth-corridor-property-pipeline",
       "2026-10-04-abu-dhabi-bus-digital-upgrade",
       "2026-10-03-mid-island-parkway-2027",
       "2026-07-24-aldar-unveils-aed-100bn-marsa-al-saadiyat-abu-dhabi-s-final-",
