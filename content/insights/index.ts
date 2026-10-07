@@ -3,6 +3,7 @@
 
 import type { InsightArticle } from "./types";
 import { waterfrontBeyondTheView } from "./waterfront-beyond-the-view";
+import { paymentPlanNotDiscount } from "./payment-plan-not-discount";
 export type { InsightArticle } from "./types";
 export {
   sortInsightArticles,
@@ -10,7 +11,7 @@ export {
   type InsightCategory,
 } from "./types";
 
-export const INSIGHT_ARTICLES: InsightArticle[] = [waterfrontBeyondTheView];
+export const INSIGHT_ARTICLES: InsightArticle[] = [paymentPlanNotDiscount, waterfrontBeyondTheView];
 
 export function getLatestInsights(limit = 5): InsightArticle[] {
   return [...INSIGHT_ARTICLES]
