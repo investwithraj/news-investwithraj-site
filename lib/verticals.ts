@@ -43,6 +43,7 @@ export const VERTICALS: Vertical[] = [
       "dubai real estate",
     ],
     curatedSlugs: [
+      "2026-10-07-dubai-rental-contracts-q3-sales",
       "2026-10-02-dubai-september-property-sales",
       "2026-09-30-dubai-offplan-prices-sales-pace",
       "2026-07-25-dubai-logs-aed-419-94bn-in-h1-transactions-as-weekly-volumes",
@@ -73,6 +74,7 @@ export const VERTICALS: Vertical[] = [
       "delivery",
     ],
     curatedSlugs: [
+      "2026-10-07-anantara-siniya-resort-residences",
       "2026-10-02-one-only-al-maryah-residences",
       "2026-10-03-ritz-carlton-al-maryah-construction",
       "2026-10-02-burj-azizi-kone-elevators",
@@ -112,6 +114,7 @@ export const VERTICALS: Vertical[] = [
       "trophy",
     ],
     curatedSlugs: [
+      "2026-10-07-anantara-siniya-resort-residences",
       "2026-10-02-one-only-al-maryah-residences",
       "2026-10-03-ritz-carlton-al-maryah-construction",
       "2026-07-08-dubai-ultra-prime-sales-hit-5-1bn-as-296-homes-above-10m-tra",
