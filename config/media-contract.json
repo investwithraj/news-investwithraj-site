@@ -70,6 +70,21 @@
   ],
   "assets": [
     {
+      "key": "newsletter:payment-plan-palm-archive",
+      "path": "/media/news/beyond-the-deal-payment-plan.webp",
+      "mediaType": "image",
+      "subject": "Palm Jumeirah and Dubai Marina archive photograph",
+      "classification": "approved-editorial-context",
+      "approval": "approved",
+      "routes": [{"path":"/insights/payment-plan-not-discount","role":"editorial-hero","fullscreen":false},{"path":"/","role":"newsletter-feature","fullscreen":false}],
+      "source": {"provider":"Raj's approved stock-account archive","creator":"Stock-account archive","sourceId":"145938653","url":"https://www.investwithraj.com/media/licensed-real/145938653.jpg"},
+      "rights": {"status":"verified-owner-supplied","record":"Owner approval 2026-09-09; exact master registered in the main site's media clearance set; native dimensions and full-frame inspection recorded 7 October."},
+      "derivative": {"width":2400,"height":800,"from":"5760×1920 un-upscaled panorama source; full frame preserved, non-fullscreen context only"},
+      "renderNotice": "Archive photograph for context, not current construction-status evidence.",
+      "aiGenerated": false,
+      "alt": "Archive aerial photograph of Palm Jumeirah with the Dubai Marina skyline beyond"
+    },
+    {
       "key": "newsletter:jbr-waterfront",
       "path": "/media/news/beyond-the-deal-jbr-waterfront.webp",
       "mediaType": "image",

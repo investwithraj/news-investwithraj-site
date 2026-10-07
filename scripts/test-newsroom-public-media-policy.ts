@@ -37,9 +37,10 @@ const governedOnDisk = [
   ),
 ].sort();
 
-assert.equal(approved.length, 19);
-assert.equal(new Set(approved).size, 19);
+assert.equal(approved.length, 20);
+assert.equal(new Set(approved).size, 20);
 assert(approved.includes("/media/news/beyond-the-deal-jbr-waterfront.webp"));
+assert(approved.includes("/media/news/beyond-the-deal-payment-plan.webp"));
 assert.deepEqual(APPROVED_NEWSROOM_PUBLIC_MEDIA_PATHS, approved);
 assert.equal(withheld.length, 31);
 assert.equal(new Set(withheld).size, 31);
@@ -72,8 +73,8 @@ const unknownGovernedPaths = [...mediaContract.unknownGovernedMedia].sort();
 assert.equal(unknownGovernedPaths.length, 16);
 assert.deepEqual(UNKNOWN_NEWSROOM_PUBLIC_MEDIA_PATHS, unknownGovernedPaths);
 const governedAuthority = [...approved, ...withheld, ...unknownGovernedPaths].sort();
-assert.equal(governedOnDisk.length, 66);
-assert.equal(new Set(governedOnDisk).size, 66);
+assert.equal(governedOnDisk.length, 67);
+assert.equal(new Set(governedOnDisk).size, 67);
 assert.deepEqual(
   governedOnDisk,
   governedAuthority,
@@ -122,5 +123,5 @@ assert.match(proxySource, /noindex, nofollow, noarchive/u);
 assert.match(proxySource, /status:\s*404/u);
 
 console.log(
-  "Newsroom public-media policy passed: 19 approved, 31 explicit withheld, 16 on-disk unknown governed assets, unknown fail-closed and app routes unaffected.",
+  "Newsroom public-media policy passed: 20 approved, 31 explicit withheld, 16 on-disk unknown governed assets, unknown fail-closed and app routes unaffected.",
 );
