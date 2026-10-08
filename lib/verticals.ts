@@ -74,6 +74,8 @@ export const VERTICALS: Vertical[] = [
       "delivery",
     ],
     curatedSlugs: [
+      "2026-10-08-expo-city-dib-offplan-finance",
+      "2026-10-08-elemental-78-jumeirah-garden-city",
       "2026-10-07-anantara-siniya-resort-residences",
       "2026-10-02-one-only-al-maryah-residences",
       "2026-10-03-ritz-carlton-al-maryah-construction",
