@@ -74,6 +74,7 @@ export const VERTICALS: Vertical[] = [
       "delivery",
     ],
     curatedSlugs: [
+      "2026-10-09-dubai-islands-shoreline",
       "2026-10-08-expo-city-dib-offplan-finance",
       "2026-10-08-elemental-78-jumeirah-garden-city",
       "2026-10-07-anantara-siniya-resort-residences",
