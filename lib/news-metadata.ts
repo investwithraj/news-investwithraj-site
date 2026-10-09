@@ -12,8 +12,12 @@ import {
 /** Metadata shared by the article route and discovery-consistency tests. */
 export function newsArticleMetadata(article: NewsArticle): Metadata {
   const url = `${SITE.url}/news/${article.slug}`;
-  const imageUrl = `${SITE.url}/api/og?slug=${encodeURIComponent(article.slug)}`;
   const hasImage = hasVerifiedEditorialImage(article);
+  // Serve approved photography directly: social crawlers must not depend on
+  // the dynamic title-card renderer fetching its background successfully.
+  const imageUrl = hasImage
+    ? new URL(article.heroImage.src, SITE.url).toString()
+    : `${SITE.url}/api/og?slug=${encodeURIComponent(article.slug)}`;
   const indexable = isIndexablePublicNewsArticleSlug(article.slug);
 
   return {
@@ -47,8 +51,8 @@ export function newsArticleMetadata(article: NewsArticle): Metadata {
       images: [
         {
           url: imageUrl,
-          width: 1200,
-          height: 630,
+          width: hasImage ? article.heroImage.width : 1200,
+          height: hasImage ? article.heroImage.height : 630,
           alt: hasImage ? supportedImageAlt(article) : article.title,
         },
       ],

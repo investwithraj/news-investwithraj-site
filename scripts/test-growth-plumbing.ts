@@ -308,7 +308,7 @@ async function main() {
       const openGraph = metadata.openGraph as {
         images?: Array<{ url?: string | URL }>;
       };
-      assert.match(String(openGraph.images?.[0]?.url), /\/api\/og\?slug=/);
+      assert.match(String(openGraph.images?.[0]?.url), /\/(?:news\/[^/]+\/cover\.|api\/og\?slug=)/);
       assert.deepEqual(
         newsArticleSchema(
           article,
