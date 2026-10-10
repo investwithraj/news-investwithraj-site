@@ -154,6 +154,7 @@ export const VERTICALS: Vertical[] = [
     excludeKeywords: ["rumour", "rumor"],
     curatedSlugs: [
       "2026-10-03-musaffah-innovation-district",
+        "2026-10-10-livex-investment-implementation",
       "2026-10-05-fourth-corridor-property-pipeline",
       "2026-10-04-abu-dhabi-bus-digital-upgrade",
       "2026-10-03-mid-island-parkway-2027",
