@@ -43,6 +43,7 @@ export const VERTICALS: Vertical[] = [
       "dubai real estate",
     ],
     curatedSlugs: [
+      "2026-10-13-dubai-ready-offplan-sales-split",
       "2026-10-07-dubai-rental-contracts-q3-sales",
       "2026-10-02-dubai-september-property-sales",
       "2026-09-30-dubai-offplan-prices-sales-pace",
