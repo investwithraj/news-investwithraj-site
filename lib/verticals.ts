@@ -118,6 +118,7 @@ export const VERTICALS: Vertical[] = [
       "trophy",
     ],
     curatedSlugs: [
+      "2026-10-15-abu-dhabi-luxury-sales-rebound-mix",
       "2026-10-07-anantara-siniya-resort-residences",
       "2026-10-02-one-only-al-maryah-residences",
       "2026-10-03-ritz-carlton-al-maryah-construction",
