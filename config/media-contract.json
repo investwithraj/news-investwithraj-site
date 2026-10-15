@@ -70,6 +70,21 @@
   ],
   "assets": [
     {
+      "key": "newsletter:exit-buyer-business-bay",
+      "path": "/media/news/beyond-the-deal-exit-buyer.webp",
+      "mediaType": "image",
+      "subject": "Business Bay canal and skyline at night; archive context",
+      "classification": "approved-editorial-context",
+      "approval": "approved",
+      "routes": [{"path":"/insights/who-buys-it-after-you","role":"editorial-hero","fullscreen":false},{"path":"/","role":"newsletter-feature","fullscreen":false}],
+      "source": {"provider":"Raj's approved stock-account archive","creator":"Stock-account archive","sourceId":"605906971","url":"https://www.investwithraj.com/media/licensed-real/605906971.jpg"},
+      "rights": {"status":"verified-owner-supplied","record":"Owner approval9September2026; exact archive master registered in main-site clearance set. ffprobe6960x4640, full original and derivative inspected15October2026. Hash/provenance in existing weekly packageW42-20261015/MEDIA.json."},
+      "derivative": {"width":2400,"height":1600,"from":"6960x4640 original, same full frame; not upscaled; non-fullscreen context only"},
+      "renderNotice": "Archive photograph for context, not current property or construction evidence.",
+      "aiGenerated": false,
+      "alt": "Archive night photograph of Business Bay canal and skyline with Burj Khalifa beyond"
+    },
+    {
       "key": "newsletter:payment-plan-palm-archive",
       "path": "/media/news/beyond-the-deal-payment-plan.webp",
       "mediaType": "image",
