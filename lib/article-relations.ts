@@ -34,6 +34,7 @@ export type ResolvedArticleDeveloper = Readonly<{
  * article blocks validation until it receives exactly one explicit record.
  */
 export const ARTICLE_RELATION_RECORDS = [
+  { articleSlug: "2026-10-16-aldar-aljada-forward-purchase", areaSlugs: [], developerSlugs: ["aldar"] },
   { articleSlug: "2026-10-15-abu-dhabi-luxury-sales-rebound-mix", areaSlugs: [], developerSlugs: [] },
   { articleSlug: "2026-10-10-livex-investment-implementation", areaSlugs: [], developerSlugs: [] },
   { articleSlug: "2026-10-13-dubai-ready-offplan-sales-split", areaSlugs: [], developerSlugs: [] },

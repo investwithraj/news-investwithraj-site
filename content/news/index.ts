@@ -21,6 +21,7 @@ import { MANUAL_NEWS_20261010 } from "./2026-10-10-chat-news";
 import { MANUAL_NEWS_20261013 } from "./2026-10-13-chat-news";
 import { MANUAL_NEWS_20261014 } from "./2026-10-14-chat-news";
 import { MANUAL_NEWS_20261015 } from "./2026-10-15-chat-news";
+import { MANUAL_NEWS_20261016 } from "./2026-10-16-chat-news";
 export type { NewsArticle } from "./types";
 export {
   sortNewsArticles,
@@ -97,6 +98,7 @@ import { FIVE_MORE_NEWS_20260930 } from "./2026-09-30-five-more";
 
 export const NEWS_ARTICLES: NewsArticle[] = [
   ...MANUAL_NEWS_20261015,
+  ...MANUAL_NEWS_20261016,
   ...MANUAL_NEWS_20261014,
   ...MANUAL_NEWS_20261009,
   ...MANUAL_NEWS_20261010,
